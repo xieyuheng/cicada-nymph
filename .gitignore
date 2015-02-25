@@ -1,0 +1,10 @@
+*~
+*#*
+*.bin
+*.ccd
+*.cicada-section
+
+1st-instar/1st-instar
+
+vm/x86-64/linux/cicada
+vm/x86-64/baremetal/*.vmdk
