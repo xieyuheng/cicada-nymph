@@ -53,14 +53,12 @@ at_the_end_of_jojo:
    ;; 去尋求被移出的一顆珠的意義
    ;; 因爲 對其意義的詮釋方式 被記錄在其地址下
    ;; 所以需要一次 間接跳
-   ;; 跳過去之後 rax 保存的是被移出的一顆珠
    jmp qword[rax]
+   ;; 跳過去之後 rax 保存的是被移出的一顆珠
+   ;; rax 可能被作爲 bead explainer 的參數
    }
 ;; initial link to point to 0 (as null)
 link = 0
-JO_TYPE__function = 0
-JO_TYPE__primitive_function = 1
-JO_TYPE__variable = 2
 macro make_name_string string {
 
 virtual at 0
@@ -97,13 +95,29 @@ link__#jo:
    xx link
    link = link__#jo
 
-type__#jo:
-   xx JO_TYPE__function
-
 jo:
    xx explain$function
 
    ;; 後面跟着作爲 function 的函數體的一串珠珠
+
+   }
+macro define_macro string, jo {
+
+define_macro__#jo:
+
+name__#jo:
+   xx current_free_address$primitive_string_heap
+
+   make_name_string string
+
+link__#jo:
+   xx link
+   link = link__#jo
+
+jo:
+   xx explain$macro
+
+   ;; 後面跟着作爲 macro (特殊的 function) 的函數體的一串珠珠
 
    }
 macro define_primitive_function string, jo {
@@ -118,9 +132,6 @@ name__#jo:
 link__#jo:
    xx link
    link = link__#jo
-
-type__#jo:
-   xx JO_TYPE__primitive_function
 
 jo:
    xx assembly_code__#jo
@@ -142,9 +153,6 @@ link__#jo:
    xx link
    link = link__#jo
 
-type__#jo:
-   xx JO_TYPE__primitive_function
-
 jo:
    xx explain$variable
 
@@ -157,6 +165,10 @@ size$primitive_string_heap = 100 * 1024 ;; (byte)
 address$primitive_string_heap:
    times size$primitive_string_heap db 0
 explain$function:
+   add rax, bead_size
+   push_return_stack rax
+   next
+explain$macro:
    add rax, bead_size
    push_return_stack rax
    next
@@ -182,15 +194,36 @@ address$argument_stack labeling
    preserve 1024 * 1024 * bead_size
 address$return_stack labeling
    preserve 1024 * 1024 * bead_size
+define_variable "*literal*", V__literal
+   xx literal
+
+define_primitive_function "", literal
+   ;; (* -- fixnum *)
+   ;; 如果在一串珠珠末尾
+   ;;     就抽出這串珠珠
+   pop_return_stack rbx
+   mov  rax, [rbx]
+   push_argument_stack rax
+   add  rbx, bead_size      
+   mov  rax, [rbx]
+   test rax, rax
+   jz .meet_end
+   push_return_stack rbx
+.meet_end:
+   ;; 不放回 就算抽出
+   next
 define_function "little_test", little_test
-   xx V__little_test_number
+   xx literal, 4
    xx exit_with_TOS
-   xx exit
 
-define_variable "*little-test-number*", V__little_test_number
-   xx 7
+   ;; xx V__little_test_number
+   ;; xx exit_with_TOS
 
-define_primitive_function "exit-with-TOS", exit_with_TOS
+
+define_variable "", V__little_test_number
+   xx 3
+
+define_primitive_function "", exit_with_TOS
    pop_argument_stack sys_1_rdi
    mov sys_n_rax, syscall_exit
    syscall
