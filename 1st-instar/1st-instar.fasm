@@ -46,8 +46,9 @@ local at_the_end_of_jojo
    pop_return_stack rbx
    mov rax, qword[rbx] ;; 記錄被移出的一顆珠
    add rbx, bead_size
-   cmp dword[rbx], exit
-   je at_the_end_of_jojo
+   mov rcx, qword[rbx] ;; 用來判斷是否是珠珠的末尾
+   test rcx, rcx
+   jz at_the_end_of_jojo
    push_return_stack rbx ;; 把珠珠放回 就代表不抽出
 at_the_end_of_jojo:
    ;; 去尋求被移出的一顆珠的意義
@@ -192,6 +193,253 @@ first_jojo:
    xx little_test
 address$argument_stack labeling
    preserve 1024 * 1024 * bead_size
+define_primitive_function "drop", drop
+   ;; (* a -- *)
+   pop_argument_stack rax
+   next
+
+define_primitive_function "drop2", drop2
+   ;; (* a b -- *)
+   pop_argument_stack rax
+   pop_argument_stack rax
+   next
+define_primitive_function "dup", dup
+   ;; (* a -- a a *)
+   mov  rax, [pointer$argument_stack - (1 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "dup2", dup2
+   ;; (* a b -- a b a b *)
+   mov  rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov  rax, [pointer$argument_stack - (2 * bead_size)]
+   push_argument_stack rax
+   push_argument_stack rbx
+   next
+define_primitive_function "over", over
+   ;; (* a b -- a b | a *)
+   mov  rax, [pointer$argument_stack - (2 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "x|over|xx", xoverxx
+   ;; (* a | b c -- a | b c | a *)
+   mov  rax, [pointer$argument_stack - (3 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "xx|over|x", xxoverx
+   ;; (* a b | c -- a b | c | a b *)
+   mov  rax, [pointer$argument_stack - (3 * bead_size)]
+   push_argument_stack rax
+   mov  rax, [pointer$argument_stack - (3 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "xx|over|xx", xxoverxx
+   ;; (* a b | c d -- a b | c d | a b *)
+   mov  rax, [pointer$argument_stack - (4 * bead_size)]
+   push_argument_stack rax
+   mov  rax, [pointer$argument_stack - (4 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "x|over|xxx", xoverxxx
+   ;; (* a | b c d -- a | b c d | a *)
+   mov  rax, [pointer$argument_stack - (4 * bead_size)]
+   push_argument_stack rax
+   next
+
+define_primitive_function "xx|over|xxxx", xxoverxxxx
+   ;; (* a b | c d e f -- a b | c d e f | a b *)
+   mov  rax, [pointer$argument_stack - (6 * bead_size)]
+   push_argument_stack rax
+   mov  rax, [pointer$argument_stack - (6 * bead_size)]
+   push_argument_stack rax
+   next
+define_primitive_function "tuck", tuck
+   ;; (* a b -- b | a b *)
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rax
+   push_argument_stack rbx
+   next
+
+define_primitive_function "x|tuck|xx", xtuckxx
+   ;; (* a | b c -- b c | a | b c *)
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   next
+
+define_primitive_function "xx|tuck|x", xxtuckx
+   ;; (* a b | c -- c | a b | c *)
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rcx
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   next
+
+define_primitive_function "xx|tuck|xx", xxtuckxx
+   ;; (* a b | c d -- c d | a b | c d *)
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   next
+
+define_primitive_function "xxx|tuck|x", xxxtuckx
+   ;; (* a b c | d -- d | a b c | d *)
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rdx
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   next
+define_primitive_function "swap", swap
+   ;; (* a b -- b a *)
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rax
+   next
+
+define_primitive_function "x|swap|xx", xswapxx
+   ;; (* a | b c -- b c | a *)
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rax
+   next
+
+define_primitive_function "xx|swap|x", xxswapx
+   ;; (* a b | c -- c | a b *)
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rcx
+   push_argument_stack rax
+   push_argument_stack rbx
+   next
+
+define_primitive_function "x|swap|xxx", xswapxxx
+   ;; (* a | b c d -- b c d | a *)
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack rax
+   next
+
+define_primitive_function "xxx|swap|x", xxxswapx
+   ;; (* a b c | d -- d | a b c *)
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rdx
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   next
+
+define_primitive_function "xx|swap|xx", xxswapxx
+   ;; (* a b | c d -- c d | a b *)
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack rax
+   push_argument_stack rbx
+   next
+
+
+define_primitive_function "x|swap|xxxx", xswapxxxx
+   ;; (* a | b c d e -- b c d e | a *)
+   pop_argument_stack r8 ;; e
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack r8 ;; e
+   push_argument_stack rax
+   next
+
+define_primitive_function "xxxx|swap|x", xxxxswapx
+   ;; (* a b c d | e --  e | a b c d *)
+   pop_argument_stack r8 ;; e
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack r8 ;; e
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   next
+
+
+define_primitive_function "xx|swap|xxxx", xxswapxxxx
+   ;; (* a b | c d e f -- c d e f | a b *)
+   pop_argument_stack r9 ;; f
+   pop_argument_stack r8 ;; e
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack r8 ;; e
+   push_argument_stack r9 ;; f
+   push_argument_stack rax
+   push_argument_stack rbx
+   next
+
+define_primitive_function "xxxx|swap|xx", xxxxswapxx
+   ;; (* a b c d | e f --  e f | a b c d *)
+   pop_argument_stack r9 ;; f
+   pop_argument_stack r8 ;; e
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack r8 ;; e
+   push_argument_stack r9 ;; f
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   next
 address$return_stack labeling
    preserve 1024 * 1024 * bead_size
 define_variable "*literal*", V__literal
@@ -202,33 +450,719 @@ define_primitive_function "", literal
    ;; 如果在一串珠珠末尾
    ;;     就抽出這串珠珠
    pop_return_stack rbx
-   mov  rax, [rbx]
+   mov rax, [rbx]
    push_argument_stack rax
-   add  rbx, bead_size      
-   mov  rax, [rbx]
+   add rbx, bead_size
+   mov rax, [rbx]
    test rax, rax
    jz .meet_end
    push_return_stack rbx
 .meet_end:
    ;; 不放回 就算抽出
    next
-define_function "little_test", little_test
-   xx literal, 4
-   xx exit_with_TOS
+define_variable "*address*", V__address
+   xx address
 
-   ;; xx V__little_test_number
-   ;; xx exit_with_TOS
+define_primitive_function "", address
+   ;; (* -- address *)
+   ;; 如果在一串珠珠末尾
+   ;;     就抽出這串珠珠
+   ;; 當調用到這個 primitive function 的時候
+   ;; 就已經是運行時了
+   ;; 所以這裏沒有對 address 之後的珠子的類型檢查
+   ;; 類型檢查可以在編譯器中做
+   pop_return_stack rbx
+   mov rax, [rbx]
+   add rax, bead_size
+   push_argument_stack rax
+   add rbx, bead_size
+   mov rax, [rbx]
+   test rax, rax
+   jz .meet_end
+   push_return_stack rbx
+.meet_end:
+   ;; 不放回 就算抽出
+   next
+define_primitive_function "", branch
+   pop_return_stack rbx
+   mov rax, [rbx]
+   imul rax, bead_size
+   add rbx, rax
+   ;; the following handles branching to "exit"
+   mov rax, [rbx]
+   test rax, rax
+   jz .meet_end
+   push_return_stack rbx
+.meet_end:
+   next
+define_primitive_function "", false?branch
+   ;; (* true of false -- *)
+   pop_argument_stack rax
+   test rax, rax
+   jnz help__false?branch__not_to_branch
+
+   pop_return_stack rbx
+   mov rax, [rbx]
+   imul rax, bead_size
+   add rbx, rax
+   ;; the following handles branching to "exit"
+   mov rax, [rbx]
+   test rax, rax
+   jz .meet_end
+   push_return_stack rbx
+.meet_end:
+   next
+
+help__false?branch__not_to_branch:
+   pop_return_stack rbx
+   add rbx, bead_size
+   mov rax, [rbx]
+   test rax, rax
+   jz .meet_end
+   push_return_stack rbx
+.meet_end:
+   next
+define_variable "*true*", V__true
+   xx 1
+
+define_variable "*false*", V__false
+   xx 0
+define_primitive_function "bitwise-and", bitwise_and
+   ;; (* a, b -- a and b *)
+   pop_argument_stack rbx
+   and [pointer$argument_stack - (1 * bead_size)], rbx
+   next
+
+define_primitive_function "bitwise-or", bitwise_or
+   ;; (* a, b -- a or b *)
+   pop_argument_stack rbx
+   or  [pointer$argument_stack - (1 * bead_size)], rbx
+   next
+
+define_primitive_function "bitwise-xor", bitwise_xor
+   ;; (* a, b -- a xor b *)
+   pop_argument_stack rbx
+   xor [pointer$argument_stack - (1 * bead_size)], rbx
+   next
+
+define_primitive_function "bitwise-invert", bitwise_invert
+   ;; (* a -- invert a *)
+   not qword [pointer$argument_stack - (1 * bead_size)]
+   next
+define_variable "*zero*", V__zero
+   xx 0
+define_primitive_function "add1", add1
+   ;; (* n -- n+1 *)
+   inc qword [pointer$argument_stack - (1 * bead_size)]
+   next
+
+define_primitive_function "add2", add2
+   ;; (* n -- n+2 *)
+   add qword [pointer$argument_stack - (1 * bead_size)], 2
+   next
+
+define_primitive_function "add3", add3
+   ;; (* n -- n+3 *)
+   add qword [pointer$argument_stack - (1 * bead_size)], 3
+   next
+
+define_primitive_function "add4", add4
+   ;; (* n -- n+4 *)
+   add qword [pointer$argument_stack - (1 * bead_size)], 4
+   next
+
+define_primitive_function "add8", add8
+   ;; (* n -- n+8 *)
+   add qword [pointer$argument_stack - (1 * bead_size)], 8
+   next
 
 
-define_variable "", V__little_test_number
-   xx 3
+define_primitive_function "sub1", sub1
+   ;; (* n -- n-1 *)
+   dec qword [pointer$argument_stack - (1 * bead_size)]
+   next
 
+define_primitive_function "sub2", sub2
+   ;; (* n -- n-2 *)
+   sub qword [pointer$argument_stack - (1 * bead_size)], 2
+   next
+
+define_primitive_function "sub3", sub3
+   ;; (* n -- n-3 *)
+   sub qword [pointer$argument_stack - (1 * bead_size)], 3
+   next
+
+define_primitive_function "sub4", sub4
+   ;; (* n -- n-4 *)
+   sub qword [pointer$argument_stack - (1 * bead_size)], 4
+   next
+
+define_primitive_function "sub8", sub8
+   ;; (* n -- n-8 *)
+   sub qword [pointer$argument_stack - (1 * bead_size)], 8
+   next
+
+
+define_primitive_function "add", addition
+   ;; (* a b -- a+b *)
+   pop_argument_stack rax
+   add qword [pointer$argument_stack - (1 * bead_size)], rax
+   next
+
+define_primitive_function "sub", subtraction
+   ;; (* a b -- a-b *)
+   pop_argument_stack rax
+   sub qword [pointer$argument_stack - (1 * bead_size)], rax
+   next
+
+define_primitive_function "mul", multiple
+   ;; (* a b -- a*b *)
+   pop_argument_stack  rbx ;; 2ed arg
+   pop_argument_stack  rax ;; 1st arg
+   imul rbx, rax
+   ;; imul will ignore overflow
+   ;; when there are two registers as arg
+   ;; imul will save the result into the first register
+   push_argument_stack rbx
+   next
+
+define_primitive_function "moddiv", moddiv
+   ;; (* a, b -- a mod b, quotient *)
+   ;; (* dividend, divisor -- remainder, quotient *)
+   ;; the arg of idiv is divisor
+   ;; the lower half of dividend is taken from rax
+   ;; the upper half of dividend is taken from rdx
+   xor  rdx, rdx   ;; high-part of dividend is not used
+   pop_argument_stack  rbx ;; 2ed arg
+   pop_argument_stack  rax ;; 1st arg
+   idiv rbx
+   ;; the remainder is stored in rdx
+   ;; the quotient  is stored in rax
+   push_argument_stack rdx ;; remainder
+   push_argument_stack rax ;; quotient
+   next
+
+
+define_function "divmod", divmod
+   ;; (* a, b -- quotient, a mod b *)
+   xx moddiv, swap
+   xx exit
+
+define_function "div", division
+   ;; (* a, b -- quotient *)
+   xx divmod, drop
+   xx exit
+
+define_function "mod", modulo
+   ;; (* a, b -- a mod b *)
+   xx moddiv, drop
+   xx exit
+
+define_function "negate", negate
+   ;; (* n --  -n *)
+   xx V__zero
+   xx swap, subtraction
+   xx exit
+
+;; define_function "help:power", help_power
+;;    ;; (* a, m, n -- a^n *)
+;;    xx dup, zero?, _false?branch, 5
+;;    xx   drop, swap, drop
+;;    xx   exit
+;;    xx sub1
+;;    xx swap
+;;    xx   xoverxx, multiple
+;;    xx swap
+;;    xx help_power
+;;    xx exit
+
+;; define_function "power", power
+;;    ;; n must be naturl number for now
+;;    ;; (* a, n -- a^n *)
+;;    xx literal, 1
+;;    xx swap
+;;    xx help_power
+;;    xx exit
+define_primitive_function "equal?", equal?
+   ;; (* a, b -- a, b, true of false *)
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rbx, rax
+   sete  al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "not-equal?", not_equal?
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rbx, rax
+   setne al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "less-than?", less_than?
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rax, rbx
+   setl  al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "greater-than?", greater_than?
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rax, rbx
+   setg  al
+   movzx rax, al
+   push_argument_stack  rax
+   next
+
+define_primitive_function "less-or-equal?", less_or_equal?
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rax, rbx
+   setle al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "greater-or-equal?", greater_or_equal?
+   mov rbx, [pointer$argument_stack - (1 * bead_size)]
+   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   cmp   rax, rbx
+   setge al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "zero?", zero?
+   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   test  rax,rax
+   setz  al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "one?", one?
+   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   dec   rax
+   test  rax,rax
+   setz  al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "not-zero?", not_zero?
+   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   test  rax,rax
+   setnz al
+   movzx rax, al
+   push_argument_stack rax
+   next
+;; "save" and "fetch" default to a bead_size
+;; the rule of "fetch2" and so on are:
+;;   in memory:
+;;     ||  1 : value-1  ||
+;;     ||  1 : value-2  ||
+;;     ||  1 : value-3  ||
+;;     ...
+;;   on stack:
+;;     (* value-1, value-2, value-3, ... *)
+;; of course we have:
+;;   fetch2 : memory=copy=>stack
+;;   save2  : stack->memory
+
+define_primitive_function "save", save
+   ;; ( value, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   mov qword[rbx], rax
+   next
+
+define_primitive_function "save-byte", save_byte
+   ;; ( value, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   mov byte[rbx], al
+   next
+
+define_primitive_function "save-two-bytes", save_two_bytes
+   ;; ( value, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   mov word [rbx], ax
+   next
+
+define_primitive_function "save-four-bytes", save_four_bytes
+   ;; ( value, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   mov dword [rbx], eax
+   next
+
+define_primitive_function "n-save", n_save
+   ;; (* value-n, ..., value-1, address, n -- *)
+   pop_argument_stack rcx
+   pop_argument_stack rdx
+   mov rax, bead_size
+   imul rax, rcx
+   add rdx, rax
+   ;; for address is based on 0
+   ;; but n is based on 1
+   sub rdx, bead_size
+.loop:
+   pop_argument_stack rax
+   mov qword [rdx], rax
+   sub rdx, bead_size
+   loop .loop
+   next
+
+define_function "save2", save2
+   ;; (* value-2, value-1, address -- *)
+   xx literal, 2
+   xx n_save
+   xx exit
+
+define_primitive_function "n-save-byte", n_save_byte
+   ;; (* value-n, ..., value-1, address, n -- *)
+   pop_argument_stack rcx
+   pop_argument_stack rdx
+   add rdx, rcx
+   dec rdx
+.loop:
+   pop_argument_stack rax
+   mov byte [rdx], al
+   dec rdx
+   loop .loop
+   next
+
+define_primitive_function "fetch", fetch
+   ;; ( address -- value )
+   pop_argument_stack  rbx
+   mov rax, qword[rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "fetch-byte", fetch_byte
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov al, byte[rbx]
+   push_argument_stack rax
+   next
+define_primitive_function "fetch-two-bytes", fetch_two_bytes
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov ax, word[rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "fetch-four-bytes", fetch_four_bytes
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov eax, dword[rbx]
+   push_argument_stack rax
+   next
+
+;;   in memory:
+;;     ||  1 : value-1  ||
+;;     ...
+;;     ||  1 : value-n  ||
+define_primitive_function "n-fetch", n_fetch
+   ;; (* address, n -- value-1, ..., value-n *)
+   pop_argument_stack  rcx
+   pop_argument_stack  rdx
+.loop:
+   mov rax, qword[rdx]
+   push_argument_stack rax
+   add rdx, bead_size
+   loop .loop
+   next
+
+define_primitive_function "n-fetch-byte", n_fetch_byte
+   ;; (* address, n -- byte-1, ..., byte-n *)
+   pop_argument_stack  rcx
+   pop_argument_stack  rdx
+   xor rax, rax
+.loop:
+   mov al, byte [rdx]
+   push_argument_stack rax
+   inc rdx
+   loop .loop
+   next
+
+define_function "fetch2", fetch2
+   ;; (* address -- value-1, value-2 *)
+   xx literal, 2
+   xx n_fetch
+   xx exit
+
+define_primitive_function "add-save", add_save
+   ;; ( number to add, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   add qword[rbx], rax
+   next
+
+define_primitive_function "sub-save", sub_save
+   ;; ( number to add, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   sub qword[rbx], rax
+   next
+
+define_primitive_function "copy-byte-string", copy_byte_string
+   ;; ( source address, destination address, length -- )
+   pop_argument_stack rcx
+   pop_argument_stack rdi
+   pop_argument_stack rsi
+   rep movsb
+   next
+max_input_length = 1024 * 1024
+
+buffer$read_byte labeling
+   preserve max_input_length
+buffer$write_char:
+   db 0
+
+define_primitive_function "write-byte", write_byte
+   ;; (* byte -- *)
+   ;; just calls the Linux write system call
+   pop_argument_stack rax
+   ;; write can not just write the char in al to stdout
+   ;; write needs the address of the byte to write
+   mov [buffer$write_char], al
+   mov sys_3_rdx, 1                 ;; max length to be write
+   mov sys_2_rsi, buffer$write_char ;; address
+   mov sys_1_rdi, 1                 ;; stdout
+   mov sys_n_rax, syscall_write
+   syscall
+   next
+cursor$read_byte:
+   xx 0
+
+border$read_byte:
+   xx 0
+
+define_primitive_function "read-byte", read_byte
+   ;; (* -- byte *)
+   call help__read_byte
+   push_argument_stack rax
+   next
+
+
+help__read_byte:
+   mov rbx, [cursor$read_byte]
+   cmp rbx, [border$read_byte]
+   ;; [cursor$read_byte] <  [border$read_byte]
+   jl .we_still_have_buffered_byte
+   ;; [cursor$read_byte] >= [border$read_byte]
+   jmp .do_a_new_buffer
+
+
+.do_a_new_buffer:
+   mov rbx, buffer$read_byte
+   mov [cursor$read_byte], rbx
+   mov [border$read_byte], rbx
+
+   mov sys_3_rdx, max_input_length ;; max length to be read
+   mov sys_2_rsi, buffer$read_byte ;; buffer address
+   xor sys_1_rdi, sys_1_rdi        ;; stdin
+   mov sys_n_rax, syscall_read
+   syscall
+   ;; the return value of syscall read
+   ;; is a count of the number of bytes transferred
+   test rax, rax
+   jz .error ;; rax = 0
+   js .error ;; rax < 0
+
+   ;; update [border$read_byte]
+   add [border$read_byte], rax
+   jmp help__read_byte
+
+
+.we_still_have_buffered_byte:
+   ;; for the following will just uses the al part of rax
+   ;; it is necessary to clear rax
+   xor rax, rax
+   mov al, byte [rbx]
+   inc rbx
+   mov [cursor$read_byte], rbx
+   ret
+
+
+.error:
+   ;; exit with exit code = 0
+   xor sys_1_rdi, sys_1_rdi
+   mov sys_n_rax, syscall_exit
+   syscall
+max_word_length = 1024
+
+buffer$read_word labeling
+   preserve max_word_length
+
+buffer$read_word_for_REPL labeling
+   preserve max_word_length
+define_function "read-first-non-blank-char", read_first_non_blank_char
+   ;; (* -- non-blank-char *)
+   xx read_byte, literal, 32 ;; ascii.space
+   xx greater_than?, false?branch, 3
+   xx   drop
+   xx   exit
+   xx drop2
+   xx read_first_non_blank_char
+   xx exit
+
+define_function "read-non-blank-char", read_non_blank_char
+   ;; (* -- non-blank-char or zero *)
+   xx read_byte, literal, 32 ;; ascii.space
+   xx greater_than?, false?branch, 3
+   xx   drop
+   xx   exit
+   xx drop2
+   xx V__zero
+   xx exit
+define_function "read-word", read_word
+   ;; (*  -- word[address, length] *)
+   xx V__zero ;; (* leave length counter *)
+   xx literal, buffer$read_word
+
+   xx read_first_non_blank_char
+   xx   over, save_byte, add1
+   xx   swap, add1, swap
+
+   xx read_non_blank_char, not_zero?, false?branch, 9
+   xx   over, save_byte, add1
+   xx   swap, add1, swap
+   xx   branch, -11
+
+   xx drop ;; zero
+   xx drop ;; buffer$read_word + counter
+
+   xx literal, buffer$read_word
+   xx swap
+   xx exit
+define_function "read-word-for-REPL", read_word_for_REPL
+   ;; (*  -- word[address, length] *)
+   xx V__zero ;; (* leave length counter *)
+   xx literal, buffer$read_word_for_REPL
+
+   xx read_first_non_blank_char
+   xx   over, save_byte, add1
+   xx   swap, add1, swap
+
+   xx read_non_blank_char, not_zero?, false?branch, 9
+   xx   over, save_byte, add1
+   xx   swap, add1, swap
+   xx   branch, -11
+
+   xx drop ;; zero
+   xx drop ;; buffer$read_word_for_REPL + counter
+
+   xx literal, buffer$read_word_for_REPL
+   xx swap
+   xx exit
+define_function "write-string", write_string
+   ;; (* string[address, length] -- *)
+   xx zero?, false?branch, 3
+   xx   drop2
+   xx   exit
+   xx sub1, swap
+   xx dup, fetch_byte, write_byte
+   xx add1, swap
+   xx write_string
+   xx exit
 define_primitive_function "", exit_with_TOS
    pop_argument_stack sys_1_rdi
    mov sys_n_rax, syscall_exit
    syscall
+
+define_variable "", V__little_test_number
+   xx 3
+
+
+define_function "little_test", little_test
+
+   ;;;; variable
+   ;; xx V__little_test_number
+   ;; xx exit_with_TOS
+   ;;;; 3
+
+   ;;;; literal
+   ;; xx literal, 4
+   ;; xx exit_with_TOS
+   ;;;; 4
+
+   ;;;; address
+   ;; xx address, V__little_test_number, fetch, add2
+   ;; xx address, V__little_test_number, save
+   ;; xx V__little_test_number
+   ;; xx exit_with_TOS
+   ;;;; 5
+
+   ;;;; write_byte
+   ;; xx literal, 64, write_byte
+   ;; xx literal, 10, write_byte
+   ;; xx V__zero
+   ;; xx exit_with_TOS
+   ;;;; @
+
+   ;;;; read_byte
+   ;; xx read_byte, write_byte
+   ;; xx exit_with_TOS
+   ;;;;
+
+   ;;;; branch
+   ;; xx read_byte, write_byte
+   ;; xx branch, -3
+   ;;;; read a string that ended by <return>
+   ;;;; write the readed string
+   ;;;; or we can say
+   ;;;; read line and write line
+   ;;;; or we can say
+   ;;;; echo line
+
+   ;;;; false?branch
+   ;; xx V__false, false?branch, 9
+   ;; xx   literal, 64, write_byte
+   ;; xx   literal, 10, write_byte
+   ;; xx   V__zero
+   ;; xx   exit_with_TOS
+   ;; xx V__true, false?branch, 9
+   ;; xx   literal, 65, write_byte
+   ;; xx   literal, 10, write_byte
+   ;; xx   V__zero
+   ;; xx   exit_with_TOS
+   ;; xx V__zero
+   ;; xx exit_with_TOS
+   ;;;; A
+
+   ;;;; read_word & write_string
+   ;; xx read_word, write_string
+   ;; xx literal, 10, write_byte
+   ;; xx read_word_for_REPL, write_string
+   ;; xx literal, 10, write_byte
+   ;; xx V__zero
+   ;; xx exit_with_TOS
+   ;;;; read line
+   ;;;; write first two words of the line
+
+   ;;;; basic-REPL (without the ability to define function)
+   xx V__zero
+   xx exit_with_TOS
+   ;;;; 1 2 +
+
+   ;;;; basic-REPL (be able to define function)
+   xx V__zero
+   xx exit_with_TOS
+   ;;;;
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
 segment readable writeable
 address$un_initialized_memory:
-    rb size$un_initialized_memory
+   rb size$un_initialized_memory
