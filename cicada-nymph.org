@@ -69,6 +69,9 @@
      |--------------+----------|
      | prefix "V__" | variable |
      | prefix "M__" | macro    |
+   * exception:
+     use "zero" instead of "V__zero"
+     use "true" instead of "V__true"
 ** convention in cicada-nymph code
    * using dash to compose big word from small words
    * using "," as prefix and postfix separator
@@ -77,16 +80,19 @@
      except for bar-ket
      every bar-ket is viewed as a word
 ** syntax of cicada-nymph
-   | syntax          | semantic              |
-   |-----------------+-----------------------|
-   | borderfix "* *" | variable              |
-   | borderfix "+ +" | [maybe use]           |
-   | bar-ket ( )     |                       |
-   | bar-ket [ ]     |                       |
-   | bar-ket { }     | macro call            |
-   |                 | (for macros of which  |
-   |                 | the number of         |
-   |                 | arguments is not fix) |
+   * syntax &  semantic
+     | syntax          | semantic              |
+     |-----------------+-----------------------|
+     | borderfix "* *" | variable              |
+     | borderfix "+ +" | [maybe use]           |
+     | bar-ket ( )     |                       |
+     | bar-ket [ ]     |                       |
+     | bar-ket { }     | macro call            |
+     |                 | (for macros of which  |
+     |                 | the number of         |
+     |                 | arguments is not fix) |
+   * exception:
+     use true
 * -----------------------------------
 * prolog
 ** include linux header
@@ -167,7 +173,7 @@
 ** exit
    * this makes 0 a very special jo
      one important effect is that
-     xx V__zero
+     xx literal, 0
      is not allowed
    #+begin_src fasm :tangle cicada-nymph.fasm
    exit = 0
@@ -684,7 +690,7 @@
      so 0 should not be used with any special primitive function
 ** literal
    * note that
-     xx V__zero
+     xx literal, 0
      is not allowed
      for 0 is used as "exit"
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -779,16 +785,22 @@
       next
    #+end_src
 * bool
-** note predicate
-   * predicates do NOT consume their arguments in argument_stack
-     instead they push a bool into argument_stack
-** *true* & *false*
+** false & true
+   * they are defined as function
+     and viewed as constant
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*true*", V__true
-      xx 1
+   define_primitive_function "false", false
+      ;; (* -- false *)
+      xor rax, rax
+      push_argument_stack rax
+      next
 
-   define_variable "*false*", V__false
-      xx 0
+   define_primitive_function "true", true
+      ;; (* -- true *)
+      xor rax, rax
+      inc rax
+      push_argument_stack rax
+      next
    #+end_src
 ** bitwise operations
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -816,10 +828,22 @@
       next
    #+end_src
 * fixnum
-** *zero*
+** zero & one
+   * they are defined as function
+     and viewed as constant
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*zero*", V__zero
-      xx 0
+   define_primitive_function "zero", zero
+      ;; (* -- 0 *)
+      xor rax, rax
+      push_argument_stack rax
+      next
+
+   define_primitive_function "one", one
+      ;; (* -- 1 *)
+      xor rax, rax
+      inc rax
+      push_argument_stack rax
+      next
    #+end_src
 ** add & sub & mul & div & mod & negate & power
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -932,7 +956,7 @@
 
    define_function "negate", negate
       ;; (* n --  -n *)
-      xx V__zero
+      xx zero
       xx swap, subtraction
       xx exit
 
@@ -960,8 +984,8 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "equal?", equal?
       ;; (* a, b -- a, b, true of false *)
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rbx, rax
       sete  al
       movzx rax, al
@@ -969,8 +993,8 @@
       next
 
    define_primitive_function "not-equal?", not_equal?
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rbx, rax
       setne al
       movzx rax, al
@@ -978,8 +1002,8 @@
       next
 
    define_primitive_function "less-than?", less_than?
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rax, rbx
       setl  al
       movzx rax, al
@@ -987,8 +1011,8 @@
       next
 
    define_primitive_function "greater-than?", greater_than?
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rax, rbx
       setg  al
       movzx rax, al
@@ -996,8 +1020,8 @@
       next
 
    define_primitive_function "less-or-equal?", less_or_equal?
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rax, rbx
       setle al
       movzx rax, al
@@ -1005,8 +1029,8 @@
       next
 
    define_primitive_function "greater-or-equal?", greater_or_equal?
-      mov rbx, [pointer$argument_stack - (1 * bead_size)]
-      mov rax, [pointer$argument_stack - (2 * bead_size)]
+      pop_argument_stack rbx
+      pop_argument_stack rax
       cmp   rax, rbx
       setge al
       movzx rax, al
@@ -1014,7 +1038,7 @@
       next
 
    define_primitive_function "zero?", zero?
-      mov rax, [pointer$argument_stack - (1 * bead_size)]
+      pop_argument_stack rax
       test  rax,rax
       setz  al
       movzx rax, al
@@ -1022,7 +1046,7 @@
       next
 
    define_primitive_function "one?", one?
-      mov rax, [pointer$argument_stack - (1 * bead_size)]
+      pop_argument_stack rax
       dec   rax
       test  rax,rax
       setz  al
@@ -1031,7 +1055,7 @@
       next
 
    define_primitive_function "not-zero?", not_zero?
-      mov rax, [pointer$argument_stack - (1 * bead_size)]
+      pop_argument_stack rax
       test  rax,rax
       setnz al
       movzx rax, al
@@ -1236,21 +1260,52 @@
    * if it detects that stdin has closed
      it exits the program
      which is why when you hit C-d the system exits
+   * add the teature to unread one ket-char
    #+begin_src fasm :tangle cicada-nymph.fasm
+   flag$unreaded_ket_char:
+      xx 0
+
+   char$unreaded_ket_char:
+      xx 0
+
+   define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+      ;; (* -- bool *)
+      xx literal, flag$unreaded_ket_char, fetch
+      xx exit
+
+   define_function "unread-ket-char", unread_ket_char
+      ;; (* char -- *)
+      xx literal, char$unreaded_ket_char, save
+      xx true, literal, flag$unreaded_ket_char, save
+      xx exit
+
+
+   ;; help__read_byte is the old do function without unread ket-char
+   define_function "read-byte", read_byte
+      ;; (* -- byte *)
+      xx have_unreaded_ket_char?, false?branch, 9
+      xx   literal, char$unreaded_ket_char, fetch_byte
+      xx   zero, literal, flag$unreaded_ket_char, save
+      xx   exit
+      xx help__read_byte
+      xx exit
+
+
+
    cursor$read_byte:
       xx 0
 
    border$read_byte:
       xx 0
 
-   define_primitive_function "read-byte", read_byte
+   define_primitive_function "help,read-byte", help__read_byte
       ;; (* -- byte *)
-      call help__read_byte
+      call help__help__read_byte
       push_argument_stack rax
       next
 
 
-   help__read_byte:
+   help__help__read_byte:
       mov rbx, [cursor$read_byte]
       cmp rbx, [border$read_byte]
       ;; [cursor$read_byte] <  [border$read_byte]
@@ -1277,7 +1332,7 @@
 
       ;; update [border$read_byte]
       add [border$read_byte], rax
-      jmp help__read_byte
+      jmp help__help__read_byte
 
 
    .we_still_have_buffered_byte:
@@ -1298,6 +1353,9 @@
    #+end_src
 ** ----------------------------------
 ** note word
+   * words are separated by spaces
+   * a bar-ket is a word
+     even when there are no spaces around it
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    max_word_length = 1024
@@ -1308,77 +1366,76 @@
    buffer$read_word_for_REPL labeling
       preserve max_word_length
    #+end_src
-** read_first_non_blank_char & read_non_blank_char
+** read-word-begin-char
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "read-first-non-blank-char", read_first_non_blank_char
+   define_function "read-word-begin-char", read_word_begin_char
       ;; (* -- non-blank-char *)
-      xx read_byte, literal, 32 ;; ascii.space
-      xx greater_than?, false?branch, 3
-      xx   drop
+      xx read_byte
+      xx dup, literal, 32 ;; ascii.space
+      xx greater_than?, false?branch, 2
       xx   exit
-      xx drop2
-      xx read_first_non_blank_char
+      xx drop
+      xx read_word_begin_char
+      xx exit
+   #+end_src
+** read-word->buffer
+   1. skip any blank (spaces tab newline)
+   2. call read_char to read characters into buffer
+      until it hits a blank
+   3. return the address of buffer and length to argument_stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "read-word->buffer", read_word_to_buffer
+      ;; (* buffer -- word[address, length] *)
+      xx read_word_begin_char
+      ;; no metter what the begin char is
+      ;; save it into buffer
+      xx dup2, swap, save_byte
+      xx swap, add1, swap
+      xx one, swap ;; leave length counter
+      ;; (* cursor[address in buffer], counter, begin char *)
+      xx dup, bar_ket_char?, false?branch, 4
+      xx   drop
+      xx   help__read_word_to_buffer__bar_ket
+      xx   exit
+      ;; maybe add other type of chars
+      xx drop
+      xx help__read_word_to_buffer__regular
       xx exit
 
-   define_function "read-non-blank-char", read_non_blank_char
-      ;; (* -- non-blank-char or zero *)
-      xx read_byte, literal, 32 ;; ascii.space
-      xx greater_than?, false?branch, 3
-      xx   drop
+   define_function "help,read-word->buffer,bar-ket", help__read_word_to_buffer__bar_ket
+      ;; (* cursor[address in buffer], counter -- word[address, length] *)
+      xx tuck, subtraction, swap
+      xx exit
+
+   define_function "help,read-word->buffer,regular", help__read_word_to_buffer__regular
+      ;; (* cursor[address in buffer], counter -- word[address, length] *)
+      xx read_byte
+      xx dup, bar_ket_char?, false?branch, 6
+      xx   unread_ket_char
+      xx   tuck, subtraction, swap
       xx   exit
-      xx drop2
-      xx V__zero
+      xx dup, space_char?, false?branch, 6
+      xx   drop
+      xx   tuck, subtraction, swap
+      xx   exit
+      xx xoverxx, save_byte
+      xx add1
+      xx swap, add1, swap
+      xx help__read_word_to_buffer__regular
       xx exit
    #+end_src
 ** read-word
-   1. skip any blank (spaces tab newline)
-   2. call read_char to read characters into buffer&read_word
-      until it hits a blank
-   3. return the address of buffer&read_word
-      and length to argument_stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word", read_word
-      ;; (*  -- word[address, length] *)
-      xx V__zero ;; (* leave length counter *)
-      xx literal, buffer$read_word
-
-      xx read_first_non_blank_char
-      xx   over, save_byte, add1
-      xx   swap, add1, swap
-
-      xx read_non_blank_char, not_zero?, false?branch, 9
-      xx   over, save_byte, add1
-      xx   swap, add1, swap
-      xx   branch, -11
-
-      xx drop ;; zero
-      xx drop ;; buffer$read_word + counter
-
-      xx literal, buffer$read_word
-      xx swap
+      ;; (* -- word[address, length] *)
+      xx literal, buffer$read_word, read_word_to_buffer
       xx exit
    #+end_src
-** read_word_for_REPL
+** read-word-for-REPL
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word-for-REPL", read_word_for_REPL
-      ;; (*  -- word[address, length] *)
-      xx V__zero ;; (* leave length counter *)
-      xx literal, buffer$read_word_for_REPL
-
-      xx read_first_non_blank_char
-      xx   over, save_byte, add1
-      xx   swap, add1, swap
-
-      xx read_non_blank_char, not_zero?, false?branch, 9
-      xx   over, save_byte, add1
-      xx   swap, add1, swap
-      xx   branch, -11
-
-      xx drop ;; zero
-      xx drop ;; buffer$read_word_for_REPL + counter
-
-      xx literal, buffer$read_word_for_REPL
-      xx swap
+      ;; (* -- word[address, length] *)
+      xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx exit
    #+end_src
 ** ----------------------------------
@@ -1387,7 +1444,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "write-string", write_string
       ;; (* string[address, length] -- *)
-      xx zero?, false?branch, 3
+      xx dup, zero?, false?branch, 3
       xx   drop2
       xx   exit
       xx sub1, swap
@@ -1397,12 +1454,108 @@
       xx exit
    #+end_src
 ** ----------------------------------
-* >< macro in cicada-nymph
-* >< basic-REPL
+* char
+** space-char?
+   * as for space-char
+     I only use two
+     ASCII 10 (newline)
+     ASCII 32 (space)
+   * I simply view number less-or-equal 32 as space-char
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "space-char?", space_char?
+      ;; (* char -- bool *)
+      xx literal, 32, less_or_equal?
+      xx exit
+   #+end_src
+** bar-ket-char?
+   * () [] {}
+     but not <>
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "bar-ket-char?", bar_ket_char?
+      ;; (* char -- bool *)
+      xx dup, literal, '(', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx dup, literal, ')', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx dup, literal, '[', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx dup, literal, ']', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx dup, literal, '{', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx dup, literal, '}', equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx drop, false
+      xx exit
+   #+end_src
+** digital-char?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "digital-char?", digital_char?
+      ;; (* char -- bool *)
+      xx dup, literal, '0', less_than?, false?branch, 4
+      xx   drop, false
+      xx   exit
+      xx dup, literal, '9', less_or_equal?, false?branch, 4
+      xx   drop, true
+      xx   exit
+      xx drop, false
+      xx exit
+   #+end_src
+** digital-char->number
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "digital-char->number", digital_char_to_number
+      ;; (* char -- the number it denotes *)
+      xx literal, '0', subtraction
+      xx exit
+   #+end_src
+* >< string
+** string-tail,char
+   #+begin_src fasm
+   define_function "string-tail,char", string_tail__char
+      xx sub1, swap
+      xx add1, swap
+      xx exit
+   #+end_src
+** digital-string?
+   #+begin_src fasm
+   define_function "digital-string?", digital_string?
+      ;; (* [address, length] -- [address, length], bool *)
+      xx dup2, help__digital_string?
+      xx exit
+
+   define_function "help,digital-string?", help__digital_string?
+      ;; (* [address, length] -- bool *)
+      xx zero?, false?branch, 4
+      xx   drop2, true
+      xx   exit
+      xx over, fetch_byte, digital_char?, false?branch, 5
+      xx   drop
+      xx   string_tail__char
+      xx   help__digital_string?
+      xx   exit
+      xx drop, drop2
+      xx false
+      xx exit
+   #+end_src
+** integer-string?
+   #+begin_src fasm
+   define_function "digital-string?", digital_string?
+      ;; (* [address, length] -- [address, length], bool *)
+      xx dup2, help__digital_string?
+      xx exit
+   #+end_src
 ** string->integer
    #+begin_src fasm
    define_function "string->integer", string_to_integer
+      xx
    #+end_src
+* >< basic-REPL
 ** find-word
    #+begin_src fasm
    define_function "find-word", find_word
@@ -1432,6 +1585,7 @@
       xx basic_REPL
       xx exit
    #+end_src
+* >< macro in cicada-nymph
 * >< function jojo
 ** define
    * as a macro
@@ -1484,7 +1638,7 @@
      ;;;; write_byte
      ;; xx literal, 64, write_byte
      ;; xx literal, 10, write_byte
-     ;; xx V__zero
+     ;; xx zero
      ;; xx exit_with_TOS
      ;;;; @
 
@@ -1507,34 +1661,34 @@
      ;; xx V__false, false?branch, 9
      ;; xx   literal, 64, write_byte
      ;; xx   literal, 10, write_byte
-     ;; xx   V__zero
+     ;; xx   zero
      ;; xx   exit_with_TOS
      ;; xx V__true, false?branch, 9
      ;; xx   literal, 65, write_byte
      ;; xx   literal, 10, write_byte
-     ;; xx   V__zero
+     ;; xx   zero
      ;; xx   exit_with_TOS
-     ;; xx V__zero
+     ;; xx zero
      ;; xx exit_with_TOS
      ;;;; A
 
      ;;;; read_word & write_string
-     ;; xx read_word, write_string
-     ;; xx literal, 10, write_byte
-     ;; xx read_word_for_REPL, write_string
-     ;; xx literal, 10, write_byte
-     ;; xx V__zero
-     ;; xx exit_with_TOS
+     xx read_word, write_string
+     xx literal, 10, write_byte
+     xx read_word_for_REPL, write_string
+     xx literal, 10, write_byte
+     xx zero
+     xx exit_with_TOS
      ;;;; read line
      ;;;; write first two words of the line
 
      ;;;; basic-REPL (without the ability to define function)
-     xx V__zero
+     xx zero
      xx exit_with_TOS
      ;;;; 1 2 +
 
      ;;;; basic-REPL (be able to define function)
-     xx V__zero
+     xx zero
      xx exit_with_TOS
      ;;;;
   #+end_src

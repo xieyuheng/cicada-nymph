@@ -522,11 +522,18 @@ help__false?branch__not_to_branch:
    push_return_stack rbx
 .meet_end:
    next
-define_variable "*true*", V__true
-   xx 1
+define_primitive_function "false", false
+   ;; (* -- false *)
+   xor rax, rax
+   push_argument_stack rax
+   next
 
-define_variable "*false*", V__false
-   xx 0
+define_primitive_function "true", true
+   ;; (* -- true *)
+   xor rax, rax
+   inc rax
+   push_argument_stack rax
+   next
 define_primitive_function "bitwise-and", bitwise_and
    ;; (* a, b -- a and b *)
    pop_argument_stack rbx
@@ -549,8 +556,18 @@ define_primitive_function "bitwise-invert", bitwise_invert
    ;; (* a -- invert a *)
    not qword [pointer$argument_stack - (1 * bead_size)]
    next
-define_variable "*zero*", V__zero
-   xx 0
+define_primitive_function "zero", zero
+   ;; (* -- 0 *)
+   xor rax, rax
+   push_argument_stack rax
+   next
+
+define_primitive_function "one", one
+   ;; (* -- 1 *)
+   xor rax, rax
+   inc rax
+   push_argument_stack rax
+   next
 define_primitive_function "add1", add1
    ;; (* n -- n+1 *)
    inc qword [pointer$argument_stack - (1 * bead_size)]
@@ -660,7 +677,7 @@ define_function "mod", modulo
 
 define_function "negate", negate
    ;; (* n --  -n *)
-   xx V__zero
+   xx zero
    xx swap, subtraction
    xx exit
 
@@ -685,8 +702,8 @@ define_function "negate", negate
 ;;    xx exit
 define_primitive_function "equal?", equal?
    ;; (* a, b -- a, b, true of false *)
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rbx, rax
    sete  al
    movzx rax, al
@@ -694,8 +711,8 @@ define_primitive_function "equal?", equal?
    next
 
 define_primitive_function "not-equal?", not_equal?
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rbx, rax
    setne al
    movzx rax, al
@@ -703,8 +720,8 @@ define_primitive_function "not-equal?", not_equal?
    next
 
 define_primitive_function "less-than?", less_than?
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rax, rbx
    setl  al
    movzx rax, al
@@ -712,8 +729,8 @@ define_primitive_function "less-than?", less_than?
    next
 
 define_primitive_function "greater-than?", greater_than?
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rax, rbx
    setg  al
    movzx rax, al
@@ -721,8 +738,8 @@ define_primitive_function "greater-than?", greater_than?
    next
 
 define_primitive_function "less-or-equal?", less_or_equal?
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rax, rbx
    setle al
    movzx rax, al
@@ -730,8 +747,8 @@ define_primitive_function "less-or-equal?", less_or_equal?
    next
 
 define_primitive_function "greater-or-equal?", greater_or_equal?
-   mov rbx, [pointer$argument_stack - (1 * bead_size)]
-   mov rax, [pointer$argument_stack - (2 * bead_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
    cmp   rax, rbx
    setge al
    movzx rax, al
@@ -739,7 +756,7 @@ define_primitive_function "greater-or-equal?", greater_or_equal?
    next
 
 define_primitive_function "zero?", zero?
-   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   pop_argument_stack rax
    test  rax,rax
    setz  al
    movzx rax, al
@@ -747,7 +764,7 @@ define_primitive_function "zero?", zero?
    next
 
 define_primitive_function "one?", one?
-   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   pop_argument_stack rax
    dec   rax
    test  rax,rax
    setz  al
@@ -756,7 +773,7 @@ define_primitive_function "one?", one?
    next
 
 define_primitive_function "not-zero?", not_zero?
-   mov rax, [pointer$argument_stack - (1 * bead_size)]
+   pop_argument_stack rax
    test  rax,rax
    setnz al
    movzx rax, al
@@ -943,20 +960,50 @@ define_primitive_function "write-byte", write_byte
    mov sys_n_rax, syscall_write
    syscall
    next
+flag$unreaded_ket_char:
+   xx 0
+
+char$unreaded_ket_char:
+   xx 0
+
+define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+   ;; (* -- bool *)
+   xx literal, flag$unreaded_ket_char, fetch
+   xx exit
+
+define_function "unread-ket-char", unread_ket_char
+   ;; (* char -- *)
+   xx literal, char$unreaded_ket_char, save
+   xx true, literal, flag$unreaded_ket_char, save
+   xx exit
+
+
+;; help__read_byte is the old do function without unread ket-char
+define_function "read-byte", read_byte
+   ;; (* -- byte *)
+   xx have_unreaded_ket_char?, false?branch, 9
+   xx   literal, char$unreaded_ket_char, fetch_byte
+   xx   zero, literal, flag$unreaded_ket_char, save
+   xx   exit
+   xx help__read_byte
+   xx exit
+
+
+
 cursor$read_byte:
    xx 0
 
 border$read_byte:
    xx 0
 
-define_primitive_function "read-byte", read_byte
+define_primitive_function "help,read-byte", help__read_byte
    ;; (* -- byte *)
-   call help__read_byte
+   call help__help__read_byte
    push_argument_stack rax
    next
 
 
-help__read_byte:
+help__help__read_byte:
    mov rbx, [cursor$read_byte]
    cmp rbx, [border$read_byte]
    ;; [cursor$read_byte] <  [border$read_byte]
@@ -983,7 +1030,7 @@ help__read_byte:
 
    ;; update [border$read_byte]
    add [border$read_byte], rax
-   jmp help__read_byte
+   jmp help__help__read_byte
 
 
 .we_still_have_buffered_byte:
@@ -1008,74 +1055,111 @@ buffer$read_word labeling
 
 buffer$read_word_for_REPL labeling
    preserve max_word_length
-define_function "read-first-non-blank-char", read_first_non_blank_char
+define_function "read-word-begin-char", read_word_begin_char
    ;; (* -- non-blank-char *)
-   xx read_byte, literal, 32 ;; ascii.space
-   xx greater_than?, false?branch, 3
-   xx   drop
+   xx read_byte
+   xx dup, literal, 32 ;; ascii.space
+   xx greater_than?, false?branch, 2
    xx   exit
-   xx drop2
-   xx read_first_non_blank_char
+   xx drop
+   xx read_word_begin_char
+   xx exit
+define_function "read-word->buffer", read_word_to_buffer
+   ;; (* buffer -- word[address, length] *)
+   xx read_word_begin_char
+   ;; no metter what the begin char is
+   ;; save it into buffer
+   xx dup2, swap, save_byte
+   xx swap, add1, swap
+   xx one, swap ;; leave length counter
+   ;; (* cursor[address in buffer], counter, begin char *)
+   xx dup, bar_ket_char?, false?branch, 4
+   xx   drop
+   xx   help__read_word_to_buffer__bar_ket
+   xx   exit
+   ;; maybe add other type of chars
+   xx drop
+   xx help__read_word_to_buffer__regular
    xx exit
 
-define_function "read-non-blank-char", read_non_blank_char
-   ;; (* -- non-blank-char or zero *)
-   xx read_byte, literal, 32 ;; ascii.space
-   xx greater_than?, false?branch, 3
-   xx   drop
+define_function "help,read-word->buffer,bar-ket", help__read_word_to_buffer__bar_ket
+   ;; (* cursor[address in buffer], counter -- word[address, length] *)
+   xx tuck, subtraction, swap
+   xx exit
+
+define_function "help,read-word->buffer,regular", help__read_word_to_buffer__regular
+   ;; (* cursor[address in buffer], counter -- word[address, length] *)
+   xx read_byte
+   xx dup, bar_ket_char?, false?branch, 6
+   xx   unread_ket_char
+   xx   tuck, subtraction, swap
    xx   exit
-   xx drop2
-   xx V__zero
+   xx dup, space_char?, false?branch, 6
+   xx   drop
+   xx   tuck, subtraction, swap
+   xx   exit
+   xx xoverxx, save_byte
+   xx add1
+   xx swap, add1, swap
+   xx help__read_word_to_buffer__regular
    xx exit
 define_function "read-word", read_word
-   ;; (*  -- word[address, length] *)
-   xx V__zero ;; (* leave length counter *)
-   xx literal, buffer$read_word
-
-   xx read_first_non_blank_char
-   xx   over, save_byte, add1
-   xx   swap, add1, swap
-
-   xx read_non_blank_char, not_zero?, false?branch, 9
-   xx   over, save_byte, add1
-   xx   swap, add1, swap
-   xx   branch, -11
-
-   xx drop ;; zero
-   xx drop ;; buffer$read_word + counter
-
-   xx literal, buffer$read_word
-   xx swap
+   ;; (* -- word[address, length] *)
+   xx literal, buffer$read_word, read_word_to_buffer
    xx exit
 define_function "read-word-for-REPL", read_word_for_REPL
-   ;; (*  -- word[address, length] *)
-   xx V__zero ;; (* leave length counter *)
-   xx literal, buffer$read_word_for_REPL
-
-   xx read_first_non_blank_char
-   xx   over, save_byte, add1
-   xx   swap, add1, swap
-
-   xx read_non_blank_char, not_zero?, false?branch, 9
-   xx   over, save_byte, add1
-   xx   swap, add1, swap
-   xx   branch, -11
-
-   xx drop ;; zero
-   xx drop ;; buffer$read_word_for_REPL + counter
-
-   xx literal, buffer$read_word_for_REPL
-   xx swap
+   ;; (* -- word[address, length] *)
+   xx literal, buffer$read_word_for_REPL, read_word_to_buffer
    xx exit
 define_function "write-string", write_string
    ;; (* string[address, length] -- *)
-   xx zero?, false?branch, 3
+   xx dup, zero?, false?branch, 3
    xx   drop2
    xx   exit
    xx sub1, swap
    xx dup, fetch_byte, write_byte
    xx add1, swap
    xx write_string
+   xx exit
+define_function "space-char?", space_char?
+   ;; (* char -- bool *)
+   xx literal, 32, less_or_equal?
+   xx exit
+define_function "bar-ket-char?", bar_ket_char?
+   ;; (* char -- bool *)
+   xx dup, literal, '(', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx dup, literal, ')', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx dup, literal, '[', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx dup, literal, ']', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx dup, literal, '{', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx dup, literal, '}', equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx drop, false
+   xx exit
+define_function "digital-char?", digital_char?
+   ;; (* char -- bool *)
+   xx dup, literal, '0', less_than?, false?branch, 4
+   xx   drop, false
+   xx   exit
+   xx dup, literal, '9', less_or_equal?, false?branch, 4
+   xx   drop, true
+   xx   exit
+   xx drop, false
+   xx exit
+define_function "digital-char->number", digital_char_to_number
+   ;; (* char -- the number it denotes *)
+   xx literal, '0', subtraction
    xx exit
 define_primitive_function "", exit_with_TOS
    pop_argument_stack sys_1_rdi
@@ -1108,7 +1192,7 @@ define_function "little_test", little_test
    ;;;; write_byte
    ;; xx literal, 64, write_byte
    ;; xx literal, 10, write_byte
-   ;; xx V__zero
+   ;; xx zero
    ;; xx exit_with_TOS
    ;;;; @
 
@@ -1131,34 +1215,34 @@ define_function "little_test", little_test
    ;; xx V__false, false?branch, 9
    ;; xx   literal, 64, write_byte
    ;; xx   literal, 10, write_byte
-   ;; xx   V__zero
+   ;; xx   zero
    ;; xx   exit_with_TOS
    ;; xx V__true, false?branch, 9
    ;; xx   literal, 65, write_byte
    ;; xx   literal, 10, write_byte
-   ;; xx   V__zero
+   ;; xx   zero
    ;; xx   exit_with_TOS
-   ;; xx V__zero
+   ;; xx zero
    ;; xx exit_with_TOS
    ;;;; A
 
    ;;;; read_word & write_string
-   ;; xx read_word, write_string
-   ;; xx literal, 10, write_byte
-   ;; xx read_word_for_REPL, write_string
-   ;; xx literal, 10, write_byte
-   ;; xx V__zero
-   ;; xx exit_with_TOS
+   xx read_word, write_string
+   xx literal, 10, write_byte
+   xx read_word_for_REPL, write_string
+   xx literal, 10, write_byte
+   xx zero
+   xx exit_with_TOS
    ;;;; read line
    ;;;; write first two words of the line
 
    ;;;; basic-REPL (without the ability to define function)
-   xx V__zero
+   xx zero
    xx exit_with_TOS
    ;;;; 1 2 +
 
    ;;;; basic-REPL (be able to define function)
-   xx V__zero
+   xx zero
    xx exit_with_TOS
    ;;;;
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
