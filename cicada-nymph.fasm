@@ -1,4 +1,4 @@
-include "../include/linux-header.inc"
+include "include/linux-header.inc"
 format elf64 executable 3
 entry begin_to_interpret_threaded_code
 segment readable executable writeable

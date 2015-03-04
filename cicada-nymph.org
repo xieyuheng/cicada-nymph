@@ -1,4 +1,4 @@
-#+TITLE:  1st-instar of cicada-nymph
+#+TITLE:  cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
@@ -90,28 +90,28 @@
 * -----------------------------------
 * prolog
 ** include linux header
-   #+begin_src fasm :tangle 1st-instar.fasm
-   include "../include/linux-header.inc"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   include "include/linux-header.inc"
    #+end_src
 ** format header
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    format elf64 executable 3
    #+end_src
 ** entry
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    entry begin_to_interpret_threaded_code
    segment readable executable writeable
    #+end_src
 * -----------------------------------
 * macro in assembly code
 ** misc
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    ;; in fasm, "dup" is a reserved word
    dup equ duplicate
    #+end_src
 ** bead_size
    * 64-bits
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    bead_size = 8 ;; (byte)
    xx equ dq
    #+end_src
@@ -126,7 +126,7 @@
    * note that another style is that
      under the stack-pointer
      there always stores the value of the-top-of-the-stack
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    ;; if you want to extend cicada in assembly,
    ;; the following registers must not be used
    ;; =================================
@@ -154,14 +154,14 @@
    #+end_src
 ** memory allocation in un_initialized_memory
    * implemented as a memory map
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    current_free_address$un_initialized_memory = address$un_initialized_memory
 
    labeling  equ = current_free_address$un_initialized_memory
    preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
    #+end_src
 ** current_free_address$primitive_string_heap
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    current_free_address$primitive_string_heap = address$primitive_string_heap
    #+end_src
 ** exit
@@ -169,11 +169,11 @@
      one important effect is that
      xx V__zero
      is not allowed
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    exit = 0
    #+end_src
 ** next
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro next {
       ;; 1. 移動 return_stack 中的第一串珠珠一次
       ;; 2. 如果 遇到珠珠的末尾
@@ -198,7 +198,7 @@
       }
    #+end_src
 ** link
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    ;; initial link to point to 0 (as null)
    link = 0
    #+end_src
@@ -206,7 +206,7 @@
    * 2 bytes for length of name_string
    * note that
      the following is using local label
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro make_name_string string {
 
    virtual at 0
@@ -232,7 +232,7 @@
    }
    #+end_src
 ** define_function
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_function string, jo {
 
    define_function__#jo:
@@ -254,7 +254,7 @@
       }
    #+end_src
 ** define_macro
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_macro string, jo {
 
    define_macro__#jo:
@@ -276,7 +276,7 @@
       }
    #+end_src
 ** define_primitive_function
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_primitive_function string, jo {
 
    define_primitive_function__#jo:
@@ -305,7 +305,7 @@
      it push the value of the variable to argument_stack
    * when wish to change a variable's value
      use key_word "address" to get the address of the variable
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_variable string, jo {
 
    define_variable__#jo:
@@ -329,7 +329,7 @@
    #+end_src
 * -----------------------------------
 * primitive_string_heap
-  #+begin_src fasm :tangle 1st-instar.fasm
+  #+begin_src fasm :tangle cicada-nymph.fasm
   size$primitive_string_heap = 100 * 1024 ;; (byte)
 
   address$primitive_string_heap:
@@ -351,7 +351,7 @@
    * a jojo can not be of size 0 or 1
    * use rax as an argument
      which stores a jo
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    explain$function:
       add rax, bead_size
       push_return_stack rax
@@ -362,14 +362,14 @@
      we need to redefine it
      for the value of explainer
      is used to decide the type of the jo
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    explain$macro:
       add rax, bead_size
       push_return_stack rax
       next
    #+end_src
 ** explain$variable
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    explain$variable:
       add rax, bead_size
       mov rbx, [rax]
@@ -377,7 +377,7 @@
       next
    #+end_src
 * begin_to_interpret_threaded_code
-  #+begin_src fasm :tangle 1st-instar.fasm
+  #+begin_src fasm :tangle cicada-nymph.fasm
   begin_to_interpret_threaded_code:
 
      cld ;; set DF = 0, then rsi and rdi are incremented
@@ -394,12 +394,12 @@
   #+end_src
 * argument_stack
 ** memory allocation
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    address$argument_stack labeling
       preserve 1024 * 1024 * bead_size
    #+end_src
 ** drop
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "drop", drop
       ;; (* a -- *)
       pop_argument_stack rax
@@ -412,7 +412,7 @@
       next
    #+end_src
 ** dup
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "dup", dup
       ;; (* a -- a a *)
       mov  rax, [pointer$argument_stack - (1 * bead_size)]
@@ -428,7 +428,7 @@
       next
    #+end_src
 ** over
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "over", over
       ;; (* a b -- a b | a *)
       mov  rax, [pointer$argument_stack - (2 * bead_size)]
@@ -472,7 +472,7 @@
       next
    #+end_src
 ** tuck
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "tuck", tuck
       ;; (* a b -- b | a b *)
       pop_argument_stack rbx
@@ -533,7 +533,7 @@
       next
    #+end_src
 ** swap
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "swap", swap
       ;; (* a b -- b a *)
       pop_argument_stack rbx
@@ -662,7 +662,7 @@
    #+end_src
 * return_stack
 ** memory allocation
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    address$return_stack labeling
       preserve 1024 * 1024 * bead_size
    #+end_src
@@ -687,7 +687,7 @@
      xx V__zero
      is not allowed
      for 0 is used as "exit"
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*literal*", V__literal
       xx literal
 
@@ -708,7 +708,7 @@
       next
    #+end_src
 ** address
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*address*", V__address
       xx address
 
@@ -734,7 +734,7 @@
       next
    #+end_src
 ** branch
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "", branch
       pop_return_stack rbx
       mov rax, [rbx]
@@ -749,7 +749,7 @@
       next
    #+end_src
 ** false?branch
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "", false?branch
       ;; (* true of false -- *)
       pop_argument_stack rax
@@ -783,7 +783,7 @@
    * predicates do NOT consume their arguments in argument_stack
      instead they push a bool into argument_stack
 ** *true* & *false*
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*true*", V__true
       xx 1
 
@@ -791,7 +791,7 @@
       xx 0
    #+end_src
 ** bitwise operations
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bitwise-and", bitwise_and
       ;; (* a, b -- a and b *)
       pop_argument_stack rbx
@@ -817,12 +817,12 @@
    #+end_src
 * fixnum
 ** *zero*
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*zero*", V__zero
       xx 0
    #+end_src
 ** add & sub & mul & div & mod & negate & power
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "add1", add1
       ;; (* n -- n+1 *)
       inc qword [pointer$argument_stack - (1 * bead_size)]
@@ -957,7 +957,7 @@
    ;;    xx exit
    #+end_src
 ** predicate
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "equal?", equal?
       ;; (* a, b -- a, b, true of false *)
       mov rbx, [pointer$argument_stack - (1 * bead_size)]
@@ -1039,7 +1039,7 @@
       next
    #+end_src
 * memory
-  #+begin_src fasm :tangle 1st-instar.fasm
+  #+begin_src fasm :tangle cicada-nymph.fasm
   ;; "save" and "fetch" default to a bead_size
   ;; the rule of "fetch2" and so on are:
   ;;   in memory:
@@ -1206,14 +1206,14 @@
 ** ----------------------------------
 ** note byte
 ** memory allocation
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    max_input_length = 1024 * 1024
 
    buffer$read_byte labeling
       preserve max_input_length
    #+end_src
 ** write-byte
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    buffer$write_char:
       db 0
 
@@ -1236,7 +1236,7 @@
    * if it detects that stdin has closed
      it exits the program
      which is why when you hit C-d the system exits
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    cursor$read_byte:
       xx 0
 
@@ -1299,7 +1299,7 @@
 ** ----------------------------------
 ** note word
 ** memory allocation
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    max_word_length = 1024
 
    buffer$read_word labeling
@@ -1309,7 +1309,7 @@
       preserve max_word_length
    #+end_src
 ** read_first_non_blank_char & read_non_blank_char
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-first-non-blank-char", read_first_non_blank_char
       ;; (* -- non-blank-char *)
       xx read_byte, literal, 32 ;; ascii.space
@@ -1336,7 +1336,7 @@
       until it hits a blank
    3. return the address of buffer&read_word
       and length to argument_stack
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word", read_word
       ;; (*  -- word[address, length] *)
       xx V__zero ;; (* leave length counter *)
@@ -1359,7 +1359,7 @@
       xx exit
    #+end_src
 ** read_word_for_REPL
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word-for-REPL", read_word_for_REPL
       ;; (*  -- word[address, length] *)
       xx V__zero ;; (* leave length counter *)
@@ -1384,7 +1384,7 @@
 ** ----------------------------------
 ** note string
 ** write-string
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "write-string", write_string
       ;; (* string[address, length] -- *)
       xx zero?, false?branch, 3
@@ -1452,7 +1452,7 @@
    #+end_src
 * -----------------------------------
 * little_test
-  #+begin_src fasm :tangle 1st-instar.fasm
+  #+begin_src fasm :tangle cicada-nymph.fasm
   define_primitive_function "", exit_with_TOS
      pop_argument_stack sys_1_rdi
      mov sys_n_rax, syscall_exit
@@ -1541,7 +1541,7 @@
 * -----------------------------------
 * epilog
 ** un_initialized_memory
-   #+begin_src fasm :tangle 1st-instar.fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
    segment readable writeable

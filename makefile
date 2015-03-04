@@ -1,5 +1,11 @@
 .ONESHELL:
 
+all:
+	@
+	echo "	 "                                    &&\
+	make linux                                    &&\
+	echo "	 "
+
 help:
 	@
 	echo -e " \E[33;1m                                                           \E[0m "
@@ -16,14 +22,9 @@ help:
 	echo -e " \E[33;1m							     \E[0m "
 	echo -e " \E[33;1m   I wish you happy making ^_^                             \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
-all:
-	@
-	echo "	 "                                    &&\
-	make linux                                    &&\
-	echo "	 "
 
 linux:
-	fasm -m 500000 1st-instar.fasm 1st-instar
+	fasm -m 500000 cicada-nymph.fasm cicada-nymph
 
 clean*~:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~  
