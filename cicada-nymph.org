@@ -52,6 +52,16 @@
    * the comment of the argument & return value of function
      is allowed to be written in free style normal comment
 * note syntax & semantic
+** naming convention
+   * a predicate of a type use that type as postfix
+     such as
+     "space-char?"
+   * note that
+     a predicate of a type denotes a subtype of that type
+   * a function of a type use that type as prefix
+     such as
+     "string-reverse"
+   * side-effect of structured data is postfixed by "!"
 ** compiler
    * a macro is a function to be called at compile time
      with a string to be compiled as one argument
@@ -802,6 +812,18 @@
       push_argument_stack rax
       next
    #+end_src
+** false? & true?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "false?", false?
+      ;; (* bool -- bool *)
+      xx false, equal?
+      xx exit
+
+   define_function "true?", true?
+      ;; (* bool -- bool *)
+      xx true, equal?
+      xx exit
+   #+end_src
 ** bitwise operations
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bitwise-and", bitwise_and
@@ -844,6 +866,18 @@
       inc rax
       push_argument_stack rax
       next
+   #+end_src
+** zero? & one?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "zero?", zero?
+      ;; (* bool -- bool *)
+      xx zero, equal?
+      xx exit
+
+   define_function "one?", one?
+      ;; (* bool -- bool *)
+      xx one, equal?
+      xx exit
    #+end_src
 ** add & sub & mul & div & mod & negate & power
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -960,25 +994,25 @@
       xx swap, subtraction
       xx exit
 
-   ;; define_function "help:power", help_power
-   ;;    ;; (* a, m, n -- a^n *)
-   ;;    xx dup, zero?, _false?branch, 5
-   ;;    xx   drop, swap, drop
-   ;;    xx   exit
-   ;;    xx sub1
-   ;;    xx swap
-   ;;    xx   xoverxx, multiple
-   ;;    xx swap
-   ;;    xx help_power
-   ;;    xx exit
 
-   ;; define_function "power", power
-   ;;    ;; n must be naturl number for now
-   ;;    ;; (* a, n -- a^n *)
-   ;;    xx literal, 1
-   ;;    xx swap
-   ;;    xx help_power
-   ;;    xx exit
+   define_function "power", power
+      ;; n must be naturl number for now
+      ;; (* a, n -- a^n *)
+      xx literal, 1, swap ;; leave product
+      xx help__power
+      xx exit
+
+   define_function "help,power", help__power
+      ;; (* a, product, n -- a^n *)
+      xx dup, zero?, false?branch, 5
+      xx   drop, swap, drop
+      xx   exit
+      xx sub1
+      xx swap
+      xx   xoverxx, multiple
+      xx swap
+      xx help__power
+      xx exit
    #+end_src
 ** predicate
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1036,33 +1070,10 @@
       movzx rax, al
       push_argument_stack rax
       next
-
-   define_primitive_function "zero?", zero?
-      pop_argument_stack rax
-      test  rax,rax
-      setz  al
-      movzx rax, al
-      push_argument_stack rax
-      next
-
-   define_primitive_function "one?", one?
-      pop_argument_stack rax
-      dec   rax
-      test  rax,rax
-      setz  al
-      movzx rax, al
-      push_argument_stack rax
-      next
-
-   define_primitive_function "not-zero?", not_zero?
-      pop_argument_stack rax
-      test  rax,rax
-      setnz al
-      movzx rax, al
-      push_argument_stack rax
-      next
    #+end_src
 * memory
+  * although the following functions are all side-effect
+    but I use "save" instead of "save!"
   #+begin_src fasm :tangle cicada-nymph.fasm
   ;; "save" and "fetch" default to a bead_size
   ;; the rule of "fetch2" and so on are:
@@ -1216,14 +1227,6 @@
      pop_argument_stack rbx
      pop_argument_stack rax
      sub qword[rbx], rax
-     next
-
-  define_primitive_function "copy-byte-string", copy_byte_string
-     ;; ( source address, destination address, length -- )
-     pop_argument_stack rcx
-     pop_argument_stack rdi
-     pop_argument_stack rsi
-     rep movsb
      next
   #+end_src
 * io
@@ -1514,46 +1517,133 @@
       xx literal, '0', subtraction
       xx exit
    #+end_src
-* >< string
-** string-tail,char
-   #+begin_src fasm
+* string
+** string-[head|tail],char
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-head,char", string_head__char
+      ;; (* string[address, length] -- char *)
+      xx drop, fetch_byte
+      xx exit
+
    define_function "string-tail,char", string_tail__char
+      ;; (* string[address, length] -- [address + 1, length + 1] *)
       xx sub1, swap
       xx add1, swap
       xx exit
    #+end_src
-** digital-string?
-   #+begin_src fasm
-   define_function "digital-string?", digital_string?
-      ;; (* [address, length] -- [address, length], bool *)
-      xx dup2, help__digital_string?
-      xx exit
+** string->buffer!
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "string->buffer!", string_to_buffer!
+      ;; ( string[address, length], buffer[address] -- )
+      pop_argument_stack rdi ;; destination
+      pop_argument_stack rcx ;; counter
+      pop_argument_stack rsi ;; source
+      rep movsb
+      next
+   #+end_src
+** string-reverse!
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   buffer$string_reverse! labeling
+      preserve 1024
 
-   define_function "help,digital-string?", help__digital_string?
+
+   define_primitive_function "string-reverse!", string_reverse!
+      ;; (* string[address, length] -- string[address, length] *)
+      mov rdi, buffer$string_reverse!
+      mov rcx, [pointer$argument_stack - (1 * bead_size)]
+      mov rsi, [pointer$argument_stack - (2 * bead_size)]
+      rep movsb
+
+      mov rcx, [pointer$argument_stack - (1 * bead_size)]
+      dec rdi ;; cursor back into string in buffer$string_reverse!
+      mov rsi, [pointer$argument_stack - (2 * bead_size)]
+   .loop:
+      mov al, byte [rdi]
+      mov byte [rsi], al
+      dec rdi
+      inc rsi
+      loop .loop
+
+      next
+   #+end_src
+** digital-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "digital-string?", digital_string?
       ;; (* [address, length] -- bool *)
-      xx zero?, false?branch, 4
+      xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   exit
-      xx over, fetch_byte, digital_char?, false?branch, 5
-      xx   drop
+      xx over, fetch_byte, digital_char?, false?branch, 4
       xx   string_tail__char
-      xx   help__digital_string?
+      xx   digital_string?
       xx   exit
-      xx drop, drop2
-      xx false
+      xx drop2, false
       xx exit
    #+end_src
 ** integer-string?
-   #+begin_src fasm
-   define_function "digital-string?", digital_string?
-      ;; (* [address, length] -- [address, length], bool *)
-      xx dup2, help__digital_string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "integer-string?", integer_string?
+      ;; (* [address, length] -- bool *)
+      xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   exit
+      xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
+      xx   string_tail__char, digital_string?
+      xx   exit
+      xx drop2, false
       xx exit
    #+end_src
 ** string->integer
-   #+begin_src fasm
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string->integer", string_to_integer
-      xx
+      ;; (* string[address, length] -- integer *)
+      xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
+      xx   digital_string_to_integer
+      xx   exit
+      xx string_tail__char
+      xx digital_string_to_integer, negate
+      xx exit
+
+
+   sum$digital_string_to_integer:
+      xx 0
+
+   counter$digital_string_to_integer:
+      xx 0
+
+   define_function "digital-string->integer", digital_string_to_integer
+      ;; (* string[address, length] -- integer *)
+      xx zero, literal, sum$digital_string_to_integer, save
+      xx zero, literal, counter$digital_string_to_integer, save
+
+      xx dup2, string_reverse!
+      xx   help__digital_string_to_integer
+      xx string_reverse!, drop2
+
+      xx literal, sum$digital_string_to_integer, fetch
+      xx exit
+
+   define_function "help,digital-string->integer", help__digital_string_to_integer
+      ;; (* reversed-string[address, length] -- *)
+      xx dup, zero?, false?branch, 3
+      xx   drop2
+      xx   exit
+
+      xx dup2, string_head__char, digital_char_to_number
+      xx   literal, 10
+      xx   literal, counter$digital_string_to_integer, fetch
+      xx     one
+      xx     literal, counter$digital_string_to_integer
+      xx     add_save
+      xx   power
+      xx multiple
+
+      xx literal, sum$digital_string_to_integer
+      xx add_save
+
+      xx string_tail__char
+      xx help__digital_string_to_integer
+      xx exit
    #+end_src
 * >< basic-REPL
 ** find-word
@@ -1673,14 +1763,19 @@
      ;;;; A
 
      ;;;; read_word & write_string
-     xx read_word, write_string
-     xx literal, 10, write_byte
-     xx read_word_for_REPL, write_string
-     xx literal, 10, write_byte
-     xx zero
-     xx exit_with_TOS
+     ;; xx read_word, write_string
+     ;; xx literal, 10, write_byte
+     ;; xx read_word_for_REPL, write_string
+     ;; xx literal, 10, write_byte
+     ;; xx zero
+     ;; xx exit_with_TOS
      ;;;; read line
      ;;;; write first two words of the line
+
+     ;;;; string->integer
+     xx read_word, string_to_integer
+     xx exit_with_TOS
+     ;;;; 
 
      ;;;; basic-REPL (without the ability to define function)
      xx zero
