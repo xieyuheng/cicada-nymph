@@ -2083,6 +2083,7 @@
      the ; must NOT be readed
    * note that
      a bar-ket is readed as a word
+     but "<" & ">" are not viewed as bar-ket
    #+begin_src fasm :tangle cicada-nymph.fasm
    buffer$colon labeling
       preserve 1024 * 1024
@@ -2138,17 +2139,8 @@
       xx exit
    #+end_src
 ** ignore-comment
-   * this is one is for
-   * I have to implement comment again here
-     this one is for basic-REPL
-   * having to implement a function twice
-     is due to the difference between the interpreter and the compiler
-     the way I use to solve this problem
-     is to implement the REPL as read-compile-and-execute loop
-   * the only function I will implement twice in this simple example
-     is comment
-     other functions such as "if else then"
-     can only be used by compiler
+   * this function is for basic-REPL
+     but it is reused by colon
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "<<", ignore_comment
       ;; << -- >>
