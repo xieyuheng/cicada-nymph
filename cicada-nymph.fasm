@@ -66,7 +66,7 @@ virtual at 0
 .start$string:
    db string
 .end$string:
-   dd (.end$string - .start$string)
+   dw (.end$string - .start$string)
    load .length word from (.end$string)
 end virtual
 store word .length at (current_free_address$primitive_string_heap)
@@ -178,6 +178,42 @@ explain$variable:
    mov rbx, [rax]
    push_argument_stack rbx
    next
+define_primitive_function "execute-jo", execute_jo
+   ;; (* jo -- unknown *)
+   pop_argument_stack rax
+   jmp qword [rax]
+define_function "jo->name", jo_to_name
+   ;; (* jo -- string[address, length] *)
+   xx literal, bead_size, subtraction
+   xx literal, bead_size, subtraction
+   xx fetch
+   xx dup
+   xx   literal, 2, addition, swap
+   xx fetch_two_bytes
+   xx exit
+define_function "null-jo?", null_jo?
+   ;; (* jo -- bool *)
+   xx literal, bead_size, subtraction
+   xx fetch
+   xx zero?
+   xx exit
+define_function "jo->pre-jo", jo_to_pre_jo
+   ;; (* jo -- pre-jo *)
+   xx literal, bead_size, subtraction
+   xx fetch
+   xx literal, bead_size, addition
+   xx exit
+define_function "jo->type", jo_to_type
+   ;; (* jo -- type *)
+   xx dup
+
+   xx dup, fetch
+   xx swap, subtraction, literal, 8, equal?, false?branch, 4
+   xx   drop, zero
+   xx   exit
+
+   xx fetch
+   xx exit
 begin_to_interpret_threaded_code:
 
    cld ;; set DF = 0, then rsi and rdi are incremented
@@ -189,8 +225,12 @@ begin_to_interpret_threaded_code:
    push_return_stack rax
    next
 
+
 first_jojo:
-   xx little_test
+   xx basic_REPL
+
+   ;; xx little_test
+preserve 64 * bead_size
 address$argument_stack labeling
    preserve 1024 * 1024 * bead_size
 define_primitive_function "drop", drop
@@ -440,6 +480,7 @@ define_primitive_function "xxxx|swap|xx", xxxxswapxx
    push_argument_stack rcx
    push_argument_stack rdx
    next
+preserve 64 * bead_size
 address$return_stack labeling
    preserve 1024 * 1024 * bead_size
 define_variable "*literal*", V__literal
@@ -728,15 +769,6 @@ define_primitive_function "equal?", equal?
    push_argument_stack rax
    next
 
-define_primitive_function "not-equal?", not_equal?
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   cmp   rbx, rax
-   setne al
-   movzx rax, al
-   push_argument_stack rax
-   next
-
 define_primitive_function "less-than?", less_than?
    pop_argument_stack rbx
    pop_argument_stack rax
@@ -772,6 +804,15 @@ define_primitive_function "greater-or-equal?", greater_or_equal?
    movzx rax, al
    push_argument_stack rax
    next
+define_function "negative?", negative?
+   ;; (* integer -- bool *)
+   xx zero, less_than?
+   xx exit
+
+define_function "positive?", positive?
+   ;; (* integer -- bool *)
+   xx negative?, false?
+   xx exit
 ;; "save" and "fetch" default to a bead_size
 ;; the rule of "fetch2" and so on are:
 ;;   in memory:
@@ -929,7 +970,7 @@ max_input_length = 1024 * 1024
 
 buffer$read_byte labeling
    preserve max_input_length
-buffer$write_char:
+buffer$write_byte:
    db 0
 
 define_primitive_function "write-byte", write_byte
@@ -938,9 +979,9 @@ define_primitive_function "write-byte", write_byte
    pop_argument_stack rax
    ;; write can not just write the char in al to stdout
    ;; write needs the address of the byte to write
-   mov [buffer$write_char], al
+   mov [buffer$write_byte], al
    mov sys_3_rdx, 1                 ;; max length to be write
-   mov sys_2_rsi, buffer$write_char ;; address
+   mov sys_2_rsi, buffer$write_byte ;; address
    mov sys_1_rdi, 1                 ;; stdout
    mov sys_n_rax, syscall_write
    syscall
@@ -1106,6 +1147,64 @@ define_function "write-string", write_string
    xx add1, swap
    xx write_string
    xx exit
+;; 2 ^ 64 = 18446744073709551616
+;; which is of length 20
+;; so
+;; I use 32 to align to 16
+
+buffer$write_naturl_number labeling
+   preserve 32
+
+counter$write_naturl_number:
+   xx 0
+
+
+define_function "write-naturl-number", write_naturl_number
+   ;; (* naturl-number -- *)
+   xx zero
+   xx literal, counter$write_naturl_number, save
+
+   xx help__write_naturl_number
+
+   xx literal, buffer$write_naturl_number
+   xx literal, counter$write_naturl_number, fetch
+   xx write_string
+   xx exit
+
+
+define_function "help,write-naturl-number", help__write_naturl_number
+   ;; (* rest-number -- *)
+   xx literal, 10, divmod
+
+   xx decimal_digital_to_char
+   xx literal, buffer$write_naturl_number
+   xx literal, counter$write_naturl_number, fetch
+   xx addition
+   xx save_byte
+
+   xx one
+   xx literal, counter$write_naturl_number
+   xx add_save
+
+   xx dup, zero?, false?branch, 3
+   xx   drop
+   xx   exit
+   xx help__write_naturl_number
+   xx exit
+define_function ".", pretty_write_integer
+   ;; (* integer -- *)
+   xx write_integer
+   xx literal, 32, write_byte
+   xx exit
+
+define_function "write-integer", write_integer
+   ;; (* integer -- *)
+   xx dup, positive?, false?branch, 3
+   xx   write_naturl_number
+   xx   exit
+   xx literal, '-', write_byte
+   xx negate, write_naturl_number
+   xx exit
 define_function "space-char?", space_char?
    ;; (* char -- bool *)
    xx literal, 32, less_or_equal?
@@ -1132,7 +1231,7 @@ define_function "bar-ket-char?", bar_ket_char?
    xx   exit
    xx drop, false
    xx exit
-define_function "digital-char?", digital_char?
+define_function "digital-char?", decimal_digital_char?
    ;; (* char -- bool *)
    xx dup, literal, '0', less_than?, false?branch, 4
    xx   drop, false
@@ -1142,9 +1241,33 @@ define_function "digital-char?", digital_char?
    xx   exit
    xx drop, false
    xx exit
-define_function "digital-char->number", digital_char_to_number
-   ;; (* char -- the number it denotes *)
+define_function "char->decimal-digital", char_to_decimal_digital
+   ;; (* char -- decimal-digital *)
    xx literal, '0', subtraction
+   xx exit
+
+define_function "decimal-digital->char", decimal_digital_to_char
+   ;; (* decimal-digital -- char *)
+   xx literal, '0', addition
+   xx exit
+;; return false when length == 0
+define_primitive_function "compare-buffer", compare_buffer
+   ;; (* address, address, length -- bool *)
+   pop_argument_stack rcx
+   pop_argument_stack rdi
+   pop_argument_stack rsi
+   repe cmpsb
+   sete al
+   movzx rax, al
+   push_argument_stack rax
+   next
+define_function "string-equal?", string_equal?
+   ;; (* string[address, length], string[address, length] -- bool *)
+   xx xoverxx, equal?, false?branch, 4
+   xx   swap, compare_buffer
+   xx   exit
+   xx drop, drop2
+   xx false
    xx exit
 define_function "string-head,char", string_head__char
    ;; (* string[address, length] -- char *)
@@ -1190,7 +1313,7 @@ define_function "digital-string?", digital_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, true
    xx   exit
-   xx over, fetch_byte, digital_char?, false?branch, 4
+   xx over, fetch_byte, decimal_digital_char?, false?branch, 4
    xx   string_tail__char
    xx   digital_string?
    xx   exit
@@ -1204,7 +1327,7 @@ define_function "integer-string?", integer_string?
    xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
    xx   string_tail__char, digital_string?
    xx   exit
-   xx drop2, false
+   xx digital_string?
    xx exit
 define_function "string->integer", string_to_integer
    ;; (* string[address, length] -- integer *)
@@ -1240,7 +1363,7 @@ define_function "help,digital-string->integer", help__digital_string_to_integer
    xx   drop2
    xx   exit
 
-   xx dup2, string_head__char, digital_char_to_number
+   xx dup2, string_head__char, char_to_decimal_digital
    xx   literal, 10
    xx   literal, counter$digital_string_to_integer, fetch
    xx     one
@@ -1255,7 +1378,61 @@ define_function "help,digital-string->integer", help__digital_string_to_integer
    xx string_tail__char
    xx help__digital_string_to_integer
    xx exit
-define_primitive_function "", exit_with_TOS
+define_variable "first-jo-in-dictionary", first_jo_in_dictionary
+   xx latest_jo_in_assembly
+
+define_function "word->jo", word_to_jo
+   ;; (* word[address, length] -- jo, found or not *)
+   xx first_jo_in_dictionary
+   xx help__word_to_jo
+   xx exit
+
+define_function "help,word->jo", help__word_to_jo
+   ;; (* word[address, length], jo -- jo, found or not *)
+   xx dup, null_jo?, false?branch, 6
+   xx   drop, drop2
+   xx   false, false
+   xx   exit
+   xx xxtuckx
+   xx jo_to_name, xxoverxx
+   xx string_equal?, false?branch, 4
+   xx   drop2, true
+   xx   exit
+   xx xswapxx, jo_to_pre_jo
+   xx help__word_to_jo
+   xx exit
+define_function "execute-word", execute_word
+   ;; (* word[address, length] -- unknown *)
+   xx dup2, integer_string?, false?branch, 3
+   xx   string_to_integer
+   xx   exit
+   ;; maybe more
+
+   xx dup2 ;; for to report undefined word
+
+   xx word_to_jo, false?branch, 5
+   xx   xxswapx, drop2
+   xx   execute_jo
+   xx   exit
+   xx drop  ;; jo
+
+   xx literal, string$undefined_word_report
+   xx literal, length$undefined_word_report
+   xx write_string
+   xx write_string, literal, 10, write_byte
+   xx exit
+
+string$undefined_word_report:
+   db "   UNDEFINED-WORD : "
+.end:
+length$undefined_word_report = (.end - string$undefined_word_report)
+define_function "basic-REPL", basic_REPL
+   ;; (* unknown -- unknown *)
+   xx read_word_for_REPL
+   xx execute_word
+   xx basic_REPL
+   xx exit
+define_primitive_function "bye", exit_with_TOS
    pop_argument_stack sys_1_rdi
    mov sys_n_rax, syscall_exit
    syscall
@@ -1331,19 +1508,24 @@ define_function "little_test", little_test
    ;;;; write first two words of the line
 
    ;;;; string->integer
-   xx read_word, string_to_integer
-   xx exit_with_TOS
-   ;;;; 
+   ;; xx read_word, string_to_integer
+   ;; xx exit_with_TOS
+   ;;;;
+
+   ;;;; use jo_to_name to test the macro make_name_string
+   ;; xx literal, jo_to_name, jo_to_name, write_string
+   ;; xx zero
+   ;; xx exit_with_TOS
+   ;;;;
 
    ;;;; basic-REPL (without the ability to define function)
-   xx zero
-   xx exit_with_TOS
-   ;;;; 1 2 +
-
-   ;;;; basic-REPL (be able to define function)
-   xx zero
-   xx exit_with_TOS
-   ;;;;
+   ;;;; after this test
+   ;;;; we will use basic-REPL to do further tests
+   xx basic_REPL
+   ;;;; 1 2 add .
+define_variable "", latest_jo_in_assembly
+   ;; (* -- *)
+   xx 0
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
 segment readable writeable

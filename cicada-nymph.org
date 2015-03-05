@@ -29,7 +29,7 @@
   7. special primitive function
   8. write-byte & read-byte
   9. read-word & write-string
-  10. string->integer & find-word & execute-word & basic-REPL
+  10. string->integer & word->jo & execute-word & basic-REPL
 * note different from re-designed cicada-language
 ** simplifications are for teaching purpose only
 ** no mixfix-notation
@@ -46,6 +46,8 @@
    * no static type declaration
 ** global linked-list for naming
    * not hash-table
+   * in classical forth
+     the linked-list of jo is called dictionary
 ** no dynamic-memory-management
    * no garbage-collectior
 ** about comment
@@ -53,14 +55,16 @@
      is allowed to be written in free style normal comment
 * note syntax & semantic
 ** naming convention
-   * a predicate of a type use that type as postfix
+   * a predicate of a type
+     which denotes a subtype of that type
+     uses that type as postfix
      such as
      "space-char?"
-   * note that
-     a predicate of a type denotes a subtype of that type
-   * a function of a type use that type as prefix
+   * a function of a type
+     uses that type as prefix
      such as
      "string-reverse"
+     "string-equal?"
    * side-effect of structured data is postfixed by "!"
 ** compiler
    * a macro is a function to be called at compile time
@@ -95,8 +99,8 @@
      |-----------------+-----------------------|
      | borderfix "* *" | variable              |
      | borderfix "+ +" | [maybe use]           |
-     | bar-ket ( )     |                       |
-     | bar-ket [ ]     |                       |
+     | bar-ket ( )     | not use               |
+     | bar-ket [ ]     | not use               |
      | bar-ket { }     | macro call            |
      |                 | (for macros of which  |
      |                 | the number of         |
@@ -229,7 +233,7 @@
    .start$string:
       db string
    .end$string:
-      dd (.end$string - .start$string)
+      dw (.end$string - .start$string)
       load .length word from (.end$string)
    end virtual
    store word .length at (current_free_address$primitive_string_heap)
@@ -352,15 +356,19 @@
      times size$primitive_string_heap db 0
   #+end_src
 * jo
+** ----------------------------------
 ** note
    * 注意
      每次經由 next 間接跳
      到這裏的詮釋者的時候
      rax 都保存着珠的值
      所以 rax 這個寄存器會被作爲某些詮釋者的參數
-   * 每個 jo 的類型對應一種解釋方式
-** note primitive function
-   * a primitive function explains itself
+   * the following functions are used as jojo-head
+     the explain the meaning of the jojo
+   * a jojo-head identifies one type of jo
+   * primitive functions are special
+     they explain themself
+     and their type is not identified by jojo-head
 ** explain$function
    * 把由這個 function 類型的 珠
      所找到的 一串珠珠 入 return_stack
@@ -392,6 +400,65 @@
       push_argument_stack rbx
       next
    #+end_src
+** ----------------------------------
+** execute-jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "execute-jo", execute_jo
+      ;; (* jo -- unknown *)
+      pop_argument_stack rax
+      jmp qword [rax]
+   #+end_src
+** ----------------------------------
+** jo->name
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->name", jo_to_name
+      ;; (* jo -- string[address, length] *)
+      xx literal, bead_size, subtraction
+      xx literal, bead_size, subtraction
+      xx fetch
+      xx dup
+      xx   literal, 2, addition, swap
+      xx fetch_two_bytes
+      xx exit
+   #+end_src
+** null-jo?
+   * first jo in assembly code
+     is the null of the linked list of jo
+     so I call it null jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "null-jo?", null_jo?
+      ;; (* jo -- bool *)
+      xx literal, bead_size, subtraction
+      xx fetch
+      xx zero?
+      xx exit
+   #+end_src
+** jo->pre-jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->pre-jo", jo_to_pre_jo
+      ;; (* jo -- pre-jo *)
+      xx literal, bead_size, subtraction
+      xx fetch
+      xx literal, bead_size, addition
+      xx exit
+   #+end_src
+** jo->type
+   * the type of primitive function
+     is encoded by 0
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->type", jo_to_type
+      ;; (* jo -- type *)
+      xx dup
+
+      xx dup, fetch
+      xx swap, subtraction, literal, 8, equal?, false?branch, 4
+      xx   drop, zero
+      xx   exit
+
+      xx fetch
+      xx exit
+   #+end_src
+** ----------------------------------
 * begin_to_interpret_threaded_code
   #+begin_src fasm :tangle cicada-nymph.fasm
   begin_to_interpret_threaded_code:
@@ -405,12 +472,19 @@
      push_return_stack rax
      next
 
+
   first_jojo:
-     xx little_test
+     xx basic_REPL
+
+     ;; xx little_test
   #+end_src
 * argument_stack
 ** memory allocation
+   * for we do not build border-check
+     into the interface of pop and push
+     we allocation some memory below the stacks
    #+begin_src fasm :tangle cicada-nymph.fasm
+      preserve 64 * bead_size
    address$argument_stack labeling
       preserve 1024 * 1024 * bead_size
    #+end_src
@@ -679,6 +753,7 @@
 * return_stack
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
+      preserve 64 * bead_size
    address$return_stack labeling
       preserve 1024 * 1024 * bead_size
    #+end_src
@@ -1014,7 +1089,7 @@
       xx help__power
       xx exit
    #+end_src
-** predicate
+** equal & greater-than & less-than
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "equal?", equal?
       ;; (* a, b -- a, b, true of false *)
@@ -1022,15 +1097,6 @@
       pop_argument_stack rax
       cmp   rbx, rax
       sete  al
-      movzx rax, al
-      push_argument_stack rax
-      next
-
-   define_primitive_function "not-equal?", not_equal?
-      pop_argument_stack rbx
-      pop_argument_stack rax
-      cmp   rbx, rax
-      setne al
       movzx rax, al
       push_argument_stack rax
       next
@@ -1070,6 +1136,18 @@
       movzx rax, al
       push_argument_stack rax
       next
+   #+end_src
+** negative? & positive?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "negative?", negative?
+      ;; (* integer -- bool *)
+      xx zero, less_than?
+      xx exit
+
+   define_function "positive?", positive?
+      ;; (* integer -- bool *)
+      xx negative?, false?
+      xx exit
    #+end_src
 * memory
   * although the following functions are all side-effect
@@ -1241,7 +1319,7 @@
    #+end_src
 ** write-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   buffer$write_char:
+   buffer$write_byte:
       db 0
 
    define_primitive_function "write-byte", write_byte
@@ -1250,9 +1328,9 @@
       pop_argument_stack rax
       ;; write can not just write the char in al to stdout
       ;; write needs the address of the byte to write
-      mov [buffer$write_char], al
+      mov [buffer$write_byte], al
       mov sys_3_rdx, 1                 ;; max length to be write
-      mov sys_2_rsi, buffer$write_char ;; address
+      mov sys_2_rsi, buffer$write_byte ;; address
       mov sys_1_rdi, 1                 ;; stdout
       mov sys_n_rax, syscall_write
       syscall
@@ -1457,6 +1535,71 @@
       xx exit
    #+end_src
 ** ----------------------------------
+** write-naturl-number
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; 2 ^ 64 = 18446744073709551616
+   ;; which is of length 20
+   ;; so
+   ;; I use 32 to align to 16
+
+   buffer$write_naturl_number labeling
+      preserve 32
+
+   counter$write_naturl_number:
+      xx 0
+
+
+   define_function "write-naturl-number", write_naturl_number
+      ;; (* naturl-number -- *)
+      xx zero
+      xx literal, counter$write_naturl_number, save
+
+      xx help__write_naturl_number
+
+      xx literal, buffer$write_naturl_number
+      xx literal, counter$write_naturl_number, fetch
+      xx write_string
+      xx exit
+
+
+   define_function "help,write-naturl-number", help__write_naturl_number
+      ;; (* rest-number -- *)
+      xx literal, 10, divmod
+
+      xx decimal_digital_to_char
+      xx literal, buffer$write_naturl_number
+      xx literal, counter$write_naturl_number, fetch
+      xx addition
+      xx save_byte
+
+      xx one
+      xx literal, counter$write_naturl_number
+      xx add_save
+
+      xx dup, zero?, false?branch, 3
+      xx   drop
+      xx   exit
+      xx help__write_naturl_number
+      xx exit
+   #+end_src
+** write-integer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function ".", pretty_write_integer
+      ;; (* integer -- *)
+      xx write_integer
+      xx literal, 32, write_byte
+      xx exit
+
+   define_function "write-integer", write_integer
+      ;; (* integer -- *)
+      xx dup, positive?, false?branch, 3
+      xx   write_naturl_number
+      xx   exit
+      xx literal, '-', write_byte
+      xx negate, write_naturl_number
+      xx exit
+   #+end_src
+** ----------------------------------
 * char
 ** space-char?
    * as for space-char
@@ -1497,9 +1640,9 @@
       xx drop, false
       xx exit
    #+end_src
-** digital-char?
+** decimal-digital-char?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "digital-char?", digital_char?
+   define_function "digital-char?", decimal_digital_char?
       ;; (* char -- bool *)
       xx dup, literal, '0', less_than?, false?branch, 4
       xx   drop, false
@@ -1510,14 +1653,51 @@
       xx drop, false
       xx exit
    #+end_src
-** digital-char->number
+** note digital
+   * a decimal-digital is number from 0 to 9
+   * a binary-digital is number from 0 to 1
+** char->decimal-digital & decimal-digital->char
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "digital-char->number", digital_char_to_number
-      ;; (* char -- the number it denotes *)
+   define_function "char->decimal-digital", char_to_decimal_digital
+      ;; (* char -- decimal-digital *)
       xx literal, '0', subtraction
       xx exit
+
+   define_function "decimal-digital->char", decimal_digital_to_char
+      ;; (* decimal-digital -- char *)
+      xx literal, '0', addition
+      xx exit
+   #+end_src
+* buffer
+** note
+   * a buffer is a large vector
+     and some functions do not care about how large it is
+** compare-buffer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; return false when length == 0
+   define_primitive_function "compare-buffer", compare_buffer
+      ;; (* address, address, length -- bool *)
+      pop_argument_stack rcx
+      pop_argument_stack rdi
+      pop_argument_stack rsi
+      repe cmpsb
+      sete al
+      movzx rax, al
+      push_argument_stack rax
+      next
    #+end_src
 * string
+** string-equal?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-equal?", string_equal?
+      ;; (* string[address, length], string[address, length] -- bool *)
+      xx xoverxx, equal?, false?branch, 4
+      xx   swap, compare_buffer
+      xx   exit
+      xx drop, drop2
+      xx false
+      xx exit
+   #+end_src
 ** string-[head|tail],char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-head,char", string_head__char
@@ -1573,7 +1753,7 @@
       xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   exit
-      xx over, fetch_byte, digital_char?, false?branch, 4
+      xx over, fetch_byte, decimal_digital_char?, false?branch, 4
       xx   string_tail__char
       xx   digital_string?
       xx   exit
@@ -1590,7 +1770,7 @@
       xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
       xx   string_tail__char, digital_string?
       xx   exit
-      xx drop2, false
+      xx digital_string?
       xx exit
    #+end_src
 ** string->integer
@@ -1629,7 +1809,7 @@
       xx   drop2
       xx   exit
 
-      xx dup2, string_head__char, digital_char_to_number
+      xx dup2, string_head__char, char_to_decimal_digital
       xx   literal, 10
       xx   literal, counter$digital_string_to_integer, fetch
       xx     one
@@ -1645,36 +1825,70 @@
       xx help__digital_string_to_integer
       xx exit
    #+end_src
-* >< basic-REPL
-** find-word
-   #+begin_src fasm
-   define_function "find-word", find_word
-      xx
-      xx
-   #+end_src
-** execute-word
-   #+begin_src fasm
-   define_function "execute-word", execute_word
-      ;; (* word[address, length] -- unknown *)
-      xx word$number?, false?branch, 4
-      xx   number, drop
-      xx   exit
-      ;; about non-number
-      xx find, dup, zero?branch, 4
-      xx   wordLinkToWordExplainer, execute
-      xx   Exit
+* word
+** word->jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "first-jo-in-dictionary", first_jo_in_dictionary
+      xx latest_jo_in_assembly
 
-      xx drop, printErrorInfoForExecuteWord
-      xx Exit
-   #+end_src
-** basic-REPL
-   #+begin_src fasm
-   define_function "basic-REPL", basic_REPL
-      xx read_word_for_REPL
-      xx execute_word
-      xx basic_REPL
+   define_function "word->jo", word_to_jo
+      ;; (* word[address, length] -- jo, found or not *)
+      xx first_jo_in_dictionary
+      xx help__word_to_jo
+      xx exit
+
+   define_function "help,word->jo", help__word_to_jo
+      ;; (* word[address, length], jo -- jo, found or not *)
+      xx dup, null_jo?, false?branch, 6
+      xx   drop, drop2
+      xx   false, false
+      xx   exit
+      xx xxtuckx
+      xx jo_to_name, xxoverxx
+      xx string_equal?, false?branch, 4
+      xx   drop2, true
+      xx   exit
+      xx xswapxx, jo_to_pre_jo
+      xx help__word_to_jo
       xx exit
    #+end_src
+** execute-word
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "execute-word", execute_word
+      ;; (* word[address, length] -- unknown *)
+      xx dup2, integer_string?, false?branch, 3
+      xx   string_to_integer
+      xx   exit
+      ;; maybe more
+
+      xx dup2 ;; for to report undefined word
+
+      xx word_to_jo, false?branch, 5
+      xx   xxswapx, drop2
+      xx   execute_jo
+      xx   exit
+      xx drop  ;; jo
+
+      xx literal, string$undefined_word_report
+      xx literal, length$undefined_word_report
+      xx write_string
+      xx write_string, literal, 10, write_byte
+      xx exit
+
+   string$undefined_word_report:
+      db "   UNDEFINED-WORD : "
+   .end:
+   length$undefined_word_report = (.end - string$undefined_word_report)
+   #+end_src
+* basic-REPL
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "basic-REPL", basic_REPL
+     ;; (* unknown -- unknown *)
+     xx read_word_for_REPL
+     xx execute_word
+     xx basic_REPL
+     xx exit
+  #+end_src
 * >< macro in cicada-nymph
 * >< function jojo
 ** define
@@ -1697,7 +1911,7 @@
 * -----------------------------------
 * little_test
   #+begin_src fasm :tangle cicada-nymph.fasm
-  define_primitive_function "", exit_with_TOS
+  define_primitive_function "bye", exit_with_TOS
      pop_argument_stack sys_1_rdi
      mov sys_n_rax, syscall_exit
      syscall
@@ -1773,22 +1987,31 @@
      ;;;; write first two words of the line
 
      ;;;; string->integer
-     xx read_word, string_to_integer
-     xx exit_with_TOS
-     ;;;; 
+     ;; xx read_word, string_to_integer
+     ;; xx exit_with_TOS
+     ;;;;
+
+     ;;;; use jo_to_name to test the macro make_name_string
+     ;; xx literal, jo_to_name, jo_to_name, write_string
+     ;; xx zero
+     ;; xx exit_with_TOS
+     ;;;;
 
      ;;;; basic-REPL (without the ability to define function)
-     xx zero
-     xx exit_with_TOS
-     ;;;; 1 2 +
-
-     ;;;; basic-REPL (be able to define function)
-     xx zero
-     xx exit_with_TOS
-     ;;;;
+     ;;;; after this test
+     ;;;; we will use basic-REPL to do further tests
+     xx basic_REPL
+     ;;;; 1 2 add .
   #+end_src
 * -----------------------------------
 * epilog
+** latest_jo_in_assembly
+   * this word helps to initialize first_jo_in_dictionary
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "", latest_jo_in_assembly
+      ;; (* -- *)
+      xx 0
+   #+end_src
 ** un_initialized_memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
