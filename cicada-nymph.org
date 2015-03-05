@@ -4,109 +4,105 @@
 
 * todo
 * ===================================
-* 記 設計決策
-  * 在某些需要做設計決策的地方
-    我放棄了簡單性
-    而追求結構的一致性還有更豐富的性狀
-    如果不是因爲這次講授的需要
-    我自己都很難想像
-    我會重新退回到叉路口
-    並認真地嘗試另一條路
-* note notation
+* note
 ** jo & jojo
    * use "jo" to denote bead
      and use "jojo" to denote a thread of beads
      [which reads like "珠珠" in Chinese]
-* note intro
-** indirect-threaded-code interpreter
-* note the order of development
-  1. macro about argument_stack & return_stack
-  2. macro about jo & jojo
-  3. macro about next
-  4. the way to do memory allocation
-  5. begin_to_interpret_threaded_code
-  6. little_test
-  7. special primitive function
-  8. write-byte & read-byte
-  9. read-word & write-string
-  10. string->integer & word->jo & execute-word & basic-REPL
-* note different from re-designed cicada-language
-** simplifications are for teaching purpose only
-** no mixfix-notation
-   * function call is "function" instead of "(function)"
-   * no such thing like
-     1 2 (add) = 1 (add 2) = (add 1 2)
-** no named local argument
-   * thus no inited local argument
-** no title-name-table
-   * and single name space
-** no type
-   * no type inference
-   * no dynamic type tag
-   * no static type declaration
-** global linked-list for naming
-   * not hash-table
-   * in classical forth
-     the linked-list of jo is called dictionary
-** no dynamic-memory-management
-   * no garbage-collectior
-** about comment
-   * the comment of the argument & return value of function
-     is allowed to be written in free style normal comment
-* note syntax & semantic
-** naming convention
-   * a predicate of a type
-     which denotes a subtype of that type
-     uses that type as postfix
-     such as
-     "space-char?"
-   * a function of a type
-     uses that type as prefix
-     such as
-     "string-reverse"
-     "string-equal?"
-   * side-effect of structured data is postfixed by "!"
-** compiler
-   * a macro is a function to be called at compile time
-     with a string to be compiled as one argument
-     and do side-effect to store data into memory
-     and return a shorter string
-     [this can be viewed as moving a cursor forward]
-   * the compiler is a macro dispatcher
-     it get next word and use predicates on word to do dispatch
-** convention in assembly code
-   * using underline to compose big word from small words
-   * using "$" as prefix and postfix separator
-   * indentation level = 3
-   * naming convention of jo
-     | convention   | jo type  |
-     |--------------+----------|
-     | prefix "V__" | variable |
-     | prefix "M__" | macro    |
-   * exception:
-     use "zero" instead of "V__zero"
-     use "true" instead of "V__true"
-** convention in cicada-nymph code
-   * using dash to compose big word from small words
-   * using "," as prefix and postfix separator
-   * indentation style = free
-   * words are separated by space
-     except for bar-ket
-     every bar-ket is viewed as a word
-** syntax of cicada-nymph
-   * syntax &  semantic
-     | syntax          | semantic              |
-     |-----------------+-----------------------|
-     | borderfix "* *" | variable              |
-     | borderfix "+ +" | [maybe use]           |
-     | bar-ket ( )     | not use               |
-     | bar-ket [ ]     | not use               |
-     | bar-ket { }     | macro call            |
-     |                 | (for macros of which  |
-     |                 | the number of         |
-     |                 | arguments is not fix) |
-   * exception:
-     use true
+** the order of development
+   * indirect-threaded-code interpreter
+     1. macro about argument_stack & return_stack
+     2. macro about jo & jojo
+     3. macro about next
+     4. the way to do memory allocation
+     5. begin_to_interpret_threaded_code
+     6. little_test
+     7. special primitive function
+   * basic-REPL as postfix-notation function executer
+     1. write-byte & read-byte
+     2. read-word & write-string
+     3. string->integer & word->jo & execute-word & basic-REPL
+   * compiler
+     1. ":" and ";" are used to read a string of words for compiler
+        [looks like bar-ket but special]
+     2. "<< >>" as the only way todo comment
+** different from the re-designed cicada-language
+   * simplifications are for teaching purpose only
+   * no mixfix-notation
+     * function call is "function" instead of "(function)"
+     * no such thing like
+       1 2 (add) = 1 (add 2) = (add 1 2)
+   * no named local argument
+     * thus no inited local argument
+   * no title-name-table
+     * and single name space
+   * no type
+     * no type inference
+     * no dynamic type tag
+     * no static type declaration
+   * global linked-list for naming
+     * not hash-table
+     * in classical forth
+       the linked-list of jo is called dictionary
+   * no dynamic-memory-management
+     * no garbage-collectior
+   * about comment
+     * the comment of the argument & return value of function
+       is allowed to be written in free style normal comment
+** 設計決策
+   * 在某些需要做設計決策的地方
+     我放棄了簡單性
+     而追求結構的一致性還有更豐富的性狀
+     如果不是因爲這次講授的需要
+     我自己都很難想像
+     我會重新退回到叉路口
+     並認真地嘗試另一條路
+** convention
+*** naming convention
+    * a predicate of a type
+      which denotes a subtype of that type
+      uses that type as postfix
+      such as
+      "space-char?"
+    * a function of a type
+      uses that type as prefix
+      such as
+      "string-reverse"
+      "string-equal?"
+    * side-effect of structured data is postfixed by "!"
+*** convention in assembly code
+    * using underline to compose big word from small words
+    * using "$" as prefix and postfix separator
+    * indentation level = 3
+    * naming convention of jo
+      | convention   | jo type  |
+      |--------------+----------|
+      | prefix "V__" | variable |
+      | prefix "M__" | macro    |
+    * exception:
+      use "zero" instead of "V__zero"
+      use "true" instead of "V__true"
+*** convention in cicada-nymph code
+    * using dash to compose big word from small words
+    * using "," as prefix and postfix separator
+    * indentation style = free
+    * words are separated by space
+      except for bar-ket
+      every bar-ket is viewed as a word
+*** syntax of cicada-nymph
+    * syntax &  semantic
+      | syntax          | semantic              |
+      |-----------------+-----------------------|
+      | borderfix "* *" | variable              |
+      | borderfix "+ +" | [maybe use]           |
+      | bar-ket ( )     | not use               |
+      | bar-ket [ ]     | not use               |
+      | bar-ket { }     | macro call            |
+      |                 | (for macros of which  |
+      |                 | the number of         |
+      |                 | arguments is not fix) |
+    * exception:
+      use true
 * -----------------------------------
 * prolog
 ** include linux header
@@ -404,7 +400,7 @@
 ** execute-jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "execute-jo", execute_jo
-      ;; (* jo -- unknown *)
+      ;; << jo -- unknown >>
       pop_argument_stack rax
       jmp qword [rax]
    #+end_src
@@ -412,7 +408,7 @@
 ** jo->name
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->name", jo_to_name
-      ;; (* jo -- string[address, length] *)
+      ;; << jo -- string[address, length] >>
       xx literal, bead_size, subtraction
       xx literal, bead_size, subtraction
       xx fetch
@@ -427,7 +423,7 @@
      so I call it null jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "null-jo?", null_jo?
-      ;; (* jo -- bool *)
+      ;; << jo -- bool >>
       xx literal, bead_size, subtraction
       xx fetch
       xx zero?
@@ -436,7 +432,7 @@
 ** jo->pre-jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->pre-jo", jo_to_pre_jo
-      ;; (* jo -- pre-jo *)
+      ;; << jo -- pre-jo >>
       xx literal, bead_size, subtraction
       xx fetch
       xx literal, bead_size, addition
@@ -447,7 +443,7 @@
      is encoded by 0
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->type", jo_to_type
-      ;; (* jo -- type *)
+      ;; << jo -- type >>
       xx dup
 
       xx dup, fetch
@@ -459,25 +455,122 @@
       xx exit
    #+end_src
 ** ----------------------------------
-* begin_to_interpret_threaded_code
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  begin_to_interpret_threaded_code:
+* the story begin
+** begin_to_interpret_threaded_code
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   begin_to_interpret_threaded_code:
 
-     cld ;; set DF = 0, then rsi and rdi are incremented
+      cld ;; set DF = 0, then rsi and rdi are incremented
 
-     mov pointer$argument_stack,  address$argument_stack
-     mov pointer$return_stack,    address$return_stack
+      mov pointer$argument_stack,  address$argument_stack
+      mov pointer$return_stack,    address$return_stack
 
-     mov rax, first_jojo
-     push_return_stack rax
-     next
+      mov rax, first_jojo
+      push_return_stack rax
+      next
 
 
-  first_jojo:
-     xx basic_REPL
+   first_jojo:
+      xx basic_REPL
 
-     ;; xx little_test
-  #+end_src
+      ;; xx little_test
+   #+end_src
+** exit_with_TOS a.k.a. bye
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "bye", exit_with_TOS
+      pop_argument_stack sys_1_rdi
+      mov sys_n_rax, syscall_exit
+      syscall
+   #+end_src
+** little_test
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "", V__little_test_number
+      xx 3
+
+
+   define_function "little_test", little_test
+
+      ;;;; variable
+      ;; xx V__little_test_number
+      ;; xx exit_with_TOS
+      ;;;; 3
+
+      ;;;; literal
+      ;; xx literal, 4
+      ;; xx exit_with_TOS
+      ;;;; 4
+
+      ;;;; address
+      ;; xx address, V__little_test_number, fetch, add2
+      ;; xx address, V__little_test_number, save
+      ;; xx V__little_test_number
+      ;; xx exit_with_TOS
+      ;;;; 5
+
+      ;;;; write_byte
+      ;; xx literal, 64, write_byte
+      ;; xx literal, 10, write_byte
+      ;; xx zero
+      ;; xx exit_with_TOS
+      ;;;; @
+
+      ;;;; read_byte
+      ;; xx read_byte, write_byte
+      ;; xx exit_with_TOS
+      ;;;;
+
+      ;;;; branch
+      ;; xx read_byte, write_byte
+      ;; xx branch, -3
+      ;;;; read a string that ended by <return>
+      ;;;; write the readed string
+      ;;;; or we can say
+      ;;;; read line and write line
+      ;;;; or we can say
+      ;;;; echo line
+
+      ;;;; false?branch
+      ;; xx V__false, false?branch, 9
+      ;; xx   literal, 64, write_byte
+      ;; xx   literal, 10, write_byte
+      ;; xx   zero
+      ;; xx   exit_with_TOS
+      ;; xx V__true, false?branch, 9
+      ;; xx   literal, 65, write_byte
+      ;; xx   literal, 10, write_byte
+      ;; xx   zero
+      ;; xx   exit_with_TOS
+      ;; xx zero
+      ;; xx exit_with_TOS
+      ;;;; A
+
+      ;;;; read_word & write_string
+      ;; xx read_word, write_string
+      ;; xx literal, 10, write_byte
+      ;; xx read_word_for_REPL, write_string
+      ;; xx literal, 10, write_byte
+      ;; xx zero
+      ;; xx exit_with_TOS
+      ;;;; read line
+      ;;;; write first two words of the line
+
+      ;;;; string->integer
+      ;; xx read_word, string_to_integer
+      ;; xx exit_with_TOS
+      ;;;;
+
+      ;;;; use jo_to_name to test the macro make_name_string
+      ;; xx literal, jo_to_name, jo_to_name, write_string
+      ;; xx zero
+      ;; xx exit_with_TOS
+      ;;;;
+
+      ;;;; basic-REPL (without the ability to define function)
+      ;;;; after this test
+      ;;;; we will use basic-REPL to do further tests
+      xx basic_REPL
+      ;;;; 1 2 add .
+   #+end_src
 * argument_stack
 ** memory allocation
    * for we do not build border-check
@@ -491,12 +584,12 @@
 ** drop
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "drop", drop
-      ;; (* a -- *)
+      ;; << a -- >>
       pop_argument_stack rax
       next
 
    define_primitive_function "drop2", drop2
-      ;; (* a b -- *)
+      ;; << a b -- >>
       pop_argument_stack rax
       pop_argument_stack rax
       next
@@ -504,13 +597,13 @@
 ** dup
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "dup", dup
-      ;; (* a -- a a *)
+      ;; << a -- a a >>
       mov  rax, [pointer$argument_stack - (1 * bead_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "dup2", dup2
-      ;; (* a b -- a b a b *)
+      ;; << a b -- a b a b >>
       mov  rbx, [pointer$argument_stack - (1 * bead_size)]
       mov  rax, [pointer$argument_stack - (2 * bead_size)]
       push_argument_stack rax
@@ -520,19 +613,19 @@
 ** over
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "over", over
-      ;; (* a b -- a b | a *)
+      ;; << a b -- a b | a >>
       mov  rax, [pointer$argument_stack - (2 * bead_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xx", xoverxx
-      ;; (* a | b c -- a | b c | a *)
+      ;; << a | b c -- a | b c | a >>
       mov  rax, [pointer$argument_stack - (3 * bead_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|x", xxoverx
-      ;; (* a b | c -- a b | c | a b *)
+      ;; << a b | c -- a b | c | a b >>
       mov  rax, [pointer$argument_stack - (3 * bead_size)]
       push_argument_stack rax
       mov  rax, [pointer$argument_stack - (3 * bead_size)]
@@ -540,7 +633,7 @@
       next
 
    define_primitive_function "xx|over|xx", xxoverxx
-      ;; (* a b | c d -- a b | c d | a b *)
+      ;; << a b | c d -- a b | c d | a b >>
       mov  rax, [pointer$argument_stack - (4 * bead_size)]
       push_argument_stack rax
       mov  rax, [pointer$argument_stack - (4 * bead_size)]
@@ -548,13 +641,13 @@
       next
 
    define_primitive_function "x|over|xxx", xoverxxx
-      ;; (* a | b c d -- a | b c d | a *)
+      ;; << a | b c d -- a | b c d | a >>
       mov  rax, [pointer$argument_stack - (4 * bead_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xxxx", xxoverxxxx
-      ;; (* a b | c d e f -- a b | c d e f | a b *)
+      ;; << a b | c d e f -- a b | c d e f | a b >>
       mov  rax, [pointer$argument_stack - (6 * bead_size)]
       push_argument_stack rax
       mov  rax, [pointer$argument_stack - (6 * bead_size)]
@@ -564,7 +657,7 @@
 ** tuck
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "tuck", tuck
-      ;; (* a b -- b | a b *)
+      ;; << a b -- b | a b >>
       pop_argument_stack rbx
       pop_argument_stack rax
       push_argument_stack rbx
@@ -573,7 +666,7 @@
       next
 
    define_primitive_function "x|tuck|xx", xtuckxx
-      ;; (* a | b c -- b c | a | b c *)
+      ;; << a | b c -- b c | a | b c >>
       pop_argument_stack rcx
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -585,7 +678,7 @@
       next
 
    define_primitive_function "xx|tuck|x", xxtuckx
-      ;; (* a b | c -- c | a b | c *)
+      ;; << a b | c -- c | a b | c >>
       pop_argument_stack rcx
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -596,7 +689,7 @@
       next
 
    define_primitive_function "xx|tuck|xx", xxtuckxx
-      ;; (* a b | c d -- c d | a b | c d *)
+      ;; << a b | c d -- c d | a b | c d >>
       pop_argument_stack rdx
       pop_argument_stack rcx
       pop_argument_stack rbx
@@ -610,7 +703,7 @@
       next
 
    define_primitive_function "xxx|tuck|x", xxxtuckx
-      ;; (* a b c | d -- d | a b c | d *)
+      ;; << a b c | d -- d | a b c | d >>
       pop_argument_stack rdx
       pop_argument_stack rcx
       pop_argument_stack rbx
@@ -625,7 +718,7 @@
 ** swap
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "swap", swap
-      ;; (* a b -- b a *)
+      ;; << a b -- b a >>
       pop_argument_stack rbx
       pop_argument_stack rax
       push_argument_stack rbx
@@ -633,7 +726,7 @@
       next
 
    define_primitive_function "x|swap|xx", xswapxx
-      ;; (* a | b c -- b c | a *)
+      ;; << a | b c -- b c | a >>
       pop_argument_stack rcx
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -643,7 +736,7 @@
       next
 
    define_primitive_function "xx|swap|x", xxswapx
-      ;; (* a b | c -- c | a b *)
+      ;; << a b | c -- c | a b >>
       pop_argument_stack rcx
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -653,7 +746,7 @@
       next
 
    define_primitive_function "x|swap|xxx", xswapxxx
-      ;; (* a | b c d -- b c d | a *)
+      ;; << a | b c d -- b c d | a >>
       pop_argument_stack rdx
       pop_argument_stack rcx
       pop_argument_stack rbx
@@ -665,7 +758,7 @@
       next
 
    define_primitive_function "xxx|swap|x", xxxswapx
-      ;; (* a b c | d -- d | a b c *)
+      ;; << a b c | d -- d | a b c >>
       pop_argument_stack rdx
       pop_argument_stack rcx
       pop_argument_stack rbx
@@ -677,7 +770,7 @@
       next
 
    define_primitive_function "xx|swap|xx", xxswapxx
-      ;; (* a b | c d -- c d | a b *)
+      ;; << a b | c d -- c d | a b >>
       pop_argument_stack rdx
       pop_argument_stack rcx
       pop_argument_stack rbx
@@ -690,7 +783,7 @@
 
 
    define_primitive_function "x|swap|xxxx", xswapxxxx
-      ;; (* a | b c d e -- b c d e | a *)
+      ;; << a | b c d e -- b c d e | a >>
       pop_argument_stack r8 ;; e
       pop_argument_stack rdx
       pop_argument_stack rcx
@@ -704,7 +797,7 @@
       next
 
    define_primitive_function "xxxx|swap|x", xxxxswapx
-      ;; (* a b c d | e --  e | a b c d *)
+      ;; << a b c d | e --  e | a b c d >>
       pop_argument_stack r8 ;; e
       pop_argument_stack rdx
       pop_argument_stack rcx
@@ -719,7 +812,7 @@
 
 
    define_primitive_function "xx|swap|xxxx", xxswapxxxx
-      ;; (* a b | c d e f -- c d e f | a b *)
+      ;; << a b | c d e f -- c d e f | a b >>
       pop_argument_stack r9 ;; f
       pop_argument_stack r8 ;; e
       pop_argument_stack rdx
@@ -735,7 +828,7 @@
       next
 
    define_primitive_function "xxxx|swap|xx", xxxxswapxx
-      ;; (* a b c d | e f --  e f | a b c d *)
+      ;; << a b c d | e f --  e f | a b c d >>
       pop_argument_stack r9 ;; f
       pop_argument_stack r8 ;; e
       pop_argument_stack rdx
@@ -783,7 +876,7 @@
       xx literal
 
    define_primitive_function "", literal
-      ;; (* -- fixnum *)
+      ;; << -- fixnum >>
       ;; 如果在一串珠珠末尾
       ;;     就抽出這串珠珠
       pop_return_stack rbx
@@ -804,7 +897,7 @@
       xx address
 
    define_primitive_function "", address
-      ;; (* -- address *)
+      ;; << -- address >>
       ;; 如果在一串珠珠末尾
       ;;     就抽出這串珠珠
       ;; 當調用到這個 primitive function 的時候
@@ -842,7 +935,7 @@
 ** false?branch
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "", false?branch
-      ;; (* true of false -- *)
+      ;; << true of false -- >>
       pop_argument_stack rax
       test rax, rax
       jnz help__false?branch__not_to_branch
@@ -875,13 +968,13 @@
      and viewed as constant
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "false", false
-      ;; (* -- false *)
+      ;; << -- false >>
       xor rax, rax
       push_argument_stack rax
       next
 
    define_primitive_function "true", true
-      ;; (* -- true *)
+      ;; << -- true >>
       xor rax, rax
       inc rax
       push_argument_stack rax
@@ -890,37 +983,37 @@
 ** false? & true?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "false?", false?
-      ;; (* bool -- bool *)
+      ;; << bool -- bool >>
       xx false, equal?
       xx exit
 
    define_function "true?", true?
-      ;; (* bool -- bool *)
+      ;; << bool -- bool >>
       xx true, equal?
       xx exit
    #+end_src
 ** bitwise operations
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bitwise-and", bitwise_and
-      ;; (* a, b -- a and b *)
+      ;; << a, b -- a and b >>
       pop_argument_stack rbx
       and [pointer$argument_stack - (1 * bead_size)], rbx
       next
 
    define_primitive_function "bitwise-or", bitwise_or
-      ;; (* a, b -- a or b *)
+      ;; << a, b -- a or b >>
       pop_argument_stack rbx
       or  [pointer$argument_stack - (1 * bead_size)], rbx
       next
 
    define_primitive_function "bitwise-xor", bitwise_xor
-      ;; (* a, b -- a xor b *)
+      ;; << a, b -- a xor b >>
       pop_argument_stack rbx
       xor [pointer$argument_stack - (1 * bead_size)], rbx
       next
 
    define_primitive_function "bitwise-invert", bitwise_invert
-      ;; (* a -- invert a *)
+      ;; << a -- invert a >>
       not qword [pointer$argument_stack - (1 * bead_size)]
       next
    #+end_src
@@ -930,13 +1023,13 @@
      and viewed as constant
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "zero", zero
-      ;; (* -- 0 *)
+      ;; << -- 0 >>
       xor rax, rax
       push_argument_stack rax
       next
 
    define_primitive_function "one", one
-      ;; (* -- 1 *)
+      ;; << -- 1 >>
       xor rax, rax
       inc rax
       push_argument_stack rax
@@ -945,83 +1038,83 @@
 ** zero? & one?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "zero?", zero?
-      ;; (* bool -- bool *)
+      ;; << bool -- bool >>
       xx zero, equal?
       xx exit
 
    define_function "one?", one?
-      ;; (* bool -- bool *)
+      ;; << bool -- bool >>
       xx one, equal?
       xx exit
    #+end_src
 ** add & sub & mul & div & mod & negate & power
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "add1", add1
-      ;; (* n -- n+1 *)
+      ;; << n -- n+1 >>
       inc qword [pointer$argument_stack - (1 * bead_size)]
       next
 
    define_primitive_function "add2", add2
-      ;; (* n -- n+2 *)
+      ;; << n -- n+2 >>
       add qword [pointer$argument_stack - (1 * bead_size)], 2
       next
 
    define_primitive_function "add3", add3
-      ;; (* n -- n+3 *)
+      ;; << n -- n+3 >>
       add qword [pointer$argument_stack - (1 * bead_size)], 3
       next
 
    define_primitive_function "add4", add4
-      ;; (* n -- n+4 *)
+      ;; << n -- n+4 >>
       add qword [pointer$argument_stack - (1 * bead_size)], 4
       next
 
    define_primitive_function "add8", add8
-      ;; (* n -- n+8 *)
+      ;; << n -- n+8 >>
       add qword [pointer$argument_stack - (1 * bead_size)], 8
       next
 
 
    define_primitive_function "sub1", sub1
-      ;; (* n -- n-1 *)
+      ;; << n -- n-1 >>
       dec qword [pointer$argument_stack - (1 * bead_size)]
       next
 
    define_primitive_function "sub2", sub2
-      ;; (* n -- n-2 *)
+      ;; << n -- n-2 >>
       sub qword [pointer$argument_stack - (1 * bead_size)], 2
       next
 
    define_primitive_function "sub3", sub3
-      ;; (* n -- n-3 *)
+      ;; << n -- n-3 >>
       sub qword [pointer$argument_stack - (1 * bead_size)], 3
       next
 
    define_primitive_function "sub4", sub4
-      ;; (* n -- n-4 *)
+      ;; << n -- n-4 >>
       sub qword [pointer$argument_stack - (1 * bead_size)], 4
       next
 
    define_primitive_function "sub8", sub8
-      ;; (* n -- n-8 *)
+      ;; << n -- n-8 >>
       sub qword [pointer$argument_stack - (1 * bead_size)], 8
       next
 
 
    define_primitive_function "add", addition
-      ;; (* a b -- a+b *)
+      ;; << a b -- a+b >>
       pop_argument_stack rax
       add qword [pointer$argument_stack - (1 * bead_size)], rax
       next
 
    define_primitive_function "sub", subtraction
-      ;; (* a b -- a-b *)
+      ;; << a b -- a-b >>
       pop_argument_stack rax
       sub qword [pointer$argument_stack - (1 * bead_size)], rax
       next
 
    define_primitive_function "mul", multiple
-      ;; (* a b -- a*b *)
+      ;; << a b -- a*b >>
       pop_argument_stack  rbx ;; 2ed arg
       pop_argument_stack  rax ;; 1st arg
       imul rbx, rax
@@ -1032,8 +1125,8 @@
       next
 
    define_primitive_function "moddiv", moddiv
-      ;; (* a, b -- a mod b, quotient *)
-      ;; (* dividend, divisor -- remainder, quotient *)
+      ;; << a, b -- a mod b, quotient >>
+      ;; << dividend, divisor -- remainder, quotient >>
       ;; the arg of idiv is divisor
       ;; the lower half of dividend is taken from rax
       ;; the upper half of dividend is taken from rdx
@@ -1049,22 +1142,22 @@
 
 
    define_function "divmod", divmod
-      ;; (* a, b -- quotient, a mod b *)
+      ;; << a, b -- quotient, a mod b >>
       xx moddiv, swap
       xx exit
 
    define_function "div", division
-      ;; (* a, b -- quotient *)
+      ;; << a, b -- quotient >>
       xx divmod, drop
       xx exit
 
    define_function "mod", modulo
-      ;; (* a, b -- a mod b *)
+      ;; << a, b -- a mod b >>
       xx moddiv, drop
       xx exit
 
    define_function "negate", negate
-      ;; (* n --  -n *)
+      ;; << n --  -n >>
       xx zero
       xx swap, subtraction
       xx exit
@@ -1072,13 +1165,13 @@
 
    define_function "power", power
       ;; n must be naturl number for now
-      ;; (* a, n -- a^n *)
+      ;; << a, n -- a^n >>
       xx literal, 1, swap ;; leave product
       xx help__power
       xx exit
 
    define_function "help,power", help__power
-      ;; (* a, product, n -- a^n *)
+      ;; << a, product, n -- a^n >>
       xx dup, zero?, false?branch, 5
       xx   drop, swap, drop
       xx   exit
@@ -1092,7 +1185,7 @@
 ** equal & greater-than & less-than
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "equal?", equal?
-      ;; (* a, b -- a, b, true of false *)
+      ;; << a, b -- a, b, true of false >>
       pop_argument_stack rbx
       pop_argument_stack rax
       cmp   rbx, rax
@@ -1140,12 +1233,12 @@
 ** negative? & positive?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "negative?", negative?
-      ;; (* integer -- bool *)
+      ;; << integer -- bool >>
       xx zero, less_than?
       xx exit
 
    define_function "positive?", positive?
-      ;; (* integer -- bool *)
+      ;; << integer -- bool >>
       xx negative?, false?
       xx exit
    #+end_src
@@ -1161,7 +1254,7 @@
   ;;     ||  1 : value-3  ||
   ;;     ...
   ;;   on stack:
-  ;;     (* value-1, value-2, value-3, ... *)
+  ;;     << value-1, value-2, value-3, ... >>
   ;; of course we have:
   ;;   fetch2 : memory=copy=>stack
   ;;   save2  : stack->memory
@@ -1195,7 +1288,7 @@
      next
 
   define_primitive_function "n-save", n_save
-     ;; (* value-n, ..., value-1, address, n -- *)
+     ;; << value-n, ..., value-1, address, n -- >>
      pop_argument_stack rcx
      pop_argument_stack rdx
      mov rax, bead_size
@@ -1212,13 +1305,13 @@
      next
 
   define_function "save2", save2
-     ;; (* value-2, value-1, address -- *)
+     ;; << value-2, value-1, address -- >>
      xx literal, 2
      xx n_save
      xx exit
 
   define_primitive_function "n-save-byte", n_save_byte
-     ;; (* value-n, ..., value-1, address, n -- *)
+     ;; << value-n, ..., value-1, address, n -- >>
      pop_argument_stack rcx
      pop_argument_stack rdx
      add rdx, rcx
@@ -1265,7 +1358,7 @@
   ;;     ...
   ;;     ||  1 : value-n  ||
   define_primitive_function "n-fetch", n_fetch
-     ;; (* address, n -- value-1, ..., value-n *)
+     ;; << address, n -- value-1, ..., value-n >>
      pop_argument_stack  rcx
      pop_argument_stack  rdx
   .loop:
@@ -1276,7 +1369,7 @@
      next
 
   define_primitive_function "n-fetch-byte", n_fetch_byte
-     ;; (* address, n -- byte-1, ..., byte-n *)
+     ;; << address, n -- byte-1, ..., byte-n >>
      pop_argument_stack  rcx
      pop_argument_stack  rdx
      xor rax, rax
@@ -1288,7 +1381,7 @@
      next
 
   define_function "fetch2", fetch2
-     ;; (* address -- value-1, value-2 *)
+     ;; << address -- value-1, value-2 >>
      xx literal, 2
      xx n_fetch
      xx exit
@@ -1323,7 +1416,7 @@
       db 0
 
    define_primitive_function "write-byte", write_byte
-      ;; (* byte -- *)
+      ;; << byte -- >>
       ;; just calls the Linux write system call
       pop_argument_stack rax
       ;; write can not just write the char in al to stdout
@@ -1350,12 +1443,12 @@
       xx 0
 
    define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
-      ;; (* -- bool *)
+      ;; << -- bool >>
       xx literal, flag$unreaded_ket_char, fetch
       xx exit
 
    define_function "unread-ket-char", unread_ket_char
-      ;; (* char -- *)
+      ;; << char -- >>
       xx literal, char$unreaded_ket_char, save
       xx true, literal, flag$unreaded_ket_char, save
       xx exit
@@ -1363,7 +1456,7 @@
 
    ;; help__read_byte is the old do function without unread ket-char
    define_function "read-byte", read_byte
-      ;; (* -- byte *)
+      ;; << -- byte >>
       xx have_unreaded_ket_char?, false?branch, 9
       xx   literal, char$unreaded_ket_char, fetch_byte
       xx   zero, literal, flag$unreaded_ket_char, save
@@ -1380,7 +1473,7 @@
       xx 0
 
    define_primitive_function "help,read-byte", help__read_byte
-      ;; (* -- byte *)
+      ;; << -- byte >>
       call help__help__read_byte
       push_argument_stack rax
       next
@@ -1450,7 +1543,7 @@
 ** read-word-begin-char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word-begin-char", read_word_begin_char
-      ;; (* -- non-blank-char *)
+      ;; << -- non-blank-char >>
       xx read_byte
       xx dup, literal, 32 ;; ascii.space
       xx greater_than?, false?branch, 2
@@ -1466,14 +1559,14 @@
    3. return the address of buffer and length to argument_stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word->buffer", read_word_to_buffer
-      ;; (* buffer -- word[address, length] *)
+      ;; << buffer -- word[address, length] >>
       xx read_word_begin_char
       ;; no metter what the begin char is
       ;; save it into buffer
       xx dup2, swap, save_byte
       xx swap, add1, swap
       xx one, swap ;; leave length counter
-      ;; (* cursor[address in buffer], counter, begin char *)
+      ;; << cursor[address in buffer], counter, begin char >>
       xx dup, bar_ket_char?, false?branch, 4
       xx   drop
       xx   help__read_word_to_buffer__bar_ket
@@ -1484,12 +1577,12 @@
       xx exit
 
    define_function "help,read-word->buffer,bar-ket", help__read_word_to_buffer__bar_ket
-      ;; (* cursor[address in buffer], counter -- word[address, length] *)
+      ;; << cursor[address in buffer], counter -- word[address, length] >>
       xx tuck, subtraction, swap
       xx exit
 
    define_function "help,read-word->buffer,regular", help__read_word_to_buffer__regular
-      ;; (* cursor[address in buffer], counter -- word[address, length] *)
+      ;; << cursor[address in buffer], counter -- word[address, length] >>
       xx read_byte
       xx dup, bar_ket_char?, false?branch, 6
       xx   unread_ket_char
@@ -1508,14 +1601,14 @@
 ** read-word
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word", read_word
-      ;; (* -- word[address, length] *)
+      ;; << -- word[address of buffer$read_word, length] >>
       xx literal, buffer$read_word, read_word_to_buffer
       xx exit
    #+end_src
 ** read-word-for-REPL
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word-for-REPL", read_word_for_REPL
-      ;; (* -- word[address, length] *)
+      ;; << -- word[address of buffer$read_word_for_REPL, length] >>
       xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx exit
    #+end_src
@@ -1524,7 +1617,7 @@
 ** write-string
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "write-string", write_string
-      ;; (* string[address, length] -- *)
+      ;; << string[address, length] -- >>
       xx dup, zero?, false?branch, 3
       xx   drop2
       xx   exit
@@ -1532,6 +1625,14 @@
       xx dup, fetch_byte, write_byte
       xx add1, swap
       xx write_string
+      xx exit
+   #+end_src
+** pretty_write_string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function ".s", pretty_write_string
+      ;; << integer -- >>
+      xx write_string
+      xx literal, 10, write_byte
       xx exit
    #+end_src
 ** ----------------------------------
@@ -1550,7 +1651,7 @@
 
 
    define_function "write-naturl-number", write_naturl_number
-      ;; (* naturl-number -- *)
+      ;; << naturl-number -- >>
       xx zero
       xx literal, counter$write_naturl_number, save
 
@@ -1558,12 +1659,13 @@
 
       xx literal, buffer$write_naturl_number
       xx literal, counter$write_naturl_number, fetch
+      xx string_reverse!
       xx write_string
       xx exit
 
 
    define_function "help,write-naturl-number", help__write_naturl_number
-      ;; (* rest-number -- *)
+      ;; << rest-number -- >>
       xx literal, 10, divmod
 
       xx decimal_digital_to_char
@@ -1584,19 +1686,21 @@
    #+end_src
 ** write-integer
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function ".", pretty_write_integer
-      ;; (* integer -- *)
-      xx write_integer
-      xx literal, 32, write_byte
-      xx exit
-
    define_function "write-integer", write_integer
-      ;; (* integer -- *)
+      ;; << integer -- >>
       xx dup, positive?, false?branch, 3
       xx   write_naturl_number
       xx   exit
       xx literal, '-', write_byte
       xx negate, write_naturl_number
+      xx exit
+   #+end_src
+** pretty_write_integer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function ".", pretty_write_integer
+      ;; << integer -- >>
+      xx write_integer
+      xx literal, 32, write_byte
       xx exit
    #+end_src
 ** ----------------------------------
@@ -1609,7 +1713,7 @@
    * I simply view number less-or-equal 32 as space-char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "space-char?", space_char?
-      ;; (* char -- bool *)
+      ;; << char -- bool >>
       xx literal, 32, less_or_equal?
       xx exit
    #+end_src
@@ -1618,7 +1722,7 @@
      but not <>
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "bar-ket-char?", bar_ket_char?
-      ;; (* char -- bool *)
+      ;; << char -- bool >>
       xx dup, literal, '(', equal?, false?branch, 4
       xx   drop, true
       xx   exit
@@ -1643,7 +1747,7 @@
 ** decimal-digital-char?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "digital-char?", decimal_digital_char?
-      ;; (* char -- bool *)
+      ;; << char -- bool >>
       xx dup, literal, '0', less_than?, false?branch, 4
       xx   drop, false
       xx   exit
@@ -1659,12 +1763,12 @@
 ** char->decimal-digital & decimal-digital->char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "char->decimal-digital", char_to_decimal_digital
-      ;; (* char -- decimal-digital *)
+      ;; << char -- decimal-digital >>
       xx literal, '0', subtraction
       xx exit
 
    define_function "decimal-digital->char", decimal_digital_to_char
-      ;; (* decimal-digital -- char *)
+      ;; << decimal-digital -- char >>
       xx literal, '0', addition
       xx exit
    #+end_src
@@ -1676,7 +1780,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; return false when length == 0
    define_primitive_function "compare-buffer", compare_buffer
-      ;; (* address, address, length -- bool *)
+      ;; << address, address, length -- bool >>
       pop_argument_stack rcx
       pop_argument_stack rdi
       pop_argument_stack rsi
@@ -1690,7 +1794,7 @@
 ** string-equal?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-equal?", string_equal?
-      ;; (* string[address, length], string[address, length] -- bool *)
+      ;; << string[address, length], string[address, length] -- bool >>
       xx xoverxx, equal?, false?branch, 4
       xx   swap, compare_buffer
       xx   exit
@@ -1701,12 +1805,12 @@
 ** string-[head|tail],char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-head,char", string_head__char
-      ;; (* string[address, length] -- char *)
+      ;; << string[address, length] -- char >>
       xx drop, fetch_byte
       xx exit
 
    define_function "string-tail,char", string_tail__char
-      ;; (* string[address, length] -- [address + 1, length + 1] *)
+      ;; << string[address, length] -- [address + 1, length + 1] >>
       xx sub1, swap
       xx add1, swap
       xx exit
@@ -1728,7 +1832,7 @@
 
 
    define_primitive_function "string-reverse!", string_reverse!
-      ;; (* string[address, length] -- string[address, length] *)
+      ;; << string[address, length] -- string[address, length] >>
       mov rdi, buffer$string_reverse!
       mov rcx, [pointer$argument_stack - (1 * bead_size)]
       mov rsi, [pointer$argument_stack - (2 * bead_size)]
@@ -1749,7 +1853,7 @@
 ** digital-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "digital-string?", digital_string?
-      ;; (* [address, length] -- bool *)
+      ;; << [address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   exit
@@ -1763,7 +1867,7 @@
 ** integer-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "integer-string?", integer_string?
-      ;; (* [address, length] -- bool *)
+      ;; << [address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, false
       xx   exit
@@ -1776,7 +1880,7 @@
 ** string->integer
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string->integer", string_to_integer
-      ;; (* string[address, length] -- integer *)
+      ;; << string[address, length] -- integer >>
       xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
       xx   digital_string_to_integer
       xx   exit
@@ -1792,7 +1896,7 @@
       xx 0
 
    define_function "digital-string->integer", digital_string_to_integer
-      ;; (* string[address, length] -- integer *)
+      ;; << string[address, length] -- integer >>
       xx zero, literal, sum$digital_string_to_integer, save
       xx zero, literal, counter$digital_string_to_integer, save
 
@@ -1804,7 +1908,7 @@
       xx exit
 
    define_function "help,digital-string->integer", help__digital_string_to_integer
-      ;; (* reversed-string[address, length] -- *)
+      ;; << reversed-string[address, length] -- >>
       xx dup, zero?, false?branch, 3
       xx   drop2
       xx   exit
@@ -1832,13 +1936,13 @@
       xx latest_jo_in_assembly
 
    define_function "word->jo", word_to_jo
-      ;; (* word[address, length] -- jo, found or not *)
+      ;; << word[address, length] -- jo, found or not >>
       xx first_jo_in_dictionary
       xx help__word_to_jo
       xx exit
 
    define_function "help,word->jo", help__word_to_jo
-      ;; (* word[address, length], jo -- jo, found or not *)
+      ;; << word[address, length], jo -- jo, found or not >>
       xx dup, null_jo?, false?branch, 6
       xx   drop, drop2
       xx   false, false
@@ -1855,7 +1959,7 @@
 ** execute-word
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "execute-word", execute_word
-      ;; (* word[address, length] -- unknown *)
+      ;; << word[address, length] -- unknown >>
       xx dup2, integer_string?, false?branch, 3
       xx   string_to_integer
       xx   exit
@@ -1883,133 +1987,220 @@
 * basic-REPL
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_function "basic-REPL", basic_REPL
-     ;; (* unknown -- unknown *)
+     ;; << unknown -- unknown >>
      xx read_word_for_REPL
      xx execute_word
      xx basic_REPL
      xx exit
   #+end_src
-* >< macro in cicada-nymph
-* >< function jojo
-** define
-   * as a macro
-   #+begin_src fasm
-   define_function "define-function", M_define_function
-      ;; (* words-string[address, length] -- *)
-      xx string_tail_and_head$word
-      xx create_word_header
-      xx dup, push_lambda_stack
-      xx   add_new_word_to_dictionary
-      xx   Verb_explainer, compile_number_to_here
-      xx   compile_word_description_to_here
-      xx pop_lambda_stack
-      xx dup, set_size_of_word
-      xx word_to_name_string, string_hash_to_index
-      xx sub_symbol_from_waiting_symbol_list
+* -----------------------------------
+* : & ;
+** note
+   * from the aesthetics point of view
+     I do NOT think which of the following is better then the other
+     but I choose the second one
+   * first:
+     #+begin_src
+     define-function factorial
+       << n -- n! >>
+       dup one? if
+         exit
+       then
+       dup sub1 factorial *
+       exit
+     end
+     #+end_src
+   * second:
+     #+begin_src cicada-nymph
+     : factorial
+       << n -- n! >>
+       dup one? if
+         exit
+       then
+       dup sub1 factorial *
+       exit
+     ; define-function
+     #+end_src
+** char-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "char-string?", char_string?
+      ;; << string[address, length], char -- bool >>
+      xx xxswapx
+      xx dup, one?, false?, false?branch, 5
+      xx   drop2, drop
+      xx   false
+      xx   exit
+      xx string_head__char, equal?, false?branch, 3
+      xx   true
+      xx   exit
+      xx false
       xx exit
    #+end_src
-* -----------------------------------
-* little_test
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_primitive_function "bye", exit_with_TOS
-     pop_argument_stack sys_1_rdi
-     mov sys_n_rax, syscall_exit
-     syscall
+** [colon|semicolon]-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "colon-string?", colon_string?
+      ;; << string[address, length] -- bool >>
+      xx literal, ':', char_string?
+      xx exit
 
-  define_variable "", V__little_test_number
-     xx 3
+   define_function "semicolon-string?", semicolon_string?
+      ;; << string[address, length] -- bool >>
+      xx literal, ';', char_string?
+      xx exit
+   #+end_src
+** comment-[begin|end]-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$comment_begin:
+      db "<<"
+
+   define_function "comment-begin-string?", comment_begin_string?
+      ;; (* string[address, length] -- bool *)
+      xx literal, string$comment_begin
+      xx literal, 2
+      xx string_equal?
+      xx exit
 
 
-  define_function "little_test", little_test
+   string$comment_end:
+      db ">>"
 
-     ;;;; variable
-     ;; xx V__little_test_number
-     ;; xx exit_with_TOS
-     ;;;; 3
+   define_function "comment-end-string?", comment_end_string?
+      ;; (* -- *)
+      xx literal, string$comment_end
+      xx literal, 2
+      xx string_equal?
+      xx exit
+   #+end_src
+** colon & semicolon
+   * nested : ; is not allow
+     and no error check for it
+   * nested << >> must be handled
+   * comment are handled by : ;
+     comment inside : ; are not readed
+   * note that
+     there might be a ; in << >>
+     when this happens
+     the ; must NOT be readed
+   * note that
+     a bar-ket is readed as a word
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   buffer$colon labeling
+      preserve 1024 * 1024
 
-     ;;;; literal
-     ;; xx literal, 4
-     ;; xx exit_with_TOS
-     ;;;; 4
+   cursor$colon:
+      xx 0
 
-     ;;;; address
-     ;; xx address, V__little_test_number, fetch, add2
-     ;; xx address, V__little_test_number, save
-     ;; xx V__little_test_number
-     ;; xx exit_with_TOS
-     ;;;; 5
+   define_function ":", colon
+      ;; << -- string[address of buffer$colon, length] >>
+      xx literal, buffer$colon
+      xx literal, cursor$colon, save
 
-     ;;;; write_byte
-     ;; xx literal, 64, write_byte
-     ;; xx literal, 10, write_byte
-     ;; xx zero
-     ;; xx exit_with_TOS
-     ;;;; @
+      xx help__loop__colon
 
-     ;;;; read_byte
-     ;; xx read_byte, write_byte
-     ;; xx exit_with_TOS
-     ;;;;
+      xx literal, buffer$colon
+      xx literal, cursor$colon, fetch
+      xx literal, buffer$colon
+      xx subtraction
+      xx exit
 
-     ;;;; branch
-     ;; xx read_byte, write_byte
-     ;; xx branch, -3
-     ;;;; read a string that ended by <return>
-     ;;;; write the readed string
-     ;;;; or we can say
-     ;;;; read line and write line
-     ;;;; or we can say
-     ;;;; echo line
 
-     ;;;; false?branch
-     ;; xx V__false, false?branch, 9
-     ;; xx   literal, 64, write_byte
-     ;; xx   literal, 10, write_byte
-     ;; xx   zero
-     ;; xx   exit_with_TOS
-     ;; xx V__true, false?branch, 9
-     ;; xx   literal, 65, write_byte
-     ;; xx   literal, 10, write_byte
-     ;; xx   zero
-     ;; xx   exit_with_TOS
-     ;; xx zero
-     ;; xx exit_with_TOS
-     ;;;; A
+   define_function "help,loop,colon", help__loop__colon
+      ;; << -- >>
+      xx read_word
+      xx dup2, semicolon_string?, false?branch, 3
+      xx   drop2
+      xx   exit
+      xx dup2, comment_begin_string?, false?branch, 5
+      xx   drop2
+      xx   ignore_comment
+      xx   help__loop__colon
+      xx   exit
+      xx help__add__colon
+      xx help__loop__colon
+      xx exit
 
-     ;;;; read_word & write_string
-     ;; xx read_word, write_string
-     ;; xx literal, 10, write_byte
-     ;; xx read_word_for_REPL, write_string
-     ;; xx literal, 10, write_byte
-     ;; xx zero
-     ;; xx exit_with_TOS
-     ;;;; read line
-     ;;;; write first two words of the line
 
-     ;;;; string->integer
-     ;; xx read_word, string_to_integer
-     ;; xx exit_with_TOS
-     ;;;;
+   ;; when add a word into buffer
+   ;; tail it with a space
+   define_function "help,add,colon", help__add__colon
+      ;; << word[address, length] -- >>
+      ;; <* word[address, length] -- *>
+      ;; << word[address, length] -- >>
+      xx tuck
+      xx   literal, cursor$colon, fetch
+      xx   string_to_buffer!
+      xx literal, cursor$colon, add_save
+      xx one
+      xx   literal, 32
+      xx   literal, cursor$colon, fetch
+      xx   save_byte
+      xx literal, cursor$colon, add_save
+      xx exit
+   #+end_src
+** ignore-comment
+   * this is one is for
+   * I have to implement comment again here
+     this one is for basic-REPL
+   * having to implement a function twice
+     is due to the difference between the interpreter and the compiler
+     the way I use to solve this problem
+     is to implement the REPL as read-compile-and-execute loop
+   * the only function I will implement twice in this simple example
+     is comment
+     other functions such as "if else then"
+     can only be used by compiler
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "<<", ignore_comment
+      ;; << -- >>
+      xx read_word
+      xx dup2, comment_begin_string?, false?branch, 5
+      xx   drop2
+      xx     ignore_comment ;; for the new nested-comment
+      xx   ignore_comment ;; for the rest-comment
+      xx   exit
+      xx dup2, comment_end_string?, false?branch, 3
+      xx   drop2
+      xx   exit
+      xx drop2
+      xx ignore_comment
+      xx exit
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   1 << 989 >> 64 add .
+   << 65 >>
 
-     ;;;; use jo_to_name to test the macro make_name_string
-     ;; xx literal, jo_to_name, jo_to_name, write_string
-     ;; xx zero
-     ;; xx exit_with_TOS
-     ;;;;
-
-     ;;;; basic-REPL (without the ability to define function)
-     ;;;; after this test
-     ;;;; we will use basic-REPL to do further tests
-     xx basic_REPL
-     ;;;; 1 2 add .
-  #+end_src
+   : kkk << 989 << 989 >> >> ; .s
+   << kkk >>
+   #+end_src
+* >< macro in cicada-nymph
+** note
+   * a macro is a function to be called at compile time
+     with a string to be compiled as one argument
+     and do side-effect to store data into memory
+     and return a shorter string
+     [this can be viewed as moving a cursor forward]
+* >< function & jojo
+** note
+   * the compiler [define-function] is a macro dispatcher
+     it get next word and use predicates on word to do dispatch
+   * note that
+     the "compiler" here
+     does NOT (can not) compile file to file
+     but creates structured data directly into memory
+** define-function
+   #+begin_src fasm
+   define_function "define-function", M__define_function
+      ;; << string[address, length] -- >>
+      xx exit
+   #+end_src
 * -----------------------------------
 * epilog
 ** latest_jo_in_assembly
    * this word helps to initialize first_jo_in_dictionary
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "", latest_jo_in_assembly
-      ;; (* -- *)
+      ;; << -- >>
       xx 0
    #+end_src
 ** un_initialized_memory
