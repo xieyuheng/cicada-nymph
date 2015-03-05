@@ -1,0 +1,14 @@
+the little nymph is for teaching purpose only.
+
+it reuses the code and idea
+of the early version of cicada-language,
+
+to teach my friends
+how to implement a interpreter
+of a simple programming language.
+
+I will use assembly language (FASM for x86-64)
+to implement the interpreter.
+
+the programming language to be implemented
+is a threaded-code based (Forth-like) language.

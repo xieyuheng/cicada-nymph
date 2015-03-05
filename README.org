@@ -1,7 +1,0 @@
-#+AUTHOR:    謝宇恆 / XIE Yuheng
-#+EMAIL:     xyheme@gmail.com
-
-
-reuse the code and idea of the early version of cicada-language
-
-to teach how to implement a threaded-code interpreter

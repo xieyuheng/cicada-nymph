@@ -1553,7 +1553,7 @@
       xx exit
    #+end_src
 ** read-word->buffer
-   1. skip any blank (spaces tab newline)
+   1. skip any space-char (whitespace newline)
    2. call read_char to read characters into buffer
       until it hits a blank
    3. return the address of buffer and length to argument_stack
@@ -1709,8 +1709,11 @@
    * as for space-char
      I only use two
      ASCII 10 (newline)
-     ASCII 32 (space)
-   * I simply view number less-or-equal 32 as space-char
+     ASCII 32 (whitespace)
+   * note that
+     I use the term "whitespace" to denotes the char
+     I use the term "space" to denotes the set of chars
+   * I will simply view number less-or-equal 32 as space-char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "space-char?", space_char?
       ;; << char -- bool >>
@@ -1927,6 +1930,20 @@
 
       xx string_tail__char
       xx help__digital_string_to_integer
+      xx exit
+   #+end_src
+** space-string?
+** string-[head|tail],word
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-head,char", string_head__char
+      ;; << string[address, length] -- char >>
+      xx drop, fetch_byte
+      xx exit
+
+   define_function "string-tail,char", string_tail__char
+      ;; << string[address, length] -- [address + 1, length + 1] >>
+      xx sub1, swap
+      xx add1, swap
       xx exit
    #+end_src
 * word
@@ -2172,6 +2189,14 @@
      and do side-effect to store data into memory
      and return a shorter string
      [this can be viewed as moving a cursor forward]
+   * all macro should be highlight by text editor in a special way
+** address
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_macro "address", M__address
+      ;; << -- >>
+      xx exit
+   #+end_src
+** if & else & then
 * >< function & jojo
 ** note
    * the compiler [define-function] is a macro dispatcher
@@ -2180,9 +2205,23 @@
      the "compiler" here
      does NOT (can not) compile file to file
      but creates structured data directly into memory
+   * I add the "CICADA__" as prefix
+     to distinguish from their assembly code version
 ** define-function
-   #+begin_src fasm
-   define_function "define-function", M__define_function
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "define-function", CICADA__define_function
+      ;; << string[address, length] -- >>
+      xx exit
+   #+end_src
+** define-macro
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "define-macro", CICADA__define_macro
+      ;; << string[address, length] -- >>
+      xx exit
+   #+end_src
+** define-variable
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "define-variable", CICADA__define_variable
       ;; << string[address, length] -- >>
       xx exit
    #+end_src
