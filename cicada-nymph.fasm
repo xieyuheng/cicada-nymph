@@ -6,8 +6,9 @@ segment readable executable writeable
 dup equ duplicate
 bead_size = 8 ;; (byte)
 xx equ dq
-;; if you want to extend cicada in assembly,
-;; the following registers must not be used
+;; if you want to extend cicada in assembly
+;; the following registers must NOT be used
+
 ;; =================================
 define pointer$argument_stack   r15
 define pointer$return_stack     r14
@@ -34,7 +35,6 @@ current_free_address$un_initialized_memory = address$un_initialized_memory
 
 labeling  equ = current_free_address$un_initialized_memory
 preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
-current_free_address$primitive_string_heap = address$primitive_string_heap
 exit = 0
 macro next {
    ;; 1. 移動 return_stack 中的第一串珠珠一次
@@ -60,7 +60,13 @@ at_the_end_of_jojo:
    }
 ;; initial link to point to 0 (as null)
 link = 0
-macro make_name_string string {
+size$primitive_string_heap = 100 * 1024 ;; (byte)
+
+address$primitive_string_heap:
+   times size$primitive_string_heap db 0
+
+current_free_address$primitive_string_heap = address$primitive_string_heap
+macro make_primitive_string string {
 
 virtual at 0
 .start$string:
@@ -90,7 +96,7 @@ define_function__#jo:
 name__#jo:
    xx current_free_address$primitive_string_heap
 
-   make_name_string string
+   make_primitive_string string
 
 link__#jo:
    xx link
@@ -102,6 +108,10 @@ jo:
    ;; 後面跟着作爲 function 的函數體的一串珠珠
 
    }
+explain$function:
+   add rax, bead_size
+   push_return_stack rax
+   next
 macro define_macro string, jo {
 
 define_macro__#jo:
@@ -109,7 +119,7 @@ define_macro__#jo:
 name__#jo:
    xx current_free_address$primitive_string_heap
 
-   make_name_string string
+   make_primitive_string string
 
 link__#jo:
    xx link
@@ -121,6 +131,10 @@ jo:
    ;; 後面跟着作爲 macro (特殊的 function) 的函數體的一串珠珠
 
    }
+explain$macro:
+   add rax, bead_size
+   push_return_stack rax
+   next
 macro define_primitive_function string, jo {
 
 define_primitive_function__#jo:
@@ -128,7 +142,7 @@ define_primitive_function__#jo:
 name__#jo:
    xx current_free_address$primitive_string_heap
 
-   make_name_string string
+   make_primitive_string string
 
 link__#jo:
    xx link
@@ -148,7 +162,7 @@ define_variable__#jo:
 name__#jo:
    xx current_free_address$primitive_string_heap
 
-   make_name_string string
+   make_primitive_string string
 
 link__#jo:
    xx link
@@ -161,18 +175,6 @@ jo:
    ;; 只能有一個值
 
    }
-size$primitive_string_heap = 100 * 1024 ;; (byte)
-
-address$primitive_string_heap:
-   times size$primitive_string_heap db 0
-explain$function:
-   add rax, bead_size
-   push_return_stack rax
-   next
-explain$macro:
-   add rax, bead_size
-   push_return_stack rax
-   next
 explain$variable:
    add rax, bead_size
    mov rbx, [rax]
@@ -191,15 +193,19 @@ define_function "jo->name", jo_to_name
    xx   literal, 2, addition, swap
    xx fetch_two_bytes
    xx exit
+define_function "jo->link", jo_to_link
+   ;; << jo -- link >>
+   xx literal, bead_size, subtraction
+   xx exit
 define_function "null-jo?", null_jo?
    ;; << jo -- bool >>
-   xx literal, bead_size, subtraction
+   xx jo_to_link
    xx fetch
    xx zero?
    xx exit
 define_function "jo->pre-jo", jo_to_pre_jo
    ;; << jo -- pre-jo >>
-   xx literal, bead_size, subtraction
+   xx jo_to_link
    xx fetch
    xx literal, bead_size, addition
    xx exit
@@ -213,6 +219,29 @@ define_function "jo->type", jo_to_type
    xx   exit
 
    xx fetch
+   xx exit
+define_function "primitive-function-jo?", primitive_function_jo?
+   ;; << jo -- bool >>
+   xx jo_to_type
+   xx zero?
+   xx exit
+define_function "function-jo?", function_jo?
+   ;; << jo -- bool >>
+   xx jo_to_type
+   xx literal, explain$function
+   xx equal?
+   xx exit
+define_function "macro-jo?", macro_jo?
+   ;; << jo -- bool >>
+   xx jo_to_type
+   xx literal, explain$macro
+   xx equal?
+   xx exit
+define_function "variable-jo?", variable_jo?
+   ;; << jo -- bool >>
+   xx jo_to_type
+   xx literal, explain$variable
+   xx equal?
    xx exit
 begin_to_interpret_threaded_code:
 
@@ -309,7 +338,7 @@ define_function "little_test", little_test
    ;; xx exit_with_TOS
    ;;;;
 
-   ;;;; use jo_to_name to test the macro make_name_string
+   ;;;; use jo_to_name to test the macro make_primitive_string
    ;; xx literal, jo_to_name, jo_to_name, write_string
    ;; xx zero
    ;; xx exit_with_TOS
@@ -1404,7 +1433,7 @@ define_primitive_function "string-reverse!", string_reverse!
 
    next
 define_function "digital-string?", digital_string?
-   ;; << [address, length] -- bool >>
+   ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
    xx   drop2, true
    xx   exit
@@ -1414,9 +1443,35 @@ define_function "digital-string?", digital_string?
    xx   exit
    xx drop2, false
    xx exit
+define_function "char-string?", char_string?
+   ;; << string[address, length], char -- bool >>
+   xx xxswapx
+   xx dup, one?, false?, false?branch, 5
+   xx   drop2, drop
+   xx   false
+   xx   exit
+   xx string_head__char, equal?, false?branch, 3
+   xx   true
+   xx   exit
+   xx false
+   xx exit
+define_function "zero-string?", zero_string?
+   ;; << string[address, length] -- bool >>
+   xx dup2, literal, '0', char_string?, false?branch, 4
+   xx   drop2, true
+   xx   exit
+   xx dup2
+   xx string_head__char, literal, '-', equal?, false?, false?branch, 4
+   xx   drop2, false
+   xx   exit
+   xx string_tail__char, literal, '0', char_string?
+   xx exit
 define_function "integer-string?", integer_string?
-   ;; << [address, length] -- bool >>
+   ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
+   xx   drop2, false
+   xx   exit
+   xx dup2, literal, '-', char_string?, false?branch, 4
    xx   drop2, false
    xx   exit
    xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
@@ -1473,12 +1528,12 @@ define_function "help,digital-string->integer", help__digital_string_to_integer
    xx string_tail__char
    xx help__digital_string_to_integer
    xx exit
-define_variable "first-jo-in-dictionary", first_jo_in_dictionary
-   xx latest_jo_in_assembly
+define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
+   xx last_jo_in_assembly
 
 define_function "word->jo", word_to_jo
    ;; << word[address, length] -- jo, found or not >>
-   xx first_jo_in_dictionary
+   xx V__first_jo_in_dictionary
    xx help__word_to_jo
    xx exit
 
@@ -1511,33 +1566,81 @@ define_function "execute-word", execute_word
    xx   exit
    xx drop  ;; jo
 
+   xx write_undefined_word_report
+   xx write_string
+   xx literal, 10, write_byte
+   xx exit
+
+define_function "write-undefined-word-report", write_undefined_word_report
+   ;; << -- >>
    xx literal, string$undefined_word_report
    xx literal, length$undefined_word_report
    xx write_string
-   xx write_string, literal, 10, write_byte
    xx exit
 
 string$undefined_word_report:
    db "   UNDEFINED-WORD : "
 .end:
 length$undefined_word_report = (.end - string$undefined_word_report)
+define_function "space-string?", space_string?
+   ;; << string[address, length] -- bool >>
+   xx dup, zero?, false?branch, 4
+   xx   drop2, true
+   xx   exit
+   xx over, fetch_byte, space_char?, false?branch, 4
+   xx   string_tail__char
+   xx   digital_string?
+   xx   exit
+   xx drop2, false
+   xx exit
+define_function "left-trim,space-char", left_trim__space_char
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup, zero?, false?branch, 2
+   xx   exit
+   xx dup2, string_head__char, space_char?, false?, false?branch, 2
+   xx   exit
+   xx string_tail__char
+   xx left_trim__space_char
+   xx exit
+
+define_function "left-trim,non-space-char", left_trim__non_space_char
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup, zero?, false?branch, 2
+   xx   exit
+   xx dup2, string_head__char, space_char?, false?branch, 2
+   xx   exit
+   xx string_tail__char
+   xx left_trim__non_space_char
+   xx exit
+define_function "string-head,word", string_head__word
+   ;; << string[address, length] -- word[address, length] >>
+   xx left_trim__space_char
+   xx dup2, left_trim__non_space_char
+   xx swap, drop
+   xx subtraction
+   xx exit
+
+define_function "string-tail,word", string_tail__word
+   ;; << string[address, length] -- string[address, length] >>
+   xx left_trim__space_char
+   xx left_trim__non_space_char
+   xx exit
+string$exit_word:
+   db "exit"
+.end:
+length$exit_word = (.end - string$exit_word)
+
+define_function "exit-word?", exit_word?
+   ;; << word[address, length] -- bool >>
+   xx literal, string$exit_word
+   xx literal, length$exit_word
+   xx string_equal?
+   xx exit
 define_function "basic-REPL", basic_REPL
    ;; << unknown -- unknown >>
    xx read_word_for_REPL
    xx execute_word
    xx basic_REPL
-   xx exit
-define_function "char-string?", char_string?
-   ;; << string[address, length], char -- bool >>
-   xx xxswapx
-   xx dup, one?, false?, false?branch, 5
-   xx   drop2, drop
-   xx   false
-   xx   exit
-   xx string_head__char, equal?, false?branch, 3
-   xx   true
-   xx   exit
-   xx false
    xx exit
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
@@ -1634,9 +1737,221 @@ define_function "<<", ignore_comment
    xx drop2
    xx ignore_comment
    xx exit
-define_variable "", latest_jo_in_assembly
+address$jo_heap labeling
+   preserve 3 * 1024 * 1024 * bead_size
+
+define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
+   xx address$jo_heap
+define_function "make-jojo", make_jojo
+   ;; << string[address, length] -- >>
+   xx dup2, space_string?, false?branch, 3
+   xx   drop2
+   xx   exit
+   xx dup2
+   xx string_head__word
+   xx   make_jojo__dispatch_word
+   xx string_tail__word
+   xx make_jojo
+   xx exit
+
+define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+   ;; << string[address, length], word[address, length] --
+   ;;    string[address, length] >>
+   xx dup2, exit_word?, false?branch, 5
+   xx   drop2
+   xx   zero
+   xx     save_into__jo_heap
+   xx   exit
+   xx dup2, zero_string?, false?branch, 6
+   xx   drop2
+   xx   literal, zero
+   xx     save_into__jo_heap
+   xx   exit
+   xx dup2, integer_string?, false?branch, 7
+   xx   literal, literal
+   xx     save_into__jo_heap
+   xx   string_to_integer
+   xx     save_into__jo_heap
+   xx   exit
+   xx dup2
+   xx word_to_jo, false?, false?branch, 8
+   xx   drop ;; jo
+   xx   write_undefined_word_report__for_funtion_body
+   xx   write_string
+   xx   literal, 10, write_byte
+   ;;   ><><><
+   ;;   here we should not compile the function into memory at all
+   ;;   note that
+   ;;     proper exception handling
+   ;;     can be implemented by doing side-effect on return-stack
+   xx   exit
+   xx xxswapx, drop2 ;; word
+   xx make_jojo__dispatch_jo
+   xx exit
+
+define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
+   ;; << string[address, length], jo --
+   ;;    string[address, length] >>
+   xx dup, function_jo?, false?branch, 3
+   xx   save_into__jo_heap
+   xx   exit
+   xx dup, primitive_function_jo?, false?branch, 3
+   xx   save_into__jo_heap
+   xx   exit
+   xx dup, variable_jo?, false?branch, 3
+   xx   save_into__jo_heap
+   xx   exit
+   xx dup, macro_jo?, false?branch, 3
+   xx   execute_jo
+   xx   exit
+   xx drop
+   xx exit
+
+define_function "write-undefined-word-report,for-funtion-body", write_undefined_word_report__for_funtion_body
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_funtion_body
+   xx literal, length$undefined_word_report__for_funtion_body
+   xx write_string
+   xx exit
+
+string$undefined_word_report__for_funtion_body:
+   db "   make-jojo meets UNDEFINED-WORD : "
+.end:
+length$undefined_word_report__for_funtion_body = (.end - string$undefined_word_report__for_funtion_body)
+define_macro "address", M__address
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, address
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx word_to_jo, false?branch, 4
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   exit
+   xx drop
+
+   xx dup2
+   xx write_undefined_word_report__for_funtion_body
+   xx string_head__word, write_string
+   xx literal, 10, write_byte
+   ;; ><><><
+   ;; here we should not compile the function into memory at all
+   xx exit
+define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+   ;; << string[address, length] -- address >>
+   xx dup, V__current_free_address__primitive_string
+   xx save_two_bytes
+
+   xx literal, 2
+   xx address, V__current_free_address__primitive_string
+   xx add_save
+
+   xx tuck
+   xx V__current_free_address__primitive_string
+   xx string_to_buffer!
+
+   xx address, V__current_free_address__primitive_string
+   xx add_save
+
+   xx exit
+define_function "save-into,jo-heap", save_into__jo_heap
+   ;; << number -- address >>
+   xx V__current_free_address__jo_heap
+   xx save
+
+   xx literal, bead_size
+   xx address, V__current_free_address__jo_heap
+   xx add_save
+
+   xx exit
+define_function "define-function", CICADA__define_function
+   ;; << string[address, length] -- >>
+   xx dup2
+
+   xx V__current_free_address__primitive_string
+   xx   save_into__jo_heap
+   xx string_head__word
+   xx   save_into__primitive_string_heap
+
+   xx V__first_jo_in_dictionary
+   xx jo_to_link
+   xx   save_into__jo_heap
+
+   xx V__current_free_address__jo_heap
+   xx address, V__first_jo_in_dictionary
+   xx save
+
+   xx literal, explain$function
+   xx   save_into__jo_heap
+
+   xx dup2, string_tail__word
+   xx   make_jojo
+
+   ;; when debugging
+   ;; instead of drop2
+   ;; one may wish to do some thing to the string
+   xx drop2
+   xx exit
+define_function "define-macro", CICADA__define_macro
+   ;; << string[address, length] -- >>
+   xx dup2
+
+   xx V__current_free_address__primitive_string
+   xx   save_into__jo_heap
+   xx string_head__word
+   xx   save_into__primitive_string_heap
+
+   xx V__first_jo_in_dictionary
+   xx jo_to_link
+   xx   save_into__jo_heap
+
+   xx V__current_free_address__jo_heap
+   xx address, V__first_jo_in_dictionary
+   xx save
+
+   xx literal, explain$macro
+   xx   save_into__jo_heap
+
+   xx dup2, string_tail__word
+   xx   make_jojo
+
+   ;; when debugging
+   ;; instead of drop2
+   ;; one may wish to do some thing to the string
+   xx drop2
+   xx exit
+define_function "define-variable", CICADA__define_variable
+   ;; << variable, string[address, length] -- >>
+   xx dup2
+
+   xx V__current_free_address__primitive_string
+   xx   save_into__jo_heap
+   xx string_head__word
+   xx   save_into__primitive_string_heap
+
+   xx V__first_jo_in_dictionary
+   xx jo_to_link
+   xx   save_into__jo_heap
+
+   xx V__current_free_address__jo_heap
+   xx address, V__first_jo_in_dictionary
+   xx save
+
+   xx literal, explain$variable
+   xx   save_into__jo_heap
+
+   ;; when debugging
+   ;; instead of drop2
+   ;; one may wish to do some thing to the string
+   xx drop2
+   xx   save_into__jo_heap
+   xx exit
+define_variable "", last_jo_in_assembly
    ;; << -- >>
    xx 0
+define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
+   xx current_free_address$primitive_string_heap
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
 segment readable writeable

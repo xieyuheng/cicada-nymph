@@ -3,6 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** more debug functions
+** fix the macro "address"
+** proper exception handling
+** "if & else & then" in cicada-nymph itself
 * ===================================
 * note
 ** jo & jojo
@@ -22,12 +26,15 @@
      1. write-byte & read-byte
      2. read-word & write-string
      3. string->integer & word->jo & execute-word & basic-REPL
-   * compiler
+   * define & make things into memory
      1. ":" and ";" are used to read a string of words for compiler
         [looks like bar-ket but special]
      2. "<< >>" as the only way todo comment
 ** different from the re-designed cicada-language
    * simplifications are for teaching purpose only
+   * first and foremost
+     function programming will NOT be supported will in this implementation
+   * a helper function must be defined before it is used
    * no mixfix-notation
      * function call is "function" instead of "(function)"
      * no such thing like
@@ -127,6 +134,9 @@
    #+end_src
 ** bead_size
    * 64-bits
+   * note that how "xx" is used as "dq" in a 64-bits version implementation
+     when one wishs to port the implementation to 32-bits machine
+     just use "xx equ dd"
    #+begin_src fasm :tangle cicada-nymph.fasm
    bead_size = 8 ;; (byte)
    xx equ dq
@@ -143,8 +153,9 @@
      under the stack-pointer
      there always stores the value of the-top-of-the-stack
    #+begin_src fasm :tangle cicada-nymph.fasm
-   ;; if you want to extend cicada in assembly,
-   ;; the following registers must not be used
+   ;; if you want to extend cicada in assembly
+   ;; the following registers must NOT be used
+
    ;; =================================
    define pointer$argument_stack   r15
    define pointer$return_stack     r14
@@ -175,10 +186,6 @@
 
    labeling  equ = current_free_address$un_initialized_memory
    preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
-   #+end_src
-** current_free_address$primitive_string_heap
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   current_free_address$primitive_string_heap = address$primitive_string_heap
    #+end_src
 ** exit
    * this makes 0 a very special jo
@@ -213,17 +220,29 @@
       ;; rax 可能被作爲 bead explainer 的參數
       }
    #+end_src
+* -----------------------------------
+* jo
+** ----------------------------------
 ** link
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; initial link to point to 0 (as null)
    link = 0
    #+end_src
-** make_name_string
+** primitive_string_heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$primitive_string_heap = 100 * 1024 ;; (byte)
+
+   address$primitive_string_heap:
+      times size$primitive_string_heap db 0
+
+   current_free_address$primitive_string_heap = address$primitive_string_heap
+   #+end_src
+** make_primitive_string
    * 2 bytes for length of name_string
    * note that
      the following is using local label
    #+begin_src fasm :tangle cicada-nymph.fasm
-   macro make_name_string string {
+   macro make_primitive_string string {
 
    virtual at 0
    .start$string:
@@ -247,6 +266,16 @@
 
    }
    #+end_src
+** ----------------------------------
+** note
+   * 注意
+     每次經由 next 間接跳
+     到這裏的詮釋者的時候
+     rax 都保存着珠的值
+     所以 rax 這個寄存器會被作爲某些詮釋者的參數
+   * explain$function is used as jojo-head
+     and explains the meaning of the jojo as function
+   * a jojo-head identifies one type of jo
 ** define_function
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_function string, jo {
@@ -256,7 +285,7 @@
    name__#jo:
       xx current_free_address$primitive_string_heap
 
-      make_name_string string
+      make_primitive_string string
 
    link__#jo:
       xx link
@@ -269,6 +298,24 @@
 
       }
    #+end_src
+** explain$function
+   * 把由這個 function 類型的 珠
+     所找到的 一串珠珠 入 return_stack
+   * a jojo can not be of size 0 or 1
+   * use rax as an argument
+     which stores a jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   explain$function:
+      add rax, bead_size
+      push_return_stack rax
+      next
+   #+end_src
+** ----------------------------------
+** note
+   * the same as function
+     we need to redefine it
+     for the value of explainer
+     is used to decide the type of the jo
 ** define_macro
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_macro string, jo {
@@ -278,7 +325,7 @@
    name__#jo:
       xx current_free_address$primitive_string_heap
 
-      make_name_string string
+      make_primitive_string string
 
    link__#jo:
       xx link
@@ -291,6 +338,18 @@
 
       }
    #+end_src
+** explain$macro
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   explain$macro:
+      add rax, bead_size
+      push_return_stack rax
+      next
+   #+end_src
+** ----------------------------------
+** note
+   * primitive functions are special
+     they explain themself
+     and their type is not identified by jojo-head
 ** define_primitive_function
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_primitive_function string, jo {
@@ -300,7 +359,7 @@
    name__#jo:
       xx current_free_address$primitive_string_heap
 
-      make_name_string string
+      make_primitive_string string
 
    link__#jo:
       xx link
@@ -314,13 +373,15 @@
 
       }
    #+end_src
-** define_variable
+** ----------------------------------
+** note
    * no constant
      only variable
    * when a variable jo in the jojo
      it push the value of the variable to argument_stack
    * when wish to change a variable's value
      use key_word "address" to get the address of the variable
+** define_variable
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_variable string, jo {
 
@@ -329,7 +390,7 @@
    name__#jo:
       xx current_free_address$primitive_string_heap
 
-      make_name_string string
+      make_primitive_string string
 
    link__#jo:
       xx link
@@ -342,51 +403,6 @@
       ;; 只能有一個值
 
       }
-   #+end_src
-* -----------------------------------
-* primitive_string_heap
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  size$primitive_string_heap = 100 * 1024 ;; (byte)
-
-  address$primitive_string_heap:
-     times size$primitive_string_heap db 0
-  #+end_src
-* jo
-** ----------------------------------
-** note
-   * 注意
-     每次經由 next 間接跳
-     到這裏的詮釋者的時候
-     rax 都保存着珠的值
-     所以 rax 這個寄存器會被作爲某些詮釋者的參數
-   * the following functions are used as jojo-head
-     the explain the meaning of the jojo
-   * a jojo-head identifies one type of jo
-   * primitive functions are special
-     they explain themself
-     and their type is not identified by jojo-head
-** explain$function
-   * 把由這個 function 類型的 珠
-     所找到的 一串珠珠 入 return_stack
-   * a jojo can not be of size 0 or 1
-   * use rax as an argument
-     which stores a jo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   explain$function:
-      add rax, bead_size
-      push_return_stack rax
-      next
-   #+end_src
-** explain$macro
-   * the same as explain$function
-     we need to redefine it
-     for the value of explainer
-     is used to decide the type of the jo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   explain$macro:
-      add rax, bead_size
-      push_return_stack rax
-      next
    #+end_src
 ** explain$variable
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -417,6 +433,13 @@
       xx fetch_two_bytes
       xx exit
    #+end_src
+** jo->link
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->link", jo_to_link
+      ;; << jo -- link >>
+      xx literal, bead_size, subtraction
+      xx exit
+   #+end_src
 ** null-jo?
    * first jo in assembly code
      is the null of the linked list of jo
@@ -424,7 +447,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "null-jo?", null_jo?
       ;; << jo -- bool >>
-      xx literal, bead_size, subtraction
+      xx jo_to_link
       xx fetch
       xx zero?
       xx exit
@@ -433,14 +456,16 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->pre-jo", jo_to_pre_jo
       ;; << jo -- pre-jo >>
-      xx literal, bead_size, subtraction
+      xx jo_to_link
       xx fetch
       xx literal, bead_size, addition
       xx exit
    #+end_src
 ** jo->type
-   * the type of primitive function
+   * the type of primitive function jo
      is encoded by 0
+   * other types of jo
+     are encoded by their explainers
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->type", jo_to_type
       ;; << jo -- type >>
@@ -455,6 +480,43 @@
       xx exit
    #+end_src
 ** ----------------------------------
+** primitive-function-jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "primitive-function-jo?", primitive_function_jo?
+      ;; << jo -- bool >>
+      xx jo_to_type
+      xx zero?
+      xx exit
+   #+end_src
+** function-jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "function-jo?", function_jo?
+      ;; << jo -- bool >>
+      xx jo_to_type
+      xx literal, explain$function
+      xx equal?
+      xx exit
+   #+end_src
+** macro-jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "macro-jo?", macro_jo?
+      ;; << jo -- bool >>
+      xx jo_to_type
+      xx literal, explain$macro
+      xx equal?
+      xx exit
+   #+end_src
+** variable-jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "variable-jo?", variable_jo?
+      ;; << jo -- bool >>
+      xx jo_to_type
+      xx literal, explain$variable
+      xx equal?
+      xx exit
+   #+end_src
+** ----------------------------------
+* -----------------------------------
 * the story begin
 ** begin_to_interpret_threaded_code
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -559,7 +621,7 @@
       ;; xx exit_with_TOS
       ;;;;
 
-      ;;;; use jo_to_name to test the macro make_name_string
+      ;;;; use jo_to_name to test the macro make_primitive_string
       ;; xx literal, jo_to_name, jo_to_name, write_string
       ;; xx zero
       ;; xx exit_with_TOS
@@ -1856,7 +1918,7 @@
 ** digital-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "digital-string?", digital_string?
-      ;; << [address, length] -- bool >>
+      ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   exit
@@ -1867,11 +1929,46 @@
       xx drop2, false
       xx exit
    #+end_src
+** char-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "char-string?", char_string?
+      ;; << string[address, length], char -- bool >>
+      xx xxswapx
+      xx dup, one?, false?, false?branch, 5
+      xx   drop2, drop
+      xx   false
+      xx   exit
+      xx string_head__char, equal?, false?branch, 3
+      xx   true
+      xx   exit
+      xx false
+      xx exit
+   #+end_src
+** zero-string?
+   * "0" or "-0"
+     0 is special when compiling literal number
+     for we are using 0 as "exit"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "zero-string?", zero_string?
+      ;; << string[address, length] -- bool >>
+      xx dup2, literal, '0', char_string?, false?branch, 4
+      xx   drop2, true
+      xx   exit
+      xx dup2
+      xx string_head__char, literal, '-', equal?, false?, false?branch, 4
+      xx   drop2, false
+      xx   exit
+      xx string_tail__char, literal, '0', char_string?
+      xx exit
+   #+end_src
 ** integer-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "integer-string?", integer_string?
-      ;; << [address, length] -- bool >>
+      ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   exit
+      xx dup2, literal, '-', char_string?, false?branch, 4
       xx   drop2, false
       xx   exit
       xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
@@ -1932,29 +2029,18 @@
       xx help__digital_string_to_integer
       xx exit
    #+end_src
-** space-string?
-** string-[head|tail],word
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string-head,char", string_head__char
-      ;; << string[address, length] -- char >>
-      xx drop, fetch_byte
-      xx exit
-
-   define_function "string-tail,char", string_tail__char
-      ;; << string[address, length] -- [address + 1, length + 1] >>
-      xx sub1, swap
-      xx add1, swap
-      xx exit
-   #+end_src
 * word
+** ----------------------------------
 ** word->jo
+   * in classical forth
+     this function is called "find"
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "first-jo-in-dictionary", first_jo_in_dictionary
-      xx latest_jo_in_assembly
+   define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
+      xx last_jo_in_assembly
 
    define_function "word->jo", word_to_jo
       ;; << word[address, length] -- jo, found or not >>
-      xx first_jo_in_dictionary
+      xx V__first_jo_in_dictionary
       xx help__word_to_jo
       xx exit
 
@@ -1990,10 +2076,16 @@
       xx   exit
       xx drop  ;; jo
 
+      xx write_undefined_word_report
+      xx write_string
+      xx literal, 10, write_byte
+      xx exit
+
+   define_function "write-undefined-word-report", write_undefined_word_report
+      ;; << -- >>
       xx literal, string$undefined_word_report
       xx literal, length$undefined_word_report
       xx write_string
-      xx write_string, literal, 10, write_byte
       xx exit
 
    string$undefined_word_report:
@@ -2001,6 +2093,81 @@
    .end:
    length$undefined_word_report = (.end - string$undefined_word_report)
    #+end_src
+** ----------------------------------
+** note
+   * one should use space-string? to make sure
+     that the string is not space-string
+     before apply string-[head|tail],word onto the string
+** space-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "space-string?", space_string?
+      ;; << string[address, length] -- bool >>
+      xx dup, zero?, false?branch, 4
+      xx   drop2, true
+      xx   exit
+      xx over, fetch_byte, space_char?, false?branch, 4
+      xx   string_tail__char
+      xx   digital_string?
+      xx   exit
+      xx drop2, false
+      xx exit
+   #+end_src
+** left-trim,[space-char|non-space-char]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "left-trim,space-char", left_trim__space_char
+      ;; << string[address, length] -- string[address, length] >>
+      xx dup, zero?, false?branch, 2
+      xx   exit
+      xx dup2, string_head__char, space_char?, false?, false?branch, 2
+      xx   exit
+      xx string_tail__char
+      xx left_trim__space_char
+      xx exit
+
+   define_function "left-trim,non-space-char", left_trim__non_space_char
+      ;; << string[address, length] -- string[address, length] >>
+      xx dup, zero?, false?branch, 2
+      xx   exit
+      xx dup2, string_head__char, space_char?, false?branch, 2
+      xx   exit
+      xx string_tail__char
+      xx left_trim__non_space_char
+      xx exit
+   #+end_src
+** string-[head|tail],word
+   * note that
+     the following functions do not create new strings
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-head,word", string_head__word
+      ;; << string[address, length] -- word[address, length] >>
+      xx left_trim__space_char
+      xx dup2, left_trim__non_space_char
+      xx swap, drop
+      xx subtraction
+      xx exit
+
+   define_function "string-tail,word", string_tail__word
+      ;; << string[address, length] -- string[address, length] >>
+      xx left_trim__space_char
+      xx left_trim__non_space_char
+      xx exit
+   #+end_src
+** ----------------------------------
+** exit-word?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$exit_word:
+      db "exit"
+   .end:
+   length$exit_word = (.end - string$exit_word)
+
+   define_function "exit-word?", exit_word?
+      ;; << word[address, length] -- bool >>
+      xx literal, string$exit_word
+      xx literal, length$exit_word
+      xx string_equal?
+      xx exit
+   #+end_src
+** ----------------------------------
 * basic-REPL
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_function "basic-REPL", basic_REPL
@@ -2038,21 +2205,6 @@
        exit
      ; define-function
      #+end_src
-** char-string?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "char-string?", char_string?
-      ;; << string[address, length], char -- bool >>
-      xx xxswapx
-      xx dup, one?, false?, false?branch, 5
-      xx   drop2, drop
-      xx   false
-      xx   exit
-      xx string_head__char, equal?, false?branch, 3
-      xx   true
-      xx   exit
-      xx false
-      xx exit
-   #+end_src
 ** [colon|semicolon]-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "colon-string?", colon_string?
@@ -2182,57 +2334,308 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
-* >< macro in cicada-nymph
+* >< function & jojo
+** ----------------------------------
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   address$jo_heap labeling
+      preserve 3 * 1024 * 1024 * bead_size
+
+   define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
+      xx address$jo_heap
+   #+end_src
+** ----------------------------------
 ** note
+   * the make-jojo is a macro dispatcher
+     it can be viewed as make-function-body
+     it gets next word and use predicates on word to do dispatch
+   * note that
+     make-jojo can be viewed as the "compiler" of the cicada-nymph
+     it does NOT (can not) compile file to file
+     but creates structured data directly into memory
+** make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "make-jojo", make_jojo
+      ;; << string[address, length] -- >>
+      xx dup2, space_string?, false?branch, 3
+      xx   drop2
+      xx   exit
+      xx dup2
+      xx string_head__word
+      xx   make_jojo__dispatch_word
+      xx string_tail__word
+      xx make_jojo
+      xx exit
+
+   define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+      ;; << string[address, length], word[address, length] --
+      ;;    string[address, length] >>
+      xx dup2, exit_word?, false?branch, 5
+      xx   drop2
+      xx   zero
+      xx     save_into__jo_heap
+      xx   exit
+      xx dup2, zero_string?, false?branch, 6
+      xx   drop2
+      xx   literal, zero
+      xx     save_into__jo_heap
+      xx   exit
+      xx dup2, integer_string?, false?branch, 7
+      xx   literal, literal
+      xx     save_into__jo_heap
+      xx   string_to_integer
+      xx     save_into__jo_heap
+      xx   exit
+      xx dup2
+      xx word_to_jo, false?, false?branch, 8
+      xx   drop ;; jo
+      xx   write_undefined_word_report__for_funtion_body
+      xx   write_string
+      xx   literal, 10, write_byte
+      ;;   ><><><
+      ;;   here we should not compile the function into memory at all
+      ;;   note that
+      ;;     proper exception handling
+      ;;     can be implemented by doing side-effect on return-stack
+      xx   exit
+      xx xxswapx, drop2 ;; word
+      xx make_jojo__dispatch_jo
+      xx exit
+
+   define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
+      ;; << string[address, length], jo --
+      ;;    string[address, length] >>
+      xx dup, function_jo?, false?branch, 3
+      xx   save_into__jo_heap
+      xx   exit
+      xx dup, primitive_function_jo?, false?branch, 3
+      xx   save_into__jo_heap
+      xx   exit
+      xx dup, variable_jo?, false?branch, 3
+      xx   save_into__jo_heap
+      xx   exit
+      xx dup, macro_jo?, false?branch, 3
+      xx   execute_jo
+      xx   exit
+      xx drop
+      xx exit
+
+   define_function "write-undefined-word-report,for-funtion-body", write_undefined_word_report__for_funtion_body
+      ;; << -- >>
+      xx literal, string$undefined_word_report__for_funtion_body
+      xx literal, length$undefined_word_report__for_funtion_body
+      xx write_string
+      xx exit
+
+   string$undefined_word_report__for_funtion_body:
+      db "   make-jojo meets UNDEFINED-WORD : "
+   .end:
+   length$undefined_word_report__for_funtion_body = (.end - string$undefined_word_report__for_funtion_body)
+   #+end_src
+** ----------------------------------
+** note macro in cicada-nymph
    * a macro is a function to be called at compile time
      with a string to be compiled as one argument
      and do side-effect to store data into memory
      and return a shorter string
      [this can be viewed as moving a cursor forward]
-   * all macro should be highlight by text editor in a special way
+   * a macro should be highlight by text editor in a special way
 ** address
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_macro "address", M__address
-      ;; << -- >>
+      ;; << string[address, length] -- string[address, length] >>
+      xx literal, address
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx word_to_jo, false?branch, 4
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   exit
+      xx drop
+
+      xx dup2
+      xx write_undefined_word_report__for_funtion_body
+      xx string_head__word, write_string
+      xx literal, 10, write_byte
+      ;; ><><><
+      ;; here we should not compile the function into memory at all
       xx exit
    #+end_src
-** if & else & then
-* >< function & jojo
+** >< branch
+** >< false?branch
+** ----------------------------------
 ** note
-   * the compiler [define-function] is a macro dispatcher
-     it get next word and use predicates on word to do dispatch
-   * note that
-     the "compiler" here
-     does NOT (can not) compile file to file
-     but creates structured data directly into memory
-   * I add the "CICADA__" as prefix
+   * you can see how the naming convention is used
+     for functions that create structured data into memory
+** save-into,primitive-string-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+      ;; << string[address, length] -- address >>
+      xx dup, V__current_free_address__primitive_string
+      xx save_two_bytes
+
+      xx literal, 2
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+
+      xx tuck
+      xx V__current_free_address__primitive_string
+      xx string_to_buffer!
+
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+
+      xx exit
+   #+end_src
+** save-into,jo-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,jo-heap", save_into__jo_heap
+      ;; << number -- address >>
+      xx V__current_free_address__jo_heap
+      xx save
+
+      xx literal, bead_size
+      xx address, V__current_free_address__jo_heap
+      xx add_save
+
+      xx exit
+   #+end_src
+** ----------------------------------
+** note
+   * for the following function
+     I add the "CICADA__" as prefix
      to distinguish from their assembly code version
 ** define-function
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
+      xx dup2
+
+      xx V__current_free_address__primitive_string
+      xx   save_into__jo_heap
+      xx string_head__word
+      xx   save_into__primitive_string_heap
+
+      xx V__first_jo_in_dictionary
+      xx jo_to_link
+      xx   save_into__jo_heap
+
+      xx V__current_free_address__jo_heap
+      xx address, V__first_jo_in_dictionary
+      xx save
+
+      xx literal, explain$function
+      xx   save_into__jo_heap
+
+      xx dup2, string_tail__word
+      xx   make_jojo
+
+      ;; when debugging
+      ;; instead of drop2
+      ;; one may wish to do some thing to the string
+      xx drop2
       xx exit
    #+end_src
+** test
+   #+begin_src cicada-nymph
+   : addadd add add exit ; define-function
+   1 2 3 addadd . << 6 >>
+
+   : add1 1 add exit ; define-function
+   1 add1 . << 2 >>
+
+   : negate 0 swap sub exit ; define-function
+   1 negate . << -1 >>
+   #+end_src
+** ----------------------------------
 ** define-macro
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-macro", CICADA__define_macro
       ;; << string[address, length] -- >>
+      xx dup2
+
+      xx V__current_free_address__primitive_string
+      xx   save_into__jo_heap
+      xx string_head__word
+      xx   save_into__primitive_string_heap
+
+      xx V__first_jo_in_dictionary
+      xx jo_to_link
+      xx   save_into__jo_heap
+
+      xx V__current_free_address__jo_heap
+      xx address, V__first_jo_in_dictionary
+      xx save
+
+      xx literal, explain$macro
+      xx   save_into__jo_heap
+
+      xx dup2, string_tail__word
+      xx   make_jojo
+
+      ;; when debugging
+      ;; instead of drop2
+      ;; one may wish to do some thing to the string
+      xx drop2
       xx exit
    #+end_src
+** ----------------------------------
 ** define-variable
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-variable", CICADA__define_variable
-      ;; << string[address, length] -- >>
+      ;; << variable, string[address, length] -- >>
+      xx dup2
+
+      xx V__current_free_address__primitive_string
+      xx   save_into__jo_heap
+      xx string_head__word
+      xx   save_into__primitive_string_heap
+
+      xx V__first_jo_in_dictionary
+      xx jo_to_link
+      xx   save_into__jo_heap
+
+      xx V__current_free_address__jo_heap
+      xx address, V__first_jo_in_dictionary
+      xx save
+
+      xx literal, explain$variable
+      xx   save_into__jo_heap
+
+      ;; when debugging
+      ;; instead of drop2
+      ;; one may wish to do some thing to the string
+      xx drop2
+      xx   save_into__jo_heap
       xx exit
+   #+end_src
+** ----------------------------------
+** test
+   #+begin_src cicada-nymph
+   233 : *three* ; define-variable
+   : fix-*three* 3 address *three* save exit ; define-function
+   : add-three *three* add exit ; define-function
+   1 add-three . << 234 >>
+   fix-*three*
+   1 add-three . << 4 >>
    #+end_src
 * -----------------------------------
 * epilog
-** latest_jo_in_assembly
-   * this word helps to initialize first_jo_in_dictionary
+** last_jo_in_assembly
+   * this word helps to initialize V__first_jo_in_dictionary
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "", latest_jo_in_assembly
+   define_variable "", last_jo_in_assembly
       ;; << -- >>
       xx 0
+   #+end_src
+** *current-free-address,primitive-string-heap*
+   * the last_primitive_string_in_assembly
+     is just "*current-free-address,primitive-string-heap*"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
+      xx current_free_address$primitive_string_heap
    #+end_src
 ** un_initialized_memory
    #+begin_src fasm :tangle cicada-nymph.fasm
