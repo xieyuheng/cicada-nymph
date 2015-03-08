@@ -180,6 +180,26 @@ explain$variable:
    mov rbx, [rax]
    push_argument_stack rbx
    next
+macro define_exception string, jo {
+
+define_exception__#jo:
+
+name__#jo:
+   xx current_free_address$primitive_string_heap
+
+   make_primitive_string string
+
+link__#jo:
+   xx link
+   link = link__#jo
+
+jo:
+   xx explain$exception
+
+   ;; 後面跟着作爲 exception (特殊的 function) 的函數體的一串珠珠
+
+   }
+explain$exception:
 define_primitive_function "execute-jo", execute_jo
    ;; << jo -- unknown >>
    pop_argument_stack rax
@@ -681,6 +701,14 @@ help__false?branch__not_to_branch:
    jz .meet_end
    push_return_stack rbx
 .meet_end:
+   next
+define_primitive_function "", prepare_for
+   ;; << -- >>
+
+   next
+define_primitive_function "", exception_header
+   ;; << -- >>
+
    next
 define_primitive_function "false", false
    ;; << -- false >>
@@ -1531,13 +1559,13 @@ define_function "help,digital-string->integer", help__digital_string_to_integer
 define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
    xx last_jo_in_assembly
 
-define_function "word->jo", word_to_jo
+define_function "find", find
    ;; << word[address, length] -- jo, found or not >>
    xx V__first_jo_in_dictionary
-   xx help__word_to_jo
+   xx help__find
    xx exit
 
-define_function "help,word->jo", help__word_to_jo
+define_function "help,find", help__find
    ;; << word[address, length], jo -- jo, found or not >>
    xx dup, null_jo?, false?branch, 6
    xx   drop, drop2
@@ -1549,7 +1577,7 @@ define_function "help,word->jo", help__word_to_jo
    xx   drop2, true
    xx   exit
    xx xswapxx, jo_to_pre_jo
-   xx help__word_to_jo
+   xx help__find
    xx exit
 define_function "execute-word", execute_word
    ;; << word[address, length] -- unknown >>
@@ -1560,7 +1588,7 @@ define_function "execute-word", execute_word
 
    xx dup2 ;; for to report undefined word
 
-   xx word_to_jo, false?branch, 5
+   xx find, false?branch, 5
    xx   xxswapx, drop2
    xx   execute_jo
    xx   exit
@@ -1776,7 +1804,7 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    xx     save_into__jo_heap
    xx   exit
    xx dup2
-   xx word_to_jo, false?, false?branch, 8
+   xx find, false?, false?branch, 8
    xx   drop ;; jo
    xx   write_undefined_word_report__for_funtion_body
    xx   write_string
@@ -1827,7 +1855,7 @@ define_macro "address", M__address
 
    xx dup2
    xx string_head__word
-   xx word_to_jo, false?branch, 4
+   xx find, false?branch, 4
    xx   save_into__jo_heap
    xx   string_tail__word
    xx   exit

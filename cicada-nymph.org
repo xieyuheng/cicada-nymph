@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** fix cicada-nymph-mode
 ** more debug functions
 ** proper exception handling
 ** "if & else & then" in cicada-nymph itself
@@ -13,6 +12,12 @@
    * use "jo" to denote bead
      and use "jojo" to denote a thread of beads
      [which reads like "珠珠" in Chinese]
+** threaded-code interpreter
+   #+begin_src picture
+   - [ ] - [ ] - [ ] - [ ] - [ (  ) ]
+                               (  )
+                               (  )
+   #+end_src
 ** the order of development
    * indirect-threaded-code interpreter
      1. macro about argument_stack & return_stack
@@ -25,7 +30,7 @@
    * basic-REPL as postfix-notation function executer
      1. write-byte & read-byte
      2. read-word & write-string
-     3. string->integer & word->jo & execute-word & basic-REPL
+     3. string->integer & find & execute-word & basic-REPL
    * define & make things into memory
      1. ":" and ";" are used to read a string of words for compiler
         [looks like bar-ket but special]
@@ -86,9 +91,9 @@
       |--------------+----------|
       | prefix "V__" | variable |
       | prefix "M__" | macro    |
-    * exception:
-      use "zero" instead of "V__zero"
-      use "true" instead of "V__true"
+    * but I use
+      1. "zero" instead of "V__zero"
+      2. "true" instead of "V__true"
 *** convention in cicada-nymph code
     * using dash to compose big word from small words
     * using "," as prefix and postfix separator
@@ -98,18 +103,22 @@
       every bar-ket is viewed as a word
 *** syntax of cicada-nymph
     * syntax &  semantic
-      | syntax          | semantic              |
-      |-----------------+-----------------------|
-      | borderfix "* *" | variable              |
-      | borderfix "+ +" | [maybe use]           |
-      | bar-ket ( )     | not use               |
-      | bar-ket [ ]     | not use               |
-      | bar-ket { }     | macro call            |
-      |                 | (for macros of which  |
-      |                 | the number of         |
-      |                 | arguments is not fix) |
-    * exception:
-      use true
+      | syntax          | semantic                |
+      |-----------------+-------------------------|
+      | borderfix "* *" | variable                |
+      | borderfix "+ +" | [maybe use]             |
+      | bar-ket ( )     | not use                 |
+      | bar-ket [ ]     | not use                 |
+      | bar-ket { }     | macro call              |
+      |                 | (for macros of which    |
+      |                 | the number of           |
+      |                 | arguments is not fix)   |
+      | prefix "!"      | exception               |
+      | postfix "!"     | some of the side-effect |
+      | postfix "?"     | predicate               |
+    * but I use
+      1. "true" instead of "*true*"
+      2. "false" instead of "*false*"
 * -----------------------------------
 * prolog
 ** include linux header
@@ -190,7 +199,9 @@
 ** exit
    * this makes 0 a very special jo
      one important effect is that
+     #+begin_src fasm
      xx literal, 0
+     #+end_src
      is not allowed
    #+begin_src fasm :tangle cicada-nymph.fasm
    exit = 0
@@ -411,6 +422,38 @@
       mov rbx, [rax]
       push_argument_stack rbx
       next
+   #+end_src
+** ----------------------------------
+** note
+   * explain$exception will
+     1. search the return-stack for that exception
+     2. special side-effect on return-stack
+        to do exception handling
+** define_exception
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro define_exception string, jo {
+
+   define_exception__#jo:
+
+   name__#jo:
+      xx current_free_address$primitive_string_heap
+
+      make_primitive_string string
+
+   link__#jo:
+      xx link
+      link = link__#jo
+
+   jo:
+      xx explain$exception
+
+      ;; 後面跟着作爲 exception (特殊的 function) 的函數體的一串珠珠
+
+      }
+   #+end_src
+** >< explain$exception
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   explain$exception:
    #+end_src
 ** ----------------------------------
 ** execute-jo
@@ -913,8 +956,14 @@
       preserve 1024 * 1024 * bead_size
    #+end_src
 * special primitive function
-** note
-   * special primitive function do special side-effect on return_stack
+** ----------------------------------
+** note side-effect
+   * a special primitive function
+     does special side-effect on return-stack
+   * note that
+     side-effect on return-stack
+     should all be done in primitive functions
+** note naming
    * the naming convention in assembly code
      of special primitive function
      is the same as it of jo
@@ -925,14 +974,17 @@
      maybe reused as a macro word in cicada-language
      but the name of the macro in assembly code
      is prefixed by "M__"
+** ----------------------------------
 ** note about exit
-   * the jo 0 is used as exit
-     so 0 should not be used with any special primitive function
-** literal
    * note that
+     the jo 0 is used as exit
+     so
+     #+begin_src fasm
      xx literal, 0
-     is not allowed
-     for 0 is used as "exit"
+     #+end_src
+     [and so on]
+     are not allowed
+** literal
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*literal*", V__literal
       xx literal
@@ -979,6 +1031,7 @@
       ;; 不放回 就算抽出
       next
    #+end_src
+** ----------------------------------
 ** branch
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "", branch
@@ -1024,6 +1077,34 @@
    .meet_end:
       next
    #+end_src
+** ----------------------------------
+** note usage
+   #+begin_src fasm
+   xx prepare_for
+   xx exception_header
+   xx   !exception_1
+   xx   !exception_2
+   xx   exit
+   xx function_1
+   xx function_2
+   xx exit
+   #+end_src
+** prepare_for
+   * prepare for a list of exceptions
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "", prepare_for
+      ;; << -- >>
+
+      next
+   #+end_src
+** exception_header
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "", exception_header
+      ;; << -- >>
+
+      next
+   #+end_src
+** ----------------------------------
 * bool
 ** false & true
    * they are defined as function
@@ -2031,20 +2112,30 @@
    #+end_src
 * word
 ** ----------------------------------
-** word->jo
-   * in classical forth
-     this function is called "find"
+** find
+   * as find
+   * find jo in dictionary by word
+     but I simply call it "find"
+   * a function whoes name is prefixed by "find"
+     maybe fail to find
+     and maybe returns a signal
+     to inform the function who calls it
+   * note that
+     the stack-comment would be easy to write
+     if one use always return the same number of return-values
+     although when failing to find something
+     often only the signal as a return-value would be useful
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
       xx last_jo_in_assembly
 
-   define_function "word->jo", word_to_jo
+   define_function "find", find
       ;; << word[address, length] -- jo, found or not >>
       xx V__first_jo_in_dictionary
-      xx help__word_to_jo
+      xx help__find
       xx exit
 
-   define_function "help,word->jo", help__word_to_jo
+   define_function "help,find", help__find
       ;; << word[address, length], jo -- jo, found or not >>
       xx dup, null_jo?, false?branch, 6
       xx   drop, drop2
@@ -2056,7 +2147,7 @@
       xx   drop2, true
       xx   exit
       xx xswapxx, jo_to_pre_jo
-      xx help__word_to_jo
+      xx help__find
       xx exit
    #+end_src
 ** execute-word
@@ -2070,7 +2161,7 @@
 
       xx dup2 ;; for to report undefined word
 
-      xx word_to_jo, false?branch, 5
+      xx find, false?branch, 5
       xx   xxswapx, drop2
       xx   execute_jo
       xx   exit
@@ -2389,7 +2480,7 @@
       xx     save_into__jo_heap
       xx   exit
       xx dup2
-      xx word_to_jo, false?, false?branch, 8
+      xx find, false?, false?branch, 8
       xx   drop ;; jo
       xx   write_undefined_word_report__for_funtion_body
       xx   write_string
@@ -2451,7 +2542,7 @@
 
       xx dup2
       xx string_head__word
-      xx word_to_jo, false?branch, 4
+      xx find, false?branch, 4
       xx   save_into__jo_heap
       xx   string_tail__word
       xx   exit
