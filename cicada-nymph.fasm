@@ -1748,9 +1748,11 @@ define_function "make-jojo", make_jojo
    xx   drop2
    xx   exit
    xx dup2
-   xx string_head__word
-   xx   make_jojo__dispatch_word
    xx string_tail__word
+   xx xxswapxx
+   xx string_head__word
+   ;; << tail[address, length], head[address, length] >>
+   xx make_jojo__dispatch_word
    xx make_jojo
    xx exit
 

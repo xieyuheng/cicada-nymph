@@ -3,8 +3,8 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** fix cicada-nymph-mode
 ** more debug functions
-** fix the macro "address"
 ** proper exception handling
 ** "if & else & then" in cicada-nymph itself
 * ===================================
@@ -2361,9 +2361,11 @@
       xx   drop2
       xx   exit
       xx dup2
-      xx string_head__word
-      xx   make_jojo__dispatch_word
       xx string_tail__word
+      xx xxswapxx
+      xx string_head__word
+      ;; << tail[address, length], head[address, length] >>
+      xx make_jojo__dispatch_word
       xx make_jojo
       xx exit
 
@@ -2615,9 +2617,10 @@
 ** test
    #+begin_src cicada-nymph
    233 : *three* ; define-variable
-   : fix-*three* 3 address *three* save exit ; define-function
    : add-three *three* add exit ; define-function
    1 add-three . << 234 >>
+
+   : fix-*three* 3 address *three* save exit ; define-function
    fix-*three*
    1 add-three . << 4 >>
    #+end_src
