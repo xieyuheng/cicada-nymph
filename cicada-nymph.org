@@ -4,8 +4,6 @@
 
 * todo
 ** more documentations on the nature of the language and the interpreter
-** remove chinese use chinese-english and picture instead
-   * remove wordy-inline comment
 ** proper exception handling
 ** more debug functions
 ** "if & else & then" in cicada-nymph itself
@@ -16,11 +14,20 @@
      and use "jojo" to denote a thread of beads
      [which reads like "珠珠" in Chinese]
 ** threaded-code interpreter
-   #+begin_src picture
-   - [ ] - [ ] - [ ] - [ ] - [ (  ) ]
-                               (  )
-                               (  )
-   #+end_src
+   * the dictionary is a single-linked-list
+     of word-jo-jojo
+   * a jojo is an vector of jo
+   * from a jo one can find a jojo
+     for example
+     this is what the "explain$function" will do
+     to help the interpreter
+     to explain the mean of a jo
+   * from a word one can find a jo
+     for example
+     this is what the "define-function" will do
+     from source code
+     it defines new function into dictionary
+     by creating new structured data into memory
 ** the order of development
    * indirect-threaded-code interpreter
      1. macro about argument_stack & return_stack
@@ -64,14 +71,6 @@
    * about comment
      * the comment of the argument & return value of function
        is allowed to be written in free style normal comment
-** 設計決策
-   * 在某些需要做設計決策的地方
-     我放棄了簡單性
-     而追求結構的一致性還有更豐富的性狀
-     如果不是因爲這次講授的需要
-     我自己都很難想像
-     我會重新退回到叉路口
-     並認真地嘗試另一條路
 ** convention
 *** naming convention
     * a predicate of a type
@@ -212,28 +211,189 @@
 ** next
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro next {
-      ;; 1. 移動 return_stack 中的第一串珠珠一次
-      ;; 2. 如果 遇到珠珠的末尾
-      ;;         把這串珠珠抽出
-      ;;    否則 不抽出
-      ;; 3. 去尋求被移出的一顆珠的意義
-   local at_the_end_of_jojo
       pop_return_stack rbx
-      mov rax, qword[rbx] ;; 記錄被移出的一顆珠
+        mov rax, qword[rbx]
       add rbx, bead_size
-      mov rcx, qword[rbx] ;; 用來判斷是否是珠珠的末尾
-      test rcx, rcx
-      jz at_the_end_of_jojo
-      push_return_stack rbx ;; 把珠珠放回 就代表不抽出
-   at_the_end_of_jojo:
-      ;; 去尋求被移出的一顆珠的意義
-      ;; 因爲 對其意義的詮釋方式 被記錄在其地址下
-      ;; 所以需要一次 間接跳
-      jmp qword[rax]
-      ;; 跳過去之後 rax 保存的是被移出的一顆珠
-      ;; rax 可能被作爲 bead explainer 的參數
-      }
+        mov rcx, qword[rbx]
+        test rcx, rcx
+        jz @f
+      push_return_stack rbx
+   @@:  jmp qword[rax]
+   }
    #+end_src
+** note play with jo & jojo
+   1. if we have
+      * the following one jojo in the return-stack
+        #+begin_src picture
+        - [ (square) ]
+            (square)
+            (exit)
+        #+end_src
+      * and 2 in the argument-stack
+        denoted by << 2 >>
+      * and as following
+        the jo "square" is defined
+        #+begin_src fasm
+        define_function "square", square
+           ;; << number -- square of number >>
+           xx dup
+           xx multiple
+           xx exit
+        #+end_src
+   2. when "next" is called
+      * "next" moves the jojo on top of return-stack
+        #+begin_src picture
+            (square)
+        - [ (square) ]
+            (exit)
+        #+end_src
+      * "next" finds the meaning of the jo just been pulled out
+        i.e. the jo "square"
+        "explain$function" is called
+        to help to explain the meaning of the function-jo "square"
+        the function body of the jo "square"
+        is pushed to return-stack as a new jojo
+        #+begin_src picture
+            (square)
+        - [ (square) ] - [ (dup) ]
+            (exit)         (multiple)
+                           (exit)
+        #+end_src
+   3. "next" is called again
+      * "next" moves the jojo on top of return-stack
+        #+begin_src picture
+            (square)       (dup)
+        - [ (square) ] - [ (multiple) ]
+            (exit)         (exit)
+        #+end_src
+      * "next" finds the meaning of the jo just been pulled out
+        i.e. the jo "dup"
+        as a primitive-function-jo
+        "dup" explains itself
+        the argument-stack becomes << 2, 2 >>
+   4. "next" is called again
+      * "next" moves the jojo on top of return-stack
+        by the ending "exit"
+        "next" recognizes that
+        it is the last jo in the jojo
+        so "next" pops the jojo out of return-stack
+        #+begin_src picture
+            (square)
+        - [ (square) ]
+            (exit)
+        #+end_src
+      * "next" finds the meaning of the jo just been pulled out
+        i.e. the jo "multiple"
+        a primitive-function-jo again
+        the argument-stack becomes << 4 >>
+   5. "next" is called again
+      * "next" moves the jojo on top of return-stack
+        by the ending "exit"
+        "next" recognizes that
+        it is the last jo in the jojo
+        so "next" pops the jojo out of return-stack
+        the return-stack is empty now
+        #+begin_src picture
+        - [  ]
+        #+end_src
+      * "next" finds the meaning of the jo just been pulled out
+        i.e. the jo "square"
+        "explain$function" is called
+        to help to explain the meaning of the function-jo "square"
+        the function body of the jo "square"
+        is pushed to return-stack as a new jojo
+        #+begin_src picture
+        - [ (dup) ]
+            (multiple)
+            (exit)
+        #+end_src
+   6. "next"
+      * return-stack
+        #+begin_src picture
+            (dup)
+        - [ (multiple) ]
+            (exit)
+        #+end_src
+      * argument-stack
+        << 4, 4 >>
+   7. "next"
+      * return-stack
+        #+begin_src picture
+        - [  ]
+        #+end_src
+      * argument-stack
+        << 16 >>
+   8. return-stack is empty now
+      it is clear that
+      if "next" is called again
+      an error will occur
+      actually
+      in real situation
+      return-stack will never be empty
+      at the end of the return-stack
+      there is a tail recursive function [a loop]
+      which protects the return-stack from being empty
+** note let us do a little review
+   1. at the beginning
+      * return-stack
+        #+begin_src picture
+        - [ (square) ]
+            (square)
+            (exit)
+        #+end_src
+      * argument-stack
+        << 2 >>
+   2. next
+      * return-stack
+        #+begin_src picture
+            (square)
+        - [ (square) ] - [ (dup) ]
+            (exit)         (multiple)
+                           (exit)
+        #+end_src
+   3. next
+      * return-stack
+        #+begin_src picture
+            (square)       (dup)
+        - [ (square) ] - [ (multiple) ]
+            (exit)         (exit)
+        #+end_src
+      * argument-stack
+        << 2, 2 >>
+   4. next
+      * return-stack
+        #+begin_src picture
+            (square)
+        - [ (square) ]
+            (exit)
+        #+end_src
+      * argument-stack << 4 >>
+   5. next
+      * return-stack
+        #+begin_src picture
+        - [ (dup) ]
+            (multiple)
+            (exit)
+        #+end_src
+   6. next
+      * return-stack
+        #+begin_src picture
+            (dup)
+        - [ (multiple) ]
+            (exit)
+        #+end_src
+      * argument-stack
+        << 4, 4 >>
+   7. next
+      * return-stack
+        #+begin_src picture
+        - [  ]
+        #+end_src
+      * argument-stack
+        << 16 >>
+   8. it is really simple
+      ^-^
+      is it not ?
 * -----------------------------------
 * jo
 ** ----------------------------------
@@ -282,11 +442,12 @@
    #+end_src
 ** ----------------------------------
 ** note
-   * 注意
-     每次經由 next 間接跳
-     到這裏的詮釋者的時候
-     rax 都保存着珠的值
-     所以 rax 這個寄存器會被作爲某些詮釋者的參數
+   * note that
+     after a "next" "jmp" to a explainer
+     the "rax" stores the value of the jo to be explained
+     so
+     "rax" is used as an inexplicit argument
+     of the following functions
    * explain$function is used as jojo-head
      and explains the meaning of the jojo as function
    * a jojo-head identifies one type of jo
@@ -308,13 +469,13 @@
    jo:
       xx explain$function
 
-      ;; 後面跟着作爲 function 的函數體的一串珠珠
+      ;; here follows a jojo as function-body
 
       }
    #+end_src
 ** explain$function
-   * 把由這個 function 類型的 珠
-     所找到的 一串珠珠 入 return_stack
+   * find a jojo from a function-jo
+     and push the jojo to return-stack
    * a jojo can not be of size 0 or 1
    * use rax as an argument
      which stores a jo
@@ -348,7 +509,7 @@
    jo:
       xx explain$macro
 
-      ;; 後面跟着作爲 macro (特殊的 function) 的函數體的一串珠珠
+      ;; here follows a jojo as function-body
 
       }
    #+end_src
@@ -383,7 +544,9 @@
       xx assembly_code__#jo
 
    assembly_code__#jo:
-      ;; 後面跟着作爲 primitive_function 的函數體的匯編代碼
+
+      ;; here follows assembly code
+      ;; as primitive function body
 
       }
    #+end_src
@@ -413,8 +576,8 @@
    jo:
       xx explain$variable
 
-      ;; 後面跟着作爲 全局變元之值的 bead_size 大小的數值
-      ;; 只能有一個值
+      ;; here follows a value of bead_size
+      ;; only one value is allowed
 
       }
    #+end_src
@@ -450,7 +613,7 @@
    jo:
       xx explain$exception
 
-      ;; 後面跟着作爲 exception (特殊的 function) 的函數體的一串珠珠
+      ;; here follows a jojo as function-body
 
       }
    #+end_src
@@ -994,18 +1157,15 @@
 
    define_primitive_function "", literal
       ;; << -- fixnum >>
-      ;; 如果在一串珠珠末尾
-      ;;     就抽出這串珠珠
       pop_return_stack rbx
-      mov rax, [rbx]
-      push_argument_stack rax
+        mov rax, [rbx]
+        push_argument_stack rax
       add rbx, bead_size
-      mov rax, [rbx]
-      test rax, rax
-      jz .meet_end
+        mov rax, [rbx]
+        test rax, rax
+        jz .meet_end
       push_return_stack rbx
    .meet_end:
-      ;; 不放回 就算抽出
       next
    #+end_src
 ** address
@@ -1015,23 +1175,16 @@
 
    define_primitive_function "", address
       ;; << -- address >>
-      ;; 如果在一串珠珠末尾
-      ;;     就抽出這串珠珠
-      ;; 當調用到這個 primitive function 的時候
-      ;; 就已經是運行時了
-      ;; 所以這裏沒有對 address 之後的珠子的類型檢查
-      ;; 類型檢查可以在編譯器中做
       pop_return_stack rbx
-      mov rax, [rbx]
-      add rax, bead_size
-      push_argument_stack rax
+        mov rax, [rbx]
+        add rax, bead_size
+        push_argument_stack rax
       add rbx, bead_size
-      mov rax, [rbx]
-      test rax, rax
-      jz .meet_end
+        mov rax, [rbx]
+        test rax, rax
+        jz .meet_end
       push_return_stack rbx
    .meet_end:
-      ;; 不放回 就算抽出
       next
    #+end_src
 ** ----------------------------------

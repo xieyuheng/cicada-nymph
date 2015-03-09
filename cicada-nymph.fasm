@@ -37,26 +37,14 @@ labeling  equ = current_free_address$un_initialized_memory
 preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
 exit = 0
 macro next {
-   ;; 1. 移動 return_stack 中的第一串珠珠一次
-   ;; 2. 如果 遇到珠珠的末尾
-   ;;         把這串珠珠抽出
-   ;;    否則 不抽出
-   ;; 3. 去尋求被移出的一顆珠的意義
-local at_the_end_of_jojo
    pop_return_stack rbx
-   mov rax, qword[rbx] ;; 記錄被移出的一顆珠
+     mov rax, qword[rbx] 
    add rbx, bead_size
-   mov rcx, qword[rbx] ;; 用來判斷是否是珠珠的末尾
-   test rcx, rcx
-   jz at_the_end_of_jojo
-   push_return_stack rbx ;; 把珠珠放回 就代表不抽出
-at_the_end_of_jojo:
-   ;; 去尋求被移出的一顆珠的意義
-   ;; 因爲 對其意義的詮釋方式 被記錄在其地址下
-   ;; 所以需要一次 間接跳
-   jmp qword[rax]
-   ;; 跳過去之後 rax 保存的是被移出的一顆珠
-   ;; rax 可能被作爲 bead explainer 的參數
+     mov rcx, qword[rbx] 
+     test rcx, rcx
+     jz @f
+   push_return_stack rbx 
+@@:  jmp qword[rax]
    }
 ;; initial link to point to 0 (as null)
 link = 0
