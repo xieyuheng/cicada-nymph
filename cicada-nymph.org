@@ -3,10 +3,13 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** 對所謂 "匯編代碼" 風格的反思
+   * 關於 函數調用 接口
 ** more documentations on the nature of the language and the interpreter
-** proper exception handling
+** use the exception handling system to do a better "define-function"
 ** more debug functions
 ** "if & else & then" in cicada-nymph itself
+** [maybe] little-tester
 * ===================================
 * note
 ** jo & jojo
@@ -212,13 +215,13 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro next {
       pop_return_stack rbx
-        mov rax, qword[rbx]
+        mov rax, qword [rbx]
       add rbx, bead_size
-        mov rcx, qword[rbx]
+        mov rcx, qword [rbx]
         test rcx, rcx
         jz @f
       push_return_stack rbx
-   @@:  jmp qword[rax]
+   @@:  jmp qword [rax]
    }
    #+end_src
 ** note play with jo & jojo
@@ -617,9 +620,102 @@
 
       }
    #+end_src
-** >< explain$exception
+** note return-stack in action
+   1. when "explain$exception" is called
+      jojo by jojo
+      it searchs the jo stored in "rax" in the return-stack
+      of course
+      only jojo with "exception_head" as head needs to be searched
+   2. for example
+      we have
+      #+begin_src fasm
+      define_exception "!exception-1", !exception_1
+         xx fun1
+         xx fun2
+         xx exit
+      #+end_src
+   3. return-stack
+      #+begin_src picture
+                                               (prepare_for)
+                                                 (exception_head)
+                                                 (!exception_1)
+                                                 (!exception_2)
+                                                 (exit)
+                      (prepare_for)            (function_1)
+      - [ pointer ] - [ (exception_head) ] - [ (function_2) ] - [ (!exception_1) ]
+                        (!exception_1)         (exit)             (exit)
+                        (!exception_2)
+                        (exit)
+                      (function_1)
+                      (function_2)
+                      (exit)
+
+      the pointer above is into argument-stack
+      #+end_src
+   4. next
+      * pointer$argument_stack
+        should be set to the pointer above
+      * and
+        to call "next" again
+        the return-stack should be change to
+        #+begin_src picture
+        - [ (fun1) ]
+            (fun2)
+            (exit)
+        #+end_src
+** note the plan
+   * so
+     we need a two-level loop
+   * note that
+     although
+     we have to use assembly code
+     to write primitive functions
+     but
+     we still can use argument-stack
+     to pass arguments
+** explain$exception
+   * no error handling for now
    #+begin_src fasm :tangle cicada-nymph.fasm
    explain$exception:
+      mov rsi, rax
+
+   .next_jojo:
+      pop_return_stack rbx
+      mov rax, qword [rbx]
+      cmp rax, exception_head
+      je .next_jo
+      cmp pointer$return_stack, address$return_stack
+      je .not_found
+      jmp .next_jojo
+
+
+   .next_jo:
+      ;; expecting
+      ;;   rbx jojo
+      ;;   rsi jo (to cmp)
+      add rbx, bead_size
+      mov rax, qword [rbx]
+      cmp rax, rsi
+      je .found
+      test rax, rax
+      jz .next_jojo
+      jmp .next_jo
+
+
+   .found:
+      ;; expecting
+      ;;   pointer$return_stack
+      ;;   rsi jo
+      pop_return_stack rax
+      mov pointer$argument_stack, rax
+      add rsi, bead_size
+      push_return_stack rsi
+      next
+
+   .not_found:
+      mov sys_1_rdi, 15
+      mov sys_n_rax, syscall_exit
+      syscall
    #+end_src
 ** ----------------------------------
 ** execute-jo
@@ -1121,7 +1217,7 @@
    address$return_stack labeling
       preserve 1024 * 1024 * bead_size
    #+end_src
-* special primitive function
+* special
 ** ----------------------------------
 ** note side-effect
    * a special primitive function
@@ -1234,30 +1330,90 @@
       next
    #+end_src
 ** ----------------------------------
-** note usage
-   #+begin_src fasm
-   xx prepare_for
-   xx exception_header
-   xx   !exception_1
-   xx   !exception_2
-   xx   exit
-   xx function_1
-   xx function_2
-   xx exit
-   #+end_src
+** note return-stack in action
+   1. when executing the following code block
+      #+begin_src fasm
+      xx prepare_for
+      xx exception_head
+      xx   !exception_1
+      xx   !exception_2
+      xx   exit
+      xx function_1
+      xx function_2
+      xx exit
+      #+end_src
+   2. return-stack
+      #+begin_src picture
+      - [ (prepare_for) ]
+            (exception_head)
+            (!exception_1)
+            (!exception_2)
+            (exit)
+          (function_1)
+          (function_2)
+          (exit)
+      #+end_src
+   3. next
+      * this is how the return-stack looks
+        right before exception_head is executed
+        #+begin_src picture
+          (prepare_for)
+        - [ (exception_head) ]
+            (!exception_1)
+            (!exception_2)
+            (exit)
+          (function_1)
+          (function_2)
+          (exit)
+        #+end_src
+      * after exception_head is executed
+        #+begin_src picture
+                                                 (prepare_for)
+                                                   (exception_head)
+                                                   (!exception_1)
+                                                   (!exception_2)
+                        (prepare_for)              (exit)
+        - [ pointer ] - [ (exception_head) ] - [ (function_1) ]
+                          (!exception_1)         (function_2)
+                          (!exception_2)         (exit)
+                          (exit)
+                        (function_1)
+                        (function_2)
+                        (exit)
+
+        the pointer above is into argument-stack
+        #+end_src
 ** prepare_for
    * prepare for a list of exceptions
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "", prepare_for
       ;; << -- >>
-
+      pop_return_stack rbx
+      push_return_stack pointer$argument_stack
+      push_return_stack rbx
+   .next:
+      add rbx, bead_size
+      mov rax, qword [rbx]
+      test rax, rax
+      jz .then
+      jmp .next
+   .then:
+      add rbx, bead_size
+      push_return_stack rbx
       next
    #+end_src
-** exception_header
+** exception_head
+   * this jo is served as a label in return-stack
+     when explained
+     it pops the jojo itself in
+     and
+     it pops the argument-stack pointer after it
+   * and "explain$exception" will search for them
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "", exception_header
+   define_primitive_function "", exception_head
       ;; << -- >>
-
+      pop_return_stack rax
+      pop_return_stack rax
       next
    #+end_src
 ** ----------------------------------
@@ -1562,7 +1718,7 @@
      ;; ( value, address -- )
      pop_argument_stack rbx
      pop_argument_stack rax
-     mov qword[rbx], rax
+     mov qword [rbx], rax
      next
 
   define_primitive_function "save-byte", save_byte
@@ -1625,7 +1781,7 @@
   define_primitive_function "fetch", fetch
      ;; ( address -- value )
      pop_argument_stack  rbx
-     mov rax, qword[rbx]
+     mov rax, qword [rbx]
      push_argument_stack rax
      next
 
@@ -1640,7 +1796,7 @@
      ;; ( address -- value )
      pop_argument_stack rbx
      xor rax, rax
-     mov ax, word[rbx]
+     mov ax, word [rbx]
      push_argument_stack rax
      next
 
@@ -1648,7 +1804,7 @@
      ;; ( address -- value )
      pop_argument_stack rbx
      xor rax, rax
-     mov eax, dword[rbx]
+     mov eax, dword [rbx]
      push_argument_stack rax
      next
 
@@ -1661,7 +1817,7 @@
      pop_argument_stack  rcx
      pop_argument_stack  rdx
   .loop:
-     mov rax, qword[rdx]
+     mov rax, qword [rdx]
      push_argument_stack rax
      add rdx, bead_size
      loop .loop
@@ -1689,14 +1845,14 @@
      ;; ( number to add, address -- )
      pop_argument_stack rbx
      pop_argument_stack rax
-     add qword[rbx], rax
+     add qword [rbx], rax
      next
 
   define_primitive_function "sub-save", sub_save
      ;; ( number to add, address -- )
      pop_argument_stack rbx
      pop_argument_stack rax
-     sub qword[rbx], rax
+     sub qword [rbx], rax
      next
   #+end_src
 * io
@@ -2646,7 +2802,8 @@
       ;;   note that
       ;;     proper exception handling
       ;;     can be implemented by doing side-effect on return-stack
-      xx   exit
+      xx   !kkk
+      ;; xx   exit
       xx xxswapx, drop2 ;; word
       xx make_jojo__dispatch_jo
       xx exit
@@ -2716,50 +2873,26 @@
 ** >< false?branch
 ** ----------------------------------
 ** note
-   * you can see how the naming convention is used
-     for functions that create structured data into memory
-** save-into,primitive-string-heap
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-      ;; << string[address, length] -- address >>
-      xx dup, V__current_free_address__primitive_string
-      xx save_two_bytes
-
-      xx literal, 2
-      xx address, V__current_free_address__primitive_string
-      xx add_save
-
-      xx tuck
-      xx V__current_free_address__primitive_string
-      xx string_to_buffer!
-
-      xx address, V__current_free_address__primitive_string
-      xx add_save
-
-      xx exit
-   #+end_src
-** save-into,jo-heap
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,jo-heap", save_into__jo_heap
-      ;; << number -- address >>
-      xx V__current_free_address__jo_heap
-      xx save
-
-      xx literal, bead_size
-      xx address, V__current_free_address__jo_heap
-      xx add_save
-
-      xx exit
-   #+end_src
-** ----------------------------------
-** note
    * for the following function
      I add the "CICADA__" as prefix
      to distinguish from their assembly code version
+** !kkk
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_exception "!kkk", !kkk
+      ;; << string[address, length] -- >>
+      xx write_string
+      xx exit
+   #+end_src
 ** define-function
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
+      xx prepare_for
+      xx   exception_head
+      xx   !kkk
+      xx   exit
+
+
       xx dup2
 
       xx V__current_free_address__primitive_string
@@ -2858,6 +2991,43 @@
       ;; one may wish to do some thing to the string
       xx drop2
       xx   save_into__jo_heap
+      xx exit
+   #+end_src
+** ----------------------------------
+** note
+   * you can see how the naming convention is used
+     for functions that create structured data into memory
+** save-into,primitive-string-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+      ;; << string[address, length] -- address >>
+      xx dup, V__current_free_address__primitive_string
+      xx save_two_bytes
+
+      xx literal, 2
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+
+      xx tuck
+      xx V__current_free_address__primitive_string
+      xx string_to_buffer!
+
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+
+      xx exit
+   #+end_src
+** save-into,jo-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,jo-heap", save_into__jo_heap
+      ;; << number -- address >>
+      xx V__current_free_address__jo_heap
+      xx save
+
+      xx literal, bead_size
+      xx address, V__current_free_address__jo_heap
+      xx add_save
+
       xx exit
    #+end_src
 ** ----------------------------------
