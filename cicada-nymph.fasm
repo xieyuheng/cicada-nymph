@@ -6,8 +6,7 @@ segment readable executable writeable
 dup equ duplicate
 
 ;; in fasm, "end" is a reserved word
-;; fin
-fin equ end
+finish equ end
 end equ exit
 bead_size = 8 ;; (byte)
 xx equ dq
@@ -67,7 +66,7 @@ virtual at 0
 .end$string:
    dw (.end$string - .start$string)
    load .length word from (.end$string)
-fin virtual
+finish virtual
 store word .length at (current_free_address$primitive_string_heap)
 
 current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 2
@@ -76,10 +75,10 @@ repeat .length
    virtual at 0
       db string
       load .char byte from (% - 1)
-   fin virtual
+   finish virtual
    store byte .char at (current_free_address$primitive_string_heap)
    current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 1
-fin repeat
+finish repeat
 
 }
 macro define_function string, jo {
@@ -1596,16 +1595,22 @@ define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
    xx last_jo_in_assembly
 
 define_function "find", find
-   ;; << word[address, length] -- jo, found or not >>
+   ;; found :
+   ;; << word[address, length] -- jo, true >>
+   ;; not found :
+   ;; << word[address, length] -- false >>
    xx V__first_jo_in_dictionary
    xx help__find
    xx end
 
 define_function "help,find", help__find
-   ;; << word[address, length], jo -- jo, found or not >>
-   xx dup, null_jo?, false?branch, 6
+   ;; found :
+   ;; << word[address, length], jo -- jo, true >>
+   ;; not found :
+   ;; << word[address, length], jo -- false >>
+   xx dup, null_jo?, false?branch, 5
    xx   drop, drop2
-   xx   false, false
+   xx   false
    xx   end
    xx xxtuckx
    xx jo_to_name, xxoverxx
@@ -1628,24 +1633,24 @@ define_function "execute-word", execute_word
    xx   xxswapx, drop2
    xx   execute_jo
    xx   end
-   xx drop  ;; jo
 
-   xx write_undefined_word_report
+   xx write_undefined_word_report__for_execute_word
    xx write_string
    xx literal, 10, write_byte
    xx end
 
-define_function "write-undefined-word-report", write_undefined_word_report
+
+define_function "write-undefined-word-report,for-execute-word", write_undefined_word_report__for_execute_word
    ;; << -- >>
-   xx literal, string$undefined_word_report
-   xx literal, length$undefined_word_report
+   xx literal, string$undefined_word_report__for_execute_word
+   xx literal, length$undefined_word_report__for_execute_word
    xx write_string
    xx end
 
-string$undefined_word_report:
-   db "   UNDEFINED-WORD : "
+string$undefined_word_report__for_execute_word:
+   db "   (execute-word) MEETS UNDEFINED WORD : "
 .end:
-length$undefined_word_report = (.end - string$undefined_word_report)
+length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
 define_function "space-string?", space_string?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
@@ -1840,14 +1845,12 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    xx     save_into__jo_heap
    xx   end
    xx dup2
-   xx find, false?, false?branch, 8
-   xx   drop ;; jo
-   xx   write_undefined_word_report__for_funtion_body
+   xx find, false?
+   xx false?branch, 7
+   xx   write_undefined_word_report__for_make_jojo
    xx   write_string
    xx   literal, 10, write_byte
-   ;;   ><><><
-   xx   !kkk
-   ;; xx   end
+   xx   !undo_define_function
    xx xxswapx, drop2 ;; word
    xx make_jojo__dispatch_jo
    xx end
@@ -1855,32 +1858,30 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
 define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
    ;; << string[address, length], jo --
    ;;    string[address, length] >>
-   xx dup, function_jo?, false?branch, 3
-   xx   save_into__jo_heap
-   xx   end
-   xx dup, primitive_function_jo?, false?branch, 3
-   xx   save_into__jo_heap
-   xx   end
-   xx dup, variable_jo?, false?branch, 3
-   xx   save_into__jo_heap
-   xx   end
    xx dup, macro_jo?, false?branch, 3
    xx   execute_jo
    xx   end
-   xx drop
+
+   ;; the same to
+   ;;   function
+   ;;   primitive-function
+   ;;   variable
+   ;;   exception
+   xx save_into__jo_heap
    xx end
 
-define_function "write-undefined-word-report,for-funtion-body", write_undefined_word_report__for_funtion_body
+
+define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
    ;; << -- >>
-   xx literal, string$undefined_word_report__for_funtion_body
-   xx literal, length$undefined_word_report__for_funtion_body
+   xx literal, string$undefined_word_report__for_make_jojo
+   xx literal, length$undefined_word_report__for_make_jojo
    xx write_string
    xx end
 
-string$undefined_word_report__for_funtion_body:
-   db "   make-jojo meets UNDEFINED-WORD : "
+string$undefined_word_report__for_make_jojo:
+   db "   (make-jojo) MEETS UNDEFINED WORD : "
 .end:
-length$undefined_word_report__for_funtion_body = (.end - string$undefined_word_report__for_funtion_body)
+length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
 define_macro "address", M__address
    ;; << string[address, length] -- string[address, length] >>
    xx literal, address
@@ -1892,32 +1893,124 @@ define_macro "address", M__address
    xx   save_into__jo_heap
    xx   string_tail__word
    xx   end
-   xx drop
 
-   xx dup2
-   xx write_undefined_word_report__for_funtion_body
-   xx string_head__word, write_string
+   xx write_undefined_word_report__for_address
+   xx dup2, string_head__word, write_string
    xx literal, 10, write_byte
-   ;; ><><><
-   ;; here we should not compile the function into memory at all
-   xx end
-define_exception "!kkk", !kkk
-   ;; << string[address, length] -- >>
+   xx !undo_define_function
+
+
+define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_address
+   xx literal, length$undefined_word_report__for_address
    xx write_string
    xx end
+
+string$undefined_word_report__for_address:
+   db "   (make-jojo (address)) THE WORD FOLLOWS (address) IS UNDEFINED : "
+.end:
+length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
+define_macro "branch", M__branch
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_define_function
+
+
+define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_branch
+   xx literal, length$not_integer_string_report__for_branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_branch:
+   db "   (make-jojo (branch)) THE WORD FOLLOWS (branch) MUST BE A INTEGER STRING : "
+.end:
+length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
+define_macro "false?branch", M__false?branch
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, false?branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_false?branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_define_function
+
+
+define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_false?branch
+   xx literal, length$not_integer_string_report__for_false?branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_false?branch:
+   db "   (make-jojo (false?branch)) THE WORD FOLLOWS (false?branch) MUST BE A INTEGER STRING : "
+.end:
+length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
+define_exception "!undo-define-function", !undo_define_function
+   ;; << string[address, length]
+   ;;    old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    -- >>
+   xx literal, string$undo_define_function_report
+   xx literal, length$undo_define_function_report
+   xx write_string
+
+   xx write_string
+   xx literal, ';', write_byte
+   xx literal, 10, write_byte
+
+   xx address, V__first_jo_in_dictionary, save
+   xx address, V__current_free_address__jo_heap, save
+   xx address, V__current_free_address__primitive_string, save
+   xx end
+
+
+string$undo_define_function_report:
+   db "   (define-function) THE FOLLOWING WORD IS NOT DEFINED :"
+   db 10
+   db "     : "
+.end:
+length$undo_define_function_report = (.end - string$undo_define_function_report)
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
+   xx V__current_free_address__primitive_string, xxswapx
+   xx V__current_free_address__jo_heap, xxswapx
+   xx V__first_jo_in_dictionary, xxswapx
    xx prepare_for
    xx   exception_head
-   xx   !kkk
+   xx   !undo_define_function
    xx   end
 
 
-   xx dup2
-
    xx V__current_free_address__primitive_string
    xx   save_into__jo_heap
-   xx string_head__word
+   xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
    xx V__first_jo_in_dictionary
@@ -1934,18 +2027,50 @@ define_function "define-function", CICADA__define_function
    xx dup2, string_tail__word
    xx   make_jojo
 
-   ;; when debugging
-   ;; instead of drop2
-   ;; one may wish to do some thing to the string
+
    xx drop2
+   xx drop, drop, drop
    xx end
-define_function "define-macro", CICADA__define_macro
+define_exception "!undo-define-macro", !undo_define_macro
+   ;; << string[address, length]
+   ;;    old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    -- >>
+   xx literal, string$undo_define_macro_report
+   xx literal, length$undo_define_macro_report
+   xx write_string
+
+   xx write_string
+   xx literal, ';', write_byte
+   xx literal, 10, write_byte
+
+   xx address, V__first_jo_in_dictionary, save
+   xx address, V__current_free_address__jo_heap, save
+   xx address, V__current_free_address__primitive_string, save
+   xx end
+
+
+string$undo_define_macro_report:
+   db "   (define-macro) THE FOLLOWING WORD IS NOT DEFINED :"
+   db 10
+   db "     : "
+.end:
+length$undo_define_macro_report = (.end - string$undo_define_macro_report)
+define_macro "define-macro", CICADA__define_macro
    ;; << string[address, length] -- >>
-   xx dup2
+   xx V__current_free_address__primitive_string, xxswapx
+   xx V__current_free_address__jo_heap, xxswapx
+   xx V__first_jo_in_dictionary, xxswapx
+   xx prepare_for
+   xx   exception_head
+   xx   !undo_define_macro
+   xx   end
+
 
    xx V__current_free_address__primitive_string
    xx   save_into__jo_heap
-   xx string_head__word
+   xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
    xx V__first_jo_in_dictionary
@@ -1962,18 +2087,75 @@ define_function "define-macro", CICADA__define_macro
    xx dup2, string_tail__word
    xx   make_jojo
 
-   ;; when debugging
-   ;; instead of drop2
-   ;; one may wish to do some thing to the string
+
    xx drop2
+   xx drop, drop, drop
    xx end
-define_function "define-variable", CICADA__define_variable
-   ;; << variable, string[address, length] -- >>
-   xx dup2
+define_exception "!undo-define-exception", !undo_define_exception
+   ;; << string[address, length]
+   ;;    old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    -- >>
+   xx literal, string$undo_define_exception_report
+   xx literal, length$undo_define_exception_report
+   xx write_string
+
+   xx write_string
+   xx literal, ';', write_byte
+   xx literal, 10, write_byte
+
+   xx address, V__first_jo_in_dictionary, save
+   xx address, V__current_free_address__jo_heap, save
+   xx address, V__current_free_address__primitive_string, save
+   xx end
+
+
+string$undo_define_exception_report:
+   db "   (define-exception) THE FOLLOWING WORD IS NOT DEFINED :"
+   db 10
+   db "     : "
+.end:
+length$undo_define_exception_report = (.end - string$undo_define_exception_report)
+define_exception "define-exception", CICADA__define_exception
+   ;; << string[address, length] -- >>
+   xx V__current_free_address__primitive_string, xxswapx
+   xx V__current_free_address__jo_heap, xxswapx
+   xx V__first_jo_in_dictionary, xxswapx
+   xx prepare_for
+   xx   exception_head
+   xx   !undo_define_exception
+   xx   end
+
 
    xx V__current_free_address__primitive_string
    xx   save_into__jo_heap
-   xx string_head__word
+   xx dup2, string_head__word
+   xx   save_into__primitive_string_heap
+
+   xx V__first_jo_in_dictionary
+   xx jo_to_link
+   xx   save_into__jo_heap
+
+   xx V__current_free_address__jo_heap
+   xx address, V__first_jo_in_dictionary
+   xx save
+
+   xx literal, explain$exception
+   xx   save_into__jo_heap
+
+   xx dup2, string_tail__word
+   xx   make_jojo
+
+
+   xx drop2
+   xx drop, drop, drop
+   xx end
+define_function "define-variable", CICADA__define_variable
+   ;; << variable, string[address, length] -- >>
+   xx V__current_free_address__primitive_string
+   xx   save_into__jo_heap
+   xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
    xx V__first_jo_in_dictionary
