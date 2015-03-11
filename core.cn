@@ -1,2 +1,32 @@
 : if
+  << string[address, length] --
+     address, string[address, length] >>
+  *false?branch* save-into,jo-heap
+  *current-free-address,jo-heap* xx|swap|x
+  0 save-into,jo-heap
+  end
+; define-macro
+
+: else
+  << address, string[address, length] --
+     address, string[address, length] >>
+  *branch* save-into,jo-heap
+  x|swap|xx
+  *current-free-address,jo-heap* xxx|swap|x
+  0 save-into,jo-heap
+  << address, string[address, length], address >>
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
+; define-macro
+
+: then
+  << address, string[address, length] --
+     string[address, length] >>
+  x|swap|xx
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
 ; define-macro
