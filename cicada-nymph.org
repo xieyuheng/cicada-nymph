@@ -744,12 +744,11 @@
       xx literal, jo_size, subtraction
       xx end
    #+end_src
-** null-jo?
+** last-jo,dictionary?
    * first jo in assembly code
-     is the null of the linked list of jo
-     so I call it null jo
+     is the last jo in dictionary
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "null-jo?", null_jo?
+   define_function "last-jo,dictionary?", last_jo__dictionary?
       ;; << jo -- bool >>
       xx jo_to_link
       xx fetch
@@ -807,6 +806,15 @@
       ;; << jo -- bool >>
       xx jo_to_type
       xx literal, explain$macro
+      xx equal?
+      xx end
+   #+end_src
+** exception-jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "exception-jo?", exception_jo?
+      ;; << jo -- bool >>
+      xx jo_to_type
+      xx literal, explain$exception
       xx equal?
       xx end
    #+end_src
@@ -936,6 +944,10 @@
       ;; xx zero
       ;; xx exit_with_TOS
       ;;;;
+
+      xx read_word_for_REPL
+      xx find
+      xx exit_with_TOS
 
       ;;;; basic-REPL (without the ability to define function)
       ;;;; after this test
@@ -2497,16 +2509,17 @@
       ;; << word[address, length], jo -- jo, true >>
       ;; not found :
       ;; << word[address, length], jo -- false >>
-      xx dup, null_jo?, false?branch, 5
-      xx   drop, drop2
-      xx   false
-      xx   end
       xx xxtuckx
       xx jo_to_name, xxoverxx
       xx string_equal?, false?branch, 4
       xx   drop2, true
       xx   end
-      xx xswapxx, jo_to_pre_jo
+      xx xswapxx
+      xx dup, last_jo__dictionary?, false?branch, 5
+      xx   drop, drop2
+      xx   false
+      xx   end
+      xx jo_to_pre_jo
       xx help__find
       xx end
    #+end_src
@@ -3198,7 +3211,7 @@
 ** ----------------------------------
 ** define-macro
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "define-macro", CICADA__define_macro
+   define_function "define-macro", CICADA__define_macro
       ;; << string[address, length] -- >>
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
@@ -3236,7 +3249,7 @@
 ** ----------------------------------
 ** define-exception
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_exception "define-exception", CICADA__define_exception
+   define_function "define-exception", CICADA__define_exception
       ;; << string[address, length] -- >>
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
@@ -3377,6 +3390,7 @@
       rb size$un_initialized_memory
    #+end_src
 * ===================================
+* note control
 * if & else & then
   * one predicate can make two branchs
     three predicates can make four branchs
@@ -3386,8 +3400,8 @@
   : if
     << string[address, length] --
        address, string[address, length] >>
-    *false?branch* save-into,jo-heap
-    *current-free-address,jo-heap* xx|swap|x
+    ,*false?branch* save-into,jo-heap
+    ,*current-free-address,jo-heap* xx|swap|x
     0 save-into,jo-heap
     end
   ; define-macro
@@ -3395,12 +3409,12 @@
   : else
     << address, string[address, length] --
        address, string[address, length] >>
-    *branch* save-into,jo-heap
+    ,*branch* save-into,jo-heap
     x|swap|xx
-    *current-free-address,jo-heap* xxx|swap|x
+    ,*current-free-address,jo-heap* xxx|swap|x
     0 save-into,jo-heap
     << address, string[address, length], address >>
-    *current-free-address,jo-heap*
+    ,*current-free-address,jo-heap*
     over sub *jo-size* div
     swap save
     end
@@ -3410,7 +3424,7 @@
     << address, string[address, length] --
        string[address, length] >>
     x|swap|xx
-    *current-free-address,jo-heap*
+    ,*current-free-address,jo-heap*
     over sub *jo-size* div
     swap save
     end
@@ -3460,7 +3474,7 @@
   : .12
     << 1 2 -- >>
     2 equal? if
-      "(^_^)" write-string
+      "(^-^)" write-string
       1 equal? if
         "\^o^/" write-string
       else
@@ -3482,5 +3496,50 @@
   6 2 .12 cr
   1 6 .12 cr
   6 6 .12 cr
+  #+end_src
+* -----------------------------------
+* re-define execute-word & basic-REPL
+  * to protect macro & exception from be called from basic-REPL
+  #+begin_src cicada-nymph :tangle core.cn
+  : execute-word
+    << word[address, length] -- unknown >>
+    dup2 integer-string? if
+      string->integer
+      end
+    then
+    dup2
+    find if
+      dup macro-jo? if
+        drop
+        "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+        write-string 10 write-byte
+        end
+      then
+      dup exception-jo? if
+        drop
+        "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+        write-string 10 write-byte
+        end
+      then
+      << function & primitive-function & variable >>
+      xx|swap|x drop2
+      execute-jo
+      end
+    else
+    "* (execute-word) MEETS UNDEFINED WORD : " write-string
+    write-string 10 write-byte
+    then
+    end
+  ; define-function
+
+  : basic-REPL
+    << unknown -- unknown >>
+    read-word-for-REPL
+    execute-word
+    basic-REPL
+    end
+  ; define-function
+
+  basic-REPL
   #+end_src
 * ===================================

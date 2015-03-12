@@ -250,7 +250,7 @@ define_function "jo->link", jo_to_link
    ;; << jo -- link >>
    xx literal, jo_size, subtraction
    xx end
-define_function "null-jo?", null_jo?
+define_function "last-jo,dictionary?", last_jo__dictionary?
    ;; << jo -- bool >>
    xx jo_to_link
    xx fetch
@@ -288,6 +288,12 @@ define_function "macro-jo?", macro_jo?
    ;; << jo -- bool >>
    xx jo_to_type
    xx literal, explain$macro
+   xx equal?
+   xx end
+define_function "exception-jo?", exception_jo?
+   ;; << jo -- bool >>
+   xx jo_to_type
+   xx literal, explain$exception
    xx equal?
    xx end
 define_function "variable-jo?", variable_jo?
@@ -398,6 +404,10 @@ define_function "little_test", little_test
    ;; xx zero
    ;; xx exit_with_TOS
    ;;;;
+
+   xx read_word_for_REPL
+   xx find
+   xx exit_with_TOS
 
    ;;;; basic-REPL (without the ability to define function)
    ;;;; after this test
@@ -1636,16 +1646,17 @@ define_function "help,find", help__find
    ;; << word[address, length], jo -- jo, true >>
    ;; not found :
    ;; << word[address, length], jo -- false >>
-   xx dup, null_jo?, false?branch, 5
-   xx   drop, drop2
-   xx   false
-   xx   end
    xx xxtuckx
    xx jo_to_name, xxoverxx
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end
-   xx xswapxx, jo_to_pre_jo
+   xx xswapxx
+   xx dup, last_jo__dictionary?, false?branch, 5
+   xx   drop, drop2
+   xx   false
+   xx   end
+   xx jo_to_pre_jo
    xx help__find
    xx end
 define_function "execute-word", execute_word
@@ -2176,7 +2187,7 @@ define_function "define-function", CICADA__define_function
    xx drop2
    xx drop, drop, drop
    xx end
-define_macro "define-macro", CICADA__define_macro
+define_function "define-macro", CICADA__define_macro
    ;; << string[address, length] -- >>
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
@@ -2210,7 +2221,7 @@ define_macro "define-macro", CICADA__define_macro
    xx drop2
    xx drop, drop, drop
    xx end
-define_exception "define-exception", CICADA__define_exception
+define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
