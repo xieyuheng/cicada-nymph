@@ -1,14 +1,54 @@
-the little nymph is for teaching purpose only.
+
+
+
+the little nymph is for teaching purpose only
 
 it reuses the code and idea
-of the early version of cicada-language,
+of the early version of cicada-language
 
 to teach my friends
 how to implement a interpreter
-of a simple programming language.
+of a simple programming language
 
 I will use assembly language (FASM for x86-64)
-to implement the interpreter.
+to implement the interpreter
 
 the programming language to be implemented
-is a threaded-code based (Forth-like) language.
+is a threaded-code based (Forth-like) language
+
+two versions of the interpreter is implemented
+one for linux
+one for windows
+
+
+
+to assemble it
+
+1. download FASM
+   from :
+     http://flatassembler.net/
+   or :
+     https://github.com/the-little-language-designer/fasm
+
+2. choose your platform
+   by editing the first few lines of the source code
+   if you are using linux :
+      linux? equ yes
+      windows? equ no
+   if you are using windows :
+      linux? equ no
+      windows? equ yes
+
+3. assemble the program by the following one way or another
+   the command line interface of fasm :
+      fasm -m 500000 cicada-nymph.fasm
+   the fasm IDE (windows only)
+
+
+
+the code of this program can be download from :
+   https://github.com/the-little-language-designer/cicada-nymph
+
+to track todos, bugs, feature requests, and more
+you can create an issue here :
+   https://github.com/the-little-language-designer/cicada-nymph/issues

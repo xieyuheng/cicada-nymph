@@ -127,26 +127,14 @@
 * ===================================
 * prolog
 ** ----------------------------------
-** note to assemble
+** choose your platform
    #+begin_src fasm :tangle cicada-nymph.fasm
-   ;;;; please download fasm
-   ;;;; from :
-   ;;;;   http://flatassembler.net/
-   ;;;; or :
-   ;;;;   https://github.com/the-little-language-designer/fasm
-
-   ;;;; and to assemble the program
-   ;;;; in the following way (in command line) :
-   ;;;;   fasm -m 500000 cicada-nymph.fasm
-   ;;;; or assembly it in IDE on windows
-
    ;;;; before you compile the code
    ;;;; do not forget to choose your platform
-   ;;;; by only un-commenting your platform
    ;;;; in the following code
 
    linux? equ yes
-   ;; windows? equ yes
+   windows? equ no
    #+end_src
 ** misc
    #+begin_src fasm :tangle cicada-nymph.fasm

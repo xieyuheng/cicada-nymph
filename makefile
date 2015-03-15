@@ -1,11 +1,5 @@
 .ONESHELL:
 
-all:
-	@
-	echo "	 "                                    &&\
-	make linux                                    &&\
-	echo "	 "
-
 help:
 	@
 	echo -e " \E[33;1m                                                           \E[0m "
@@ -14,7 +8,7 @@ help:
 	echo -e " \E[33;1m                                                           \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
 	echo -e " \E[33;1m   Makefile functions                                      \E[0m "
-	echo -e " \E[33;1m     linux                                                 \E[0m "
+	echo -e " \E[33;1m     build                                                 \E[0m "
 	echo -e " \E[33;1m     clean                                                 \E[0m "
 	echo -e " \E[33;1m							     \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
@@ -23,7 +17,7 @@ help:
 	echo -e " \E[33;1m   I wish you happy making ^_^                             \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
 
-linux:
+build:
 	fasm -m 500000 cicada-nymph.fasm 
 
 clean*~:
