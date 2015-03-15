@@ -52,7 +52,12 @@
    * no named local argument
      * thus no inited local argument
    * no title-name-table
-     * thus we only use single name space in this implementation
+     * thus in this implementation
+       we only use single name space
+     * thus in this implementation
+       we do NOT have the concept of "context"
+       so
+       the syntax is not as flexible as it will be in cicada-language
    * no type
      * no type inference
      * no dynamic type tag
@@ -121,21 +126,28 @@
      2. "false" instead of "*false*"
 * ===================================
 * prolog
-** include linux header
+** ----------------------------------
+** note to assemble
    #+begin_src fasm :tangle cicada-nymph.fasm
-   include "include/linux-header.inc"
+   ;;;; please download fasm
+   ;;;; from :
+   ;;;;   http://flatassembler.net/
+   ;;;; or :
+   ;;;;   https://github.com/the-little-language-designer/fasm
+
+   ;;;; and to assemble the program
+   ;;;; in the following way (in command line) :
+   ;;;;   fasm -m 500000 cicada-nymph.fasm
+   ;;;; or assembly it in IDE on windows
+
+   ;;;; before you compile the code
+   ;;;; do not forget to choose your platform
+   ;;;; by only un-commenting your platform
+   ;;;; in the following code
+
+   linux? equ yes
+   ;; windows? equ yes
    #+end_src
-** format header
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   format elf64 executable 3
-   #+end_src
-** entry
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   entry begin_to_interpret_threaded_code
-   segment readable executable writeable
-   #+end_src
-* -----------------------------------
-* macro in assembly code
 ** misc
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; in fasm, "dup" is a reserved word
@@ -145,6 +157,66 @@
    finish equ end
    end equ exit
    #+end_src
+** ----------------------------------
+** header [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   include "include/linux-header.inc"
+
+   finish if
+   #+end_src
+** format header [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   format elf64 executable 3
+
+   finish if
+   #+end_src
+** entry [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   entry begin_to_interpret_threaded_code
+   segment readable executable writeable
+
+   finish if
+   #+end_src
+** ----------------------------------
+** header [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   STD_INPUT_HANDLE     = -10
+   STD_OUTPUT_HANDLE    = -11
+   define fun_4_r9   r9
+   define fun_3_r8   r8
+   define fun_2_rdx  rdx
+   define fun_1_rcx  rcx
+
+   finish if
+   #+end_src
+** format header [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   format PE64 console
+
+   finish if
+   #+end_src
+** entry [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   entry begin_to_interpret_threaded_code
+   section '.text' code writeable readable executable
+
+   finish if
+   #+end_src
+** ----------------------------------
+* -----------------------------------
+* macro in assembly code
 ** jo_size
    * 64-bits
    * note that how "xx" is used as "dq" in a 64-bits version implementation
@@ -396,6 +468,125 @@
    8. it is really simple
       ^-^
       is it not ?
+* -----------------------------------
+* helper function in assembly code
+** ----------------------------------
+** __exit_with_TOS [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_TOS:
+      pop_argument_stack sys_1_rdi
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** __exit_with_zero [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_zero:
+      xor sys_1_rdi, sys_1_rdi
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** __exit_with_six [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_six:
+      mov sys_1_rdi, 6
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** ----------------------------------
+** __exit_with_TOS [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_TOS:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      pop_argument_stack fun_1_rcx
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** __exit_with_zero [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_zero:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      xor fun_1_rcx, fun_1_rcx
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** __exit_with_six [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_six:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      mov fun_1_rcx, 15
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** ----------------------------------
 * -----------------------------------
 * jo
 ** ----------------------------------
@@ -712,9 +903,7 @@
       next
 
    .not_found:
-      mov sys_1_rdi, 15
-      mov sys_n_rax, syscall_exit
-      syscall
+      call __exit_with_six
    #+end_src
 ** ----------------------------------
 ** execute-jo
@@ -836,8 +1025,10 @@
 ** ----------------------------------
 * -----------------------------------
 * the story begin
-** begin_to_interpret_threaded_code
+** begin_to_interpret_threaded_code [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
    begin_to_interpret_threaded_code:
 
       cld ;; set DF = 0, then rsi and rdi are incremented
@@ -849,18 +1040,101 @@
       push_return_stack rax
       next
 
+   finish if
+   #+end_src
+** begin_to_interpret_threaded_code [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
 
+   ;;;; for windows
+   _output_handle:
+      dq 0
+   _input_handle:
+      dq 0
+   ;;;;
+
+   begin_to_interpret_threaded_code:
+
+      cld ;; set DF = 0, then rsi and rdi are incremented
+
+
+      ;;;; for windows
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+
+      sub rsp, 8*4
+      mov fun_1_rcx, STD_INPUT_HANDLE
+      call [GetStdHandle]
+      mov [_input_handle], rax
+
+
+      mov rsp, rbp
+      pop rbp
+
+
+
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+
+      sub rsp, 8*4
+      mov fun_1_rcx, STD_OUTPUT_HANDLE
+      call [GetStdHandle]
+      mov [_output_handle], rax
+
+
+      mov rsp, rbp
+      pop rbp
+      ;;;;
+
+
+      mov pointer$argument_stack,  address$argument_stack
+      mov pointer$return_stack,    address$return_stack
+
+      mov rax, first_jojo
+      push_return_stack rax
+      next
+
+   finish if
+   #+end_src
+** first_jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
    first_jojo:
       xx basic_REPL
+
+      ;; you can use comment out "xx basic_REPL"
+      ;; and use the following "xx little_test"
+      ;; to do some little tests
+      ;; by set up the code block beneath
+      ;;    define_function "little_test", little_test
 
       ;; xx little_test
    #+end_src
 ** exit_with_TOS a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bye", exit_with_TOS
-      pop_argument_stack sys_1_rdi
-      mov sys_n_rax, syscall_exit
-      syscall
+      call __exit_with_TOS
    #+end_src
 ** little_test
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1890,8 +2164,10 @@
    buffer$read_byte labeling
       preserve max_input_length
    #+end_src
-** write-byte
+** write-byte [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
    buffer$write_byte:
       db 0
 
@@ -1902,20 +2178,28 @@
       ;; write can not just write the char in al to stdout
       ;; write needs the address of the byte to write
       mov [buffer$write_byte], al
+
+      ;;;; for linux
       mov sys_3_rdx, 1                 ;; max length to be write
       mov sys_2_rsi, buffer$write_byte ;; address
       mov sys_1_rdi, 1                 ;; stdout
       mov sys_n_rax, syscall_write
+      ;;;;
+
       syscall
       next
+
+   finish if
    #+end_src
-** read-byte
+** read-byte [linux]
    * calls the Linux read system call to fill buffer$read_byte
    * if it detects that stdin has closed
      it exits the program
      which is why when you hit C-d the system exits
    * add the teature to unread one ket-char
    #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
    flag$unreaded_ket_char:
       xx 0
 
@@ -1973,6 +2257,7 @@
       mov [cursor$read_byte], rbx
       mov [border$read_byte], rbx
 
+      ;;;; for linux
       mov sys_3_rdx, max_input_length ;; max length to be read
       mov sys_2_rsi, buffer$read_byte ;; buffer address
       xor sys_1_rdi, sys_1_rdi        ;; stdin
@@ -1980,6 +2265,8 @@
       syscall
       ;; the return value of syscall read
       ;; is a count of the number of bytes transferred
+      ;;;;
+
       test rax, rax
       jz .error ;; rax = 0
       js .error ;; rax < 0
@@ -2001,9 +2288,185 @@
 
    .error:
       ;; exit with exit code = 0
-      xor sys_1_rdi, sys_1_rdi
-      mov sys_n_rax, syscall_exit
-      syscall
+      call __exit_with_zero
+
+   finish if
+   #+end_src
+** ----------------------------------
+** write-byte [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   buffer$write_byte:
+      db 0
+
+   ;;;; for windows
+   _counter$write_byte:
+      dq 0
+   ;;;;
+
+   define_primitive_function "write-byte", write_byte
+      ;; << byte -- >>
+      ;; just calls the Linux write system call
+      pop_argument_stack rax
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      mov [buffer$write_byte], al
+
+      ;;;; for windows
+      number_of_arguments = 5
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+
+      push 0
+      sub rsp, 8*4
+      mov fun_4_r9, _counter$write_byte
+      mov fun_3_r8, 1
+      mov fun_2_rdx, buffer$write_byte
+      mov fun_1_rcx, [_output_handle]
+      call [WriteFile]
+
+
+      mov rsp, rbp
+      pop rbp
+      ;;;;
+
+      next
+
+   finish if
+   #+end_src
+** read-byte [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   flag$unreaded_ket_char:
+      xx 0
+
+   char$unreaded_ket_char:
+      xx 0
+
+   define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+      ;; << -- bool >>
+      xx literal, flag$unreaded_ket_char, fetch
+      xx end
+
+   define_function "unread-ket-char", unread_ket_char
+      ;; << char -- >>
+      xx literal, char$unreaded_ket_char, save
+      xx true, literal, flag$unreaded_ket_char, save
+      xx end
+
+
+   ;; help__read_byte is the old do function without unread ket-char
+   define_function "read-byte", read_byte
+      ;; << -- byte >>
+      xx have_unreaded_ket_char?, false?branch, 9
+      xx   literal, char$unreaded_ket_char, fetch_byte
+      xx   zero, literal, flag$unreaded_ket_char, save
+      xx   end
+      xx help__read_byte
+      xx end
+
+   ;;;; for windows
+   _counter$read_byte:
+      dq 0
+   ;;;;
+
+   cursor$read_byte:
+      xx 0
+
+   border$read_byte:
+      xx 0
+
+   define_primitive_function "help,read-byte", help__read_byte
+      ;; << -- byte >>
+      call help__help__read_byte
+      push_argument_stack rax
+      next
+
+
+   help__help__read_byte:
+      mov rbx, [cursor$read_byte]
+      cmp rbx, [border$read_byte]
+      ;; [cursor$read_byte] <  [border$read_byte]
+      jl .we_still_have_buffered_byte
+      ;; [cursor$read_byte] >= [border$read_byte]
+      jmp .do_a_new_buffer
+
+
+   .do_a_new_buffer:
+      mov rbx, buffer$read_byte
+      mov [cursor$read_byte], rbx
+      mov [border$read_byte], rbx
+
+      ;;;; for windows
+      number_of_arguments = 5
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      push 0
+      sub rsp, 8*4
+      mov fun_4_r9, _counter$read_byte
+      mov fun_3_r8, max_input_length
+      mov fun_2_rdx, buffer$read_byte
+      mov fun_1_rcx, [_input_handle]
+      call [ReadFile]
+
+      mov rsp, rbp
+      pop rbp
+      ;;;;
+
+      ;; the return value of syscall read
+      ;; is a count of the number of bytes transferred
+
+      ;;;; for windows
+      mov rax, [_counter$read_byte]
+      ;;;;
+
+      test rax, rax
+      jz .error ;; rax = 0
+      js .error ;; rax < 0
+
+      ;; update [border$read_byte]
+      add [border$read_byte], rax
+      jmp help__help__read_byte
+
+
+   .we_still_have_buffered_byte:
+      ;; for the following will just uses the al part of rax
+      ;; it is necessary to clear rax
+      xor rax, rax
+      mov al, byte [rbx]
+      inc rbx
+      mov [cursor$read_byte], rbx
+      ret
+
+
+   .error:
+      ;; exit with exit code = 0
+      call __exit_with_zero
+
+
+   finish if
    #+end_src
 ** ----------------------------------
 ** note word
@@ -3358,11 +3821,11 @@
    : add-three *three* add end ; define-function
    1 add-three . << 234 >>
 
+   << you get the address of the variable *three*
+      by add "address" in front of it >>
    : fix-*three* 3 address *three* save end ; define-function
    fix-*three*
    1 add-three . << 4 >>
-
-   : k 10 space-char? end ; define-function
    #+end_src
 ** ----------------------------------
 * -----------------------------------
@@ -3381,14 +3844,118 @@
       ;; << -- >>
       xx 0
    #+end_src
-** un_initialized_memory
+** ----------------------------------
+** un_initialized_memory [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
    segment readable writeable
    address$un_initialized_memory:
       rb size$un_initialized_memory
+
+   finish if
    #+end_src
+** ----------------------------------
+** un_initialized_memory [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+   section '.data' data readable writeable
+   address$un_initialized_memory:
+      rb size$un_initialized_memory
+
+   finish if
+   #+end_src
+** import [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+
+   ;; Macroinstructions for making import section (64-bit)
+
+   macro library [name,string]
+    { common
+       import.data:
+      forward
+       local _label
+       if defined name#.redundant
+        if ~ name#.redundant
+         dd RVA name#.lookup,0,0,RVA _label,RVA name#.address
+        finish if
+       finish if
+       name#.referred = 1
+      common
+       dd 0,0,0,0,0
+      forward
+       if defined name#.redundant
+        if ~ name#.redundant
+         _label db string,0
+                rb RVA $ and 1
+        finish if
+       finish if }
+
+   macro import name,[label,string]
+    { common
+       rb (- rva $) and 7
+       if defined name#.referred
+        name#.lookup:
+      forward
+        if used label
+         if string eqtype ''
+          local _label
+          dq RVA _label
+         else
+          dq 8000000000000000h + string
+         finish if
+        finish if
+      common
+        if $ > name#.lookup
+         name#.redundant = 0
+         dq 0
+        else
+         name#.redundant = 1
+        finish if
+        name#.address:
+      forward
+        if used label
+         if string eqtype ''
+          label dq RVA _label
+         else
+          label dq 8000000000000000h + string
+         finish if
+        finish if
+      common
+        if ~ name#.redundant
+         dq 0
+        finish if
+      forward
+        if used label & string eqtype ''
+        _label dw 0
+               db string,0
+               rb RVA $ and 1
+        finish if
+      common
+       finish if }
+
+
+   section '.idata' import data readable writeable
+
+   library kernel32,'KERNEL32.DLL'
+
+   import kernel32,\
+          ExitProcess,'ExitProcess',\
+          ReadFile,'ReadFile',\
+          WriteFile,'WriteFile',\
+          GetStdHandle,'GetStdHandle'
+
+
+   finish if
+   #+end_src
+** ----------------------------------
 * ===================================
 * note control
 * if & else & then

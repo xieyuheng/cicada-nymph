@@ -24,7 +24,7 @@ help:
 	echo -e " \E[33;1m                                                           \E[0m "
 
 linux:
-	fasm -m 500000 cicada-nymph.fasm cicada-nymph
+	fasm -m 500000 cicada-nymph.fasm 
 
 clean*~:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~  

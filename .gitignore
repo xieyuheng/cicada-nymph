@@ -1,6 +1,7 @@
 *~
 *#*
 *.bin
+*.exe
 *.ccd
 *.cicada-section
 
