@@ -178,6 +178,7 @@
 
    STD_INPUT_HANDLE     = -10
    STD_OUTPUT_HANDLE    = -11
+
    define fun_4_r9   r9
    define fun_3_r8   r8
    define fun_2_rdx  rdx
@@ -493,6 +494,33 @@
    finish if
    #+end_src
 ** ----------------------------------
+** note windows calling convention for x86-64
+   * https://msdn.microsoft.com/en-us/library/ew5tede7%28v=vs.90%29.aspx
+   * if you respect the calling convention
+     1. your functions will be able to call other functions
+        which respect the calling convention
+     2. your functions will be call-able by other functions
+        which respect the calling convention
+   * in our program
+     1. we do NOT need to respect the calling convention
+        to let our functions be call-able by other function
+        which respect the calling convention
+     2. we ONLY need to respect the calling convention
+        to let our functions be able to call other functions
+        which respect the calling convention
+   * before a call to function in kernel
+     you have to 16-byte aligne the stack
+   * pass first 4 arguments by rcx rdx r8 r9
+     pass other arguments by stack
+   * you have to reserve 4 place for the first 4 arguments
+     although you do not need to push them into stack
+   * you have to reserve 4 place for the first 4 arguments
+     even if the function you are calling
+     only uses less then 4 arguments
+   * the code I am using
+     to handle windows calling convention
+     is de-macro-lized and un-optimized
+     this is for teaching purpose only
 ** __exit_with_TOS [windows]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if windows? eq yes
@@ -504,7 +532,6 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
@@ -531,7 +558,6 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
@@ -558,7 +584,6 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
@@ -1050,7 +1075,6 @@
       number_of_arguments = 4
       push rbp
       mov rbp, rsp
-
       mov rax, rsp
       add rax, 8*number_of_arguments
 
@@ -1078,19 +1102,16 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
       sub rsp, 16
       add rsp, rbx
 
-
       sub rsp, 8*4
       mov fun_1_rcx, STD_OUTPUT_HANDLE
       call [GetStdHandle]
       mov [_output_handle], rax
-
 
       mov rsp, rbp
       pop rbp
@@ -2308,7 +2329,6 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
@@ -2404,7 +2424,6 @@
 
       mov rax, rsp
       add rax, 8*number_of_arguments
-
       mov rbx, 1111b
       and rbx, rax
 
