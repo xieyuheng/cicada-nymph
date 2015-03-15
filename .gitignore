@@ -3,9 +3,5 @@
 *.bin
 *.exe
 *.ccd
-*.cicada-section
 
 cicada-nymph
-
-vm/x86-64/linux/cicada
-vm/x86-64/baremetal/*.vmdk
