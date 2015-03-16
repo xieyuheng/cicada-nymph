@@ -14,7 +14,18 @@ end equ exit
 
 if linux? eq yes
 
-include "include/linux-header.inc"
+define sys_6_r8  r8
+define sys_5_r9  r9
+define sys_4_r10 r10
+define sys_3_rdx rdx
+define sys_2_rsi rsi
+define sys_1_rdi rdi
+define sys_n_rax rax
+
+;; the only three linux syscall we will use
+define syscall_read    0
+define syscall_write   1
+define syscall_exit    60
 
 finish if
 
@@ -35,6 +46,7 @@ if windows? eq yes
 
 STD_INPUT_HANDLE     = -10
 STD_OUTPUT_HANDLE    = -11
+
 define fun_4_r9   r9
 define fun_3_r8   r8
 define fun_2_rdx  rdx
@@ -138,7 +150,6 @@ __exit_with_TOS:
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 
@@ -163,7 +174,6 @@ __exit_with_zero:
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 
@@ -188,7 +198,6 @@ __exit_with_six:
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 
@@ -513,7 +522,6 @@ begin_to_interpret_threaded_code:
    number_of_arguments = 4
    push rbp
    mov rbp, rsp
-
    mov rax, rsp
    add rax, 8*number_of_arguments
 
@@ -541,19 +549,16 @@ begin_to_interpret_threaded_code:
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 
    sub rsp, 16
    add rsp, rbx
 
-
    sub rsp, 8*4
    mov fun_1_rcx, STD_OUTPUT_HANDLE
    call [GetStdHandle]
    mov [_output_handle], rax
-
 
    mov rsp, rbp
    pop rbp
@@ -1597,7 +1602,6 @@ define_primitive_function "write-byte", write_byte
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 
@@ -1691,7 +1695,6 @@ help__help__read_byte:
 
    mov rax, rsp
    add rax, 8*number_of_arguments
-
    mov rbx, 1111b
    and rbx, rax
 

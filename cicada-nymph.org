@@ -2,6 +2,12 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* todo
+** a version of starting forth
+** merge the-little-language-designer to the-little-language-designer.github.io
+   * use jekyll to do the pages
+   * hach htmlize to do org->html
+** more note about assembler
 * ===================================
 * note
 ** jo & jojo
@@ -150,7 +156,18 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    if linux? eq yes
 
-   include "include/linux-header.inc"
+   define sys_6_r8  r8
+   define sys_5_r9  r9
+   define sys_4_r10 r10
+   define sys_3_rdx rdx
+   define sys_2_rsi rsi
+   define sys_1_rdi rdi
+   define sys_n_rax rax
+
+   ;; the only three linux syscall we will use
+   define syscall_read    0
+   define syscall_write   1
+   define syscall_exit    60
 
    finish if
    #+end_src
@@ -495,7 +512,7 @@
    #+end_src
 ** ----------------------------------
 ** note windows calling convention for x86-64
-   * https://msdn.microsoft.com/en-us/library/ew5tede7%28v=vs.90%29.aspx
+   * [[https://msdn.microsoft.com/en-us/library/ew5tede7%28v=vs.90%29.aspx][microsoft's web]]
    * if you respect the calling convention
      1. your functions will be able to call other functions
         which respect the calling convention
