@@ -3,13 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** update documentation to meet the explicit tail call
+** add documentation for explicit tail call
 ** syntax for exception handling in cicada-nymph
-** give the end of prepare_for a name
-   * do not use 0 anymore
 ** a version of starting forth
 ** more note about assembler
-** add note about unique id
 * ===================================
 * note
 ** jo & jojo
@@ -132,7 +129,17 @@
    * but I use
      1. "true" instead of "*true*"
      2. "false" instead of "*false*"
-** >< unique id
+** unique id
+   * if one wish to get a named unique id
+     a jo maybe used
+     for a jo is an address in memory
+     it is unique as a memory address
+   * but there is not effort made
+     to distinguish address and fixnum
+     as different type of things
+     thus
+     this kind of unique id is not fit
+     for some tasks
 * ===================================
 * prolog
 ** ----------------------------------
@@ -779,12 +786,12 @@
                                                  (exception_head)
                                                  (!exception_1)
                                                  (!exception_2)
-                                                 0
+                                                 (end_of_prepare)
                       (prepare_for)            (function_1)
       - [ pointer ] - [ (exception_head) ] - [ (function_2) ] - [ (!exception_1) ]
                         (!exception_1)         (end)              (end)
                         (!exception_2)
-                        0
+                        (end_of_prepare)
                       (function_1)
                       (function_2)
                       (end)
@@ -974,6 +981,21 @@
       xx 8
    #+end_src
 ** ----------------------------------
+* taca & end
+** taca
+   * tail-call
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "<>", taca
+      pop_return_stack rbx
+      mov rax, qword [rbx]
+      jmp qword [rax]
+   #+end_src
+** end
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "end", end
+      pop_return_stack rbx
+      next
+   #+end_src
 * -----------------------------------
 * the story begin
 ** begin_to_interpret_threaded_code [linux]
@@ -1466,39 +1488,15 @@
      should all be done in primitive functions
 ** note naming
    * the naming convention in assembly code
-     of special primitive function
+     of instruction
      is the same as it of jo
-   * the name of a special primitive function
-     is not exported to cicada-language as a function
+   * the name of an instruction
+     might not be exported to cicada-language as a function
      but as a variable
    * the name of a special primitive function in assembly code
      maybe reused as a macro word in cicada-language
      but the name of the macro in assembly code
      is prefixed by "M__"
-** ----------------------------------
-** taca
-   * tail-call
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*taca*", V__taca
-      xx taca
-
-   define_primitive_function "<>", taca
-      pop_return_stack rbx
-      mov rax, qword [rbx]
-      jmp qword [rax]
-   #+end_src
-** nothing
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "nothing", nothing
-      next
-   #+end_src
-** ----------------------------------
-** end
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "end", end
-      pop_return_stack rbx
-      next
-   #+end_src
 ** ----------------------------------
 ** literal
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1577,7 +1575,7 @@
       xx exception_head
       xx   !exception_1
       xx   !exception_2
-      xx   0
+      xx   end_of_prepare
       xx function_1
       xx function_2
       xx ><><>< end
@@ -1588,7 +1586,7 @@
             (exception_head)
             (!exception_1)
             (!exception_2)
-            0
+            (end_of_prepare)
           (function_1)
           (function_2)
           (end)
@@ -1601,7 +1599,7 @@
         - [ (exception_head) ]
             (!exception_1)
             (!exception_2)
-            0
+            (end_of_prepare)
           (function_1)
           (function_2)
           (end)
@@ -1612,11 +1610,11 @@
                                                    (exception_head)
                                                    (!exception_1)
                                                    (!exception_2)
-                        (prepare_for)              0
+                        (prepare_for)              (end_of_prepare)
         - [ pointer ] - [ (exception_head) ] - [ (function_1) ]
                           (!exception_1)         (function_2)
                           (!exception_2)         (end)
-                          0
+                          (end_of_prepare)
                         (function_1)
                         (function_2)
                         (end)
@@ -1634,13 +1632,21 @@
    .next:
       add rbx, jo_size
       mov rax, qword [rbx]
-      test rax, rax
-      jz .then
+      cmp rax, end_of_prepare
+      je .then
       jmp .next
    .then:
       add rbx, jo_size
       push_return_stack rbx
       next
+   #+end_src
+** end_of_prepare
+   * used as an unique id
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*end-of-prepare*", V__end_of_prepare
+
+   end_of_prepare:
+      xx 0
    #+end_src
 ** exception_head
    * this jo is served as a label in return-stack
@@ -3556,7 +3562,7 @@
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
-      xx   0
+      xx   end_of_prepare
 
 
       xx V__current_free_address__primitive_string
@@ -3605,7 +3611,7 @@
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
-      xx   0
+      xx   end_of_prepare
 
 
       xx V__current_free_address__primitive_string
@@ -3643,7 +3649,7 @@
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
-      xx   0
+      xx   end_of_prepare
 
 
       xx V__current_free_address__primitive_string

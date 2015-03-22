@@ -486,6 +486,15 @@ define_function "variable-jo?", variable_jo?
 define_variable "*jo-size*", V__jo_size
    xx 8
 
+define_primitive_function "<>", taca
+   pop_return_stack rbx
+   mov rax, qword [rbx]
+   jmp qword [rax]
+
+define_primitive_function "end", end
+   pop_return_stack rbx
+   next
+
 if linux? eq yes
 
 begin_to_interpret_threaded_code:
@@ -936,21 +945,6 @@ preserve 64 * jo_size
 address$return_stack labeling
    preserve 1024 * 1024 * jo_size
 
-define_variable "*taca*", V__taca
-   xx taca
-
-define_primitive_function "<>", taca
-   pop_return_stack rbx
-   mov rax, qword [rbx]
-   jmp qword [rax]
-
-define_primitive_function "nothing", nothing
-   next
-
-define_primitive_function "end", end
-   pop_return_stack rbx
-   next
-
 define_variable "*literal*", V__literal
    xx literal
 
@@ -1017,13 +1011,18 @@ define_primitive_function "", prepare_for
 .next:
    add rbx, jo_size
    mov rax, qword [rbx]
-   test rax, rax
-   jz .then
+   cmp rax, end_of_prepare
+   je .then
    jmp .next
 .then:
    add rbx, jo_size
    push_return_stack rbx
    next
+
+define_variable "*end-of-prepare*", V__end_of_prepare
+
+end_of_prepare:
+   xx 0
 
 define_primitive_function "", exception_head
    ;; << -- >>
@@ -2653,7 +2652,7 @@ define_function "define-function", CICADA__define_function
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
-   xx   0
+   xx   end_of_prepare
 
 
    xx V__current_free_address__primitive_string
@@ -2688,7 +2687,7 @@ define_function "define-macro", CICADA__define_macro
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
-   xx   0
+   xx   end_of_prepare
 
 
    xx V__current_free_address__primitive_string
@@ -2723,7 +2722,7 @@ define_function "define-exception", CICADA__define_exception
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
-   xx   0
+   xx   end_of_prepare
 
 
    xx V__current_free_address__primitive_string
