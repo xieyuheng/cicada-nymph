@@ -66,8 +66,7 @@
   << unknown -- unknown >>
   read-word-for-REPL
   execute-word
-  basic-REPL
-  end
+  <> basic-REPL
 ; define-function
 
 basic-REPL
