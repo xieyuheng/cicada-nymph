@@ -1,30 +1,32 @@
-#+TITLE:  1st-instar
+#+TITLE:  齡一 / 1st-instar
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
 * ===================================
+* note the order of development
+** 1st-instar
+   * indirect-threaded-code interpreter
+     1. macro about argument_stack & return_stack
+     2. macro about jo & jojo
+     3. macro about next
+     4. the way to do memory allocation
+     5. begin_to_interpret_threaded_code
+     6. little_test
+* -----------------------------------
 * note
 ** jo & jojo
    * use "jo" to denote bead
      and use "jojo" to denote a thread of beads
      [which reads like "珠珠" in Chinese]
-** threaded-code interpreter
-   * the dictionary is a single-linked-list
-     of word-jo-jojo
-   * a jojo is an vector of jo
-   * from a jo one can find a jojo
-     for example
-     this is what the "explain$function" will do
-     to help the interpreter
-     to explain the mean of a jo
-** the order of development
-** indirect-threaded-code interpreter
-   1. macro about argument_stack & return_stack
-   2. macro about jo & jojo
-   3. macro about next
-   4. the way to do memory allocation
-   5. begin_to_interpret_threaded_code
-   6. little_test
+** convention in assembly code
+   * using underline to compose big word from small words
+   * using "$" as prefix and postfix separator
+   * indentation level = 3
+   * naming convention of jo
+     | convention   | jo type  |
+     |--------------+----------|
+     | prefix "V__" | variable |
+     | prefix "M__" | macro    |
 * ===================================
 * prolog
 ** ----------------------------------
@@ -173,22 +175,6 @@
    labeling  equ = current_free_address$un_initialized_memory
    preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
    #+end_src
-** note tail call
-   * the tail position of a function body must be recognized
-     there are two ways
-     1. recognize tail position in the threaded-code-interpreter
-        #+begin_src fasm
-        xx function1
-        xx fucntion2
-        xx end
-        #+end_src
-     2. recognize tail position in the compiler
-        #+begin_src fasm
-        xx function1
-        xx tail_call, function2
-        #+end_src
-   * the secnod way is better
-     it is explicit
 ** next
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro next {
@@ -429,7 +415,7 @@
    #+end_src
 ** ----------------------------------
 * -----------------------------------
-* jo
+* macro for jo & explainer
 ** ----------------------------------
 ** link
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -510,7 +496,7 @@
 ** explain$function
    * find a jojo from a function-jo
      and push the jojo to return-stack
-   * a jojo can not be of size 0 or 1
+   * a jojo can not be of size 0
    * use rax as an argument
      which stores a jo
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -523,6 +509,7 @@
 ** note
    * primitive functions are special
      they explain themself
+     and their type is not identified by jojo-head
 ** define_primitive_function
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_primitive_function string, jo {
@@ -554,6 +541,8 @@
      only variable
    * when a variable jo in the jojo
      it push the value of the variable to argument_stack
+   * when wish to change a variable's value
+     use key_word "address" to get the address of the variable
 ** define_variable
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_variable string, jo {
@@ -586,6 +575,7 @@
       next
    #+end_src
 ** ----------------------------------
+* -----------------------------------
 * end
 ** end
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -594,7 +584,7 @@
       next
    #+end_src
 * -----------------------------------
-* the story begin
+* *the story begin*
 ** begin_to_interpret_threaded_code [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if linux? eq yes
@@ -707,6 +697,7 @@
       xx exit_with_TOS
       ;;;; 3
    #+end_src
+* -----------------------------------
 * argument_stack
 ** memory allocation
    * for we do not build border-check

@@ -1,0 +1,1697 @@
+#+TITLE:  齡二 / 2ed-instar
+#+AUTHOR: 謝宇恆 / XIE Yuheng
+#+EMAIL:  xyheme@gmail.com
+
+* ===================================
+* note the order of development
+** 2ed-instar
+   * instruction as special primitive function
+     1. literal
+     2. address
+   * and primitive functions about
+     1. argument-stack
+     2. bool
+     3. fixnum
+     4. memory
+   * and taca for explicit tail-call
+* -----------------------------------
+* note
+** jo & jojo
+   * use "jo" to denote bead
+     and use "jojo" to denote a thread of beads
+     [which reads like "珠珠" in Chinese]
+** convention in assembly code
+   * using underline to compose big word from small words
+   * using "$" as prefix and postfix separator
+   * indentation level = 3
+   * naming convention of jo
+     | convention   | jo type  |
+     |--------------+----------|
+     | prefix "V__" | variable |
+     | prefix "M__" | macro    |
+* ===================================
+* prolog
+** ----------------------------------
+** choose your platform
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;;;; before you compile the code
+   ;;;; do not forget to choose your platform
+   ;;;; in the following code
+
+   linux? equ yes
+   windows? equ no
+   #+end_src
+** misc
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; in fasm, "dup" is a reserved word
+   dup equ duplicate
+
+   ;; in fasm, "end" is a reserved word
+   finish equ end
+   end equ exit
+   #+end_src
+** ----------------------------------
+** header [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   define sys_6_r8  r8
+   define sys_5_r9  r9
+   define sys_4_r10 r10
+   define sys_3_rdx rdx
+   define sys_2_rsi rsi
+   define sys_1_rdi rdi
+   define sys_n_rax rax
+
+   ;; the only three linux syscall we will use
+   define syscall_read    0
+   define syscall_write   1
+   define syscall_exit    60
+
+   finish if
+   #+end_src
+** format header [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   format elf64 executable 3
+
+   finish if
+   #+end_src
+** entry [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   entry begin_to_interpret_threaded_code
+   segment readable executable writeable
+
+   finish if
+   #+end_src
+** ----------------------------------
+** header [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   STD_INPUT_HANDLE     = -10
+   STD_OUTPUT_HANDLE    = -11
+
+   define fun_4_r9   r9
+   define fun_3_r8   r8
+   define fun_2_rdx  rdx
+   define fun_1_rcx  rcx
+
+   finish if
+   #+end_src
+** format header [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   format PE64 console
+
+   finish if
+   #+end_src
+** entry [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   entry begin_to_interpret_threaded_code
+   section '.text' code writeable readable executable
+
+   finish if
+   #+end_src
+** ----------------------------------
+* -----------------------------------
+* macro in assembly code
+** jo_size
+   * 64-bits
+   * note that how "xx" is used as "dq" in a 64-bits version implementation
+     when one wishs to port the implementation to 32-bits machine
+     just use "xx equ dd"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   jo_size = 8 ;; (byte)
+   xx equ dq
+   #+end_src
+** argument_stack & return_stack
+   * when doing "push"
+     a stack-pointer moves to lower address
+   * note that another style is that
+     when doing "push"
+     a stack-pointer moves to higher address
+   * the stack-pointer
+     always stores the address of current-free-address of the stack
+   * note that another style is that
+     under the stack-pointer
+     there always stores the value of the-top-of-the-stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; if you want to extend cicada in assembly
+   ;; the following registers must NOT be used
+
+   ;; =================================
+   define pointer$argument_stack   r15
+   define pointer$return_stack     r14
+   ;; =================================
+
+   macro push_argument_stack register {
+      mov [pointer$argument_stack], register
+      add pointer$argument_stack, jo_size
+      }
+   macro pop_argument_stack register {
+      sub pointer$argument_stack, jo_size
+      mov register, [pointer$argument_stack]
+      }
+
+   macro push_return_stack register {
+      mov [pointer$return_stack], register
+      add pointer$return_stack, jo_size
+      }
+   macro pop_return_stack register {
+      sub pointer$return_stack, jo_size
+      mov register, [pointer$return_stack]
+      }
+   #+end_src
+** memory allocation in un_initialized_memory
+   * implemented as a memory map
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   current_free_address$un_initialized_memory = address$un_initialized_memory
+
+   labeling  equ = current_free_address$un_initialized_memory
+   preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
+   #+end_src
+** next
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro next {
+      pop_return_stack rbx
+        mov rax, qword [rbx]
+      add rbx, jo_size
+      push_return_stack rbx
+        jmp qword [rax]
+   }
+   #+end_src
+** note play with jo & jojo
+   1. at the beginning
+      * argument-stack
+        << 2 >>
+      * return-stack
+        #+begin_src return-stack
+        - [ (square) ]
+            (square)
+            (end)
+        #+end_src
+   2. next
+      * argument-stack
+        << 2 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)
+        - [ (square) ] - [ (dup) ]
+            (end)          (multiple)
+                           (end)
+        #+end_src
+   3. next
+      * argument-stack
+        << 2, 2 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)       (dup)
+        - [ (square) ] - [ (multiple) ]
+            (end)          (end)
+        #+end_src
+   4. next
+      * argument-stack << 4 >>
+      * return-stack
+        #+begin_src return-stack
+                           (dup)
+            (square)       (multiple)
+        - [ (square) ] - [ (end) ]
+            (end)
+        #+end_src
+   5. next
+      * argument-stack << 4 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)
+            (square)
+        - [ (end) ] - [ (dup) ]
+                        (multiple)
+                        (end)
+        #+end_src
+   6. next
+      * argument-stack
+        << 4, 4 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)
+            (square)    (dup)
+        - [ (end) ] - [ (multiple) ]
+                        (end)
+        #+end_src
+   7. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)    (dup)
+            (square)    (multiple)
+        - [ (end) ] - [ (end) ]
+        #+end_src
+   8. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+            (square)
+            (square)
+        - [ (end) ]
+        #+end_src
+   9. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+        - [  ]
+        #+end_src
+   10. it is really simple
+       ^-^
+       is it not ?
+* -----------------------------------
+* helper function in assembly code
+** ----------------------------------
+** __exit_with_TOS [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_TOS:
+      pop_argument_stack sys_1_rdi
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** __exit_with_zero [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_zero:
+      xor sys_1_rdi, sys_1_rdi
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** __exit_with_six [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   __exit_with_six:
+      mov sys_1_rdi, 6
+      mov sys_n_rax, syscall_exit
+      syscall
+
+   finish if
+   #+end_src
+** ----------------------------------
+** note windows calling convention for x86-64
+   * [[https://msdn.microsoft.com/en-us/library/ew5tede7%28v=vs.90%29.aspx][microsoft's web]]
+   * if you respect the calling convention
+     1. your functions will be able to call other functions
+        which respect the calling convention
+     2. your functions will be call-able by other functions
+        which respect the calling convention
+   * in our program
+     1. we do NOT need to respect the calling convention
+        to let our functions be call-able by other function
+        which respect the calling convention
+     2. we ONLY need to respect the calling convention
+        to let our functions be able to call other functions
+        which respect the calling convention
+   * before a call to function in kernel
+     you have to 16-byte aligne the stack
+   * pass first 4 arguments by rcx rdx r8 r9
+     pass other arguments by stack
+   * you have to reserve 4 place for the first 4 arguments
+     although you do not need to push them into stack
+   * you have to reserve 4 place for the first 4 arguments
+     even if the function you are calling
+     only uses less then 4 arguments
+   * the code I am using
+     to handle windows calling convention
+     is de-macro-lized and un-optimized
+     this is for teaching purpose only
+** __exit_with_TOS [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_TOS:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      pop_argument_stack fun_1_rcx
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** __exit_with_zero [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_zero:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      xor fun_1_rcx, fun_1_rcx
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** __exit_with_six [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   __exit_with_six:
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      mov fun_1_rcx, 15
+      call [ExitProcess]
+
+      mov rsp, rbp
+      pop rbp
+
+   finish if
+   #+end_src
+** ----------------------------------
+* -----------------------------------
+* macro for jo & explainer
+** ----------------------------------
+** link
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; initial link to point to 0 (as null)
+   link = 0
+   #+end_src
+** primitive_string_heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$primitive_string_heap = 100 * 1024 ;; (byte)
+
+   address$primitive_string_heap:
+      times size$primitive_string_heap db 0
+
+   current_free_address$primitive_string_heap = address$primitive_string_heap
+   #+end_src
+** make_primitive_string
+   * 2 bytes for length of name_string
+   * note that
+     the following is using local label
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro make_primitive_string string {
+
+   virtual at 0
+   .start$string:
+      db string
+   .end$string:
+      dw (.end$string - .start$string)
+      load .length word from (.end$string)
+   finish virtual
+   store word .length at (current_free_address$primitive_string_heap)
+
+   current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 2
+
+   repeat .length
+      virtual at 0
+         db string
+         load .char byte from (% - 1)
+      finish virtual
+      store byte .char at (current_free_address$primitive_string_heap)
+      current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 1
+   finish repeat
+
+   }
+   #+end_src
+** ----------------------------------
+** note
+   * note that
+     after a "next" "jmp" to a explainer
+     the "rax" stores the value of the jo to be explained
+     so
+     "rax" is used as an inexplicit argument
+     of the following functions
+   * explain$function is used as jojo-head
+     and explains the meaning of the jojo as function
+   * a jojo-head identifies one type of jo
+** define_function
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro define_function string, jo {
+
+   define_function__#jo:
+
+   name__#jo:
+      xx current_free_address$primitive_string_heap
+
+      make_primitive_string string
+
+   link__#jo:
+      xx link
+      link = link__#jo
+
+   jo:
+      xx explain$function
+
+      ;; here follows a jojo as function-body
+
+      }
+   #+end_src
+** explain$function
+   * find a jojo from a function-jo
+     and push the jojo to return-stack
+   * a jojo can not be of size 0
+   * use rax as an argument
+     which stores a jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   explain$function:
+      add rax, jo_size
+      push_return_stack rax
+      next
+   #+end_src
+** ----------------------------------
+** note
+   * primitive functions are special
+     they explain themself
+     and their type is not identified by jojo-head
+** define_primitive_function
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro define_primitive_function string, jo {
+
+   define_primitive_function__#jo:
+
+   name__#jo:
+      xx current_free_address$primitive_string_heap
+
+      make_primitive_string string
+
+   link__#jo:
+      xx link
+      link = link__#jo
+
+   jo:
+      xx assembly_code__#jo
+
+   assembly_code__#jo:
+
+      ;; here follows assembly code
+      ;; as primitive function body
+
+      }
+   #+end_src
+** ----------------------------------
+** note
+   * no constant
+     only variable
+   * when a variable jo in the jojo
+     it push the value of the variable to argument_stack
+   * when wish to change a variable's value
+     use key_word "address" to get the address of the variable
+** define_variable
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro define_variable string, jo {
+
+   define_variable__#jo:
+
+   name__#jo:
+      xx current_free_address$primitive_string_heap
+
+      make_primitive_string string
+
+   link__#jo:
+      xx link
+      link = link__#jo
+
+   jo:
+      xx explain$variable
+
+      ;; here follows a value of jo_size
+      ;; only one value is allowed
+
+      }
+   #+end_src
+** explain$variable
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   explain$variable:
+      add rax, jo_size
+      mov rbx, [rax]
+      push_argument_stack rbx
+      next
+   #+end_src
+** ----------------------------------
+* -----------------------------------
+* end & taca
+** end
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "end", end
+      pop_return_stack rbx
+      next
+   #+end_src
+** taca
+   * tail-call
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "<>", taca
+      pop_return_stack rbx
+      mov rax, qword [rbx]
+      jmp qword [rax]
+   #+end_src
+** note explicit tail call in action
+   1. the tail position of a function body must be recognized
+      explicit tail call is used to achieve this
+   2. thus
+      tail-recursive-call can be use to do loop
+      without pushing too many address into return-stack
+   3. for example if we have a function
+      which is called "example"
+      #+begin_src fasm
+      define_function "example", example
+         xx fun1
+         xx fun2
+         xx taca, example
+      #+end_src
+   4. and we have the following jojo in return-stack
+      #+begin_src return-stack
+      - [ (example) ]
+          (end)
+      #+end_src
+   5. next
+      #+begin_src return-stack
+          (example)
+      - [ (end) ] - [ (fun1) ]
+                      (fun2)
+                      (taca)
+                      (example)
+      #+end_src
+   6. next
+      #+begin_src return-stack
+          (example)   (fun1)
+      - [ (end) ] - [ (fun2) ]
+                      (taca)
+                      (example)
+      #+end_src
+   7. next
+      #+begin_src return-stack
+                      (fun1)
+          (example)   (fun2)
+      - [ (end) ] - [ (taca) ]
+                      (example)
+      #+end_src
+   8. next
+      by the definition of taca
+      #+begin_src return-stack
+          (example)
+      - [ (end) ] - [ (fun1) ]
+                      (fun2)
+                      (taca)
+                      (example)
+      #+end_src
+   9. you can see return-stack of (8.)
+      is the same as (5.)
+      it is clear how the example function
+      is actually a loop now
+* -----------------------------------
+* *the story begin*
+** begin_to_interpret_threaded_code [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   begin_to_interpret_threaded_code:
+
+      cld ;; set DF = 0, then rsi and rdi are incremented
+
+      mov pointer$argument_stack,  address$argument_stack
+      mov pointer$return_stack,    address$return_stack
+
+      mov rax, first_jojo
+      push_return_stack rax
+      next
+
+   finish if
+   #+end_src
+** begin_to_interpret_threaded_code [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   ;;;; for windows
+   _output_handle:
+      dq 0
+   _input_handle:
+      dq 0
+   ;;;;
+
+   begin_to_interpret_threaded_code:
+
+      cld ;; set DF = 0, then rsi and rdi are incremented
+
+
+      ;;;; for windows
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+
+      sub rsp, 8*4
+      mov fun_1_rcx, STD_INPUT_HANDLE
+      call [GetStdHandle]
+      mov [_input_handle], rax
+
+
+      mov rsp, rbp
+      pop rbp
+
+
+
+      number_of_arguments = 4
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+
+      sub rsp, 8*4
+      mov fun_1_rcx, STD_OUTPUT_HANDLE
+      call [GetStdHandle]
+      mov [_output_handle], rax
+
+      mov rsp, rbp
+      pop rbp
+      ;;;;
+
+
+      mov pointer$argument_stack,  address$argument_stack
+      mov pointer$return_stack,    address$return_stack
+
+      mov rax, first_jojo
+      push_return_stack rax
+      next
+
+   finish if
+   #+end_src
+** first_jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   first_jojo:
+      xx little_test
+   #+end_src
+** exit_with_TOS a.k.a. bye
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "bye", exit_with_TOS
+      call __exit_with_TOS
+   #+end_src
+** little_test
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "", V__little_test_number
+      xx 3
+
+
+   define_function "little_test", little_test
+
+      ;;;; variable
+      ;; xx V__little_test_number
+      ;; xx exit_with_TOS
+      ;;;; 3
+
+      ;;;; literal
+      xx literal, 4
+      xx exit_with_TOS
+      ;;;; 4
+
+      ;;;; address
+      xx address, V__little_test_number, fetch, add2
+      xx address, V__little_test_number, save
+      xx V__little_test_number
+      xx exit_with_TOS
+      ;;;; 5
+   #+end_src
+* -----------------------------------
+* argument_stack
+** memory allocation
+   * for we do not build border-check
+     into the interface of pop and push
+     we allocation some memory below the stacks
+   #+begin_src fasm :tangle cicada-nymph.fasm
+      preserve 64 * jo_size
+   address$argument_stack labeling
+      preserve 1024 * 1024 * jo_size
+   #+end_src
+** drop
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "drop", drop
+      ;; << a -- >>
+      pop_argument_stack rax
+      next
+
+   define_primitive_function "drop2", drop2
+      ;; << a b -- >>
+      pop_argument_stack rax
+      pop_argument_stack rax
+      next
+   #+end_src
+** dup
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "dup", dup
+      ;; << a -- a a >>
+      mov  rax, [pointer$argument_stack - (1 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "dup2", dup2
+      ;; << a b -- a b a b >>
+      mov  rbx, [pointer$argument_stack - (1 * jo_size)]
+      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+   #+end_src
+** over
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "over", over
+      ;; << a b -- a b | a >>
+      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|over|xx", xoverxx
+      ;; << a | b c -- a | b c | a >>
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|x", xxoverx
+      ;; << a b | c -- a b | c | a b >>
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|xx", xxoverxx
+      ;; << a b | c d -- a b | c d | a b >>
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|over|xxx", xoverxxx
+      ;; << a | b c d -- a | b c d | a >>
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|xxxx", xxoverxxxx
+      ;; << a b | c d e f -- a b | c d e f | a b >>
+      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      push_argument_stack rax
+      next
+   #+end_src
+** tuck
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "tuck", tuck
+      ;; << a b -- b | a b >>
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "x|tuck|xx", xtuckxx
+      ;; << a | b c -- b c | a | b c >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      next
+
+   define_primitive_function "xx|tuck|x", xxtuckx
+      ;; << a b | c -- c | a b | c >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      next
+
+   define_primitive_function "xx|tuck|xx", xxtuckxx
+      ;; << a b | c d -- c d | a b | c d >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+
+   define_primitive_function "xxx|tuck|x", xxxtuckx
+      ;; << a b c | d -- d | a b c | d >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+   #+end_src
+** swap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "swap", swap
+      ;; << a b -- b a >>
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|swap|xx", xswapxx
+      ;; << a | b c -- b c | a >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|swap|x", xxswapx
+      ;; << a b | c -- c | a b >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "x|swap|xxx", xswapxxx
+      ;; << a | b c d -- b c d | a >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xxx|swap|x", xxxswapx
+      ;; << a b c | d -- d | a b c >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      next
+
+   define_primitive_function "xx|swap|xx", xxswapxx
+      ;; << a b | c d -- c d | a b >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+
+   define_primitive_function "x|swap|xxxx", xswapxxxx
+      ;; << a | b c d e -- b c d e | a >>
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack r8 ;; e
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xxxx|swap|x", xxxxswapx
+      ;; << a b c d | e --  e | a b c d >>
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack r8 ;; e
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+
+
+   define_primitive_function "xx|swap|xxxx", xxswapxxxx
+      ;; << a b | c d e f -- c d e f | a b >>
+      pop_argument_stack r9 ;; f
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack r8 ;; e
+      push_argument_stack r9 ;; f
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "xxxx|swap|xx", xxxxswapxx
+      ;; << a b c d | e f --  e f | a b c d >>
+      pop_argument_stack r9 ;; f
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack r8 ;; e
+      push_argument_stack r9 ;; f
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+   #+end_src
+* return_stack
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+      preserve 64 * jo_size
+   address$return_stack labeling
+      preserve 1024 * 1024 * jo_size
+   #+end_src
+* instruction
+** ----------------------------------
+** note side-effect
+   * an instruction
+     is a special primitive function
+     which does special side-effect on return-stack
+   * note that
+     side-effect on return-stack
+     should all be done in primitive functions
+** note naming
+   * the naming convention in assembly code
+     of instruction
+     is the same as it of jo
+   * the name of an instruction
+     might not be exported to cicada-language as a function
+     but as a variable
+   * the name of a special primitive function in assembly code
+     maybe reused as a macro word in cicada-language
+     but the name of the macro in assembly code
+     is prefixed by "M__"
+** ----------------------------------
+** literal
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*literal*", V__literal
+      xx literal
+
+   define_primitive_function "", literal
+      ;; << -- fixnum >>
+      pop_return_stack rbx
+        mov rax, [rbx]
+        push_argument_stack rax
+      add rbx, jo_size
+      push_return_stack rbx
+      next
+   #+end_src
+** address
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*address*", V__address
+      xx address
+
+   define_primitive_function "", address
+      ;; << -- address >>
+      pop_return_stack rbx
+        mov rax, [rbx]
+        add rax, jo_size
+        push_argument_stack rax
+      add rbx, jo_size
+      push_return_stack rbx
+      next
+   #+end_src
+** ----------------------------------
+** branch
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*branch*", V__branch
+      xx branch
+
+   define_primitive_function "", branch
+      pop_return_stack rbx
+      mov rax, [rbx]
+      imul rax, jo_size
+      add rbx, rax
+      push_return_stack rbx
+      next
+   #+end_src
+** false?branch
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*false?branch*", V__false?branch
+      xx false?branch
+
+   define_primitive_function "", false?branch
+      ;; << true of false -- >>
+      pop_argument_stack rax
+      test rax, rax
+      jnz help__false?branch__not_to_branch
+
+      pop_return_stack rbx
+      mov rax, [rbx]
+      imul rax, jo_size
+      add rbx, rax
+      push_return_stack rbx
+      next
+
+   help__false?branch__not_to_branch:
+      pop_return_stack rbx
+      add rbx, jo_size
+      push_return_stack rbx
+      next
+   #+end_src
+** ----------------------------------
+* bool
+** false & true
+   * they are defined as function
+     and viewed as constant
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "false", false
+      ;; << -- false >>
+      xor rax, rax
+      push_argument_stack rax
+      next
+
+   define_primitive_function "true", true
+      ;; << -- true >>
+      xor rax, rax
+      inc rax
+      push_argument_stack rax
+      next
+   #+end_src
+** false? & true?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "false?", false?
+      ;; << bool -- bool >>
+      xx false, equal?
+      xx end
+
+   define_function "true?", true?
+      ;; << bool -- bool >>
+      xx true, equal?
+      xx end
+   #+end_src
+** bitwise operations
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "bitwise-and", bitwise_and
+      ;; << a, b -- a and b >>
+      pop_argument_stack rbx
+      and [pointer$argument_stack - (1 * jo_size)], rbx
+      next
+
+   define_primitive_function "bitwise-or", bitwise_or
+      ;; << a, b -- a or b >>
+      pop_argument_stack rbx
+      or  [pointer$argument_stack - (1 * jo_size)], rbx
+      next
+
+   define_primitive_function "bitwise-xor", bitwise_xor
+      ;; << a, b -- a xor b >>
+      pop_argument_stack rbx
+      xor [pointer$argument_stack - (1 * jo_size)], rbx
+      next
+
+   define_primitive_function "bitwise-invert", bitwise_invert
+      ;; << a -- invert a >>
+      not qword [pointer$argument_stack - (1 * jo_size)]
+      next
+   #+end_src
+* fixnum
+** zero & one
+   * they are defined as function
+     and viewed as constant
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "zero", zero
+      ;; << -- 0 >>
+      xor rax, rax
+      push_argument_stack rax
+      next
+
+   define_primitive_function "one", one
+      ;; << -- 1 >>
+      xor rax, rax
+      inc rax
+      push_argument_stack rax
+      next
+   #+end_src
+** zero? & one?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "zero?", zero?
+      ;; << bool -- bool >>
+      xx zero, equal?
+      xx end
+
+   define_function "one?", one?
+      ;; << bool -- bool >>
+      xx one, equal?
+      xx end
+   #+end_src
+** add & sub & mul & div & mod & negate & power
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "add1", add1
+      ;; << n -- n+1 >>
+      inc qword [pointer$argument_stack - (1 * jo_size)]
+      next
+
+   define_primitive_function "add2", add2
+      ;; << n -- n+2 >>
+      add qword [pointer$argument_stack - (1 * jo_size)], 2
+      next
+
+   define_primitive_function "add3", add3
+      ;; << n -- n+3 >>
+      add qword [pointer$argument_stack - (1 * jo_size)], 3
+      next
+
+   define_primitive_function "add4", add4
+      ;; << n -- n+4 >>
+      add qword [pointer$argument_stack - (1 * jo_size)], 4
+      next
+
+   define_primitive_function "add8", add8
+      ;; << n -- n+8 >>
+      add qword [pointer$argument_stack - (1 * jo_size)], 8
+      next
+
+
+   define_primitive_function "sub1", sub1
+      ;; << n -- n-1 >>
+      dec qword [pointer$argument_stack - (1 * jo_size)]
+      next
+
+   define_primitive_function "sub2", sub2
+      ;; << n -- n-2 >>
+      sub qword [pointer$argument_stack - (1 * jo_size)], 2
+      next
+
+   define_primitive_function "sub3", sub3
+      ;; << n -- n-3 >>
+      sub qword [pointer$argument_stack - (1 * jo_size)], 3
+      next
+
+   define_primitive_function "sub4", sub4
+      ;; << n -- n-4 >>
+      sub qword [pointer$argument_stack - (1 * jo_size)], 4
+      next
+
+   define_primitive_function "sub8", sub8
+      ;; << n -- n-8 >>
+      sub qword [pointer$argument_stack - (1 * jo_size)], 8
+      next
+
+
+   define_primitive_function "add", addition
+      ;; << a b -- a+b >>
+      pop_argument_stack rax
+      add qword [pointer$argument_stack - (1 * jo_size)], rax
+      next
+
+   define_primitive_function "sub", subtraction
+      ;; << a b -- a-b >>
+      pop_argument_stack rax
+      sub qword [pointer$argument_stack - (1 * jo_size)], rax
+      next
+
+   define_primitive_function "mul", multiple
+      ;; << a b -- a*b >>
+      pop_argument_stack  rbx ;; 2ed arg
+      pop_argument_stack  rax ;; 1st arg
+      imul rbx, rax
+      ;; imul will ignore overflow
+      ;; when there are two registers as arg
+      ;; imul will save the result into the first register
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "moddiv", moddiv
+      ;; << a, b -- a mod b, quotient >>
+      ;; << dividend, divisor -- remainder, quotient >>
+      ;; the arg of idiv is divisor
+      ;; the lower half of dividend is taken from rax
+      ;; the upper half of dividend is taken from rdx
+      xor  rdx, rdx   ;; high-part of dividend is not used
+      pop_argument_stack  rbx ;; 2ed arg
+      pop_argument_stack  rax ;; 1st arg
+      idiv rbx
+      ;; the remainder is stored in rdx
+      ;; the quotient  is stored in rax
+      push_argument_stack rdx ;; remainder
+      push_argument_stack rax ;; quotient
+      next
+
+
+   define_function "divmod", divmod
+      ;; << a, b -- quotient, a mod b >>
+      xx moddiv, swap
+      xx end
+
+   define_function "div", division
+      ;; << a, b -- quotient >>
+      xx divmod, drop
+      xx end
+
+   define_function "mod", modulo
+      ;; << a, b -- a mod b >>
+      xx moddiv, drop
+      xx end
+
+   define_function "negate", negate
+      ;; << n --  -n >>
+      xx zero
+      xx swap, subtraction
+      xx end
+
+
+   define_function "power", power
+      ;; n must be nature number for now
+      ;; << a, n -- a^n >>
+      xx literal, 1, swap ;; leave product
+      xx help__power
+      xx end
+
+   define_function "help,power", help__power
+      ;; << a, product, n -- a^n >>
+      xx dup, zero?, false?branch, 5
+      xx   drop, swap, drop
+      xx   end
+      xx sub1
+      xx swap
+      xx   xoverxx, multiple
+      xx swap
+      xx taca, help__power
+   #+end_src
+** equal & greater-than & less-than
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "equal?", equal?
+      ;; << a, b -- a, b, true of false >>
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      cmp   rbx, rax
+      sete  al
+      movzx rax, al
+      push_argument_stack rax
+      next
+
+   define_primitive_function "less-than?", less_than?
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      cmp   rax, rbx
+      setl  al
+      movzx rax, al
+      push_argument_stack rax
+      next
+
+   define_primitive_function "greater-than?", greater_than?
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      cmp   rax, rbx
+      setg  al
+      movzx rax, al
+      push_argument_stack  rax
+      next
+
+   define_primitive_function "less-or-equal?", less_or_equal?
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      cmp   rax, rbx
+      setle al
+      movzx rax, al
+      push_argument_stack rax
+      next
+
+   define_primitive_function "greater-or-equal?", greater_or_equal?
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      cmp   rax, rbx
+      setge al
+      movzx rax, al
+      push_argument_stack rax
+      next
+   #+end_src
+** negative? & positive?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "negative?", negative?
+      ;; << integer -- bool >>
+      xx zero, less_than?
+      xx end
+
+   define_function "positive?", positive?
+      ;; << integer -- bool >>
+      xx negative?, false?
+      xx end
+   #+end_src
+* memory
+  * although the following functions are all side-effect
+    but I use "save" instead of "save!"
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  ;; "save" and "fetch" default to a jo_size
+  ;; the rule of "fetch2" and so on are:
+  ;;   in memory:
+  ;;     ||  1 : value-1  ||
+  ;;     ||  1 : value-2  ||
+  ;;     ||  1 : value-3  ||
+  ;;     ...
+  ;;   on stack:
+  ;;     << value-1, value-2, value-3, ... >>
+  ;; of course we have:
+  ;;   fetch2 : memory=copy=>stack
+  ;;   save2  : stack->memory
+
+  define_primitive_function "save", save
+     ;; ( value, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     mov qword [rbx], rax
+     next
+
+  define_primitive_function "save-byte", save_byte
+     ;; ( value, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     mov byte[rbx], al
+     next
+
+  define_primitive_function "save-two-bytes", save_two_bytes
+     ;; ( value, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     mov word [rbx], ax
+     next
+
+  define_primitive_function "save-four-bytes", save_four_bytes
+     ;; ( value, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     mov dword [rbx], eax
+     next
+
+  define_primitive_function "n-save", n_save
+     ;; << value-n, ..., value-1, address, n -- >>
+     pop_argument_stack rcx
+     pop_argument_stack rdx
+     mov rax, jo_size
+     imul rax, rcx
+     add rdx, rax
+     ;; for address is based on 0
+     ;; but n is based on 1
+     sub rdx, jo_size
+  .loop:
+     pop_argument_stack rax
+     mov qword [rdx], rax
+     sub rdx, jo_size
+     loop .loop
+     next
+
+  define_function "save2", save2
+     ;; << value-2, value-1, address -- >>
+     xx literal, 2
+     xx n_save
+     xx end
+
+  define_primitive_function "n-save-byte", n_save_byte
+     ;; << value-n, ..., value-1, address, n -- >>
+     pop_argument_stack rcx
+     pop_argument_stack rdx
+     add rdx, rcx
+     dec rdx
+  .loop:
+     pop_argument_stack rax
+     mov byte [rdx], al
+     dec rdx
+     loop .loop
+     next
+
+  define_primitive_function "fetch", fetch
+     ;; ( address -- value )
+     pop_argument_stack  rbx
+     mov rax, qword [rbx]
+     push_argument_stack rax
+     next
+
+  define_primitive_function "fetch-byte", fetch_byte
+     ;; ( address -- value )
+     pop_argument_stack rbx
+     xor rax, rax
+     mov al, byte[rbx]
+     push_argument_stack rax
+     next
+
+  define_primitive_function "fetch-two-bytes", fetch_two_bytes
+     ;; ( address -- value )
+     pop_argument_stack rbx
+     xor rax, rax
+     mov ax, word [rbx]
+     push_argument_stack rax
+     next
+
+  define_primitive_function "fetch-four-bytes", fetch_four_bytes
+     ;; ( address -- value )
+     pop_argument_stack rbx
+     xor rax, rax
+     mov eax, dword [rbx]
+     push_argument_stack rax
+     next
+
+  ;;   in memory:
+  ;;     ||  1 : value-1  ||
+  ;;     ...
+  ;;     ||  1 : value-n  ||
+  define_primitive_function "n-fetch", n_fetch
+     ;; << address, n -- value-1, ..., value-n >>
+     pop_argument_stack  rcx
+     pop_argument_stack  rdx
+  .loop:
+     mov rax, qword [rdx]
+     push_argument_stack rax
+     add rdx, jo_size
+     loop .loop
+     next
+
+  define_primitive_function "n-fetch-byte", n_fetch_byte
+     ;; << address, n -- byte-1, ..., byte-n >>
+     pop_argument_stack  rcx
+     pop_argument_stack  rdx
+     xor rax, rax
+  .loop:
+     mov al, byte [rdx]
+     push_argument_stack rax
+     inc rdx
+     loop .loop
+     next
+
+  define_function "fetch2", fetch2
+     ;; << address -- value-1, value-2 >>
+     xx literal, 2
+     xx n_fetch
+     xx end
+
+  define_primitive_function "add-save", add_save
+     ;; ( number to add, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     add qword [rbx], rax
+     next
+
+  define_primitive_function "sub-save", sub_save
+     ;; ( number to add, address -- )
+     pop_argument_stack rbx
+     pop_argument_stack rax
+     sub qword [rbx], rax
+     next
+  #+end_src
+* -----------------------------------
+* epilog
+** ----------------------------------
+** un_initialized_memory [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+   segment readable writeable
+   address$un_initialized_memory:
+      rb size$un_initialized_memory
+
+   finish if
+   #+end_src
+** ----------------------------------
+** un_initialized_memory [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+   section '.data' data readable writeable
+   address$un_initialized_memory:
+      rb size$un_initialized_memory
+
+   finish if
+   #+end_src
+** import [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+
+   ;; Macroinstructions for making import section (64-bit)
+
+   macro library [name,string]
+    { common
+       import.data:
+      forward
+       local _label
+       if defined name#.redundant
+        if ~ name#.redundant
+         dd RVA name#.lookup,0,0,RVA _label,RVA name#.address
+        finish if
+       finish if
+       name#.referred = 1
+      common
+       dd 0,0,0,0,0
+      forward
+       if defined name#.redundant
+        if ~ name#.redundant
+         _label db string,0
+                rb RVA $ and 1
+        finish if
+       finish if }
+
+   macro import name,[label,string]
+    { common
+       rb (- rva $) and 7
+       if defined name#.referred
+        name#.lookup:
+      forward
+        if used label
+         if string eqtype ''
+          local _label
+          dq RVA _label
+         else
+          dq 8000000000000000h + string
+         finish if
+        finish if
+      common
+        if $ > name#.lookup
+         name#.redundant = 0
+         dq 0
+        else
+         name#.redundant = 1
+        finish if
+        name#.address:
+      forward
+        if used label
+         if string eqtype ''
+          label dq RVA _label
+         else
+          label dq 8000000000000000h + string
+         finish if
+        finish if
+      common
+        if ~ name#.redundant
+         dq 0
+        finish if
+      forward
+        if used label & string eqtype ''
+        _label dw 0
+               db string,0
+               rb RVA $ and 1
+        finish if
+      common
+       finish if }
+
+
+   section '.idata' import data readable writeable
+
+   library kernel32,'KERNEL32.DLL'
+
+   import kernel32,\
+          ExitProcess,'ExitProcess',\
+          ReadFile,'ReadFile',\
+          WriteFile,'WriteFile',\
+          GetStdHandle,'GetStdHandle'
+
+
+   finish if
+   #+end_src
+** ----------------------------------
+* ===================================
