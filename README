@@ -1,7 +1,7 @@
 
 
 
-the little nymph is for teaching purpose only
+the little cicada-nymph is for teaching purpose at first
 
 it reuses the code and idea
 of the early version of cicada-language
@@ -20,7 +20,7 @@ one for windows
 
 
 
-to assemble it
+to assemble it :
 
 1. download FASM
    from :
@@ -48,7 +48,52 @@ to assemble it
 
 
 
-the code of this program can be download from :
+the core.cn file is written in cicada-nymph
+to show the use of "define-macro"
+I define "if" "else" "then" by "define-macro" as macro in cicada-nymph
+thus
+when you are running the interpreter
+if you copy the content of core.cn into the interpreter
+then
+the group of syntax key words "if" "else" "then"
+will be available to you
+
+
+
+to run it :
+
+on linux :
+   cicada-nymph is the output executable file
+   you can run it by :
+      ./cicada-nymph
+   cn is a script that helps you to run the interpreter
+   you can run it by :
+      ./cn
+   there is only one line in cn :
+      cat core.cn - | ./cicada-nymph
+   it is equivalent to run the interpreter by :
+      ./cicada-nymph
+   and copy the content of core.cn into the interpreter
+
+on windows :
+   cicada-nymph.exe is the output executable file
+   you can run it by :
+      1. double click it
+      2. run cmd.exe
+         switch to the directory where the cicada-nymph.exe lives
+         and type the name of the program to run it
+         (when you are typing the name
+          you can press <tab> to do auto completion)
+   sometimes it is problematic to run the interpreter on windows
+   (due to the bug of windows)
+   thus
+   it is recommended to run the interpreter in emacs when you are using windows
+   please visit our wiki for more information about this :
+      https://github.com/the-little-language-designer/cicada-nymph/wiki/run-the-interpreter-in-emacs
+
+
+
+the source code of this program can be downloaded from :
    https://github.com/the-little-language-designer/cicada-nymph
 
 to track todos, bugs, feature requests, and more
