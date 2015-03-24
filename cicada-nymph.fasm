@@ -23,9 +23,9 @@ define sys_1_rdi rdi
 define sys_n_rax rax
 
 ;; the only three linux syscall we will use
-define syscall_read    0
-define syscall_write   1
-define syscall_exit    60
+define syscall_read  0
+define syscall_write 1
+define syscall_exit  60
 
 finish if
 
@@ -44,13 +44,13 @@ finish if
 
 if windows? eq yes
 
-STD_INPUT_HANDLE     = -10
-STD_OUTPUT_HANDLE    = -11
+define fun_4_r9  r9
+define fun_3_r8  r8
+define fun_2_rdx rdx
+define fun_1_rcx rcx
 
-define fun_4_r9   r9
-define fun_3_r8   r8
-define fun_2_rdx  rdx
-define fun_1_rcx  rcx
+define STD_INPUT_HANDLE  -10
+define STD_OUTPUT_HANDLE -11
 
 finish if
 
@@ -581,6 +581,7 @@ begin_to_interpret_threaded_code:
 finish if
 
 first_jojo:
+   xx welcome
    xx basic_REPL
 
    ;; you can use comment out "xx basic_REPL"
@@ -590,6 +591,19 @@ first_jojo:
    ;;    define_function "little_test", little_test
 
    ;; xx little_test
+
+define_function "welcome", welcome
+   ;; << -- >>
+   xx literal, string$welcome_to_cicada_nymph
+   xx literal, length$welcome_to_cicada_nymph
+   xx write_string
+   xx end
+
+string$welcome_to_cicada_nymph:
+   db "* welcome to cicada-nymph ^-^"
+   db 10
+.end:
+length$welcome_to_cicada_nymph = (.end - string$welcome_to_cicada_nymph)
 
 define_primitive_function "bye", exit_with_TOS
    call __exit_with_TOS
@@ -1541,6 +1555,8 @@ help__help__read_byte:
    ;; is a count of the number of bytes transferred
    ;;;;
 
+   ;; the following will let the interpreter exit
+   ;; when meeting end-of-line or reading error
    test rax, rax
    jz .error ;; rax = 0
    js .error ;; rax < 0
@@ -1712,9 +1728,12 @@ help__help__read_byte:
    mov rax, [_counter$read_byte]
    ;;;;
 
+   ;; the following will let the interpreter exit
+   ;; when meeting end-of-line or reading error
    test rax, rax
    jz .error ;; rax = 0
    js .error ;; rax < 0
+
 
    ;; update [border$read_byte]
    add [border$read_byte], rax

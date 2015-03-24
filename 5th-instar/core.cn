@@ -1,0 +1,72 @@
+: if
+  << string[address, length] --
+     address, string[address, length] >>
+  *false?branch* save-into,jo-heap
+  *current-free-address,jo-heap* xx|swap|x
+  0 save-into,jo-heap
+  end
+; define-macro
+
+: else
+  << address, string[address, length] --
+     address, string[address, length] >>
+  *branch* save-into,jo-heap
+  x|swap|xx
+  *current-free-address,jo-heap* xxx|swap|x
+  0 save-into,jo-heap
+  << address, string[address, length], address >>
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
+; define-macro
+
+: then
+  << address, string[address, length] --
+     string[address, length] >>
+  x|swap|xx
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
+; define-macro
+
+: execute-word
+  << word[address, length] -- unknown >>
+  dup2 integer-string? if
+    string->integer
+    end
+  then
+  dup2
+  find if
+    dup macro-jo? if
+      drop
+      "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+      write-string 10 write-byte
+      end
+    then
+    dup exception-jo? if
+      drop
+      "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+      write-string 10 write-byte
+      end
+    then
+    << function & primitive-function & variable >>
+    xx|swap|x drop2
+    execute-jo
+    end
+  else
+  "* (execute-word) MEETS UNDEFINED WORD : " write-string
+  write-string 10 write-byte
+  then
+  end
+; define-function
+
+: basic-REPL
+  << unknown -- unknown >>
+  read-word-for-REPL
+  execute-word
+  <> basic-REPL
+; define-function
+
+basic-REPL

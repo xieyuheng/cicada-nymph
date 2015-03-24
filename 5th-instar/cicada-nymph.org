@@ -2,53 +2,9 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* todo
-** syntax for exception handling in cicada-nymph
-** function to load file
 * ===================================
 * note the order of development
-** 1st-instar
-   * indirect-threaded-code interpreter
-     1. macro about argument_stack & return_stack
-     2. macro about jo & jojo
-     3. macro about next
-     4. the way to do memory allocation
-     5. begin_to_interpret_threaded_code
-     6. little_test
-** 2ed-instar
-   * instruction as special primitive function
-     1. literal
-     2. address
-   * and primitive functions about
-     1. argument-stack
-     2. bool
-     3. fixnum
-     4. memory
-   * and taca for explicit tail-call
-** 3rd-instar
-   * primitive function about io
-     1. write_byte
-     2. read_byte
-   * more instruction as special primitive function
-     1. branch
-     2. false?branch
-** 4th-instar
-   * more function about io
-     1. about word
-     2. about string
-     3. about number
-   * more function
-     1. jo
-     2. char
-     3. buffer
-   * more in epilog
-     1. last_jo_in_assembly
-   * function about dictionary
-     1. find
-     2. execute-word
-   * basic-REPL as postfix-notation function executer
-     1. basic-REPL
-** 5th-instar [the cicada-nymph]
+** 5th-instar
    * type of jo
    * more in epilog
      1. *current-free-address,primitive-string-heap*
@@ -64,6 +20,12 @@
        2. exception handling system
      * function about definition
        which leave data into memory
+   * code written in cicada-nymph
+     * use define-macro to implement
+       if & else & then
+     * test the interpreter by the factorial function
+     * re-define execute-word & basic-REPL
+       to protect macro & exception from be called from basic-REPL
 * -----------------------------------
 * note
 ** jo & jojo
@@ -1158,7 +1120,6 @@
 ** first_jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
    first_jojo:
-      xx welcome
       xx basic_REPL
 
       ;; you can use comment out "xx basic_REPL"
@@ -1168,21 +1129,6 @@
       ;;    define_function "little_test", little_test
 
       ;; xx little_test
-   #+end_src
-** welcome
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "welcome", welcome
-      ;; << -- >>
-      xx literal, string$welcome_to_cicada_nymph
-      xx literal, length$welcome_to_cicada_nymph
-      xx write_string
-      xx end
-
-   string$welcome_to_cicada_nymph:
-      db "* welcome to cicada-nymph ^-^"
-      db 10
-   .end:
-   length$welcome_to_cicada_nymph = (.end - string$welcome_to_cicada_nymph)
    #+end_src
 ** exit_with_TOS a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
