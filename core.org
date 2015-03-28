@@ -1,0 +1,254 @@
+#+TITLE:  core of cicada-nymph
+#+AUTHOR: 謝宇恆 / XIE Yuheng
+#+EMAIL:  xyheme@gmail.com
+
+* todo
+** syntax for exception handling in cicada-nymph
+** re-factoring read_byte to make it easier to implement eval-string
+** eval-string
+** load-file
+* ===================================
+* misc
+  #+begin_src cicada-nymph :tangle core.cn
+  : cr << cr denotes carriage return >>
+    << -- >>
+    10 write-byte
+    end
+  ; define-function
+  #+end_src
+* -----------------------------------
+* if & else & then
+  * one predicate can make two branchs
+    three predicates can make four branchs
+    three predicates may only make three branchs
+    but indeed there must be an invisible branch
+  #+begin_src cicada-nymph :tangle core.cn
+  : if
+    << string[address, length] --
+       address, string[address, length] >>
+    *false?branch* save-into,jo-heap
+    *current-free-address,jo-heap* xx|swap|x
+    0 save-into,jo-heap
+    end
+  ; define-macro
+
+  : else
+    << address, string[address, length] --
+       address, string[address, length] >>
+    *branch* save-into,jo-heap
+    x|swap|xx
+    *current-free-address,jo-heap* xxx|swap|x
+    0 save-into,jo-heap
+    << address, string[address, length], address >>
+    *current-free-address,jo-heap*
+    over sub *jo-size* div
+    swap save
+    end
+  ; define-macro
+
+  : then
+    << address, string[address, length] --
+       string[address, length] >>
+    x|swap|xx
+    *current-free-address,jo-heap*
+    over sub *jo-size* div
+    swap save
+    end
+  ; define-macro
+  #+end_src
+* test
+  #+begin_src cicada-nymph
+  : kkk
+    "kkk took my baby away !" write-string
+    cr
+    end
+  ; define-function
+
+  : factorial
+    << number -- number >>
+    dup
+    one? if
+      end
+    then
+    dup sub1 factorial
+    mul
+    end
+  ; define-function
+
+
+  1 factorial .
+  2 factorial .
+  3 factorial .
+  4 factorial .
+  5 factorial .
+  6 factorial .
+  7 factorial .
+  8 factorial .
+  9 factorial .
+  10 factorial .
+  11 factorial .
+  12 factorial .
+  13 factorial .
+  14 factorial .
+  15 factorial .
+  16 factorial .
+  17 factorial .
+  18 factorial .
+  19 factorial .
+  20 factorial .
+
+
+  : .12
+    << 1 2 -- >>
+    2 equal? if
+      "(^-^)" write-string
+      1 equal? if
+        "\^o^/" write-string
+      else
+        "     " write-string
+      then
+    else
+      "     " write-string
+      1 equal? if
+        "\^o^/" write-string
+      else
+        "     " write-string
+      then
+    then
+    end
+  ; define-function
+
+  cr
+  1 2 .12 cr
+  6 2 .12 cr
+  1 6 .12 cr
+  6 6 .12 cr
+  #+end_src
+* -----------------------------------
+* re-define execute-word & basic-REPL
+  * to protect macro & exception from be called from basic-REPL
+  #+begin_src cicada-nymph :tangle core.cn
+  : execute-word
+    << word[address, length] -- unknown >>
+    dup2 integer-string? if
+      string->integer
+      end
+    then
+    dup2
+    find if
+      dup macro-jo? if
+        drop
+        "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+        write-string cr
+        end
+      then
+      dup exception-jo? if
+        drop
+        "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+        write-string cr
+        end
+      then
+      << function & primitive-function & variable >>
+      xx|swap|x drop2
+      execute-jo
+      end
+    else
+    "* (execute-word) MEETS UNDEFINED WORD : " write-string
+    write-string cr
+    then
+    end
+  ; define-function
+
+  : basic-REPL
+    << unknown -- unknown >>
+    read-word-for-REPL
+    execute-word
+    <> basic-REPL
+  ; define-function
+
+  basic-REPL
+  #+end_src
+* report
+** show-dictionary
+   #+begin_src cicada-nymph :tangle core.cn
+   : loop,show-dictionary
+     << jo -- >>
+     dup last-jo,dictionary? if
+       jo->name
+       write-string cr
+       end
+     then
+     dup jo->name
+     dup2 space-string? if
+       drop2
+     else
+       write-string cr
+     then
+     jo->pre-jo
+     <> loop,show-dictionary
+   ; define-function
+
+   : show-dictionary
+     << -- >>
+     *first-jo-in-dictionary*
+     loop,show-dictionary
+     end
+   ; define-function
+   #+end_src
+** report-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-memory
+     << -- >>
+     "* *un-initialized-memory*" write-string cr
+     "  * SIZE : " write-string
+          *size,un-initialized-memory*
+          . cr
+     "  * USED : " write-string
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub . cr
+     "  * FREE : " write-string
+          *size,un-initialized-memory*
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub sub . cr
+     "* *primitive-string-heap*" write-string cr
+     "  * SIZE : " write-string
+          *size,primitive-string-heap*
+          . cr
+     "  * USED : " write-string
+          *current-free-address,primitive-string-heap*
+          *primitive-string-heap*
+          sub . cr
+     "  * FREE : " write-string
+          *size,primitive-string-heap*
+          *current-free-address,primitive-string-heap*
+          *primitive-string-heap*
+          sub sub . cr
+     "* *jo-heap*" write-string cr
+     "  * SIZE : " write-string
+          *size,jo-heap* . cr
+     "  * USED : " write-string
+          *current-free-address,jo-heap*
+          *jo-heap*
+          sub . cr
+     "  * FREE : " write-string
+          *size,jo-heap*
+          *current-free-address,jo-heap*
+          *jo-heap*
+          sub sub . cr
+     end
+   ; define-function
+   #+end_src
+* -----------------------------------
+* an interface of *un-initialized-memory*
+** allocate
+   #+begin_src cicada-nymph :tangle core.cn
+   : allocate
+     << size -- address >>
+     *un-initialized-memory* tuck
+     add address *un-initialized-memory* save
+     end
+   ; define-function
+   #+end_src
+* ===================================

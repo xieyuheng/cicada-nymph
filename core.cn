@@ -1,4 +1,5 @@
-: cr
+: cr << cr denotes carriage return >>
+  << -- >>
   10 write-byte
   end
 ; define-function
@@ -140,5 +141,12 @@ basic-REPL
        *current-free-address,jo-heap*
        *jo-heap*
        sub sub . cr
+  end
+; define-function
+
+: allocate
+  << size -- address >>
+  *un-initialized-memory* tuck
+  add address *un-initialized-memory* save
   end
 ; define-function
