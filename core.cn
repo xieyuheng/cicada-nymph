@@ -1,3 +1,8 @@
+: cr
+  10 write-byte
+  end
+; define-function
+
 : if
   << string[address, length] --
      address, string[address, length] >>
@@ -42,13 +47,13 @@
     dup macro-jo? if
       drop
       "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
-      write-string 10 write-byte
+      write-string cr
       end
     then
     dup exception-jo? if
       drop
       "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
-      write-string 10 write-byte
+      write-string cr
       end
     then
     << function & primitive-function & variable >>
@@ -57,7 +62,7 @@
     end
   else
   "* (execute-word) MEETS UNDEFINED WORD : " write-string
-  write-string 10 write-byte
+  write-string cr
   then
   end
 ; define-function
@@ -70,3 +75,70 @@
 ; define-function
 
 basic-REPL
+
+: loop,show-dictionary
+  << jo -- >>
+  dup last-jo,dictionary? if
+    jo->name
+    write-string cr
+    end
+  then
+  dup jo->name
+  dup2 space-string? if
+    drop2
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,show-dictionary
+; define-function
+
+: show-dictionary
+  << -- >>
+  *first-jo-in-dictionary*
+  loop,show-dictionary
+  end
+; define-function
+
+: report-memory
+  << -- >>
+  "* *un-initialized-memory*" write-string cr
+  "  * SIZE : " write-string
+       *size,un-initialized-memory*
+       . cr
+  "  * USED : " write-string
+       *current-free-address,un-initialized-memory*
+       *un-initialized-memory*
+       sub . cr
+  "  * FREE : " write-string
+       *size,un-initialized-memory*
+       *current-free-address,un-initialized-memory*
+       *un-initialized-memory*
+       sub sub . cr
+  "* *primitive-string-heap*" write-string cr
+  "  * SIZE : " write-string
+       *size,primitive-string-heap*
+       . cr
+  "  * USED : " write-string
+       *current-free-address,primitive-string-heap*
+       *primitive-string-heap*
+       sub . cr
+  "  * FREE : " write-string
+       *size,primitive-string-heap*
+       *current-free-address,primitive-string-heap*
+       *primitive-string-heap*
+       sub sub . cr
+  "* *jo-heap*" write-string cr
+  "  * SIZE : " write-string
+       *size,jo-heap* . cr
+  "  * USED : " write-string
+       *current-free-address,jo-heap*
+       *jo-heap*
+       sub . cr
+  "  * FREE : " write-string
+       *size,jo-heap*
+       *current-free-address,jo-heap*
+       *jo-heap*
+       sub sub . cr
+  end
+; define-function

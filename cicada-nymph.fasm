@@ -317,6 +317,15 @@ explain$variable:
    push_argument_stack rbx
    next
 
+define_variable "*primitive-string-heap*", V__primitive_string_heap
+  xx address$primitive_string_heap
+
+define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+  xx size$primitive_string_heap
+
+;; *current-free-address,primitive-string-heap*
+;; is at epilog
+
 macro define_macro string, jo {
 
 define_macro__#jo:
@@ -2425,8 +2434,17 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
+size$jo_heap = 3 * 1024 * 1024 * jo_size
+
+define_variable "*jo-heap*", V__jo_heap
+  xx address$jo_heap
+
+define_variable "*size,jo-heap*", V__size__jo_heap
+  xx size$jo_heap
+
+
 address$jo_heap labeling
-   preserve 3 * 1024 * 1024 * jo_size
+   preserve size$jo_heap
 
 define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
    xx address$jo_heap
@@ -2816,6 +2834,15 @@ define_function "save-into,jo-heap", save_into__jo_heap
    xx address, V__current_free_address__jo_heap
    xx add_save
    xx end
+
+define_variable "*un-initialized-memory*", V__un_initialized_memory
+  xx address$un_initialized_memory
+
+define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+  xx size$un_initialized_memory
+
+define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+  xx current_free_address$un_initialized_memory
 
 define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
    xx current_free_address$primitive_string_heap

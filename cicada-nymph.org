@@ -3,8 +3,11 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** an interface of *un-initialized-memory*
 ** syntax for exception handling in cicada-nymph
-** function to load file
+** re-factoring read_byte to make it easier to implement eval-string
+** eval-string
+** load-file
 * ===================================
 * note the order of development
 ** 1st-instar
@@ -714,6 +717,17 @@
       next
    #+end_src
 ** ----------------------------------
+** *primitive-string-heap*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*primitive-string-heap*", V__primitive_string_heap
+     xx address$primitive_string_heap
+
+   define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+     xx size$primitive_string_heap
+
+   ;; *current-free-address,primitive-string-heap*
+   ;; is at epilog
+   #+end_src
 * macro for make-jojo
 ** ----------------------------------
 ** note
@@ -3383,8 +3397,17 @@
 ** ----------------------------------
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
+   size$jo_heap = 3 * 1024 * 1024 * jo_size
+
+   define_variable "*jo-heap*", V__jo_heap
+     xx address$jo_heap
+
+   define_variable "*size,jo-heap*", V__size__jo_heap
+     xx size$jo_heap
+
+
    address$jo_heap labeling
-      preserve 3 * 1024 * 1024 * jo_size
+      preserve size$jo_heap
 
    define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
       xx address$jo_heap
@@ -3861,6 +3884,18 @@
 * -----------------------------------
 * epilog
 ** ----------------------------------
+** *un-initialized-memory*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*un-initialized-memory*", V__un_initialized_memory
+     xx address$un_initialized_memory
+
+   define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+     xx size$un_initialized_memory
+
+   define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+     xx current_free_address$un_initialized_memory
+   #+end_src
+** ----------------------------------
 ** *current-free-address,primitive-string-heap*
    * the last_primitive_string_in_assembly
      is just "*current-free-address,primitive-string-heap*"
@@ -3989,6 +4024,14 @@
    #+end_src
 ** ----------------------------------
 * ===================================
+* misc
+  #+begin_src cicada-nymph :tangle core.cn
+  : cr
+    10 write-byte
+    end
+  ; define-function
+  #+end_src
+* -----------------------------------
 * if & else & then
   * one predicate can make two branchs
     three predicates can make four branchs
@@ -4030,9 +4073,16 @@
   #+end_src
 * test
   #+begin_src cicada-nymph
+  : kkk
+    "kkk took my baby away !" write-string
+    cr
+    end
+  ; define-function
+
   : factorial
     << number -- number >>
-    dup one? if
+    dup
+    one? if
       end
     then
     dup sub1 factorial
@@ -4061,12 +4111,6 @@
   18 factorial .
   19 factorial .
   20 factorial .
-
-
-  : cr
-    10 write-byte
-    end
-  ; define-function
 
 
   : .12
@@ -4110,13 +4154,13 @@
       dup macro-jo? if
         drop
         "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
-        write-string 10 write-byte
+        write-string cr
         end
       then
       dup exception-jo? if
         drop
         "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
-        write-string 10 write-byte
+        write-string cr
         end
       then
       << function & primitive-function & variable >>
@@ -4125,7 +4169,7 @@
       end
     else
     "* (execute-word) MEETS UNDEFINED WORD : " write-string
-    write-string 10 write-byte
+    write-string cr
     then
     end
   ; define-function
@@ -4139,4 +4183,76 @@
 
   basic-REPL
   #+end_src
+* report
+** show-dictionary
+   #+begin_src cicada-nymph :tangle core.cn
+   : loop,show-dictionary
+     << jo -- >>
+     dup last-jo,dictionary? if
+       jo->name
+       write-string cr
+       end
+     then
+     dup jo->name
+     dup2 space-string? if
+       drop2
+     else
+       write-string cr
+     then
+     jo->pre-jo
+     <> loop,show-dictionary
+   ; define-function
+
+   : show-dictionary
+     << -- >>
+     *first-jo-in-dictionary*
+     loop,show-dictionary
+     end
+   ; define-function
+   #+end_src
+** report-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-memory
+     << -- >>
+     "* *un-initialized-memory*" write-string cr
+     "  * SIZE : " write-string
+          *size,un-initialized-memory*
+          . cr
+     "  * USED : " write-string
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub . cr
+     "  * FREE : " write-string
+          *size,un-initialized-memory*
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub sub . cr
+     "* *primitive-string-heap*" write-string cr
+     "  * SIZE : " write-string
+          *size,primitive-string-heap*
+          . cr
+     "  * USED : " write-string
+          *current-free-address,primitive-string-heap*
+          *primitive-string-heap*
+          sub . cr
+     "  * FREE : " write-string
+          *size,primitive-string-heap*
+          *current-free-address,primitive-string-heap*
+          *primitive-string-heap*
+          sub sub . cr
+     "* *jo-heap*" write-string cr
+     "  * SIZE : " write-string
+          *size,jo-heap* . cr
+     "  * USED : " write-string
+          *current-free-address,jo-heap*
+          *jo-heap*
+          sub . cr
+     "  * FREE : " write-string
+          *size,jo-heap*
+          *current-free-address,jo-heap*
+          *jo-heap*
+          sub sub . cr
+     end
+   ; define-function
+   #+end_src
 * ===================================
