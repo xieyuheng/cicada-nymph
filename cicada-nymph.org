@@ -2,6 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* todo
+** fix define in if-block
+** 32-bits port for linux
+** 32-bits port for windows
+** [maybe] re generate instars
 * ===================================
 * note the order of development
 ** 1st-instar
@@ -253,6 +258,36 @@
 
    finish if
    #+end_src
+** calling-convention-windows-64
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
+
+   ;; 這裏的 number_of_arguments 其實代表
+   ;; 在對齊棧之後
+   ;; 你還想要將棧的指針 向下移動多少個單位
+   ;; 根據 windows calling convention
+   ;; 這個數字最少是 4
+
+   macro windows_function number_of_arguments {
+      push rbp
+      mov rbp, rsp
+
+      mov rax, rsp
+      add rax, 8*number_of_arguments
+      mov rbx, 1111b
+      and rbx, rax
+
+      sub rsp, 16
+      add rsp, rbx
+   }
+
+   macro end_windows_function {
+      mov rsp, rbp
+      pop rbp
+   }
+
+   finish if
+   #+end_src
 ** ----------------------------------
 * -----------------------------------
 * macro in assembly code
@@ -476,24 +511,12 @@
    if windows? eq yes
 
    __exit_with_TOS:
-      number_of_arguments = 4
-      push rbp
-      mov rbp, rsp
 
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
+   windows_function 4
       sub rsp, 8*4
       pop_argument_stack fun_1_rcx
       call [ExitProcess]
-
-      mov rsp, rbp
-      pop rbp
+   end_windows_function
 
    finish if
    #+end_src
@@ -502,24 +525,12 @@
    if windows? eq yes
 
    __exit_with_zero:
-      number_of_arguments = 4
-      push rbp
-      mov rbp, rsp
 
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
+   windows_function 4
       sub rsp, 8*4
       xor fun_1_rcx, fun_1_rcx
       call [ExitProcess]
-
-      mov rsp, rbp
-      pop rbp
+   end_windows_function
 
    finish if
    #+end_src
@@ -528,24 +539,12 @@
    if windows? eq yes
 
    __exit_with_six:
-      number_of_arguments = 4
-      push rbp
-      mov rbp, rsp
 
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
+   windows_function 4
       sub rsp, 8*4
-      mov fun_1_rcx, 15
+      mov fun_1_rcx, 6
       call [ExitProcess]
-
-      mov rsp, rbp
-      pop rbp
+   end_windows_function
 
    finish if
    #+end_src
@@ -1106,53 +1105,19 @@
 
       cld ;; set DF = 0, then rsi and rdi are incremented
 
-
-      ;;;; for windows
-      number_of_arguments = 4
-      push rbp
-      mov rbp, rsp
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
-
+   windows_function 4
       sub rsp, 8*4
       mov fun_1_rcx, STD_INPUT_HANDLE
       call [GetStdHandle]
       mov [_input_handle], rax
+   end_windows_function
 
-
-      mov rsp, rbp
-      pop rbp
-
-
-
-      number_of_arguments = 4
-      push rbp
-      mov rbp, rsp
-
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
+   windows_function 4
       sub rsp, 8*4
       mov fun_1_rcx, STD_OUTPUT_HANDLE
       call [GetStdHandle]
       mov [_output_handle], rax
-
-      mov rsp, rbp
-      pop rbp
-      ;;;;
-
+   end_windows_function
 
       mov pointer$argument_stack,  address$argument_stack
       mov pointer$return_stack,    address$return_stack
@@ -1164,18 +1129,13 @@
    finish if
    #+end_src
 ** first_jojo
+   * you can use the following "xx little_test"
+     to do some little tests
    #+begin_src fasm :tangle cicada-nymph.fasm
    first_jojo:
       xx welcome
-      xx basic_REPL
-
-      ;; you can use comment out "xx basic_REPL"
-      ;; and use the following "xx little_test"
-      ;; to do some little tests
-      ;; by set up the code block beneath
-      ;;    define_function "little_test", little_test
-
       ;; xx little_test
+      xx basic_REPL
    #+end_src
 ** welcome
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -2194,13 +2154,8 @@
 * basic io
 ** ----------------------------------
 ** note byte
-** memory allocation
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   max_input_length = 1024 * 1024
-
-   buffer$read_byte labeling
-      preserve max_input_length
-   #+end_src
+   * basic io is about byte
+** ----------------------------------
 ** write-byte [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if linux? eq yes
@@ -2228,113 +2183,6 @@
 
    finish if
    #+end_src
-** read-byte [linux]
-   * calls the Linux read system call to fill buffer$read_byte
-   * if it detects that stdin has closed
-     it exits the program
-     which is why when you hit C-d the system exits
-   * add the teature to unread one ket-char
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
-
-   flag$unreaded_ket_char:
-      xx 0
-
-   char$unreaded_ket_char:
-      xx 0
-
-   define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
-      ;; << -- bool >>
-      xx literal, flag$unreaded_ket_char
-      xx fetch
-      xx end
-
-   define_function "unread-ket-char", unread_ket_char
-      ;; << char -- >>
-      xx literal, char$unreaded_ket_char, save
-      xx true, literal, flag$unreaded_ket_char
-      xx save
-      xx end
-
-
-   ;; help__read_byte is the old do function without unread ket-char
-   define_function "read-byte", read_byte
-      ;; << -- byte >>
-      xx have_unreaded_ket_char?, false?branch, 9
-      xx   literal, char$unreaded_ket_char, fetch_byte
-      xx   zero, literal, flag$unreaded_ket_char
-      xx   save
-      xx   end
-      xx help__read_byte
-      xx end
-
-
-
-   cursor$read_byte:
-      xx 0
-
-   border$read_byte:
-      xx 0
-
-   define_primitive_function "help,read-byte", help__read_byte
-      ;; << -- byte >>
-      call help__help__read_byte
-      push_argument_stack rax
-      next
-
-
-   help__help__read_byte:
-      mov rbx, [cursor$read_byte]
-      cmp rbx, [border$read_byte]
-      ;; [cursor$read_byte] <  [border$read_byte]
-      jl .we_still_have_buffered_byte
-      ;; [cursor$read_byte] >= [border$read_byte]
-      jmp .do_a_new_buffer
-
-
-   .do_a_new_buffer:
-      mov rbx, buffer$read_byte
-      mov [cursor$read_byte], rbx
-      mov [border$read_byte], rbx
-
-      ;;;; for linux
-      mov sys_3_rdx, max_input_length ;; max length to be read
-      mov sys_2_rsi, buffer$read_byte ;; buffer address
-      xor sys_1_rdi, sys_1_rdi        ;; stdin
-      mov sys_n_rax, syscall_read
-      syscall
-      ;; the return value of syscall read
-      ;; is a count of the number of bytes transferred
-      ;;;;
-
-      ;; the following will let the interpreter exit
-      ;; when meeting end-of-line or reading error
-      test rax, rax
-      jz .error ;; rax = 0
-      js .error ;; rax < 0
-
-      ;; update [border$read_byte]
-      add [border$read_byte], rax
-      jmp help__help__read_byte
-
-
-   .we_still_have_buffered_byte:
-      ;; for the following will just uses the al part of rax
-      ;; it is necessary to clear rax
-      xor rax, rax
-      mov al, byte [rbx]
-      inc rbx
-      mov [cursor$read_byte], rbx
-      ret
-
-
-   .error:
-      ;; exit with exit code = 0
-      call __exit_with_zero
-
-   finish if
-   #+end_src
-** ----------------------------------
 ** write-byte [windows]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if windows? eq yes
@@ -2355,20 +2203,7 @@
       ;; write needs the address of the byte to write
       mov [buffer$write_byte], al
 
-      ;;;; for windows
-      number_of_arguments = 5
-      push rbp
-      mov rbp, rsp
-
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
-
+   windows_function 5
       push 0
       sub rsp, 8*4
       mov fun_4_r9, _counter$write_byte
@@ -2376,20 +2211,219 @@
       mov fun_2_rdx, buffer$write_byte
       mov fun_1_rcx, [_output_handle]
       call [WriteFile]
-
-
-      mov rsp, rbp
-      pop rbp
-      ;;;;
+   end_windows_function
 
       next
 
    finish if
    #+end_src
-** read-byte [windows]
+** ----------------------------------
+** note
+   * calls the linux read system call to fill buffer$read_byte
+   * do not exit the program
+     when meeting <end-of-file>
+     so
+     when you hit <C-d>
+     some you will not exit the interpreter
+   * add the feature to unread one ket-char
+** note factoring
+   * reading from file of stdin is slow
+     thus
+     1. when reading from file
+        a whole file is readed at a time
+        and saved to a buffer
+     2. when reading from stdin
+        a whole line is readed at a time
+     3. not that
+        reading line instead of keyboard-code
+        will limit the design of the user interface
+   * by factoring out the low-level calls
+     that read a line from stdin
+     we are able to implement eval-string easily
+** note nested call of eval-string
+   * nested call of eval-string is handled
+     by using a eval_string_stack
+     to remember the old string
+   * but
+     in my view
+     meta-programming should NOT
+     be achieved by editing string
+   * not that
+     this point of view
+     is not conflict with my macro system
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   max_input_length = 1024 * 1024
+
+   buffer$read_byte labeling
+      preserve max_input_length
+   #+end_src
+** eval_string_stack
+*** note
+    * for we do not build border-check
+      into the interface of pop and push
+      we allocation some memory below the stacks
+    * the size$eval_string_stack
+      defines the max depth
+      of nested call to eval string
+    * cursor and border of a evaled string
+      can be stored in eval_string_stack
+      so
+      when evaling a string
+      the eval_string_stack will be
+      << counter, cursor >>
+      when evaling is nested depth is 2
+      << counter, cursor, counter, cursor >>
+*** memory allocation
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    size$eval_string_stack = 1024 * jo_size
+
+       preserve 64 * jo_size
+    address$eval_string_stack labeling
+       preserve size$eval_string_stack
+    #+end_src
+*** pointer
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    pointer$eval_string_stack:
+       xx address$eval_string_stack
+    #+end_src
+*** push & pop
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_primitive_function "push-eval-string-stack", push_eval_string_stack
+       ;; argument-stack -> eval-string-stack
+       pop_argument_stack rax
+       mov rbx, [pointer$eval_string_stack]
+       mov [rbx], rax
+       add qword [pointer$eval_string_stack], jo_size
+       next
+
+    define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+       ;; eval-string-stack -> argument-stack
+       sub qword [pointer$eval_string_stack], jo_size
+       mov rbx, [pointer$eval_string_stack]
+       mov rax, [rbx]
+       push_argument_stack rax
+       next
+    #+end_src
+*** clear
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+       ;; << -- >>
+       mov qword [pointer$eval_string_stack], address$eval_string_stack
+       next
+    #+end_src
+*** empty?
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
+       ;; << -- bool >>
+       mov rax, [pointer$eval_string_stack]
+       cmp rax, address$eval_string_stack
+       ;; less-than is treated as equal
+       setle al
+       movzx rax, al
+       push_argument_stack rax
+       next
+    #+end_src
+** read-line-from-stdin [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if linux? eq yes
+
+   define_primitive_function "read-line-from-stdin", read_line_from_stdin
+      ;; << buffer address, max length -- >>
+      pop_argument_stack sys_3_rdx
+      pop_argument_stack sys_2_rsi
+      xor sys_1_rdi, sys_1_rdi ;; stdin
+      mov sys_n_rax, syscall_read
+      syscall
+      ;; the return value
+      ;; is a count of the number of bytes transferred
+      push_argument_stack rax
+      next
+
+   finish if
+   #+end_src
+** test
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "", test__read_line_from_stdin
+      xx literal, buffer$read_byte
+      xx literal, max_input_length
+      xx read_line_from_stdin
+      xx pretty_write_integer
+      xx literal, buffer$read_byte
+      xx literal, 10
+      xx write_string
+      xx exit_with_TOS
+      xx end
+   #+end_src
+** read-line-from-stdin [windows]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if windows? eq yes
 
+   _counter$read_byte:
+      dq 0
+
+   define_primitive_function "read-line-from-stdin", read_line_from_stdin
+      ;; << -- >>
+
+   windows_function 5
+      push 0
+      sub rsp, 8*4
+      mov fun_4_r9, _counter$read_byte
+      mov fun_3_r8, max_input_length
+      mov fun_2_rdx, buffer$read_byte
+      mov fun_1_rcx, [_input_handle]
+      call [ReadFile]
+   end_windows_function
+
+      ;; the return value
+      ;; is a count of the number of bytes transferred
+      mov rax, [_counter$read_byte]
+      push_argument_stack rax
+      next
+
+   finish if
+   #+end_src
+** read-byte
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "read-byte", read_byte
+      ;; << -- byte >>
+      xx have_unreaded_ket_char?, false?branch, 9
+      xx   literal, char$unreaded_ket_char, fetch_byte
+      xx   zero, literal, flag$unreaded_ket_char
+      xx   save
+      xx   end
+      xx read_byte__without_unread
+      xx end
+
+   define_function "read-byte,without-unread", read_byte__without_unread
+      ;; << -- byte >>
+      xx eval_string_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx   literal, buffer$read_byte
+      xx   literal, max_input_length
+      xx   read_line_from_stdin
+      xx     dup, positive?, false?, false?branch, 4
+      ;;     ignore <end-of-file>
+      ;;     ignore reading error
+      xx     drop
+      xx     taca, read_byte__without_unread
+      xx   push_eval_string_stack
+      xx   literal, buffer$read_byte
+      xx   push_eval_string_stack
+      xx   taca, read_byte__without_unread
+      .not_empty:
+      xx pop_eval_string_stack
+      xx pop_eval_string_stack
+      xx dup, zero?, false?branch, 4
+      xx   drop2
+      xx   taca, read_byte__without_unread
+      xx sub1, push_eval_string_stack
+      xx dup
+      xx add1, push_eval_string_stack
+      xx fetch_byte
+      xx end
+   #+end_src
+** unread-ket-char
+   #+begin_src fasm :tangle cicada-nymph.fasm
    flag$unreaded_ket_char:
       xx 0
 
@@ -2408,111 +2442,6 @@
       xx true, literal, flag$unreaded_ket_char
       xx save
       xx end
-
-
-   ;; help__read_byte is the old do function without unread ket-char
-   define_function "read-byte", read_byte
-      ;; << -- byte >>
-      xx have_unreaded_ket_char?, false?branch, 9
-      xx   literal, char$unreaded_ket_char, fetch_byte
-      xx   zero, literal, flag$unreaded_ket_char
-      xx   save
-      xx   end
-      xx help__read_byte
-      xx end
-
-   ;;;; for windows
-   _counter$read_byte:
-      dq 0
-   ;;;;
-
-   cursor$read_byte:
-      xx 0
-
-   border$read_byte:
-      xx 0
-
-   define_primitive_function "help,read-byte", help__read_byte
-      ;; << -- byte >>
-      call help__help__read_byte
-      push_argument_stack rax
-      next
-
-
-   help__help__read_byte:
-      mov rbx, [cursor$read_byte]
-      cmp rbx, [border$read_byte]
-      ;; [cursor$read_byte] <  [border$read_byte]
-      jl .we_still_have_buffered_byte
-      ;; [cursor$read_byte] >= [border$read_byte]
-      jmp .do_a_new_buffer
-
-
-   .do_a_new_buffer:
-      mov rbx, buffer$read_byte
-      mov [cursor$read_byte], rbx
-      mov [border$read_byte], rbx
-
-      ;;;; for windows
-      number_of_arguments = 5
-      push rbp
-      mov rbp, rsp
-
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-
-      push 0
-      sub rsp, 8*4
-      mov fun_4_r9, _counter$read_byte
-      mov fun_3_r8, max_input_length
-      mov fun_2_rdx, buffer$read_byte
-      mov fun_1_rcx, [_input_handle]
-      call [ReadFile]
-
-      mov rsp, rbp
-      pop rbp
-      ;;;;
-
-      ;; the return value of syscall read
-      ;; is a count of the number of bytes transferred
-
-      ;;;; for windows
-      mov rax, [_counter$read_byte]
-      ;;;;
-
-      ;; the following will let the interpreter exit
-      ;; when meeting end-of-line or reading error
-      test rax, rax
-      jz .error ;; rax = 0
-      js .error ;; rax < 0
-
-
-      ;; update [border$read_byte]
-      add [border$read_byte], rax
-      jmp help__help__read_byte
-
-
-   .we_still_have_buffered_byte:
-      ;; for the following will just uses the al part of rax
-      ;; it is necessary to clear rax
-      xor rax, rax
-      mov al, byte [rbx]
-      inc rbx
-      mov [cursor$read_byte], rbx
-      ret
-
-
-   .error:
-      ;; exit with exit code = 0
-      call __exit_with_zero
-
-
-   finish if
    #+end_src
 ** ----------------------------------
 * -----------------------------------

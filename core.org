@@ -3,8 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** better report of dictionary
+   * different types of words in dictionary 
+     are showed separately
 ** syntax for exception handling in cicada-nymph
-** re-factoring read_byte to make it easier to implement eval-string
 ** eval-string
 ** load-file
 * ===================================
@@ -170,6 +172,8 @@
   #+end_src
 * report
 ** show-dictionary
+   * different types of words in dictionary 
+     are showed separately
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary
      << jo -- >>
