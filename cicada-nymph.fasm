@@ -403,7 +403,7 @@ explain$exception:
    call __exit_with_six
 
 define_primitive_function "execute-jo", execute_jo
-   ;; << jo -- unknown >>
+   ;; << jo -- UNKNOWN >>
    pop_argument_stack rax
    jmp qword [rax]
 
@@ -1626,6 +1626,17 @@ define_function "unread-ket-char", unread_ket_char
    xx save
    xx end
 
+define_function "eval-string", eval_string
+   ;; << string[address, length] -- UNKNOWN >>
+   xx push_eval_string_stack
+   xx push_eval_string_stack
+   xx end
+
+define_function "load-file", load_file
+   ;; << -- >>
+
+   xx end
+
 define_function "space-char?", space_char?
    ;; << char -- bool >>
    xx literal, 32
@@ -2142,15 +2153,10 @@ string$undefined_word_report__for_execute_word:
 length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
 
 define_function "basic-REPL", basic_REPL
-   ;; << unknown -- unknown >>
+   ;; << UNKNOWN -- UNKNOWN >>
    xx read_word_for_REPL
    xx execute_word
    xx taca, basic_REPL
-
-define_function "eval-string", eval_string
-   ;; << -- >>
-
-   xx end
 
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
@@ -2713,10 +2719,6 @@ define_variable "*current-free-address,primitive-string-heap*", V__current_free_
    xx current_free_address$primitive_string_heap
 
 last_link = link
-
-;; define_variable "", last_jo_in_assembly
-;;    ;; << -- >>
-;;    xx 0
 
 if linux? eq yes
 

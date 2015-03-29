@@ -3,6 +3,8 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** load-file
+   * get rid of "cat core.cn - | ./cicada-nymph" in cn
 ** [maybe] make instruction a type of jo
    this is needed when doing report of the dictionary
 ** fix define in if-block
@@ -888,7 +890,7 @@
 ** execute-jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "execute-jo", execute_jo
-      ;; << jo -- unknown >>
+      ;; << jo -- UNKNOWN >>
       pop_argument_stack rax
       jmp qword [rax]
    #+end_src
@@ -2157,6 +2159,7 @@
      sub qword [rbx], rax
      next
   #+end_src
+* -----------------------------------
 * basic io
 ** ----------------------------------
 ** note byte
@@ -2450,6 +2453,27 @@
       xx end
    #+end_src
 ** ----------------------------------
+* eval-string
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "eval-string", eval_string
+     ;; << string[address, length] -- UNKNOWN >>
+     xx push_eval_string_stack
+     xx push_eval_string_stack
+     xx end
+  #+end_src
+* -----------------------------------
+* >< file io
+** open-file
+** close-file
+** read-file
+** write-file
+* >< load-file
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "load-file", load_file
+     ;; << -- >>
+
+     xx end
+  #+end_src
 * -----------------------------------
 * char
 ** space-char?
@@ -3111,17 +3135,10 @@
 * basic-REPL
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_function "basic-REPL", basic_REPL
-     ;; << unknown -- unknown >>
+     ;; << UNKNOWN -- UNKNOWN >>
      xx read_word_for_REPL
      xx execute_word
      xx taca, basic_REPL
-  #+end_src
-* eval-string
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_function "eval-string", eval_string
-     ;; << -- >>
-
-     xx end
   #+end_src
 * -----------------------------------
 * colon semicolon
