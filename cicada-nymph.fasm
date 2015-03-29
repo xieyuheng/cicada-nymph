@@ -437,6 +437,8 @@ define_function "jo->pre-jo", jo_to_pre_jo
    ;; << jo -- pre-jo >>
    xx jo_to_link
    xx fetch
+   xx dup, zero?, false?branch, 2
+   xx   end
    xx literal, jo_size
    xx addition
    xx end
@@ -2077,7 +2079,7 @@ define_function "string-tail,word", string_tail__word
    xx end
 
 define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
-   xx last_jo_in_assembly
+   xx last_link + jo_size
 
 define_function "find", find
    ;; found :
@@ -2144,6 +2146,11 @@ define_function "basic-REPL", basic_REPL
    xx read_word_for_REPL
    xx execute_word
    xx taca, basic_REPL
+
+define_function "eval-string", eval_string
+   ;; << -- >>
+
+   xx end
 
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
@@ -2705,9 +2712,11 @@ define_variable "*current-free-address,un-initialized-memory*", V__current_free_
 define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
    xx current_free_address$primitive_string_heap
 
-define_variable "", last_jo_in_assembly
-   ;; << -- >>
-   xx 0
+last_link = link
+
+;; define_variable "", last_jo_in_assembly
+;;    ;; << -- >>
+;;    xx 0
 
 if linux? eq yes
 

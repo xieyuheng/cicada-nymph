@@ -3,6 +3,8 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** [maybe] make instruction a type of jo
+   this is needed when doing report of the dictionary
 ** fix define in if-block
 ** 32-bits port for linux
 ** 32-bits port for windows
@@ -44,7 +46,7 @@
      2. char
      3. buffer
    * more in epilog
-     1. last_jo_in_assembly
+     1. last_link
    * function about dictionary
      1. find
      2. execute-word
@@ -928,11 +930,15 @@
       xx end
    #+end_src
 ** jo->pre-jo
+   * treat last-jo,dictionary specially
+     i.e. return zero on that case
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->pre-jo", jo_to_pre_jo
       ;; << jo -- pre-jo >>
       xx jo_to_link
       xx fetch
+      xx dup, zero?, false?branch, 2
+      xx   end
       xx literal, jo_size
       xx addition
       xx end
@@ -3038,7 +3044,7 @@
      to inform the function who calls it
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
-      xx last_jo_in_assembly
+      xx last_link + jo_size
 
    define_function "find", find
       ;; found :
@@ -3109,6 +3115,13 @@
      xx read_word_for_REPL
      xx execute_word
      xx taca, basic_REPL
+  #+end_src
+* eval-string
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "eval-string", eval_string
+     ;; << -- >>
+
+     xx end
   #+end_src
 * -----------------------------------
 * colon semicolon
@@ -3827,12 +3840,10 @@
       xx current_free_address$primitive_string_heap
    #+end_src
 ** ----------------------------------
-** last_jo_in_assembly
+** last_link
    * this word helps to initialize V__first_jo_in_dictionary
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "", last_jo_in_assembly
-      ;; << -- >>
-      xx 0
+   last_link = link
    #+end_src
 ** ----------------------------------
 ** un_initialized_memory [linux]

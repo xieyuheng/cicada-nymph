@@ -77,27 +77,183 @@
 
 basic-REPL
 
-: loop,show-dictionary
-  << jo -- >>
-  dup last-jo,dictionary? if
-    jo->name
-    write-string cr
+: loop,show-dictionary,primitive-function
+  << counter, jo -- >>
+  dup zero? if
+    drop
     end
   then
+  dup primitive-function-jo? false? if
+    jo->pre-jo
+    <> loop,show-dictionary,primitive-function
+  then
+  swap
+    "  " write-string
+    dup . add1
+  swap
   dup jo->name
   dup2 space-string? if
     drop2
-  else
+    "UN-NAMED" write-string cr
+  else       
     write-string cr
   then
   jo->pre-jo
-  <> loop,show-dictionary
+  <> loop,show-dictionary,primitive-function
+; define-function
+
+: show-dictionary,primitive-function
+  << -- >>
+  "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
+  1
+  *first-jo-in-dictionary*
+  loop,show-dictionary,primitive-function
+  end
+; define-function
+
+: loop,show-dictionary,function
+  << counter, jo -- >>
+  dup zero? if
+    drop
+    end
+  then
+  dup function-jo? false? if
+    jo->pre-jo
+    <> loop,show-dictionary,function
+  then
+  swap
+    "  " write-string
+    dup . add1
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else       
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,show-dictionary,function
+; define-function
+
+: show-dictionary,function
+  << -- >>
+  "* ALL FUNCTION IN DICTIONARY :" write-string cr
+  1
+  *first-jo-in-dictionary*
+  loop,show-dictionary,function
+  end
+; define-function
+
+: loop,show-dictionary,macro
+  << counter, jo -- >>
+  dup zero? if
+    drop
+    end
+  then
+  dup macro-jo? false? if
+    jo->pre-jo
+    <> loop,show-dictionary,macro
+  then
+  swap
+    "  " write-string
+    dup . add1
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else       
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,show-dictionary,macro
+; define-function
+
+: show-dictionary,macro
+  << -- >>
+  "* ALL MACRO IN DICTIONARY :" write-string cr
+  1
+  *first-jo-in-dictionary*
+  loop,show-dictionary,macro
+  end
+; define-function
+
+: loop,show-dictionary,exception
+  << counter, jo -- >>
+  dup zero? if
+    drop
+    end
+  then
+  dup exception-jo? false? if
+    jo->pre-jo
+    <> loop,show-dictionary,exception
+  then
+  swap
+    "  " write-string
+    dup . add1
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else       
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,show-dictionary,exception
+; define-function
+
+: show-dictionary,exception
+  << -- >>
+  "* ALL EXCEPTION IN DICTIONARY :" write-string cr
+  1
+  *first-jo-in-dictionary*
+  loop,show-dictionary,exception
+  end
+; define-function
+
+: loop,show-dictionary,variable
+  << counter, jo -- >>
+  dup zero? if
+    drop
+    end
+  then
+  dup variable-jo? false? if
+    jo->pre-jo
+    <> loop,show-dictionary,variable
+  then
+  swap
+    "  " write-string
+    dup . add1
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else       
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,show-dictionary,variable
+; define-function
+
+: show-dictionary,variable
+  << -- >>
+  "* ALL VARIABLE IN DICTIONARY :" write-string cr
+  1
+  *first-jo-in-dictionary*
+  loop,show-dictionary,variable
+  end
 ; define-function
 
 : show-dictionary
   << -- >>
-  *first-jo-in-dictionary*
-  loop,show-dictionary
+  show-dictionary,primitive-function
+  show-dictionary,function
+  show-dictionary,macro
+  show-dictionary,exception
+  show-dictionary,variable
   end
 ; define-function
 
