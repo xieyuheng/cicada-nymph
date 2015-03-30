@@ -1567,31 +1567,19 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
 
    }
 
-define_function "", test__read_line_from_stdin
-   xx literal, buffer$read_byte
-   xx literal, max_input_length
-   xx read_line_from_stdin
-   xx pretty_write_integer
-   xx literal, buffer$read_byte
-   xx literal, 10
-   xx write_string
-   xx exit_with_TOS
-   xx end
-
 match =windows =64bit, platform machine {
 
 __counter$read_line_from_stdin:
    dq 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << -- >>
-
+   ;; << buffer address, max length -- >>
 windows_function 5
    push 0
    sub rsp, 8*4
    mov windows64_fun_4_r9, __counter$read_line_from_stdin
-   mov windows64_fun_3_r8, max_input_length
-   mov windows64_fun_2_rdx, buffer$read_byte
+   pop_argument_stack windows64_fun_3_r8
+   pop_argument_stack windows64_fun_2_rdx
    mov windows64_fun_1_rcx, [_input_handle]
    call [ReadFile]
    ;; the return value
@@ -1755,6 +1743,8 @@ define_primitive_function "write-file", write_file
 
    }
 
+match =windows =64bit, platform machine {
+
 ; Access rights
 
 DELETE_RIGHT              = 00010000h
@@ -1807,6 +1797,8 @@ FILE_ATTRIBUTE_ARCHIVE    = 020h
 FILE_ATTRIBUTE_NORMAL     = 080h
 FILE_ATTRIBUTE_TEMPORARY  = 100h
 FILE_ATTRIBUTE_COMPRESSED = 800h
+
+}
 
 match =windows =64bit, platform machine {
 
@@ -1899,9 +1891,11 @@ windows_function 5
    pop_argument_stack windows64_fun_2_rdx
    pop_argument_stack windows64_fun_1_rcx
    call [ReadFile]
+end_windows_function
+
    mov rax, [__counter$read_file]
    push_argument_stack rax
-end_windows_function
+
    next
 
    }
@@ -1925,6 +1919,7 @@ windows_function 5
    mov rax, [__counter$write_file]
    push_argument_stack rax
 end_windows_function
+
    next
 
    }
@@ -3169,7 +3164,6 @@ import kernel32,\
        ReadFile,'ReadFile',\
        WriteFile,'WriteFile',\
        GetStdHandle,'GetStdHandle',\
-       CreateFile, 'CreateFile',\
-       CloseHandle, 'CloseHandle'
-
+       CloseHandle, 'CloseHandle',\
+       CreateFile, 'CreateFile'
     }
