@@ -54,7 +54,7 @@
   ; define-macro
   #+end_src
 * test
-  #+begin_src cicada-nymph
+  #+begin_src cicada-nymph :tangle core.cn.test
   : kkk
     "kkk took my baby away !" write-string
     cr
@@ -73,26 +73,27 @@
   ; define-function
 
 
-  1 factorial .
-  2 factorial .
-  3 factorial .
-  4 factorial .
-  5 factorial .
-  6 factorial .
-  7 factorial .
-  8 factorial .
-  9 factorial .
-  10 factorial .
-  11 factorial .
-  12 factorial .
-  13 factorial .
-  14 factorial .
-  15 factorial .
-  16 factorial .
-  17 factorial .
-  18 factorial .
-  19 factorial .
-  20 factorial .
+  cr
+  1 factorial . cr
+  2 factorial . cr
+  3 factorial . cr
+  4 factorial . cr
+  5 factorial . cr
+  6 factorial . cr
+  7 factorial . cr
+  8 factorial . cr
+  9 factorial . cr
+  10 factorial . cr
+  11 factorial . cr
+  12 factorial . cr
+  13 factorial . cr
+  14 factorial . cr
+  15 factorial . cr
+  16 factorial . cr
+  17 factorial . cr
+  18 factorial . cr
+  19 factorial . cr
+  20 factorial . cr
 
 
   : .12
@@ -417,68 +418,12 @@
   ; define-function
   #+end_src
 * ===================================
-很高興收到你的郵件^-^
-
-1. 未济 是我朋友的金屬樂隊
-   四月份有演出 可以一起來玩 ^-^
-   我大二大三的時候有在民謠樂隊裏演出過(吹口琴)
-   我那個時候還和朋友辦演出(還在中大辦過呢)
-   不過現在朋友們都各自有別的事業了
-   就只有 未济主唱 來找我的時候
-   還偶爾在排練房一起玩
-2. 我是數學專業的
-   不過我覺得數學和計算機科學都應該是融會貫通的
-   (我也不知道將來會不會以寫程序爲職業 對前途也有點迷茫呢)
-   網站主要是方便大家瀏覽代碼用的
-   所以設計的主要思路就是
-   把我編輯代碼時候的效果展示出來
-   所以看起來當然有在編輯代碼的感覺了
-   (雖然你只能瀏覽而不能真正編輯它)
-3. 相似的還有
-   * 蘋果核戰紀
-   * 星際牛仔
-   另外 攻殼 還有別的劇場版
-   還有四集新劇場(人設有些變動)
-
-
- 關於程序語言
- * 人們使用的程序語言因人之喜好而異
-   每個程序語言都有不同的特點
-   就像 漢語 拉丁語 德語 英語 各自有不同的特點一樣
- * 人類用人類的語言來相互交流
-   同時一個人所使用和熟悉的語言
-   又影響着這個人的 思考方式 和 表達方式
- * 程序語言也是一樣
-   人們用程序語言來和機器交流(控制機器)
-   而在使用每種不同的程序語言的過程中
-   你也能體會到不同的 思維範式 和 表達範式
- * 我所學會的第一個程序語言叫 scheme 
-   第二個是 forth
-   (而我想要教大家的 cicada-nymph 就是類似與 forth 的)
-   我熟悉這兩個語言的技術細節和實現方式
- * 我還瞭解很多其他的語言
-   但是都不如我對這兩個語言的瞭解深入
-   比如
-   - common-lisp
-   - coq
-   - emacs-lisp
-   - erlang
-   - haskell
-   - joy
-   - minikanren
-   - ml 
-   - racket
-   - shen
-   - smalltalk
-   - tcl
- * 就像當你熟悉 拉丁語 和 梵語 之後
-   學習 德語 法語 和 世界語 就會很容易一樣
-   只要你瞭解程序語言的基本原理
-   再學習一個新的語言
-   可能只要 兩個小時 或 一個週末 而已
-   所以
-   瞭解很多語言 也沒有什麼了不起的
- * 而z在我看來
-   去瞭解和學習各種語言的特性和實現技術
-   本身就是非常有趣的   
-   就像是小孩在玩積木一樣 ^-^
+* test
+  #+begin_src cicada-nymph :tangle core.cn
+  : test
+    << -- >>
+    "core.cn.test" load-file
+    end
+  ; define-function
+  #+end_src
+* ===================================

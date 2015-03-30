@@ -3,8 +3,9 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** load-file
-   * get rid of "cat core.cn - | ./cicada-nymph" in cn
+** load-file [windows version]
+** nested load-file
+   * a stack of buffer would solve this problem
 ** [maybe] make instruction a type of jo
    this is needed when doing report of the dictionary
 ** fix define in if-block
@@ -195,23 +196,46 @@
    #+end_src
 ** ----------------------------------
 ** header [linux]
+   * note that
+     the following code is not in a if-block
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   define linux64_sys_6_r8  r8
+   define linux64_sys_5_r9  r9
+   define linux64_sys_4_r10 r10
+   define linux64_sys_3_rdx rdx
+   define linux64_sys_2_rsi rsi
+   define linux64_sys_1_rdi rdi
+   define linux64_sys_n_rax rax
 
-   define sys_6_r8  r8
-   define sys_5_r9  r9
-   define sys_4_r10 r10
-   define sys_3_rdx rdx
-   define sys_2_rsi rsi
-   define sys_1_rdi rdi
-   define sys_n_rax rax
-
-   ;; the only three linux syscall we will use
    define syscall_read  0
    define syscall_write 1
+   define syscall_open  2
+   define syscall_close 3
    define syscall_exit  60
 
-   finish if
+
+   ;; about open & read & write
+
+   open_read         = 0
+   open_write        = 1
+   open_readAndWrite = 2
+
+   open_creat      = 0100o
+   open_rewrite    = 1000o ;; rewrite if file exist
+   open_append     = 2000o
+
+   open_excl       = 0200o ;; ensure that THIS call creates the file
+   open_noctty     = 0400o
+   open_nonblock   = 4000o
+   open_nondelay   = open_nonblock
+   open_sync       = 10000o
+   open_async      = 20000o
+   open_direct     = 40000o
+       ;; to minimize cache effects of the I/O to and from this file.
+
+   open_largefile  = 100000o
+   open_directory  = 200000o
+   open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
    #+end_src
 ** format header [linux]
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -232,18 +256,16 @@
    #+end_src
 ** ----------------------------------
 ** header [windows]
+   * note that
+     the following code is not in a if-block
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
-
-   define fun_4_r9  r9
-   define fun_3_r8  r8
-   define fun_2_rdx rdx
-   define fun_1_rcx rcx
+   define windows64_fun_4_r9  r9
+   define windows64_fun_3_r8  r8
+   define windows64_fun_2_rdx rdx
+   define windows64_fun_1_rcx rcx
 
    define STD_INPUT_HANDLE  -10
    define STD_OUTPUT_HANDLE -11
-
-   finish if
    #+end_src
 ** format header [windows]
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -454,8 +476,8 @@
    if linux? eq yes
 
    __exit_with_TOS:
-      pop_argument_stack sys_1_rdi
-      mov sys_n_rax, syscall_exit
+      pop_argument_stack linux64_sys_1_rdi
+      mov linux64_sys_n_rax, syscall_exit
       syscall
 
    finish if
@@ -465,8 +487,8 @@
    if linux? eq yes
 
    __exit_with_zero:
-      xor sys_1_rdi, sys_1_rdi
-      mov sys_n_rax, syscall_exit
+      xor linux64_sys_1_rdi, linux64_sys_1_rdi
+      mov linux64_sys_n_rax, syscall_exit
       syscall
 
    finish if
@@ -476,8 +498,8 @@
    if linux? eq yes
 
    __exit_with_six:
-      mov sys_1_rdi, 6
-      mov sys_n_rax, syscall_exit
+      mov linux64_sys_1_rdi, 6
+      mov linux64_sys_n_rax, syscall_exit
       syscall
 
    finish if
@@ -518,7 +540,7 @@
 
    windows_function 4
       sub rsp, 8*4
-      pop_argument_stack fun_1_rcx
+      pop_argument_stack windows64_fun_1_rcx
       call [ExitProcess]
    end_windows_function
 
@@ -532,7 +554,7 @@
 
    windows_function 4
       sub rsp, 8*4
-      xor fun_1_rcx, fun_1_rcx
+      xor windows64_fun_1_rcx, windows64_fun_1_rcx
       call [ExitProcess]
    end_windows_function
 
@@ -546,7 +568,7 @@
 
    windows_function 4
       sub rsp, 8*4
-      mov fun_1_rcx, 6
+      mov windows64_fun_1_rcx, 6
       call [ExitProcess]
    end_windows_function
 
@@ -1115,14 +1137,14 @@
 
    windows_function 4
       sub rsp, 8*4
-      mov fun_1_rcx, STD_INPUT_HANDLE
+      mov windows64_fun_1_rcx, STD_INPUT_HANDLE
       call [GetStdHandle]
       mov [_input_handle], rax
    end_windows_function
 
    windows_function 4
       sub rsp, 8*4
-      mov fun_1_rcx, STD_OUTPUT_HANDLE
+      mov windows64_fun_1_rcx, STD_OUTPUT_HANDLE
       call [GetStdHandle]
       mov [_output_handle], rax
    end_windows_function
@@ -1143,6 +1165,7 @@
    first_jojo:
       xx welcome
       ;; xx little_test
+      xx load_init_file
       xx basic_REPL
    #+end_src
 ** welcome
@@ -2181,10 +2204,10 @@
       mov [buffer$write_byte], al
 
       ;;;; for linux
-      mov sys_3_rdx, 1                 ;; max length to be write
-      mov sys_2_rsi, buffer$write_byte ;; address
-      mov sys_1_rdi, 1                 ;; stdout
-      mov sys_n_rax, syscall_write
+      mov linux64_sys_3_rdx, 1                 ;; max length to be write
+      mov linux64_sys_2_rsi, buffer$write_byte ;; address
+      mov linux64_sys_1_rdi, 1                 ;; stdout
+      mov linux64_sys_n_rax, syscall_write
       ;;;;
 
       syscall
@@ -2215,10 +2238,10 @@
    windows_function 5
       push 0
       sub rsp, 8*4
-      mov fun_4_r9, _counter$write_byte
-      mov fun_3_r8, 1
-      mov fun_2_rdx, buffer$write_byte
-      mov fun_1_rcx, [_output_handle]
+      mov windows64_fun_4_r9, _counter$write_byte
+      mov windows64_fun_3_r8, 1
+      mov windows64_fun_2_rdx, buffer$write_byte
+      mov windows64_fun_1_rcx, [_output_handle]
       call [WriteFile]
    end_windows_function
 
@@ -2339,10 +2362,10 @@
 
    define_primitive_function "read-line-from-stdin", read_line_from_stdin
       ;; << buffer address, max length -- >>
-      pop_argument_stack sys_3_rdx
-      pop_argument_stack sys_2_rsi
-      xor sys_1_rdi, sys_1_rdi ;; stdin
-      mov sys_n_rax, syscall_read
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_2_rsi
+      xor linux64_sys_1_rdi, linux64_sys_1_rdi ;; stdin
+      mov linux64_sys_n_rax, syscall_read
       syscall
       ;; the return value
       ;; is a count of the number of bytes transferred
@@ -2377,10 +2400,10 @@
    windows_function 5
       push 0
       sub rsp, 8*4
-      mov fun_4_r9, _counter$read_byte
-      mov fun_3_r8, max_input_length
-      mov fun_2_rdx, buffer$read_byte
-      mov fun_1_rcx, [_input_handle]
+      mov windows64_fun_4_r9, _counter$read_byte
+      mov windows64_fun_3_r8, max_input_length
+      mov windows64_fun_2_rdx, buffer$read_byte
+      mov windows64_fun_1_rcx, [_input_handle]
       call [ReadFile]
    end_windows_function
 
@@ -2462,16 +2485,140 @@
      xx end
   #+end_src
 * -----------------------------------
-* >< file io
-** open-file
-** close-file
-** read-file
-** write-file
-* >< load-file
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_function "load-file", load_file
-     ;; << -- >>
+* file io
+** open-file,to-read [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   name_buffer$open_file__to_read labeling
+      preserve 512
 
+   define_primitive_function "open-file,to-read", open_file__to_read
+      ;; << file-name-string[address, length] --
+      ;;    [file handle] or [negate number on error] >>
+      pop_argument_stack rcx
+      pop_argument_stack rsi
+      ;; copy file-name as a null-terminal string
+      mov rdi, name_buffer$open_file__to_read
+      rep movsb
+      xor rax, rax
+      mov byte [rdi], al
+      mov linux64_sys_2_rsi, open_read ;; read onlya
+      mov linux64_sys_1_rdi, name_buffer$open_file__to_read
+      mov linux64_sys_n_rax, syscall_open
+      syscall
+      push_argument_stack rax
+      next
+   #+end_src
+** open-file,to-write [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   name_buffer$open_file__to_write labeling
+      preserve 512
+
+   define_primitive_function "open-file,to-write", open_file__to_write
+      ;; << file-name-string[address, length] --
+      ;;    [file handle] or [negate number on error] >>
+      pop_argument_stack rcx
+      pop_argument_stack rsi
+      ;; copy file-name as a null-terminal string
+      mov rdi, name_buffer$open_file__to_write
+      rep movsb
+      xor rax, rax
+      mov byte [rdi], al
+      mov linux64_sys_3_rdx, 110100100b
+      mov linux64_sys_2_rsi, open_readAndWrite or open_creat or open_rewrite
+      mov linux64_sys_1_rdi, name_buffer$open_file__to_write
+      mov linux64_sys_n_rax, syscall_open
+      syscall
+      push_argument_stack rax
+      next
+   #+end_src
+** close-file [linux]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "close-file", close_file
+      ;; << file-handle -- >>
+      pop_argument_stack linux64_sys_1_rdi
+      mov linux64_sys_n_rax, syscall_close
+      syscall
+      next
+   #+end_src
+** read-file [linux]
+   * from disk to memory
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "read-file", read_file
+      ;; << [file handle], buffer[address, length] --
+      ;;    [number of char] or [negate number on error] >>
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_1_rdi
+      mov linux64_sys_n_rax, syscall_read
+      syscall
+      push_argument_stack rax
+      next
+   #+end_src
+** write-file [linux]
+   * from memory to disk
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "write-file", write_file
+      ;; << [file handle], buffer[address, length] --
+      ;;    [number of char] or [negate number on error] >>
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_1_rdi
+      mov linux64_sys_n_rax, syscall_write
+      syscall
+      push_argument_stack rax
+      next
+   #+end_src
+* load-file
+  * load-file can not be nested for now
+    a stack of buffer would solve this problem
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  buffer$load_file labeling
+    preserve 1024 * 1024
+
+  define_function "load-file", load_file
+     ;; << name-string[address, length] -- UNKNOWN >>
+     xx open_file__to_read
+     xx dup
+     xx   literal, buffer$load_file ;; buffer
+     xx   literal, 1024 * 1024      ;; length
+     xx   read_file
+     xx swap, close_file
+     xx dup, positive?, false?branch, (.error-$)/jo_size
+     xx   literal, buffer$load_file
+     xx   swap
+     xx   push_eval_string_stack
+     xx   push_eval_string_stack
+     xx   end
+     .error:
+     xx error_report__load_file
+     xx write_integer
+     xx end
+
+  define_function "error-report,load-file", error_report__load_file
+     ;; << -- >>
+     xx literal, string$error_report__load_file
+     xx literal, length$error_report__load_file
+     xx write_string
+     xx end
+
+  string$error_report__load_file:
+     db "* (load-file) MEETS ERROR : "
+  .end:
+  length$error_report__load_file = (.end - string$error_report__load_file)
+  #+end_src
+* load-init-file
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  string$name_of_init_file:
+     db "core.cn"
+  .end:
+  length$name_of_init_file = (.end - string$name_of_init_file)
+
+
+  define_function "load-init-file", load_init_file
+     ;; << -- >>
+     xx literal, string$name_of_init_file
+     xx literal, length$name_of_init_file
+     xx load_file
      xx end
   #+end_src
 * -----------------------------------
@@ -3188,7 +3335,7 @@
       db "<<"
 
    define_function "comment-begin-string?", comment_begin_string?
-      ;; (* string[address, length] -- bool *)
+      ;; << string[address, length] -- bool >>
       xx literal, string$comment_begin
       xx literal, 2
       xx string_equal?
@@ -3199,7 +3346,7 @@
       db ">>"
 
    define_function "comment-end-string?", comment_end_string?
-      ;; (* -- *)
+      ;; << -- >>
       xx literal, string$comment_end
       xx literal, 2
       xx string_equal?
@@ -3888,7 +4035,7 @@
 
    finish if
    #+end_src
-** import [windows]
+** macro about import [windows]
    #+begin_src fasm :tangle cicada-nymph.fasm
    if windows? eq yes
 
@@ -3959,6 +4106,12 @@
       common
        finish if }
 
+
+   finish if
+   #+end_src
+** section about import [windows]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   if windows? eq yes
 
    section '.idata' import data readable writeable
 

@@ -95,7 +95,7 @@ basic-REPL
   dup2 space-string? if
     drop2
     "UN-NAMED" write-string cr
-  else       
+  else
     write-string cr
   then
   jo->pre-jo
@@ -129,7 +129,7 @@ basic-REPL
   dup2 space-string? if
     drop2
     "UN-NAMED" write-string cr
-  else       
+  else
     write-string cr
   then
   jo->pre-jo
@@ -163,7 +163,7 @@ basic-REPL
   dup2 space-string? if
     drop2
     "UN-NAMED" write-string cr
-  else       
+  else
     write-string cr
   then
   jo->pre-jo
@@ -197,7 +197,7 @@ basic-REPL
   dup2 space-string? if
     drop2
     "UN-NAMED" write-string cr
-  else       
+  else
     write-string cr
   then
   jo->pre-jo
@@ -231,7 +231,7 @@ basic-REPL
   dup2 space-string? if
     drop2
     "UN-NAMED" write-string cr
-  else       
+  else
     write-string cr
   then
   jo->pre-jo
@@ -304,5 +304,11 @@ basic-REPL
   << size -- address >>
   *un-initialized-memory* tuck
   add address *un-initialized-memory* save
+  end
+; define-function
+
+: test
+  << -- >>
+  "core.cn.test" load-file
   end
 ; define-function
