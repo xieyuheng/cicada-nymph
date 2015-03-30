@@ -8,70 +8,10 @@
    * a stack of buffer would solve this problem
 ** [maybe] make instruction a type of jo
    this is needed when doing report of the dictionary
-** fix define in if-block
-** 32-bits port for linux
-** 32-bits port for windows
+** 32bit port for linux
+** 32bit port for windows
 ** [maybe] re generate instars
 * ===================================
-* note the order of development
-** 1st-instar
-   * indirect-threaded-code interpreter
-     1. macro about argument_stack & return_stack
-     2. macro about jo & jojo
-     3. macro about next
-     4. the way to do memory allocation
-     5. begin_to_interpret_threaded_code
-     6. little_test
-** 2ed-instar
-   * instruction as special primitive function
-     1. literal
-     2. address
-   * and primitive functions about
-     1. argument-stack
-     2. bool
-     3. fixnum
-     4. memory
-   * and taca for explicit tail-call
-** 3rd-instar
-   * primitive function about io
-     1. write_byte
-     2. read_byte
-   * more instruction as special primitive function
-     1. branch
-     2. false?branch
-** 4th-instar
-   * more function about io
-     1. about word
-     2. about string
-     3. about number
-   * more function
-     1. jo
-     2. char
-     3. buffer
-   * more in epilog
-     1. last_link
-   * function about dictionary
-     1. find
-     2. execute-word
-   * basic-REPL as postfix-notation function executer
-     1. basic-REPL
-** 5th-instar [the cicada-nymph]
-   * type of jo
-   * more in epilog
-     1. *current-free-address,primitive-string-heap*
-   * colon semicolon
-     1. ":" and ";" are used to read a string of words for compiler
-        [looks like bar-ket but special]
-     2. comment is handled here
-        "<< >>" as the only way to do comment
-   * compiler
-     * make-jojo
-       and macro for make-jojo
-       1. macro system
-       2. exception handling system
-     * function about definition
-       which leave data into memory
-* -----------------------------------
 * note
 ** jo & jojo
    * use "jo" to denote bead
@@ -176,14 +116,23 @@
 * ===================================
 * prolog
 ** ----------------------------------
-** choose your platform
+** note conditional preprocessing
+   * flower bar-ket can not be nested in fasm's "match"
+     so
+     1. when defining macro conditionally
+        one should use "if eq" & "finish if"
+     2. when doing "define" or "equ"
+        one should use "match { }"
+** platform configuration
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;;;; before you compile the code
    ;;;; do not forget to choose your platform
    ;;;; in the following code
 
-   linux? equ yes
-   windows? equ no
+   include "platform-configuration.inc"
+
+   ;; define platform linux or windows
+   ;; define machine  64bit or 32bit
    #+end_src
 ** misc
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -195,10 +144,13 @@
    end equ exit
    #+end_src
 ** ----------------------------------
-** header [linux]
+** header [linux64]
    * note that
      the following code is not in a if-block
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+
    define linux64_sys_6_r8  r8
    define linux64_sys_5_r9  r9
    define linux64_sys_4_r10 r10
@@ -207,11 +159,11 @@
    define linux64_sys_1_rdi rdi
    define linux64_sys_n_rax rax
 
-   define syscall_read  0
-   define syscall_write 1
-   define syscall_open  2
-   define syscall_close 3
-   define syscall_exit  60
+   define linux64_syscall_read  0
+   define linux64_syscall_write 1
+   define linux64_syscall_open  2
+   define linux64_syscall_close 3
+   define linux64_syscall_exit  60
 
 
    ;; about open & read & write
@@ -236,26 +188,29 @@
    open_largefile  = 100000o
    open_directory  = 200000o
    open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
+
+
+   }
    #+end_src
-** format header [linux]
+** format header [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    format elf64 executable 3
 
-   finish if
+   }
    #+end_src
-** entry [linux]
+** entry [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    entry begin_to_interpret_threaded_code
    segment readable executable writeable
 
-   finish if
+   }
    #+end_src
 ** ----------------------------------
-** header [windows]
+** header [windows64]
    * note that
      the following code is not in a if-block
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -267,26 +222,28 @@
    define STD_INPUT_HANDLE  -10
    define STD_OUTPUT_HANDLE -11
    #+end_src
-** format header [windows]
+** format header [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    format PE64 console
 
-   finish if
+   }
    #+end_src
-** entry [windows]
+** entry [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    entry begin_to_interpret_threaded_code
    section '.text' code writeable readable executable
 
-   finish if
+   }
    #+end_src
-** calling-convention-windows-64
+** macro about calling-convention [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   if platform eq windows
+   if machine eq 64bit
+
 
    ;; 這裏的 number_of_arguments 其實代表
    ;; 在對齊棧之後
@@ -312,19 +269,31 @@
       pop rbp
    }
 
+
+   finish if
    finish if
    #+end_src
 ** ----------------------------------
 * -----------------------------------
 * macro in assembly code
-** jo_size
-   * 64-bits
-   * note that how "xx" is used as "dq" in a 64-bits version implementation
-     when one wishs to port the implementation to 32-bits machine
-     just use "xx equ dd"
+** jo_size [32bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+
+   jo_size = 4 ;; (byte)
+   xx equ dd
+
+   }
+   #+end_src
+** jo_size [64bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
    jo_size = 8 ;; (byte)
    xx equ dq
+
+   }
    #+end_src
 ** argument_stack & return_stack
    * when doing "push"
@@ -471,38 +440,38 @@
 * -----------------------------------
 * helper function in assembly code
 ** ----------------------------------
-** __exit_with_TOS [linux]
+** __exit_with_TOS [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    __exit_with_TOS:
       pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, syscall_exit
+      mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
-   finish if
+      }
    #+end_src
-** __exit_with_zero [linux]
+** __exit_with_zero [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    __exit_with_zero:
       xor linux64_sys_1_rdi, linux64_sys_1_rdi
-      mov linux64_sys_n_rax, syscall_exit
+      mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
-   finish if
+      }
    #+end_src
-** __exit_with_six [linux]
+** __exit_with_six [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    __exit_with_six:
       mov linux64_sys_1_rdi, 6
-      mov linux64_sys_n_rax, syscall_exit
+      mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
-   finish if
+      }
    #+end_src
 ** ----------------------------------
 ** note windows calling convention for x86-64
@@ -532,9 +501,9 @@
      to handle windows calling convention
      is de-macro-lized and un-optimized
      this is for teaching purpose only
-** __exit_with_TOS [windows]
+** __exit_with_TOS [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    __exit_with_TOS:
 
@@ -544,11 +513,11 @@
       call [ExitProcess]
    end_windows_function
 
-   finish if
+   }
    #+end_src
-** __exit_with_zero [windows]
+** __exit_with_zero [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    __exit_with_zero:
 
@@ -558,11 +527,11 @@
       call [ExitProcess]
    end_windows_function
 
-   finish if
+   }
    #+end_src
-** __exit_with_six [windows]
+** __exit_with_six [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    __exit_with_six:
 
@@ -572,7 +541,7 @@
       call [ExitProcess]
    end_windows_function
 
-   finish if
+   }
    #+end_src
 ** ----------------------------------
 * -----------------------------------
@@ -1103,9 +1072,9 @@
       is actually a loop now
 * -----------------------------------
 * *the story begin*
-** begin_to_interpret_threaded_code [linux]
+** begin_to_interpret_threaded_code [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    begin_to_interpret_threaded_code:
 
@@ -1118,11 +1087,11 @@
       push_return_stack rax
       next
 
-   finish if
+      }
    #+end_src
-** begin_to_interpret_threaded_code [windows]
+** begin_to_interpret_threaded_code [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
 
    ;;;; for windows
    _output_handle:
@@ -1156,7 +1125,7 @@
       push_return_stack rax
       next
 
-   finish if
+   }
    #+end_src
 ** first_jojo
    * you can use the following "xx little_test"
@@ -2188,9 +2157,10 @@
 ** note byte
    * basic io is about byte
 ** ----------------------------------
-** write-byte [linux]
+** write-byte [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
+
 
    buffer$write_byte:
       db 0
@@ -2207,17 +2177,19 @@
       mov linux64_sys_3_rdx, 1                 ;; max length to be write
       mov linux64_sys_2_rsi, buffer$write_byte ;; address
       mov linux64_sys_1_rdi, 1                 ;; stdout
-      mov linux64_sys_n_rax, syscall_write
+      mov linux64_sys_n_rax, linux64_syscall_write
       ;;;;
 
       syscall
       next
 
-   finish if
+
+      }
    #+end_src
-** write-byte [windows]
+** write-byte [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
+
 
    buffer$write_byte:
       db 0
@@ -2247,7 +2219,8 @@
 
       next
 
-   finish if
+
+   }
    #+end_src
 ** ----------------------------------
 ** note
@@ -2356,23 +2329,23 @@
        push_argument_stack rax
        next
     #+end_src
-** read-line-from-stdin [linux]
+** read-line-from-stdin [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
 
    define_primitive_function "read-line-from-stdin", read_line_from_stdin
       ;; << buffer address, max length -- >>
       pop_argument_stack linux64_sys_3_rdx
       pop_argument_stack linux64_sys_2_rsi
       xor linux64_sys_1_rdi, linux64_sys_1_rdi ;; stdin
-      mov linux64_sys_n_rax, syscall_read
+      mov linux64_sys_n_rax, linux64_syscall_read
       syscall
       ;; the return value
       ;; is a count of the number of bytes transferred
       push_argument_stack rax
       next
 
-   finish if
+      }
    #+end_src
 ** test
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -2387,9 +2360,10 @@
       xx exit_with_TOS
       xx end
    #+end_src
-** read-line-from-stdin [windows]
+** read-line-from-stdin [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
+
 
    _counter$read_byte:
       dq 0
@@ -2413,7 +2387,8 @@
       push_argument_stack rax
       next
 
-   finish if
+
+      }
    #+end_src
 ** read-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -2486,8 +2461,11 @@
   #+end_src
 * -----------------------------------
 * file io
-** open-file,to-read [linux]
+** ----------------------------------
+** open-file,to-read [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
    name_buffer$open_file__to_read labeling
       preserve 512
 
@@ -2503,13 +2481,17 @@
       mov byte [rdi], al
       mov linux64_sys_2_rsi, open_read ;; read onlya
       mov linux64_sys_1_rdi, name_buffer$open_file__to_read
-      mov linux64_sys_n_rax, syscall_open
+      mov linux64_sys_n_rax, linux64_syscall_open
       syscall
       push_argument_stack rax
       next
+
+      }
    #+end_src
-** open-file,to-write [linux]
+** open-file,to-write [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
    name_buffer$open_file__to_write labeling
       preserve 512
 
@@ -2526,48 +2508,65 @@
       mov linux64_sys_3_rdx, 110100100b
       mov linux64_sys_2_rsi, open_readAndWrite or open_creat or open_rewrite
       mov linux64_sys_1_rdi, name_buffer$open_file__to_write
-      mov linux64_sys_n_rax, syscall_open
+      mov linux64_sys_n_rax, linux64_syscall_open
       syscall
       push_argument_stack rax
       next
+
+      }
    #+end_src
-** close-file [linux]
+** close-file [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
    define_primitive_function "close-file", close_file
       ;; << file-handle -- >>
       pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, syscall_close
+      mov linux64_sys_n_rax, linux64_syscall_close
       syscall
       next
+
+      }
    #+end_src
-** read-file [linux]
+** read-file [linux64]
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
    define_primitive_function "read-file", read_file
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [negate number on error] >>
       pop_argument_stack linux64_sys_3_rdx
       pop_argument_stack linux64_sys_2_rsi
       pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, syscall_read
+      mov linux64_sys_n_rax, linux64_syscall_read
       syscall
       push_argument_stack rax
       next
+
+      }
    #+end_src
-** write-file [linux]
+** write-file [linux64]
    * from memory to disk
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
    define_primitive_function "write-file", write_file
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [negate number on error] >>
       pop_argument_stack linux64_sys_3_rdx
       pop_argument_stack linux64_sys_2_rsi
       pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, syscall_write
+      mov linux64_sys_n_rax, linux64_syscall_write
       syscall
       push_argument_stack rax
       next
+
+      }
    #+end_src
+** ----------------------------------
+** ><
+** ----------------------------------
 * load-file
   * load-file can not be nested for now
     a stack of buffer would solve this problem
@@ -4010,9 +4009,10 @@
    last_link = link
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [linux]
+** un_initialized_memory [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if linux? eq yes
+   match =linux =64bit, platform machine {
+
 
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -4020,12 +4020,14 @@
    address$un_initialized_memory:
       rb size$un_initialized_memory
 
-   finish if
+
+      }
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [windows]
+** un_initialized_memory [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
+
 
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -4033,11 +4035,13 @@
    address$un_initialized_memory:
       rb size$un_initialized_memory
 
-   finish if
+
+      }
    #+end_src
-** macro about import [windows]
+** macro about import [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   if platform eq windows
+   if machine eq 64bit
 
 
    ;; Macroinstructions for making import section (64-bit)
@@ -4108,10 +4112,12 @@
 
 
    finish if
+   finish if
    #+end_src
-** section about import [windows]
+** section about import [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
-   if windows? eq yes
+   match =windows =64bit, platform machine {
+
 
    section '.idata' import data readable writeable
 
@@ -4124,7 +4130,7 @@
           GetStdHandle,'GetStdHandle'
 
 
-   finish if
+       }
    #+end_src
 ** ----------------------------------
 * ===================================

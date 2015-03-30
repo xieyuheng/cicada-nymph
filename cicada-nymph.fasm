@@ -2,8 +2,10 @@
 ;;;; do not forget to choose your platform
 ;;;; in the following code
 
-linux? equ yes
-windows? equ no
+include "platform-configuration.inc"
+
+;; define platform linux or windows
+;; define machine  64bit or 32bit
 
 ;; in fasm, "dup" is a reserved word
 dup equ duplicate
@@ -11,6 +13,9 @@ dup equ duplicate
 ;; in fasm, "end" is a reserved word
 finish equ end
 end equ exit
+
+match =linux =64bit, platform machine {
+
 
 define linux64_sys_6_r8  r8
 define linux64_sys_5_r9  r9
@@ -20,11 +25,11 @@ define linux64_sys_2_rsi rsi
 define linux64_sys_1_rdi rdi
 define linux64_sys_n_rax rax
 
-define syscall_read  0
-define syscall_write 1
-define syscall_open  2
-define syscall_close 3
-define syscall_exit  60
+define linux64_syscall_read  0
+define linux64_syscall_write 1
+define linux64_syscall_open  2
+define linux64_syscall_close 3
+define linux64_syscall_exit  60
 
 
 ;; about open & read & write
@@ -50,18 +55,21 @@ open_largefile  = 100000o
 open_directory  = 200000o
 open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
 
-if linux? eq yes
+
+}
+
+match =linux =64bit, platform machine {
 
 format elf64 executable 3
 
-finish if
+}
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 entry begin_to_interpret_threaded_code
 segment readable executable writeable
 
-finish if
+}
 
 define windows64_fun_4_r9  r9
 define windows64_fun_3_r8  r8
@@ -71,20 +79,22 @@ define windows64_fun_1_rcx rcx
 define STD_INPUT_HANDLE  -10
 define STD_OUTPUT_HANDLE -11
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 format PE64 console
 
-finish if
+}
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 entry begin_to_interpret_threaded_code
 section '.text' code writeable readable executable
 
-finish if
+}
 
-if windows? eq yes
+if platform eq windows
+if machine eq 64bit
+
 
 ;; 這裏的 number_of_arguments 其實代表
 ;; 在對齊棧之後
@@ -110,10 +120,24 @@ macro end_windows_function {
    pop rbp
 }
 
+
 finish if
+finish if
+
+match =32bit, machine {
+
+
+jo_size = 4 ;; (byte)
+xx equ dd
+
+}
+
+match =64bit, machine {
 
 jo_size = 8 ;; (byte)
 xx equ dq
+
+}
 
 ;; if you want to extend cicada in assembly
 ;; the following registers must NOT be used
@@ -154,34 +178,34 @@ macro next {
      jmp qword [rax]
 }
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 __exit_with_TOS:
    pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, syscall_exit
+   mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-finish if
+   }
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 __exit_with_zero:
    xor linux64_sys_1_rdi, linux64_sys_1_rdi
-   mov linux64_sys_n_rax, syscall_exit
+   mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-finish if
+   }
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 __exit_with_six:
    mov linux64_sys_1_rdi, 6
-   mov linux64_sys_n_rax, syscall_exit
+   mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-finish if
+   }
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 __exit_with_TOS:
 
@@ -191,9 +215,9 @@ windows_function 4
    call [ExitProcess]
 end_windows_function
 
-finish if
+}
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 __exit_with_zero:
 
@@ -203,9 +227,9 @@ windows_function 4
    call [ExitProcess]
 end_windows_function
 
-finish if
+}
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 __exit_with_six:
 
@@ -215,7 +239,7 @@ windows_function 4
    call [ExitProcess]
 end_windows_function
 
-finish if
+}
 
 ;; initial link to point to 0 (as null)
 link = 0
@@ -515,7 +539,7 @@ define_primitive_function "<>", taca
    mov rax, qword [rbx]
    jmp qword [rax]
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 begin_to_interpret_threaded_code:
 
@@ -528,9 +552,9 @@ begin_to_interpret_threaded_code:
    push_return_stack rax
    next
 
-finish if
+   }
 
-if windows? eq yes
+match =windows =64bit, platform machine {
 
 ;;;; for windows
 _output_handle:
@@ -564,7 +588,7 @@ end_windows_function
    push_return_stack rax
    next
 
-finish if
+}
 
 first_jojo:
    xx welcome
@@ -1433,7 +1457,8 @@ define_primitive_function "sub-save", sub_save
    sub qword [rbx], rax
    next
 
-if linux? eq yes
+match =linux =64bit, platform machine {
+
 
 buffer$write_byte:
    db 0
@@ -1450,15 +1475,17 @@ define_primitive_function "write-byte", write_byte
    mov linux64_sys_3_rdx, 1                 ;; max length to be write
    mov linux64_sys_2_rsi, buffer$write_byte ;; address
    mov linux64_sys_1_rdi, 1                 ;; stdout
-   mov linux64_sys_n_rax, syscall_write
+   mov linux64_sys_n_rax, linux64_syscall_write
    ;;;;
 
    syscall
    next
 
-finish if
 
-if windows? eq yes
+   }
+
+match =windows =64bit, platform machine {
+
 
 buffer$write_byte:
    db 0
@@ -1488,7 +1515,8 @@ end_windows_function
 
    next
 
-finish if
+
+}
 
 max_input_length = 1024 * 1024
 
@@ -1535,21 +1563,21 @@ define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
    push_argument_stack rax
    next
 
-if linux? eq yes
+match =linux =64bit, platform machine {
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
    ;; << buffer address, max length -- >>
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    xor linux64_sys_1_rdi, linux64_sys_1_rdi ;; stdin
-   mov linux64_sys_n_rax, syscall_read
+   mov linux64_sys_n_rax, linux64_syscall_read
    syscall
    ;; the return value
    ;; is a count of the number of bytes transferred
    push_argument_stack rax
    next
 
-finish if
+   }
 
 define_function "", test__read_line_from_stdin
    xx literal, buffer$read_byte
@@ -1562,7 +1590,8 @@ define_function "", test__read_line_from_stdin
    xx exit_with_TOS
    xx end
 
-if windows? eq yes
+match =windows =64bit, platform machine {
+
 
 _counter$read_byte:
    dq 0
@@ -1586,7 +1615,8 @@ end_windows_function
    push_argument_stack rax
    next
 
-finish if
+
+   }
 
 define_function "read-byte", read_byte
    ;; << -- byte >>
@@ -1650,6 +1680,8 @@ define_function "eval-string", eval_string
    xx push_eval_string_stack
    xx end
 
+match =linux =64bit, platform machine {
+
 name_buffer$open_file__to_read labeling
    preserve 512
 
@@ -1665,10 +1697,14 @@ define_primitive_function "open-file,to-read", open_file__to_read
    mov byte [rdi], al
    mov linux64_sys_2_rsi, open_read ;; read onlya
    mov linux64_sys_1_rdi, name_buffer$open_file__to_read
-   mov linux64_sys_n_rax, syscall_open
+   mov linux64_sys_n_rax, linux64_syscall_open
    syscall
    push_argument_stack rax
    next
+
+   }
+
+match =linux =64bit, platform machine {
 
 name_buffer$open_file__to_write labeling
    preserve 512
@@ -1686,17 +1722,25 @@ define_primitive_function "open-file,to-write", open_file__to_write
    mov linux64_sys_3_rdx, 110100100b
    mov linux64_sys_2_rsi, open_readAndWrite or open_creat or open_rewrite
    mov linux64_sys_1_rdi, name_buffer$open_file__to_write
-   mov linux64_sys_n_rax, syscall_open
+   mov linux64_sys_n_rax, linux64_syscall_open
    syscall
    push_argument_stack rax
    next
 
+   }
+
+match =linux =64bit, platform machine {
+
 define_primitive_function "close-file", close_file
    ;; << file-handle -- >>
    pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, syscall_close
+   mov linux64_sys_n_rax, linux64_syscall_close
    syscall
    next
+
+   }
+
+match =linux =64bit, platform machine {
 
 define_primitive_function "read-file", read_file
    ;; << [file handle], buffer[address, length] --
@@ -1704,10 +1748,14 @@ define_primitive_function "read-file", read_file
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, syscall_read
+   mov linux64_sys_n_rax, linux64_syscall_read
    syscall
    push_argument_stack rax
    next
+
+   }
+
+match =linux =64bit, platform machine {
 
 define_primitive_function "write-file", write_file
    ;; << [file handle], buffer[address, length] --
@@ -1715,10 +1763,12 @@ define_primitive_function "write-file", write_file
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, syscall_write
+   mov linux64_sys_n_rax, linux64_syscall_write
    syscall
    push_argument_stack rax
    next
+
+   }
 
 buffer$load_file labeling
   preserve 1024 * 1024
@@ -2850,7 +2900,8 @@ define_variable "*current-free-address,primitive-string-heap*", V__current_free_
 
 last_link = link
 
-if linux? eq yes
+match =linux =64bit, platform machine {
+
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -2858,9 +2909,11 @@ segment readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
 
-finish if
 
-if windows? eq yes
+   }
+
+match =windows =64bit, platform machine {
+
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -2868,9 +2921,11 @@ section '.data' data readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
 
-finish if
 
-if windows? eq yes
+   }
+
+if platform eq windows
+if machine eq 64bit
 
 
 ;; Macroinstructions for making import section (64-bit)
@@ -2941,8 +2996,10 @@ macro import name,[label,string]
 
 
 finish if
+finish if
 
-if windows? eq yes
+match =windows =64bit, platform machine {
+
 
 section '.idata' import data readable writeable
 
@@ -2955,4 +3012,4 @@ import kernel32,\
        GetStdHandle,'GetStdHandle'
 
 
-finish if
+    }
