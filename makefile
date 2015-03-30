@@ -12,7 +12,6 @@ help:
 	echo -e " \E[33;1m     windows64                                             \E[0m "
 	echo -e " \E[33;1m     linux32                                               \E[0m "
 	echo -e " \E[33;1m     windows32                                             \E[0m "
-	echo -e " \E[33;1m     all                                                   \E[0m "
 	echo -e " \E[33;1m     clean                                                 \E[0m "
 	echo -e " \E[33;1m							     \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
@@ -20,12 +19,6 @@ help:
 	echo -e " \E[33;1m							     \E[0m "
 	echo -e " \E[33;1m   I wish you happy making ^_^                             \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
-
-all:
-	make linux64    &&\
-	make windows64	&&\
-	make linux32	&&\
-	make windows32
 
 linux64:
 	echo "define platform linux" >  platform-configuration.inc
