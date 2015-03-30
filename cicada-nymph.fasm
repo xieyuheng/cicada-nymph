@@ -556,12 +556,10 @@ begin_to_interpret_threaded_code:
 
 match =windows =64bit, platform machine {
 
-;;;; for windows
 _output_handle:
    dq 0
 _input_handle:
    dq 0
-;;;;
 
 begin_to_interpret_threaded_code:
 
@@ -1459,7 +1457,6 @@ define_primitive_function "sub-save", sub_save
 
 match =linux =64bit, platform machine {
 
-
 buffer$write_byte:
    db 0
 
@@ -1470,30 +1467,22 @@ define_primitive_function "write-byte", write_byte
    ;; write can not just write the char in al to stdout
    ;; write needs the address of the byte to write
    mov [buffer$write_byte], al
-
-   ;;;; for linux
    mov linux64_sys_3_rdx, 1                 ;; max length to be write
    mov linux64_sys_2_rsi, buffer$write_byte ;; address
    mov linux64_sys_1_rdi, 1                 ;; stdout
    mov linux64_sys_n_rax, linux64_syscall_write
-   ;;;;
-
    syscall
    next
-
 
    }
 
 match =windows =64bit, platform machine {
 
-
 buffer$write_byte:
    db 0
 
-;;;; for windows
-_counter$write_byte:
+__counter$write_byte:
    dq 0
-;;;;
 
 define_primitive_function "write-byte", write_byte
    ;; << byte -- >>
@@ -1506,7 +1495,7 @@ define_primitive_function "write-byte", write_byte
 windows_function 5
    push 0
    sub rsp, 8*4
-   mov windows64_fun_4_r9, _counter$write_byte
+   mov windows64_fun_4_r9, __counter$write_byte
    mov windows64_fun_3_r8, 1
    mov windows64_fun_2_rdx, buffer$write_byte
    mov windows64_fun_1_rcx, [_output_handle]
@@ -1514,7 +1503,6 @@ windows_function 5
 end_windows_function
 
    next
-
 
 }
 
@@ -1592,8 +1580,7 @@ define_function "", test__read_line_from_stdin
 
 match =windows =64bit, platform machine {
 
-
-_counter$read_byte:
+__counter$read_line_from_stdin:
    dq 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
@@ -1602,19 +1589,17 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
 windows_function 5
    push 0
    sub rsp, 8*4
-   mov windows64_fun_4_r9, _counter$read_byte
+   mov windows64_fun_4_r9, __counter$read_line_from_stdin
    mov windows64_fun_3_r8, max_input_length
    mov windows64_fun_2_rdx, buffer$read_byte
    mov windows64_fun_1_rcx, [_input_handle]
    call [ReadFile]
-end_windows_function
-
    ;; the return value
    ;; is a count of the number of bytes transferred
-   mov rax, [_counter$read_byte]
+   mov rax, [__counter$read_line_from_stdin]
    push_argument_stack rax
+end_windows_function
    next
-
 
    }
 
@@ -1687,7 +1672,7 @@ name_buffer$open_file__to_read labeling
 
 define_primitive_function "open-file,to-read", open_file__to_read
    ;; << file-name-string[address, length] --
-   ;;    [file handle] or [negate number on error] >>
+   ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
@@ -1711,7 +1696,7 @@ name_buffer$open_file__to_write labeling
 
 define_primitive_function "open-file,to-write", open_file__to_write
    ;; << file-name-string[address, length] --
-   ;;    [file handle] or [negate number on error] >>
+   ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
@@ -1744,7 +1729,7 @@ match =linux =64bit, platform machine {
 
 define_primitive_function "read-file", read_file
    ;; << [file handle], buffer[address, length] --
-   ;;    [number of char] or [negate number on error] >>
+   ;;    [number of char] or [error code] >>
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_1_rdi
@@ -1759,13 +1744,187 @@ match =linux =64bit, platform machine {
 
 define_primitive_function "write-file", write_file
    ;; << [file handle], buffer[address, length] --
-   ;;    [number of char] or [negate number on error] >>
+   ;;    [number of char] or [error code] >>
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_1_rdi
    mov linux64_sys_n_rax, linux64_syscall_write
    syscall
    push_argument_stack rax
+   next
+
+   }
+
+; Access rights
+
+DELETE_RIGHT              = 00010000h
+READ_CONTROL              = 00020000h
+WRITE_DAC                 = 00040000h
+WRITE_OWNER               = 00080000h
+SYNCHRONIZE               = 00100000h
+STANDARD_RIGHTS_READ      = READ_CONTROL
+STANDARD_RIGHTS_WRITE     = READ_CONTROL
+STANDARD_RIGHTS_EXECUTE   = READ_CONTROL
+STANDARD_RIGHTS_REQUIRED  = 000F0000h
+STANDARD_RIGHTS_ALL       = 001F0000h
+SPECIFIC_RIGHTS_ALL       = 0000FFFFh
+ACCESS_SYSTEM_SECURITY    = 01000000h
+MAXIMUM_ALLOWED           = 02000000h
+GENERIC_READ              = 80000000h
+GENERIC_WRITE             = 40000000h
+GENERIC_EXECUTE           = 20000000h
+GENERIC_ALL               = 10000000h
+PROCESS_TERMINATE         = 00000001h
+PROCESS_CREATE_THREAD     = 00000002h
+PROCESS_VM_OPERATION      = 00000008h
+PROCESS_VM_READ           = 00000010h
+PROCESS_VM_WRITE          = 00000020h
+PROCESS_DUP_HANDLE        = 00000040h
+PROCESS_CREATE_PROCESS    = 00000080h
+PROCESS_SET_QUOTA         = 00000100h
+PROCESS_SET_INFORMATION   = 00000200h
+PROCESS_QUERY_INFORMATION = 00000400h
+PROCESS_ALL_ACCESS        = STANDARD_RIGHTS_REQUIRED or SYNCHRONIZE or 0FFFh
+FILE_SHARE_READ           = 00000001h
+FILE_SHARE_WRITE          = 00000002h
+FILE_SHARE_DELETE         = 00000004h
+
+; CreateFile actions
+
+CREATE_NEW        = 1
+CREATE_ALWAYS     = 2
+OPEN_EXISTING     = 3
+OPEN_ALWAYS       = 4
+TRUNCATE_EXISTING = 5
+
+; File attributes
+
+FILE_ATTRIBUTE_READONLY   = 001h
+FILE_ATTRIBUTE_HIDDEN     = 002h
+FILE_ATTRIBUTE_SYSTEM     = 004h
+FILE_ATTRIBUTE_DIRECTORY  = 010h
+FILE_ATTRIBUTE_ARCHIVE    = 020h
+FILE_ATTRIBUTE_NORMAL     = 080h
+FILE_ATTRIBUTE_TEMPORARY  = 100h
+FILE_ATTRIBUTE_COMPRESSED = 800h
+
+match =windows =64bit, platform machine {
+
+name_buffer$open_file__to_read labeling
+   preserve 512
+
+define_primitive_function "open-file,to-read", open_file__to_read
+   ;; << file-name-string[address, length] --
+   ;;    [file handle] or [error code] >>
+   pop_argument_stack rcx
+   pop_argument_stack rsi
+   ;; copy file-name as a null-terminal string
+   mov rdi, name_buffer$open_file__to_read
+   rep movsb
+   xor rax, rax
+   mov byte [rdi], al
+windows_function 7
+   push 0 ;; null
+   push FILE_ATTRIBUTE_NORMAL
+   push OPEN_EXISTING
+   sub rsp, 8*4
+   mov windows64_fun_4_r9, 0 ;; null
+   mov windows64_fun_3_r8, 0 ;; no sharing
+   mov windows64_fun_2_rdx, GENERIC_READ
+   mov windows64_fun_1_rcx, name_buffer$open_file__to_read
+   call [CreateFile]
+   push_argument_stack rax
+end_windows_function
+   next
+
+   }
+
+match =windows =64bit, platform machine {
+
+name_buffer$open_file__to_write labeling
+   preserve 512
+
+define_primitive_function "open-file,to-write", open_file__to_write
+   ;; << file-name-string[address, length] --
+   ;;    [file handle] or [error code] >>
+   pop_argument_stack rcx
+   pop_argument_stack rsi
+   ;; copy file-name as a null-terminal string
+   mov rdi, name_buffer$open_file__to_write
+   rep movsb
+   xor rax, rax
+   mov byte [rdi], al
+windows_function 7
+   push 0 ;; null
+   push FILE_ATTRIBUTE_NORMAL
+   push CREATE_ALWAYS
+   sub rsp, 8*4
+   mov windows64_fun_4_r9, 0 ;; null
+   mov windows64_fun_3_r8, 0 ;; no sharing
+   mov windows64_fun_2_rdx, GENERIC_WRITE
+   mov windows64_fun_1_rcx, name_buffer$open_file__to_write
+   call [CreateFile]
+   push_argument_stack rax
+end_windows_function
+   next
+
+   }
+
+match =windows =64bit, platform machine {
+
+define_primitive_function "close-file", close_file
+   ;; << file-handle -- >>
+windows_function 4
+   sub rsp, 8*4
+   pop_argument_stack windows64_fun_1_rcx
+   call [CloseHandle]
+end_windows_function
+   next
+
+   }
+
+match =windows =64bit, platform machine {
+
+__counter$read_file:
+   dq 0
+
+define_primitive_function "read-file", read_file
+   ;; << [file handle], buffer[address, length] --
+   ;;    [number of char] or [error code] >>
+windows_function 5
+   push 0
+   sub rsp, 8*4
+   mov windows64_fun_4_r9, __counter$read_file
+   pop_argument_stack windows64_fun_3_r8
+   pop_argument_stack windows64_fun_2_rdx
+   pop_argument_stack windows64_fun_1_rcx
+   call [ReadFile]
+   mov rax, [__counter$read_file]
+   push_argument_stack rax
+end_windows_function
+   next
+
+   }
+
+match =windows =64bit, platform machine {
+
+__counter$write_file:
+   dq 0
+
+define_primitive_function "write-file", write_file
+   ;; << [file handle], buffer[address, length] --
+   ;;    [number of char] or [error code] >>
+windows_function 5
+   push 0
+   sub rsp, 8*4
+   mov windows64_fun_4_r9, __counter$write_file
+   pop_argument_stack windows64_fun_3_r8
+   pop_argument_stack windows64_fun_2_rdx
+   pop_argument_stack windows64_fun_1_rcx
+   call [WriteFile]
+   mov rax, [__counter$write_file]
+   push_argument_stack rax
+end_windows_function
    next
 
    }
@@ -3009,7 +3168,8 @@ import kernel32,\
        ExitProcess,'ExitProcess',\
        ReadFile,'ReadFile',\
        WriteFile,'WriteFile',\
-       GetStdHandle,'GetStdHandle'
-
+       GetStdHandle,'GetStdHandle',\
+       CreateFile, 'CreateFile',\
+       CloseHandle, 'CloseHandle'
 
     }
