@@ -839,7 +839,7 @@ define_function "jo->type", jo_to_type
    xx dup
 
    xx dup, fetch
-   xx swap, subtraction, literal, jo_to_type, equal?, false?branch, 4
+   xx swap, subtraction, literal, jo_size, equal?, false?branch, 4
    xx   drop, zero
    xx   end
 

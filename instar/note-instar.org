@@ -2,6 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* note
+  * instars are written for windows 32bit version of the interpreter
 * 1st-instar
   * indirect-threaded-code interpreter
     1. macro about argument_stack & return_stack
