@@ -1,2 +1,2 @@
-define platform linux
+define platform windows
 define machine  32bit
