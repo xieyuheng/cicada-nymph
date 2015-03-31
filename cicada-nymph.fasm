@@ -35,6 +35,8 @@ rbp equ ebp
 rsi equ esi
 rdi equ edi
 
+syscall equ int 80h
+
 }
 
 match =linux =64bit, platform machine {
@@ -93,7 +95,6 @@ segment readable executable writeable
 
 match =linux =32bit, platform machine {
 
-
 define linux32_sys_6_ebp ebp
 define linux32_sys_5_edi edi
 define linux32_sys_4_esi esi
@@ -108,6 +109,13 @@ define linux32_syscall_write 4
 define linux32_syscall_open  5
 define linux32_syscall_close 6
 
+open_read         = 0
+open_write        = 1
+open_readAndWrite = 2
+
+open_creat      = 0100o
+open_rewrite    = 1000o ;; rewrite if file exist
+open_append     = 2000o
 
 }
 
@@ -385,7 +393,7 @@ match =linux =32bit, platform machine {
 __exit_with_TOS:
    pop_argument_stack linux32_sys_1_ebx
    mov linux32_sys_n_eax, linux32_syscall_exit
-   int 80h
+   syscall
 
 }
 
@@ -394,7 +402,7 @@ match =linux =32bit, platform machine {
 __exit_with_zero:
    xor linux32_sys_1_ebx, linux32_sys_1_ebx
    mov linux32_sys_n_eax, linux32_syscall_exit
-   int 80h
+   syscall
 
 }
 
@@ -403,7 +411,7 @@ match =linux =32bit, platform machine {
 __exit_with_six:
    mov linux32_sys_1_ebx, 6
    mov linux32_sys_n_eax, linux32_syscall_exit
-   int 80h
+   syscall
 
 }
 
@@ -649,6 +657,50 @@ explain$exception:
 
 }
 
+match =32bit, machine {
+
+explain$exception:
+   mov rsi, rax
+
+.next_jojo:
+   pop_return_stack rbx
+   mov rax, dword [rbx]
+   cmp rax, exception_head
+   je .next_jo
+   mov rdx, [pointer$return_stack]
+   cmp rdx, address$return_stack
+   je .not_found
+   jmp .next_jojo
+
+
+.next_jo:
+   ;; expecting
+   ;;   rbx jojo
+   ;;   rsi jo (to cmp)
+   add rbx, jo_size
+   mov rax, dword [rbx]
+   cmp rax, rsi
+   je .found
+   test rax, rax
+   jz .next_jojo
+   jmp .next_jo
+
+
+.found:
+   ;; expecting
+   ;;   pointer$return_stack
+   ;;   rsi jo
+   pop_return_stack rax
+   mov [pointer$argument_stack], rax
+   add rsi, jo_size
+   push_return_stack rsi
+   next
+
+.not_found:
+   call __exit_with_six
+
+   }
+
 match =64bit, machine {
 
 define_primitive_function "execute-jo", execute_jo
@@ -677,8 +729,8 @@ define_function "jo->name", jo_to_name
    xx literal, jo_size, subtraction
    xx fetch
    xx dup
-   xx   literal, 2, addition, swap
-   xx fetch_two_bytes
+   xx literal, 2, addition  ;; address
+   xx swap, fetch_two_bytes ;; length
    xx end
 
 define_function "jo->link", jo_to_link
@@ -709,7 +761,7 @@ define_function "jo->type", jo_to_type
    xx dup
 
    xx dup, fetch
-   xx swap, subtraction, literal, 8, equal?, false?branch, 4
+   xx swap, subtraction, literal, jo_to_type, equal?, false?branch, 4
    xx   drop, zero
    xx   end
 
@@ -874,17 +926,17 @@ define_function "little_test", little_test
    ;;;; 4
 
    ;;;; address
-   ;; xx address, V__little_test_number, fetch, add2
+   ;; xx address, V__little_test_number, fetch_two_bytes, add2
    ;; xx address, V__little_test_number, save
    ;; xx V__little_test_number
    ;; xx exit_with_TOS
    ;;;; 5
 
    ;;;; taca
-   xx literal, 2
-   xx literal, 4
-   xx power
-   xx exit_with_TOS
+   ;; xx literal, 2
+   ;; xx literal, 4
+   ;; xx power
+   ;; xx exit_with_TOS
    ;;;; 16
 
    ;;;; write_byte
@@ -942,9 +994,41 @@ define_function "little_test", little_test
 
    ;;;; use jo_to_name to test the macro make_primitive_string
    ;; xx literal, jo_to_name, jo_to_name, write_string
+   ;; xx literal, 10, write_byte
+   ;; xx literal, addition, jo_to_name, write_string
+   ;; xx literal, 10, write_byte
    ;; xx zero
    ;; xx exit_with_TOS
    ;;;; print "jo->name"
+   ;;;; print "add"
+
+   ;;;; xxoverxx
+   ;; xx literal, 1
+   ;; xx literal, 2
+   ;; xx literal, 3
+   ;; xx literal, 4
+   ;; xx xxoverxx
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx zero
+   ;; xx exit_with_TOS
+   ;;;; 2 1 4 3 2 1
+
+   ;;;; find
+   ;; xx read_word, string_to_integer ;; number
+   ;; xx read_word, string_to_integer ;; number
+   ;; xx read_word, find ;; add
+   ;; xx drop ;; true
+   ;; xx execute_jo
+   ;; xx write_integer
+   ;; xx zero
+   ;; xx exit_with_TOS
+   ;;;; 1 2 add
+   ;;;; print "3"
 
    ;;;; basic-REPL (without the ability to define function)
    ;;;; after this test
@@ -1069,7 +1153,7 @@ define_primitive_function "xx|over|x", xxoverx
    mov rbx, [pointer$argument_stack]
    mov rax, [rbx - (3 * jo_size)]
    push_argument_stack rax
-   mov rax, [rbx - (3 * jo_size)]
+   mov rax, [rbx - (2 * jo_size)]
    push_argument_stack rax
    next
 
@@ -1078,7 +1162,7 @@ define_primitive_function "xx|over|xx", xxoverxx
    mov rbx, [pointer$argument_stack]
    mov rax, [rbx - (4 * jo_size)]
    push_argument_stack rax
-   mov rax, [rbx - (4 * jo_size)]
+   mov rax, [rbx - (3 * jo_size)]
    push_argument_stack rax
    next
 
@@ -1094,7 +1178,7 @@ define_primitive_function "xx|over|xxxx", xxoverxxxx
    mov rbx, [pointer$argument_stack]
    mov rax, [rbx - (6 * jo_size)]
    push_argument_stack rax
-   mov rax, [rbx - (6 * jo_size)]
+   mov rax, [rbx - (5 * jo_size)]
    push_argument_stack rax
    next
 
@@ -1810,7 +1894,7 @@ define_primitive_function "sub4", sub4
 define_primitive_function "sub8", sub8
    ;; << n -- n-8 >>
    pop_argument_stack rax
-   sub 8
+   sub rax, 8
    push_argument_stack rax
    next
 
@@ -2319,7 +2403,7 @@ define_primitive_function "write-byte", write_byte
    mov linux32_sys_2_ecx, buffer$write_byte ;; address
    mov linux32_sys_1_ebx, 1                 ;; stdout
    mov linux32_sys_n_eax, linux32_syscall_write
-   int 80h
+   syscall
    next
 
 }
@@ -2461,7 +2545,7 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
    pop_argument_stack linux32_sys_2_ecx
    xor linux32_sys_1_ebx, linux32_sys_1_ebx ;; stdin
    mov linux32_sys_n_eax, linux32_syscall_read
-   int 80h
+   syscall
    ;; the return value
    ;; is a count of the number of bytes transferred
    push_argument_stack rax
@@ -2639,6 +2723,96 @@ define_primitive_function "write-file", write_file
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_1_rdi
    mov linux64_sys_n_rax, linux64_syscall_write
+   syscall
+   push_argument_stack rax
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+name_buffer$open_file__to_read labeling
+   preserve 512
+
+define_primitive_function "open-file,to-read", open_file__to_read
+   ;; << file-name-string[address, length] --
+   ;;    [file handle] or [error code] >>
+   pop_argument_stack rcx
+   pop_argument_stack rsi
+   ;; copy file-name as a null-terminal string
+   mov rdi, name_buffer$open_file__to_read
+   rep movsb
+   xor rax, rax
+   mov byte [rdi], al
+   mov linux32_sys_2_ecx, open_read ;; read onlya
+   mov linux32_sys_1_ebx, name_buffer$open_file__to_read
+   mov linux32_sys_n_eax, linux32_syscall_open
+   syscall
+   push_argument_stack rax
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+name_buffer$open_file__to_write labeling
+   preserve 512
+
+define_primitive_function "open-file,to-write", open_file__to_write
+   ;; << file-name-string[address, length] --
+   ;;    [file handle] or [error code] >>
+   pop_argument_stack rcx
+   pop_argument_stack rsi
+   ;; copy file-name as a null-terminal string
+   mov rdi, name_buffer$open_file__to_write
+   rep movsb
+   xor rax, rax
+   mov byte [rdi], al
+   mov linux32_sys_3_edx, 110100100b
+   mov linux32_sys_2_ecx, open_readAndWrite or open_creat or open_rewrite
+   mov linux32_sys_1_ebx, name_buffer$open_file__to_write
+   mov linux32_sys_n_eax, linux32_syscall_open
+   syscall
+   push_argument_stack rax
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+define_primitive_function "close-file", close_file
+   ;; << file-handle -- >>
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_close
+   syscall
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+define_primitive_function "read-file", read_file
+   ;; << [file handle], buffer[address, length] --
+   ;;    [number of char] or [error code] >>
+   pop_argument_stack linux32_sys_3_edx
+   pop_argument_stack linux32_sys_2_ecx
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_read
+   syscall
+   push_argument_stack rax
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+define_primitive_function "write-file", write_file
+   ;; << [file handle], buffer[address, length] --
+   ;;    [number of char] or [error code] >>
+   pop_argument_stack linux32_sys_3_edx
+   pop_argument_stack linux32_sys_2_ecx
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_write
    syscall
    push_argument_stack rax
    next
@@ -2987,6 +3161,8 @@ define_primitive_function "string->buffer!", string_to_buffer!
    rep movsb
    next
 
+match =64bit, machine {
+
 buffer$string_reverse! labeling
    preserve 1024
 
@@ -3009,6 +3185,36 @@ define_primitive_function "string-reverse!", string_reverse!
    loop .loop
 
    next
+
+}
+
+match =32bit, machine {
+
+buffer$string_reverse! labeling
+   preserve 1024
+
+
+define_primitive_function "string-reverse!", string_reverse!
+   ;; << string[address, length] -- string[address, length] >>
+   mov rbx, [pointer$argument_stack]
+   mov rdi, buffer$string_reverse!
+   mov rcx, [rbx - (1 * jo_size)]
+   mov rsi, [rbx - (2 * jo_size)]
+   rep movsb
+
+   mov rcx, [rbx - (1 * jo_size)]
+   dec rdi ;; cursor back into string in buffer$string_reverse!
+   mov rsi, [rbx - (2 * jo_size)]
+.loop:
+   mov al, byte [rdi]
+   mov byte [rsi], al
+   dec rdi
+   inc rsi
+   loop .loop
+
+   next
+
+}
 
 define_function "digital-string?", digital_string?
    ;; << string[address, length] -- bool >>
@@ -3326,7 +3532,7 @@ define_function "string-tail,word", string_tail__word
    xx end
 
 define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
-   xx last_link + jo_size
+   xx (last_link + jo_size)
 
 define_function "find", find
    ;; found :
@@ -3343,7 +3549,21 @@ define_function "help,find", help__find
    ;; not found :
    ;; << word[address, length], jo -- false >>
    xx xxtuckx
+
+
    xx jo_to_name, xxoverxx
+
+   ;; for debug
+   ;; xx jo_to_name
+   ;; xx   dup2
+   ;; xx   dup, write_integer, literal, 32, write_byte
+   ;; xx   write_string, literal, 10, write_byte
+   ;; xx xxoverxx
+   ;; xx   dup2
+   ;; xx   dup, write_integer, literal, 32, write_byte
+   ;; xx   write_string, literal, 10, write_byte
+
+
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end

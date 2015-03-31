@@ -1,2 +1,2 @@
 define platform linux
-define machine  64bit
+define machine  32bit
