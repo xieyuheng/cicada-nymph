@@ -158,15 +158,19 @@
 
    macro pop_argument_stack register \{
       if register in <eax>
+      push ebx
       mov ebx, [pointer$argument_stack]
       sub ebx, jo_size
       mov register, [ebx]
       mov [pointer$argument_stack], ebx
+      pop ebx
       else
+      push eax
       mov eax, [pointer$argument_stack]
       sub eax, jo_size
       mov register, [eax]
       mov [pointer$argument_stack], eax
+      pop eax
       finish if
    \}
 
@@ -584,7 +588,7 @@
 
    define_primitive_function "<>", taca
       pop_return_stack rbx
-      mov rax, qword [rbx]
+      mov rax, [rbx]
       jmp qword [rax]
    }
 
@@ -592,9 +596,10 @@
    match =32bit, machine {
 
    define_primitive_function "<>", taca
-      pop_return_stack ebx
-      mov eax, dword [ebx]
-      jmp dword [eax]
+      pop_return_stack rdi
+      mov rax, dword [rdi]
+      jmp dword [rax]
+
    }
    #+end_src
 ** note explicit tail call in action
@@ -698,151 +703,414 @@
       ;;;; 4
 
       ;;;; address
-      xx address, V__little_test_number, fetch, add2
-      xx address, V__little_test_number, save
-      xx V__little_test_number
-      xx exit_with_TOS
+      ;; xx address, V__little_test_number, fetch, add2
+      ;; xx address, V__little_test_number, save
+      ;; xx V__little_test_number
+      ;; xx exit_with_TOS
       ;;;; 5
+
+      ;;;; taca
+      ;; xx literal, 2
+      ;; xx literal, 4
+      ;; xx power
+      ;; xx exit_with_TOS
+      ;;;; 16
+
+      ;;;; write_byte
+      ;; xx literal, 64, write_byte
+      ;; xx literal, 10, write_byte
+      ;; xx zero
+      ;; xx exit_with_TOS
+      ;;;; @
+
+      ;;;; read_byte
+      ;; xx read_byte, write_byte
+      ;; xx exit_with_TOS
+      ;;;;
+
+      ;;;; branch
+      xx read_byte, write_byte
+      xx branch, -3
+      ;;;; read a string that ended by <return>
+      ;;;; write the readed string
+      ;;;; or we can say
+      ;;;; read line and write line
+      ;;;; or we can say
+      ;;;; echo line
+
+      ;;;; false?branch
+      xx false, false?branch, 9
+      xx   literal, 64, write_byte
+      xx   literal, 10, write_byte
+      xx   zero
+      xx   exit_with_TOS
+      xx true, false?branch, 9
+      xx   literal, 65, write_byte
+      xx   literal, 10, write_byte
+      xx   zero
+      xx   exit_with_TOS
+      xx zero
+      xx exit_with_TOS
+      ;;;; A
    #+end_src
 * -----------------------------------
 * the stack
 ** ----------------------------------
-** drop [32bit]
+** drop
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "drop", drop
       ;; << a -- >>
-      pop_argument_stack eax
+      pop_argument_stack rax
       next
 
    define_primitive_function "drop2", drop2
       ;; << a b -- >>
-      pop_argument_stack eax
-      pop_argument_stack eax
+      pop_argument_stack rax
+      pop_argument_stack rax
       next
    #+end_src
-** dup  [32bit]
+** dup  [64bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
    define_primitive_function "dup", dup
       ;; << a -- a a >>
-      mov  eax, [pointer$argument_stack - (1 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (1 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "dup2", dup2
       ;; << a b -- a b a b >>
-      mov  ebx, [pointer$argument_stack - (1 * jo_size)]
-      mov  eax, [pointer$argument_stack - (2 * jo_size)]
-      push_argument_stack eax
-      push_argument_stack ebx
+      mov  rbx, [pointer$argument_stack - (1 * jo_size)]
+      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      push_argument_stack rax
+      push_argument_stack rbx
       next
+
+   }
    #+end_src
-** over [32bit]
+** dup  [32bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "dup", dup
+      ;; << a -- a a >>
+      pop_argument_stack rax
+      push_argument_stack rax
+      push_argument_stack rax
+      next
+
+   define_primitive_function "dup2", dup2
+      ;; << a b -- a b a b >>
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   }
+   #+end_src
+** over [64bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
    define_primitive_function "over", over
       ;; << a b -- a b | a >>
-      mov  eax, [pointer$argument_stack - (2 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "x|over|xx", xoverxx
       ;; << a | b c -- a | b c | a >>
-      mov  eax, [pointer$argument_stack - (3 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "xx|over|x", xxoverx
       ;; << a b | c -- a b | c | a b >>
-      mov  eax, [pointer$argument_stack - (3 * jo_size)]
-      push_argument_stack eax
-      mov  eax, [pointer$argument_stack - (3 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xx", xxoverxx
       ;; << a b | c d -- a b | c d | a b >>
-      mov  eax, [pointer$argument_stack - (4 * jo_size)]
-      push_argument_stack eax
-      mov  eax, [pointer$argument_stack - (4 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "x|over|xxx", xoverxxx
       ;; << a | b c d -- a | b c d | a >>
-      mov  eax, [pointer$argument_stack - (4 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xxxx", xxoverxxxx
       ;; << a b | c d e f -- a b | c d e f | a b >>
-      mov  eax, [pointer$argument_stack - (6 * jo_size)]
-      push_argument_stack eax
-      mov  eax, [pointer$argument_stack - (6 * jo_size)]
-      push_argument_stack eax
+      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      push_argument_stack rax
+      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      push_argument_stack rax
       next
+
+   }
    #+end_src
-** tuck [32bit]
+** over [32bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "over", over
+      ;; << a b -- a b | a >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (2 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|over|xx", xoverxx
+      ;; << a | b c -- a | b c | a >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (3 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|x", xxoverx
+      ;; << a b | c -- a b | c | a b >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (3 * jo_size)]
+      push_argument_stack rax
+      mov rax, [rbx - (3 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|xx", xxoverxx
+      ;; << a b | c d -- a b | c d | a b >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (4 * jo_size)]
+      push_argument_stack rax
+      mov rax, [rbx - (4 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|over|xxx", xoverxxx
+      ;; << a | b c d -- a | b c d | a >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (4 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|over|xxxx", xxoverxxxx
+      ;; << a b | c d e f -- a b | c d e f | a b >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (6 * jo_size)]
+      push_argument_stack rax
+      mov rax, [rbx - (6 * jo_size)]
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** tuck
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "tuck", tuck
       ;; << a b -- b | a b >>
-      pop_argument_stack ebx
-      pop_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack eax
-      push_argument_stack ebx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rax
+      push_argument_stack rbx
       next
 
    define_primitive_function "x|tuck|xx", xtuckxx
       ;; << a | b c -- b c | a | b c >>
-      pop_argument_stack ecx
-      pop_argument_stack ebx
-      pop_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack ecx
-      push_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack ecx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
       next
 
    define_primitive_function "xx|tuck|x", xxtuckx
       ;; << a b | c -- c | a b | c >>
-      pop_argument_stack ecx
-      pop_argument_stack ebx
-      pop_argument_stack eax
-      push_argument_stack ecx
-      push_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack ecx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
       next
 
    define_primitive_function "xx|tuck|xx", xxtuckxx
       ;; << a b | c d -- c d | a b | c d >>
-      pop_argument_stack edx
-      pop_argument_stack ecx
-      pop_argument_stack ebx
-      pop_argument_stack eax
-      push_argument_stack ecx
-      push_argument_stack edx
-      push_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack ecx
-      push_argument_stack edx
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
       next
 
    define_primitive_function "xxx|tuck|x", xxxtuckx
       ;; << a b c | d -- d | a b c | d >>
-      pop_argument_stack edx
-      pop_argument_stack ecx
-      pop_argument_stack ebx
-      pop_argument_stack eax
-      push_argument_stack edx
-      push_argument_stack eax
-      push_argument_stack ebx
-      push_argument_stack ecx
-      push_argument_stack edx
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
       next
+   #+end_src
+** swap [64bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "swap", swap
+      ;; << a b -- b a >>
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|swap|xx", xswapxx
+      ;; << a | b c -- b c | a >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xx|swap|x", xxswapx
+      ;; << a b | c -- c | a b >>
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "x|swap|xxx", xswapxxx
+      ;; << a | b c d -- b c d | a >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xxx|swap|x", xxxswapx
+      ;; << a b c | d -- d | a b c >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      next
+
+   define_primitive_function "xx|swap|xx", xxswapxx
+      ;; << a b | c d -- c d | a b >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+
+   define_primitive_function "x|swap|xxxx", xswapxxxx
+      ;; << a | b c d e -- b c d e | a >>
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack r8 ;; e
+      push_argument_stack rax
+      next
+
+   define_primitive_function "xxxx|swap|x", xxxxswapx
+      ;; << a b c d | e --  e | a b c d >>
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack r8 ;; e
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+
+
+   define_primitive_function "xx|swap|xxxx", xxswapxxxx
+      ;; << a b | c d e f -- c d e f | a b >>
+      pop_argument_stack r9 ;; f
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack r8 ;; e
+      push_argument_stack r9 ;; f
+      push_argument_stack rax
+      push_argument_stack rbx
+      next
+
+   define_primitive_function "xxxx|swap|xx", xxxxswapxx
+      ;; << a b c d | e f --  e f | a b c d >>
+      pop_argument_stack r9 ;; f
+      pop_argument_stack r8 ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack r8 ;; e
+      push_argument_stack r9 ;; f
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      next
+
+   }
    #+end_src
 ** swap [32bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
    define_primitive_function "swap", swap
       ;; << a b -- b a >>
       pop_argument_stack ebx
@@ -996,6 +1264,8 @@
       push_argument_stack ecx
       push_argument_stack edx
       next
+
+   }
    #+end_src
 ** ----------------------------------
 * instruction
@@ -1820,12 +2090,6 @@
 
    }
    #+end_src
-** note rbx & rsi
-   * 32bit 的版本中
-     不能使用 mov [rbx], rax
-     只能使用 mov [rsi], rax
-     也就是說 rbx 不能用來做爲內存的指針
-     我忘了這是怎麼回事兒了
 ** save  [32bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
@@ -1845,30 +2109,30 @@
 
    define_primitive_function "save", save
       ;; ( value, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      mov [rsi], rax
+      mov [rbx], rax
       next
 
    define_primitive_function "save-byte", save_byte
       ;; ( value, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      mov byte[rsi], al
+      mov byte[rbx], al
       next
 
    define_primitive_function "save-two-bytes", save_two_bytes
       ;; ( value, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      mov word [rsi], ax
+      mov word [rbx], ax
       next
 
    define_primitive_function "save-four-bytes", save_four_bytes
       ;; ( value, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      mov dword [rsi], eax
+      mov dword [rbx], eax
       next
 
    define_primitive_function "n-save", n_save
@@ -1909,16 +2173,16 @@
 
    define_primitive_function "add-save", add_save
       ;; ( number to add, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      add dword [rsi], rax
+      add dword [rbx], rax
       next
 
    define_primitive_function "sub-save", sub_save
       ;; ( number to add, address -- )
-      pop_argument_stack rsi
+      pop_argument_stack rbx
       pop_argument_stack rax
-      sub dword [rsi], rax
+      sub dword [rbx], rax
       next
 
    }
@@ -1993,6 +2257,383 @@
 
    }
    #+end_src
+* -----------------------------------
+* basic io
+** ----------------------------------
+** note byte
+   * basic io is about byte
+** ----------------------------------
+** write-byte [linux64]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   buffer$write_byte:
+      db 0
+
+   define_primitive_function "write-byte", write_byte
+      ;; << byte -- >>
+      ;; just calls the Linux write system call
+      pop_argument_stack rax
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      mov [buffer$write_byte], al
+      mov linux64_sys_3_rdx, 1                 ;; max length to be write
+      mov linux64_sys_2_rsi, buffer$write_byte ;; address
+      mov linux64_sys_1_rdi, 1                 ;; stdout
+      mov linux64_sys_n_rax, linux64_syscall_write
+      syscall
+      next
+
+   }
+   #+end_src
+** write-byte [linux32]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   buffer$write_byte:
+      db 0
+
+   define_primitive_function "write-byte", write_byte
+      ;; << byte -- >>
+      ;; just calls the Linux write system call
+      pop_argument_stack rax
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      mov [buffer$write_byte], al
+      mov linux32_sys_3_edx, 1                 ;; max length to be write
+      mov linux32_sys_2_ecx, buffer$write_byte ;; address
+      mov linux32_sys_1_ebx, 1                 ;; stdout
+      mov linux32_sys_n_eax, linux32_syscall_write
+      int 80h
+      next
+
+   }
+   #+end_src
+** write-byte [windows64]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =windows =64bit, platform machine {
+
+   buffer$write_byte:
+      db 0
+
+   __counter$write_byte:
+      xx 0
+
+   define_primitive_function "write-byte", write_byte
+      ;; << byte -- >>
+      ;; just calls the Linux write system call
+      pop_argument_stack rax
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      mov [buffer$write_byte], al
+
+   windows_function 5
+      push 0
+      sub rsp, 8*4
+      mov windows64_fun_4_r9, __counter$write_byte
+      mov windows64_fun_3_r8, 1
+      mov windows64_fun_2_rdx, buffer$write_byte
+      mov windows64_fun_1_rcx, [_output_handle]
+      call [WriteFile]
+   end_windows_function
+
+      next
+
+   }
+   #+end_src
+** ----------------------------------
+** note
+   * calls the linux read system call to fill buffer$read_byte
+   * do not exit the program
+     when meeting <end-of-file>
+     so
+     when you hit <C-d>
+     some you will not exit the interpreter
+   * add the feature to unread one ket-char
+** note factoring
+   * reading from file of stdin is slow
+     thus
+     1. when reading from file
+        a whole file is readed at a time
+        and saved to a buffer
+     2. when reading from stdin
+        a whole line is readed at a time
+     3. not that
+        reading line instead of keyboard-code
+        will limit the design of the user interface
+   * by factoring out the low-level calls
+     that read a line from stdin
+     we are able to implement eval-string easily
+** note nested call of eval-string
+   * nested call of eval-string is handled
+     by using a eval_string_stack
+     to remember the old string
+   * but
+     in my view
+     meta-programming should NOT
+     be achieved by editing string
+   * not that
+     this point of view
+     is not conflict with my macro system
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   max_input_length = 1024 * 1024
+
+   buffer$read_byte labeling
+      preserve max_input_length
+   #+end_src
+** eval_string_stack
+*** note
+    * for we do not build border-check
+      into the interface of pop and push
+      we allocation some memory below the stacks
+    * the size$eval_string_stack
+      defines the max depth
+      of nested call to eval string
+    * cursor and border of a evaled string
+      can be stored in eval_string_stack
+      so
+      when evaling a string
+      the eval_string_stack will be
+      << counter, cursor >>
+      when evaling is nested depth is 2
+      << counter, cursor, counter, cursor >>
+*** memory allocation
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    size$eval_string_stack = 1024 * jo_size
+
+       preserve 64 * jo_size
+    address$eval_string_stack labeling
+       preserve size$eval_string_stack
+    #+end_src
+*** pointer
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    pointer$eval_string_stack:
+       xx address$eval_string_stack
+    #+end_src
+*** push & pop [64bit]
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    match =64bit, machine {
+
+     define_primitive_function "push-eval-string-stack", push_eval_string_stack
+        ;; argument-stack -> eval-string-stack
+        pop_argument_stack rax
+        mov rbx, [pointer$eval_string_stack]
+        mov [rbx], rax
+        add qword [pointer$eval_string_stack], jo_size
+        next
+
+     define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+        ;; eval-string-stack -> argument-stack
+        sub qword [pointer$eval_string_stack], jo_size
+        mov rbx, [pointer$eval_string_stack]
+        mov rax, [rbx]
+        push_argument_stack rax
+        next
+
+    }
+    #+end_src
+*** push & pop [32bit]
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    match =32bit, machine {
+
+     define_primitive_function "push-eval-string-stack", push_eval_string_stack
+        ;; argument-stack -> eval-string-stack
+        pop_argument_stack rax
+        mov rsi, [pointer$eval_string_stack]
+        mov [rsi], rax
+        add dword [pointer$eval_string_stack], jo_size
+        next
+
+     define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+        ;; eval-string-stack -> argument-stack
+        sub dword [pointer$eval_string_stack], jo_size
+        mov rsi, [pointer$eval_string_stack]
+        mov rax, [rsi]
+        push_argument_stack rax
+        next
+
+    }
+    #+end_src
+*** clear [64bit]
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    match =64bit, machine {
+
+    define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+       ;; << -- >>
+       mov qword [pointer$eval_string_stack], address$eval_string_stack
+       next
+
+    }
+    #+end_src
+*** clear [32bit]
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    match =32bit, machine {
+
+    define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+       ;; << -- >>
+       mov eax, address$eval_string_stack
+       mov dword [pointer$eval_string_stack], eax;address$eval_string_stack
+       next
+
+    }
+    #+end_src
+*** empty?
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
+       ;; << -- bool >>
+       mov rax, [pointer$eval_string_stack]
+       cmp rax, address$eval_string_stack
+       ;; less-than is treated as equal
+       setle al
+       movzx rax, al
+       push_argument_stack rax
+       next
+    #+end_src
+** read-line-from-stdin [linux64]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   define_primitive_function "read-line-from-stdin", read_line_from_stdin
+      ;; << buffer address, max length -- >>
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_2_rsi
+      xor linux64_sys_1_rdi, linux64_sys_1_rdi ;; stdin
+      mov linux64_sys_n_rax, linux64_syscall_read
+      syscall
+      ;; the return value
+      ;; is a count of the number of bytes transferred
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** read-line-from-stdin [linux32]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   define_primitive_function "read-line-from-stdin", read_line_from_stdin
+      ;; << buffer address, max length -- >>
+      pop_argument_stack linux32_sys_3_edx
+      pop_argument_stack linux32_sys_2_ecx
+      xor linux32_sys_1_ebx, linux32_sys_1_ebx ;; stdin
+      mov linux32_sys_n_eax, linux32_syscall_read
+      int 80h
+      ;; the return value
+      ;; is a count of the number of bytes transferred
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** read-line-from-stdin [windows64]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =windows =64bit, platform machine {
+
+   __counter$read_line_from_stdin:
+      xx 0
+
+   define_primitive_function "read-line-from-stdin", read_line_from_stdin
+      ;; << buffer address, max length -- >>
+   windows_function 5
+      push 0
+      sub rsp, 8*4
+      mov windows64_fun_4_r9, __counter$read_line_from_stdin
+      pop_argument_stack windows64_fun_3_r8
+      pop_argument_stack windows64_fun_2_rdx
+      mov windows64_fun_1_rcx, [_input_handle]
+      call [ReadFile]
+      ;; the return value
+      ;; is a count of the number of bytes transferred
+      mov rax, [__counter$read_line_from_stdin]
+      push_argument_stack rax
+   end_windows_function
+      next
+
+   }
+   #+end_src
+** test read-line-from-stdin
+   #+begin_src fasm
+   define_function "", test__read_line_from_stdin
+      xx literal, buffer$read_byte
+      xx literal, max_input_length
+      xx read_line_from_stdin
+      xx pretty_write_integer
+      xx literal, buffer$read_byte
+      xx literal, 10
+      xx write_string
+      xx exit_with_TOS
+      xx end
+   #+end_src
+** read-byte
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "read-byte", read_byte
+      ;; << -- byte >>
+      xx have_unreaded_ket_char?, false?branch, 9
+      xx   literal, char$unreaded_ket_char, fetch_byte
+      xx   zero, literal, flag$unreaded_ket_char
+      xx   save
+      xx   end
+      xx read_byte__without_unread
+      xx end
+
+   define_function "read-byte,without-unread", read_byte__without_unread
+      ;; << -- byte >>
+      xx eval_string_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx   literal, buffer$read_byte
+      xx   literal, max_input_length
+      xx   read_line_from_stdin
+      xx     dup, positive?, false?, false?branch, 4
+      ;;     ignore <end-of-file>
+      ;;     ignore reading error
+      xx     drop
+      xx     taca, read_byte__without_unread
+      xx   push_eval_string_stack
+      xx   literal, buffer$read_byte
+      xx   push_eval_string_stack
+      xx   taca, read_byte__without_unread
+      .not_empty:
+      xx pop_eval_string_stack
+      xx pop_eval_string_stack
+      xx dup, zero?, false?branch, 4
+      xx   drop2
+      xx   taca, read_byte__without_unread
+      xx sub1, push_eval_string_stack
+      xx dup
+      xx add1, push_eval_string_stack
+      xx fetch_byte
+      xx end
+   #+end_src
+** unread-ket-char
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   flag$unreaded_ket_char:
+      xx 0
+
+   char$unreaded_ket_char:
+      xx 0
+
+   define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+      ;; << -- bool >>
+      xx literal, flag$unreaded_ket_char
+      xx fetch
+      xx end
+
+   define_function "unread-ket-char", unread_ket_char
+      ;; << char -- >>
+      xx literal, char$unreaded_ket_char, save
+      xx true, literal, flag$unreaded_ket_char
+      xx save
+      xx end
+   #+end_src
+** ----------------------------------
+* eval-string
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "eval-string", eval_string
+     ;; << string[address, length] -- UNKNOWN >>
+     xx push_eval_string_stack
+     xx push_eval_string_stack
+     xx end
+  #+end_src
 * -----------------------------------
 * epilog
 ** ----------------------------------
