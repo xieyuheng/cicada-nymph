@@ -1,2 +1,2 @@
 define platform windows
-define machine  32bit
+define machine  64bit

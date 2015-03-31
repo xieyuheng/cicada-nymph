@@ -82,7 +82,7 @@ open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails
 
 match =linux =64bit, platform machine {
 
-format ELF64 executable 3
+format ELF64 executable 3 as "cicada-nymph"
 
 }
 
@@ -121,7 +121,7 @@ open_append     = 2000o
 
 match =linux =32bit, platform machine {
 
-format ELF executable 3
+format ELF executable 3 as "cicada-nymph-32"
 
 }
 
@@ -146,7 +146,7 @@ define STD_OUTPUT_HANDLE -11
 
 match =windows =64bit, platform machine {
 
-format PE64 console
+format PE64 console as "cicada-nymph.exe"
 
 }
 
@@ -196,7 +196,7 @@ define STD_OUTPUT_HANDLE -11
 
 match =windows =32bit, platform machine {
 
-format PE console
+format PE console as "cicada-nymph-32.exe"
 
 }
 

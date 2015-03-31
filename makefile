@@ -8,10 +8,11 @@ help:
 	echo -e " \E[33;1m                                                           \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
 	echo -e " \E[33;1m   Makefile functions                                      \E[0m "
-	echo -e " \E[33;1m     linux64                                               \E[0m "
-	echo -e " \E[33;1m     windows64                                             \E[0m "
-	echo -e " \E[33;1m     linux32                                               \E[0m "
-	echo -e " \E[33;1m     windows32                                             \E[0m "
+	echo -e " \E[33;1m     all                                                   \E[0m "
+	echo -e " \E[33;1m       linux64                                             \E[0m "
+	echo -e " \E[33;1m       windows64                                           \E[0m "
+	echo -e " \E[33;1m       linux32                                             \E[0m "
+	echo -e " \E[33;1m       windows32                                           \E[0m "
 	echo -e " \E[33;1m     clean                                                 \E[0m "
 	echo -e " \E[33;1m							     \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
@@ -55,4 +56,5 @@ clean*.bin:
 clean:
 	make clean*~                                  &&\
 	make clean*.bin                               &&\
+	rm cicada-nymph cicada-nymph-32 cicada-nymph-32.exe cicada-nymph.exe &&\
 	echo -e "\E[33;1m [ok] clean directory \E[0m"

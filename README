@@ -35,26 +35,30 @@
 
   2. choose your platform
      by editing "platform-configuration.inc"
-     |-------------------------+------------------------------------------------------|
-     | configuration           | the command used to compile                          |
-     |-------------------------+------------------------------------------------------|
-     | define platform linux   | fasm -m 100000 cicada-nymph.fasm cicada-nymph        |
-     | define machine  64bit   |                                                      |
-     |-------------------------+------------------------------------------------------|
-     | define platform windows | fasm -m 100000 cicada-nymph.fasm cicada-nymph.exe    |
-     | define machine  64bit   |                                                      |
-     |-------------------------+------------------------------------------------------|
-     | define platform linux   | fasm -m 100000 cicada-nymph.fasm cicada-nymph-32     |
-     | define machine  32bit   |                                                      |
-     |-------------------------+------------------------------------------------------|
-     | define platform windows | fasm -m 100000 cicada-nymph.fasm cicada-nymph-32.exe |
-     | define machine  32bit   |                                                      |
-     |-------------------------+------------------------------------------------------|
+     |-------------------------|
+     | configuration           |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  32bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  32bit   |
+     |-------------------------|
 
-  3. note
+  3. the command used to compile the source file
+     
+     fasm -m 100000 cicada-nymph.fasm
+     
      1) "fasm -m 100000" means that
         fasm will use 100Mb of memory
         when compiling the source code
+
      2) you can also use the IDE of fasm (windows only)
         to compile the source file
         * for example

@@ -220,7 +220,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   format ELF64 executable 3
+   format ELF64 executable 3 as "cicada-nymph"
 
    }
    #+end_src
@@ -266,7 +266,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   format ELF executable 3
+   format ELF executable 3 as "cicada-nymph-32"
 
    }
    #+end_src
@@ -328,7 +328,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
-   format PE64 console
+   format PE64 console as "cicada-nymph.exe"
 
    }
    #+end_src
@@ -392,7 +392,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
-   format PE console
+   format PE console as "cicada-nymph-32.exe"
 
    }
    #+end_src
