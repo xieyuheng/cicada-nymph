@@ -1,101 +1,115 @@
 
 
 
-the little cicada-nymph is for teaching purpose at first
+* to explain the title
 
-it reuses the code and idea
-of the early version of cicada-language
-to teach my friends
-how to implement a interpreter
-of a simple programming language
+  * the little cicada-nymph is for teaching purpose at first
 
-I will use assembly language (FASM for x86-64)
-to implement the interpreter
-the programming language to be implemented
-is a threaded-code based (Forth-like) language
+  * it reuses the code and idea
+    of the early version of cicada-language
+    to teach my friends
+    how to implement a interpreter
+    of a simple programming language
 
-two versions of the interpreter is implemented
-one for linux
-one for windows
+  * I use assembly language (FASM for x86)
+    to implement the interpreter
 
+  * the programming language to be implemented
+    is a threaded-code based (Forth-like) language
 
-
-to assemble it :
-
-1. download FASM
-   from :
-     http://flatassembler.net/
-   or :
-     https://github.com/the-little-language-designer/fasm
-
-2. choose your platform
-   by editing the first few lines of the source code
-   if you are using linux :
-      linux? equ yes
-      windows? equ no
-   if you are using windows :
-      linux? equ no
-      windows? equ yes
-
-3. assemble the program by the following one way or another
-   the command line interface of fasm :
-      fasm -m 500000 cicada-nymph.fasm
-   the fasm IDE (windows only) :
-      File -> Open -> (choose the file)
-      Options -> Compiler setup -> (set Memory to : 524288)
-      Run -> Compile
-      (output file will be saved in where the source file is)
+  * four versions of the interpreter are implemented
+    |---------+-------|
+    | linux   | 64bit |
+    | windows | 64bit |
+    | linux   | 32bit |
+    | windows | 32bit |
+    |---------+-------|
 
 
 
-the core.cn file is written in cicada-nymph
-to show the use of "define-macro"
-I define "if" "else" "then" by "define-macro" as macro in cicada-nymph
-thus
-when you are running the interpreter
-if you copy the content of core.cn into the interpreter
-then
-the group of syntax key words "if" "else" "then"
-will be available to you
+* to compile it
+
+  1. download FASM
+     from : http://flatassembler.net/
+     or : https://github.com/the-little-language-designer/fasm
+
+  2. choose your platform
+     by editing "platform-configuration.inc"
+     |-------------------------+------------------------------------------------------|
+     | configuration           | the command used to compile                          |
+     |-------------------------+------------------------------------------------------|
+     | define platform linux   | fasm -m 100000 cicada-nymph.fasm cicada-nymph        |
+     | define machine  64bit   |                                                      |
+     |-------------------------+------------------------------------------------------|
+     | define platform windows | fasm -m 100000 cicada-nymph.fasm cicada-nymph.exe    |
+     | define machine  64bit   |                                                      |
+     |-------------------------+------------------------------------------------------|
+     | define platform linux   | fasm -m 100000 cicada-nymph.fasm cicada-nymph-32     |
+     | define machine  32bit   |                                                      |
+     |-------------------------+------------------------------------------------------|
+     | define platform windows | fasm -m 100000 cicada-nymph.fasm cicada-nymph-32.exe |
+     | define machine  32bit   |                                                      |
+     |-------------------------+------------------------------------------------------|
+
+  3. note
+     1) "fasm -m 100000" means that
+        fasm will use 100Mb of memory
+        when compiling the source code
+     2) you can also use the IDE of fasm (windows only)
+        to compile the source file
+        * for example
+          File -> Open -> (choose the file)
+          Options -> Compiler setup -> (set Memory to : 131072)
+          Run -> Compile
+          (output file will be saved in where the source file is)
 
 
 
-to run it :
+* to play with it
 
-on linux :
-   cicada-nymph is the output executable file
-   you can run it by :
-      ./cicada-nymph
-   cn is a script that helps you to run the interpreter
-   you can run it by :
-      ./cn
-   there is only one line in cn :
-      cat core.cn - | ./cicada-nymph
-   it is equivalent to run the interpreter by :
-      ./cicada-nymph
-   and copy the content of core.cn into the interpreter
+  * just open it ^-^
+    the interpreter will show you a welcome message
 
-on windows :
-   cicada-nymph.exe is the output executable file
-   you can run it by :
-      1. double click it
-      2. run cmd.exe
-         switch to the directory where the cicada-nymph.exe lives
-         and type the name of the program to run it
-         (when you are typing the name
-          you can press <tab> to do auto completion)
-   sometimes it is problematic to run the interpreter on windows
-   (due to the bug of windows)
-   thus
-   it is recommended to run the interpreter in emacs when you are using windows
-   please visit our wiki for more information about this :
-      https://github.com/the-little-language-designer/cicada-nymph/wiki/run-the-interpreter-in-emacs
+  * note that
+    the "core.cn" must be in the same directory as the interpreter
+
+  * when you are running the interpreter
+    you can call a function by typing its name
+    for example
+    |-----------------+----------------------------------|
+    | function name   | usage                            |
+    |-----------------+----------------------------------|
+    | test            | to do a little test              |
+    | report-memory   | to get a report of memory usage  |
+    | show-dictionary | to get a report of defined words |
+    |-----------------+----------------------------------|
 
 
 
-the source code of this program can be downloaded from :
-   https://github.com/the-little-language-designer/cicada-nymph
+* to learn more
 
-to track todos, bugs, feature requests, and more
-you can create an issue here :
-   https://github.com/the-little-language-designer/cicada-nymph/issues
+  * you can find documentations here
+    http://the-little-language-designer.github.io/cicada-nymph/intro/contents.html
+
+
+
+* to get the newest version of the program
+
+  * the source code of this program can be downloaded from
+    https://github.com/the-little-language-designer/cicada-nymph
+
+
+
+* to contribute
+
+  * to share your ideas and experiences
+    you can edit the wiki page here
+    https://github.com/the-little-language-designer/cicada-nymph/wiki
+
+  * to track todos, bugs, feature requests, and more
+    you can create an issue here
+    https://github.com/the-little-language-designer/cicada-nymph/issues
+
+  * to send patch and fix bug
+    you can do pull request here
+    https://github.com/the-little-language-designer/cicada-nymph/pulls

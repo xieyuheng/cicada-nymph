@@ -20,25 +20,31 @@ help:
 	echo -e " \E[33;1m   I wish you happy making ^_^                             \E[0m "
 	echo -e " \E[33;1m                                                           \E[0m "
 
+all:
+	make linux64   &&\
+	make linux32   &&\
+	make windows64 &&\
+	make windows32
+
 linux64:
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  64bit" >> platform-configuration.inc
-	fasm -m 500000 cicada-nymph.fasm cicada-nymph
+	fasm -m 100000 cicada-nymph.fasm cicada-nymph
 
 windows64:
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  64bit"   >> platform-configuration.inc
-	fasm -m 500000 cicada-nymph.fasm cicada-nymph.exe
+	fasm -m 100000 cicada-nymph.fasm cicada-nymph.exe
 
 linux32:
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  32bit" >> platform-configuration.inc
-	fasm -m 500000 cicada-nymph.fasm cicada-nymph-32
+	fasm -m 100000 cicada-nymph.fasm cicada-nymph-32
 
 windows32:
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  32bit"   >> platform-configuration.inc
-	fasm -m 500000 cicada-nymph.fasm cicada-nymph-32.exe
+	fasm -m 100000 cicada-nymph.fasm cicada-nymph-32.exe
 
 clean*~:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~  
