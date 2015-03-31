@@ -1,0 +1,439 @@
+;;;; before you compile the code
+;;;; do not forget to choose your platform
+;;;; in the following code
+
+include "platform-configuration.inc"
+
+;; define platform linux or windows
+;; define machine  64bit or 32bit
+
+;; in fasm, "dup" is a reserved word
+dup equ duplicate
+
+;; in fasm, "end" is a reserved word
+finish equ end
+end equ exit
+
+match =32bit, machine {
+
+jo_size = 4 ;; (byte)
+xx equ dd
+
+}
+
+match =linux =32bit, platform machine {
+
+
+define linux32_sys_6_ebp ebp
+define linux32_sys_5_edi edi
+define linux32_sys_4_esi esi
+define linux32_sys_3_edx edx
+define linux32_sys_2_ecx ecx
+define linux32_sys_1_ebx ebx
+define linux32_sys_n_eax eax
+
+define linux32_syscall_exit  1
+define linux32_syscall_read  3
+define linux32_syscall_write 4
+define linux32_syscall_open  5
+define linux32_syscall_close 6
+
+
+}
+
+match =linux =32bit, platform machine {
+
+format ELF executable 3
+
+}
+
+match =linux =32bit, platform machine {
+
+entry begin_to_interpret_threaded_code
+segment readable executable writeable
+
+}
+
+current_free_address$un_initialized_memory = address$un_initialized_memory
+
+labeling  equ = current_free_address$un_initialized_memory
+preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
+
+preserve 64 * jo_size
+address$argument_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =32bit, machine {
+
+pointer$argument_stack:
+   xx address$argument_stack
+
+}
+
+match =32bit, machine {
+
+macro push_argument_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$argument_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$argument_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$argument_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$argument_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_argument_stack register \{
+   if register in <eax>
+   mov ebx, [pointer$argument_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$argument_stack], ebx
+   else
+   mov eax, [pointer$argument_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$argument_stack], eax
+   finish if
+\}
+
+}
+
+preserve 64 * jo_size
+address$return_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =32bit, machine {
+
+pointer$return_stack:
+   xx address$return_stack
+
+}
+
+match =32bit, machine {
+
+macro push_return_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$return_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$return_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$return_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$return_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_return_stack register \{
+   if register in <eax>
+   mov ebx, [pointer$return_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$return_stack], ebx
+   else
+   mov eax, [pointer$return_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$return_stack], eax
+   finish if
+\}
+
+}
+
+match =64bit, machine {
+
+macro next \{
+   pop_return_stack rbx
+     mov rax, qword [rbx]
+   add rbx, jo_size
+   push_return_stack rbx
+     jmp qword [rax]
+\}
+
+}
+
+
+match =32bit, machine {
+
+macro next \{
+   pop_return_stack ebx
+     mov eax, dword [ebx]
+   add ebx, jo_size
+   push_return_stack ebx
+     jmp dword [eax]
+\}
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_TOS:
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_zero:
+   xor linux32_sys_1_ebx, linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_six:
+   mov linux32_sys_1_ebx, 6
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
+
+;; initial link to point to 0 (as null)
+link = 0
+
+size$primitive_string_heap = 100 * 1024 ;; (byte)
+
+address$primitive_string_heap:
+   times size$primitive_string_heap db 0
+
+current_free_address$primitive_string_heap = address$primitive_string_heap
+
+macro make_primitive_string string {
+
+virtual at 0
+.start$string:
+   db string
+.end$string:
+   dw (.end$string - .start$string)
+   load .length word from (.end$string)
+finish virtual
+store word .length at (current_free_address$primitive_string_heap)
+
+current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 2
+
+repeat .length
+   virtual at 0
+      db string
+      load .char byte from (% - 1)
+   finish virtual
+   store byte .char at (current_free_address$primitive_string_heap)
+   current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 1
+finish repeat
+
+}
+
+macro define_function string, jo {
+
+define_function__#jo:
+
+name__#jo:
+   xx current_free_address$primitive_string_heap
+
+   make_primitive_string string
+
+link__#jo:
+   xx link
+   link = link__#jo
+
+jo:
+   xx explain$function
+
+   ;; here follows a jojo as function-body
+
+}
+
+match =64bit, machine {
+
+explain$function:
+   add rax, jo_size
+   push_return_stack rax
+   next
+
+}
+
+
+match =32bit, machine {
+
+explain$function:
+   add eax, jo_size
+   push_return_stack eax
+   next
+
+}
+
+macro define_primitive_function string, jo {
+
+define_primitive_function__#jo:
+
+name__#jo:
+   xx current_free_address$primitive_string_heap
+
+   make_primitive_string string
+
+link__#jo:
+   xx link
+   link = link__#jo
+
+jo:
+   xx assembly_code__#jo
+
+assembly_code__#jo:
+
+   ;; here follows assembly code
+   ;; as primitive function body
+
+}
+
+macro define_variable string, jo {
+
+define_variable__#jo:
+
+name__#jo:
+   xx current_free_address$primitive_string_heap
+
+   make_primitive_string string
+
+link__#jo:
+   xx link
+   link = link__#jo
+
+jo:
+   xx explain$variable
+
+   ;; here follows a value of jo_size
+   ;; only one value is allowed
+
+}
+
+match =64bit, machine {
+
+explain$variable:
+   add rax, jo_size
+   mov rbx, [rax]
+   push_argument_stack rbx
+   next
+
+}
+
+
+match =32bit, machine {
+
+explain$variable:
+   add eax, jo_size
+   mov ebx, [eax]
+   push_argument_stack ebx
+   next
+
+}
+
+define_variable "*primitive-string-heap*", V__primitive_string_heap
+  xx address$primitive_string_heap
+
+define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+  xx size$primitive_string_heap
+
+;; *current-free-address,primitive-string-heap*
+;; is at epilog
+
+match =64bit, machine {
+
+define_primitive_function "end", end
+   pop_return_stack rbx
+   next
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "end", end
+   pop_return_stack ebx
+   next
+
+}
+
+match =64bit, machine {
+
+define_primitive_function "<>", taca
+   pop_return_stack rbx
+   mov rax, qword [rbx]
+   jmp qword [rax]
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "<>", taca
+   pop_return_stack ebx
+   mov eax, dword [ebx]
+   jmp dword [eax]
+}
+
+match =linux =32bit, platform machine {
+
+begin_to_interpret_threaded_code:
+
+   cld ;; set DF = 0, then rsi and rdi are incremented
+
+   mov eax, first_jojo
+   push_return_stack eax
+   next
+
+}
+
+first_jojo:
+   xx little_test
+
+define_primitive_function "bye", exit_with_TOS
+   call __exit_with_TOS
+
+define_variable "", V__little_test_number
+   xx 3
+
+
+define_function "little_test", little_test
+
+   ;;;; variable
+   xx V__little_test_number
+   xx exit_with_TOS
+   ;;;; 3
+
+define_variable "*un-initialized-memory*", V__un_initialized_memory
+  xx address$un_initialized_memory
+
+define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+  xx size$un_initialized_memory
+
+define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+  xx current_free_address$un_initialized_memory
+
+define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
+   xx current_free_address$primitive_string_heap
+
+last_link = link
+
+match =linux =32bit, platform machine {
+
+size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+segment readable writeable
+address$un_initialized_memory:
+   rb size$un_initialized_memory
+
+}

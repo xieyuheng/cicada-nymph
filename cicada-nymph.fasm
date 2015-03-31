@@ -14,8 +14,21 @@ dup equ duplicate
 finish equ end
 end equ exit
 
-match =linux =64bit, platform machine {
+match =64bit, machine {
 
+jo_size = 8 ;; (byte)
+xx equ dq
+
+}
+
+match =32bit, machine {
+
+jo_size = 4 ;; (byte)
+xx equ dd
+
+}
+
+match =linux =64bit, platform machine {
 
 define linux64_sys_6_r8  r8
 define linux64_sys_5_r9  r9
@@ -30,7 +43,6 @@ define linux64_syscall_write 1
 define linux64_syscall_open  2
 define linux64_syscall_close 3
 define linux64_syscall_exit  60
-
 
 ;; about open & read & write
 
@@ -55,12 +67,11 @@ open_largefile  = 100000o
 open_directory  = 200000o
 open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
 
-
 }
 
 match =linux =64bit, platform machine {
 
-format elf64 executable 3
+format ELF64 executable 3
 
 }
 
@@ -71,6 +82,41 @@ segment readable executable writeable
 
 }
 
+match =linux =32bit, platform machine {
+
+
+define linux32_sys_6_ebp ebp
+define linux32_sys_5_edi edi
+define linux32_sys_4_esi esi
+define linux32_sys_3_edx edx
+define linux32_sys_2_ecx ecx
+define linux32_sys_1_ebx ebx
+define linux32_sys_n_eax eax
+
+define linux32_syscall_exit  1
+define linux32_syscall_read  3
+define linux32_syscall_write 4
+define linux32_syscall_open  5
+define linux32_syscall_close 6
+
+
+}
+
+match =linux =32bit, platform machine {
+
+format ELF executable 3
+
+}
+
+match =linux =32bit, platform machine {
+
+entry begin_to_interpret_threaded_code
+segment readable executable writeable
+
+}
+
+match =windows =64bit, platform machine {
+
 define windows64_fun_4_r9  r9
 define windows64_fun_3_r8  r8
 define windows64_fun_2_rdx rdx
@@ -78,6 +124,8 @@ define windows64_fun_1_rcx rcx
 
 define STD_INPUT_HANDLE  -10
 define STD_OUTPUT_HANDLE -11
+
+}
 
 match =windows =64bit, platform machine {
 
@@ -92,8 +140,7 @@ section '.text' code writeable readable executable
 
 }
 
-if platform eq windows
-if machine eq 64bit
+match =windows =64bit, platform machine {
 
 
 ;; 這裏的 number_of_arguments 其實代表
@@ -102,7 +149,7 @@ if machine eq 64bit
 ;; 根據 windows calling convention
 ;; 這個數字最少是 4
 
-macro windows_function number_of_arguments {
+macro windows_function number_of_arguments \{
    push rbp
    mov rbp, rsp
 
@@ -113,69 +160,184 @@ macro windows_function number_of_arguments {
 
    sub rsp, 16
    add rsp, rbx
-}
+\}
 
-macro end_windows_function {
+macro end_windows_function \{
    mov rsp, rbp
    pop rbp
-}
+\}
 
-
-finish if
-finish if
-
-match =32bit, machine {
-
-
-jo_size = 4 ;; (byte)
-xx equ dd
 
 }
-
-match =64bit, machine {
-
-jo_size = 8 ;; (byte)
-xx equ dq
-
-}
-
-;; if you want to extend cicada in assembly
-;; the following registers must NOT be used
-
-;; =================================
-define pointer$argument_stack   r15
-define pointer$return_stack     r14
-;; =================================
-
-macro push_argument_stack register {
-   mov [pointer$argument_stack], register
-   add pointer$argument_stack, jo_size
-   }
-macro pop_argument_stack register {
-   sub pointer$argument_stack, jo_size
-   mov register, [pointer$argument_stack]
-   }
-
-macro push_return_stack register {
-   mov [pointer$return_stack], register
-   add pointer$return_stack, jo_size
-   }
-macro pop_return_stack register {
-   sub pointer$return_stack, jo_size
-   mov register, [pointer$return_stack]
-   }
 
 current_free_address$un_initialized_memory = address$un_initialized_memory
 
 labeling  equ = current_free_address$un_initialized_memory
 preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
 
-macro next {
+preserve 64 * jo_size
+address$argument_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =64bit, machine {
+
+;; if you want to extend cicada in assembly
+;; the following registers must NOT be used
+
+define pointer$argument_stack r15
+
+}
+
+match =64bit, machine {
+
+macro push_argument_stack register \{
+   mov [pointer$argument_stack], register
+   add pointer$argument_stack, jo_size
+\}
+
+macro pop_argument_stack register \{
+   sub pointer$argument_stack, jo_size
+   mov register, [pointer$argument_stack]
+\}
+
+}
+
+match =32bit, machine {
+
+pointer$argument_stack:
+   xx address$argument_stack
+
+}
+
+match =32bit, machine {
+
+macro push_argument_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$argument_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$argument_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$argument_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$argument_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_argument_stack register \{
+   if register in <eax>
+   mov ebx, [pointer$argument_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$argument_stack], ebx
+   else
+   mov eax, [pointer$argument_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$argument_stack], eax
+   finish if
+\}
+
+}
+
+preserve 64 * jo_size
+address$return_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =64bit, machine {
+
+;; if you want to extend cicada in assembly
+;; the following registers must NOT be used
+
+define pointer$return_stack r14
+
+}
+
+match =64bit, machine {
+
+macro push_return_stack register \{
+   mov [pointer$return_stack], register
+   add pointer$return_stack, jo_size
+\}
+
+macro pop_return_stack register \{
+   sub pointer$return_stack, jo_size
+   mov register, [pointer$return_stack]
+\}
+
+}
+
+match =32bit, machine {
+
+pointer$return_stack:
+   xx address$return_stack
+
+}
+
+match =32bit, machine {
+
+macro push_return_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$return_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$return_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$return_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$return_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_return_stack register \{
+   if register in <eax>
+   mov ebx, [pointer$return_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$return_stack], ebx
+   else
+   mov eax, [pointer$return_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$return_stack], eax
+   finish if
+\}
+
+}
+
+match =64bit, machine {
+
+macro next \{
    pop_return_stack rbx
      mov rax, qword [rbx]
    add rbx, jo_size
    push_return_stack rbx
      jmp qword [rax]
+\}
+
+}
+
+
+match =32bit, machine {
+
+macro next \{
+   pop_return_stack ebx
+     mov eax, dword [ebx]
+   add ebx, jo_size
+   push_return_stack ebx
+     jmp dword [eax]
+\}
+
 }
 
 match =linux =64bit, platform machine {
@@ -185,7 +347,7 @@ __exit_with_TOS:
    mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -194,7 +356,7 @@ __exit_with_zero:
    mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -203,7 +365,34 @@ __exit_with_six:
    mov linux64_sys_n_rax, linux64_syscall_exit
    syscall
 
-   }
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_TOS:
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_zero:
+   xor linux32_sys_1_ebx, linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_six:
+   mov linux32_sys_1_ebx, 6
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   int 80h
+
+}
 
 match =windows =64bit, platform machine {
 
@@ -293,12 +482,26 @@ jo:
 
    ;; here follows a jojo as function-body
 
-   }
+}
+
+match =64bit, machine {
 
 explain$function:
    add rax, jo_size
    push_return_stack rax
    next
+
+}
+
+
+match =32bit, machine {
+
+explain$function:
+   add eax, jo_size
+   push_return_stack eax
+   next
+
+}
 
 macro define_primitive_function string, jo {
 
@@ -321,7 +524,7 @@ assembly_code__#jo:
    ;; here follows assembly code
    ;; as primitive function body
 
-   }
+}
 
 macro define_variable string, jo {
 
@@ -342,13 +545,28 @@ jo:
    ;; here follows a value of jo_size
    ;; only one value is allowed
 
-   }
+}
+
+match =64bit, machine {
 
 explain$variable:
    add rax, jo_size
    mov rbx, [rax]
    push_argument_stack rbx
    next
+
+}
+
+
+match =32bit, machine {
+
+explain$variable:
+   add eax, jo_size
+   mov ebx, [eax]
+   push_argument_stack ebx
+   next
+
+}
 
 define_variable "*primitive-string-heap*", V__primitive_string_heap
   xx address$primitive_string_heap
@@ -377,12 +595,26 @@ jo:
 
    ;; here follows a jojo as function-body
 
-   }
+}
+
+match =64bit, machine {
 
 explain$macro:
    add rax, jo_size
    push_return_stack rax
    next
+
+}
+
+
+match =32bit, machine {
+
+explain$macro:
+   add eax, jo_size
+   push_return_stack eax
+   next
+
+}
 
 macro define_exception string, jo {
 
@@ -402,7 +634,9 @@ jo:
 
    ;; here follows a jojo as function-body
 
-   }
+}
+
+match =64bit, machine {
 
 explain$exception:
    mov rsi, rax
@@ -443,13 +677,29 @@ explain$exception:
 .not_found:
    call __exit_with_six
 
+}
+
+match =64bit, machine {
+
 define_primitive_function "execute-jo", execute_jo
    ;; << jo -- UNKNOWN >>
    pop_argument_stack rax
    jmp qword [rax]
 
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "execute-jo", execute_jo
+   ;; << jo -- UNKNOWN >>
+   pop_argument_stack eax
+   jmp dword [eax]
+
+}
+
 define_variable "*jo-size*", V__jo_size
-   xx 8
+   xx jo_size
 
 define_function "jo->name", jo_to_name
    ;; << jo -- string[address, length] >>
@@ -530,14 +780,38 @@ define_function "variable-jo?", variable_jo?
    xx equal?
    xx end
 
+match =64bit, machine {
+
 define_primitive_function "end", end
    pop_return_stack rbx
    next
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "end", end
+   pop_return_stack ebx
+   next
+
+}
+
+match =64bit, machine {
 
 define_primitive_function "<>", taca
    pop_return_stack rbx
    mov rax, qword [rbx]
    jmp qword [rax]
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "<>", taca
+   pop_return_stack ebx
+   mov eax, dword [ebx]
+   jmp dword [eax]
+}
 
 match =linux =64bit, platform machine {
 
@@ -552,14 +826,26 @@ begin_to_interpret_threaded_code:
    push_return_stack rax
    next
 
-   }
+}
+
+match =linux =32bit, platform machine {
+
+begin_to_interpret_threaded_code:
+
+   cld ;; set DF = 0, then rsi and rdi are incremented
+
+   mov eax, first_jojo
+   push_return_stack eax
+   next
+
+}
 
 match =windows =64bit, platform machine {
 
 _output_handle:
-   dq 0
+   xx 0
 _input_handle:
-   dq 0
+   xx 0
 
 begin_to_interpret_threaded_code:
 
@@ -697,10 +983,6 @@ define_function "little_test", little_test
    ;;;; we will use basic-REPL to do further tests
    xx basic_REPL
    ;;;; 1 2 add .
-
-preserve 64 * jo_size
-address$argument_stack labeling
-   preserve 1024 * 1024 * jo_size
 
 define_primitive_function "drop", drop
    ;; << a -- >>
@@ -953,10 +1235,6 @@ define_primitive_function "xxxx|swap|xx", xxxxswapxx
    push_argument_stack rcx
    push_argument_stack rdx
    next
-
-preserve 64 * jo_size
-address$return_stack labeling
-   preserve 1024 * 1024 * jo_size
 
 define_variable "*literal*", V__literal
    xx literal
@@ -1474,7 +1752,7 @@ define_primitive_function "write-byte", write_byte
    syscall
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
@@ -1482,7 +1760,7 @@ buffer$write_byte:
    db 0
 
 __counter$write_byte:
-   dq 0
+   xx 0
 
 define_primitive_function "write-byte", write_byte
    ;; << byte -- >>
@@ -1565,12 +1843,12 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
    push_argument_stack rax
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
 __counter$read_line_from_stdin:
-   dq 0
+   xx 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
    ;; << buffer address, max length -- >>
@@ -1589,7 +1867,7 @@ windows_function 5
 end_windows_function
    next
 
-   }
+}
 
 define_function "read-byte", read_byte
    ;; << -- byte >>
@@ -1675,7 +1953,7 @@ define_primitive_function "open-file,to-read", open_file__to_read
    push_argument_stack rax
    next
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -1700,7 +1978,7 @@ define_primitive_function "open-file,to-write", open_file__to_write
    push_argument_stack rax
    next
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -1711,7 +1989,7 @@ define_primitive_function "close-file", close_file
    syscall
    next
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -1726,7 +2004,7 @@ define_primitive_function "read-file", read_file
    push_argument_stack rax
    next
 
-   }
+}
 
 match =linux =64bit, platform machine {
 
@@ -1741,7 +2019,7 @@ define_primitive_function "write-file", write_file
    push_argument_stack rax
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
@@ -1824,12 +2102,12 @@ windows_function 7
    mov windows64_fun_3_r8, 0 ;; no sharing
    mov windows64_fun_2_rdx, GENERIC_READ
    mov windows64_fun_1_rcx, name_buffer$open_file__to_read
-   call [CreateFile]
+   call [CreateFileA]
    push_argument_stack rax
 end_windows_function
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
@@ -1855,12 +2133,12 @@ windows_function 7
    mov windows64_fun_3_r8, 0 ;; no sharing
    mov windows64_fun_2_rdx, GENERIC_WRITE
    mov windows64_fun_1_rcx, name_buffer$open_file__to_write
-   call [CreateFile]
+   call [CreateFileA]
    push_argument_stack rax
 end_windows_function
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
@@ -1873,12 +2151,12 @@ windows_function 4
 end_windows_function
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
 __counter$read_file:
-   dq 0
+   xx 0
 
 define_primitive_function "read-file", read_file
    ;; << [file handle], buffer[address, length] --
@@ -1898,12 +2176,12 @@ end_windows_function
 
    next
 
-   }
+}
 
 match =windows =64bit, platform machine {
 
 __counter$write_file:
-   dq 0
+   xx 0
 
 define_primitive_function "write-file", write_file
    ;; << [file handle], buffer[address, length] --
@@ -1922,7 +2200,7 @@ end_windows_function
 
    next
 
-   }
+}
 
 buffer$load_file labeling
   preserve 1024 * 1024
@@ -3056,6 +3334,15 @@ last_link = link
 
 match =linux =64bit, platform machine {
 
+size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+segment readable writeable
+address$un_initialized_memory:
+   rb size$un_initialized_memory
+
+}
+
+match =linux =32bit, platform machine {
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -3063,11 +3350,9 @@ segment readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
 
-
-   }
+}
 
 match =windows =64bit, platform machine {
-
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -3075,17 +3360,15 @@ section '.data' data readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
 
-
-   }
+}
 
 if platform eq windows
 if machine eq 64bit
 
-
 ;; Macroinstructions for making import section (64-bit)
 
-macro library [name,string]
- { common
+macro library [name,string] {
+   common
     import.data:
    forward
     local _label
@@ -3103,10 +3386,11 @@ macro library [name,string]
       _label db string,0
              rb RVA $ and 1
      finish if
-    finish if }
+    finish if
+}
 
-macro import name,[label,string]
- { common
+macro import name,[label,string] {
+  common
     rb (- rva $) and 7
     if defined name#.referred
      name#.lookup:
@@ -3146,14 +3430,14 @@ macro import name,[label,string]
             rb RVA $ and 1
      finish if
    common
-    finish if }
+    finish if
+}
 
 
 finish if
 finish if
 
 match =windows =64bit, platform machine {
-
 
 section '.idata' import data readable writeable
 
@@ -3165,5 +3449,6 @@ import kernel32,\
        WriteFile,'WriteFile',\
        GetStdHandle,'GetStdHandle',\
        CloseHandle, 'CloseHandle',\
-       CreateFile, 'CreateFile'
-    }
+       CreateFileA, 'CreateFileA'
+
+}
