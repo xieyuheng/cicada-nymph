@@ -420,7 +420,7 @@
 * ===================================
 * test
   #+begin_src cicada-nymph :tangle core.cn
-  : test:core
+  : test
     << -- >>
     "core.cn.test" load-file
     end

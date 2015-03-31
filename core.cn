@@ -307,7 +307,7 @@ basic-REPL
   end
 ; define-function
 
-: test:core
+: test
   << -- >>
   "core.cn.test" load-file
   end

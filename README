@@ -29,7 +29,7 @@
 
 * to compile it
 
-  1. download FASM
+  1. download fasm (the flat assembler)
      from : http://flatassembler.net/
      or : https://github.com/the-little-language-designer/fasm
 
@@ -56,7 +56,7 @@
      fasm -m 100000 cicada-nymph.fasm
      
      1) "fasm -m 100000" means that
-        fasm will use 100Mb of memory
+        fasm will use 100000 Kb of memory
         when compiling the source code
 
      2) you can also use the IDE of fasm (windows only)
