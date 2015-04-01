@@ -30,22 +30,22 @@ all:
 linux64:
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  64bit" >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm cicada-nymph
+	fasm -m 100000 cicada-nymph.fasm 
 
 windows64:
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  64bit"   >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm cicada-nymph.exe
+	fasm -m 100000 cicada-nymph.fasm 
 
 linux32:
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  32bit" >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm cicada-nymph-32
+	fasm -m 100000 cicada-nymph.fasm 
 
 windows32:
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  32bit"   >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm cicada-nymph-32.exe
+	fasm -m 100000 cicada-nymph.fasm 
 
 clean*~:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~  
@@ -56,5 +56,5 @@ clean*.bin:
 clean:
 	make clean*~                                  &&\
 	make clean*.bin                               &&\
-	rm cicada-nymph cicada-nymph-32 cicada-nymph-32.exe cicada-nymph.exe &&\
+	rm cicada-nymph cicada-nymph.32 cicada-nymph.32.exe cicada-nymph.exe &&\
 	echo -e "\E[33;1m [ok] clean directory \E[0m"

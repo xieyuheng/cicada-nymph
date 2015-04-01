@@ -369,7 +369,7 @@ _input_handle:
    xx 0
 
 begin_to_interpret_threaded_code:
-
+ 
    cld ;; set DF = 0, then rsi and rdi are incremented
 
    push STD_INPUT_HANDLE
