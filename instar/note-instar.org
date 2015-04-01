@@ -17,18 +17,16 @@
     1. literal
     2. address
   * and primitive functions about
-    1. argument-stack
+    1. the stack
     2. bool
     3. fixnum
     4. memory
   * and taca for explicit tail-call
+  * false?branch and taca are needed for "power"
 * 3rd-instar
   * primitive function about io
     1. write_byte
     2. read_byte
-  * more instruction as special primitive function
-    1. branch
-    2. false?branch
 * 4th-instar
   * more function about io
     1. about word

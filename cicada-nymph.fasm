@@ -991,26 +991,26 @@ define_function "little_test", little_test
    ;;;; variable
    ;; xx V__little_test_number
    ;; xx exit_with_TOS
-   ;;;; 3
+   ;;;; exit ocde : 3
 
    ;;;; literal
    ;; xx literal, 4
    ;; xx exit_with_TOS
-   ;;;; 4
+   ;;;; exit ocde : 4
 
    ;;;; address
-   ;; xx address, V__little_test_number, fetch_two_bytes, add2
+   ;; xx address, V__little_test_number, fetch, add2
    ;; xx address, V__little_test_number, save
    ;; xx V__little_test_number
    ;; xx exit_with_TOS
-   ;;;; 5
+   ;;;; exit ocde : 5
 
    ;;;; taca
    ;; xx literal, 2
    ;; xx literal, 4
    ;; xx power
    ;; xx exit_with_TOS
-   ;;;; 16
+   ;;;; exit ocde : 16
 
    ;;;; write_byte
    ;; xx literal, 64, write_byte
