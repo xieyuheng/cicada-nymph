@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* re-generate 2nd-instar
 * todo
 ** [really needed] little tester
 ** error handling of load-file
@@ -10,7 +11,7 @@
    * a stack of buffer would solve this problem
 ** [maybe] make instruction a type of jo
    this is needed when doing report of the dictionary
-** [maybe] re generate instars
+** re-generate instars
 * ===================================
 * note
 ** jo & jojo
@@ -353,7 +354,7 @@
    ;; 根據 windows calling convention
    ;; 這個數字最少是 4
 
-   macro windows_function number_of_arguments \{
+   macro windows64_function number_of_arguments \{
       push rbp
       mov rbp, rsp
 
@@ -366,7 +367,7 @@
       add rsp, rbx
    \}
 
-   macro end_windows_function \{
+   macro end_windows64_function \{
       mov rsp, rbp
       pop rbp
    \}
@@ -402,39 +403,6 @@
 
    entry begin_to_interpret_threaded_code
    section '.text' code writeable readable executable
-
-   }
-   #+end_src
-** macro  [windows32]
-   * macro about windows32 calling-convention
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =windows =32bit, platform machine {
-
-
-   ;; 這裏的 number_of_arguments 其實代表
-   ;; 在對齊棧之後
-   ;; 你還想要將棧的指針 向下移動多少個單位
-   ;; 根據 windows calling convention
-   ;; 這個數字最少是 4
-
-   macro windows_function number_of_arguments \{
-      push rbp
-      mov rbp, rsp
-
-      mov rax, rsp
-      add rax, 8*number_of_arguments
-      mov rbx, 1111b
-      and rbx, rax
-
-      sub rsp, 16
-      add rsp, rbx
-   \}
-
-   macro end_windows_function \{
-      mov rsp, rbp
-      pop rbp
-   \}
-
 
    }
    #+end_src
@@ -656,11 +624,11 @@
   match =32bit, machine {
 
   macro next \{
-     pop_return_stack ebx
-       mov eax, [ebx]
-     add ebx, jo_size
-     push_return_stack ebx
-       jmp dword [eax]
+     pop_return_stack rbx
+       mov rax, [rbx]
+     add rbx, jo_size
+     push_return_stack rbx
+       jmp dword [rax]
   \}
 
   }
@@ -828,11 +796,11 @@
 
    __exit_with_TOS:
 
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       pop_argument_stack windows64_fun_1_rcx
       call [ExitProcess]
-   end_windows_function
+   end_windows64_function
 
    }
    #+end_src
@@ -842,11 +810,11 @@
 
    __exit_with_zero:
 
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       xor windows64_fun_1_rcx, windows64_fun_1_rcx
       call [ExitProcess]
-   end_windows_function
+   end_windows64_function
 
    }
    #+end_src
@@ -856,11 +824,11 @@
 
    __exit_with_six:
 
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       mov windows64_fun_1_rcx, 6
       call [ExitProcess]
-   end_windows_function
+   end_windows64_function
 
    }
    #+end_src
@@ -1074,6 +1042,7 @@
    ;; *current-free-address,primitive-string-heap*
    ;; is at epilog
    #+end_src
+** ----------------------------------
 * macro for make-jojo
 ** ----------------------------------
 ** note
@@ -1552,19 +1521,19 @@
 
       cld ;; set DF = 0, then rsi and rdi are incremented
 
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       mov windows64_fun_1_rcx, STD_INPUT_HANDLE
       call [GetStdHandle]
       mov [_input_handle], rax
-   end_windows_function
+   end_windows64_function
 
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       mov windows64_fun_1_rcx, STD_OUTPUT_HANDLE
       call [GetStdHandle]
       mov [_output_handle], rax
-   end_windows_function
+   end_windows64_function
 
       mov pointer$argument_stack,  address$argument_stack
       mov pointer$return_stack,    address$return_stack
@@ -3337,7 +3306,7 @@
       ;; write needs the address of the byte to write
       mov [buffer$write_byte], al
 
-   windows_function 5
+   windows64_function 5
       push 0
       sub rsp, 8*4
       mov windows64_fun_4_r9, __counter$write_byte
@@ -3345,7 +3314,7 @@
       mov windows64_fun_2_rdx, buffer$write_byte
       mov windows64_fun_1_rcx, [_output_handle]
       call [WriteFile]
-   end_windows_function
+   end_windows64_function
 
       next
 
@@ -3575,7 +3544,7 @@
 
    define_primitive_function "read-line-from-stdin", read_line_from_stdin
       ;; << buffer address, max length -- >>
-   windows_function 5
+   windows64_function 5
       push 0
       sub rsp, 8*4
       mov windows64_fun_4_r9, __counter$read_line_from_stdin
@@ -3587,7 +3556,7 @@
       ;; is a count of the number of bytes transferred
       mov rax, [__counter$read_line_from_stdin]
       push_argument_stack rax
-   end_windows_function
+   end_windows64_function
       next
 
    }
@@ -3986,7 +3955,7 @@
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-   windows_function 7
+   windows64_function 7
       push 0 ;; null
       push FILE_ATTRIBUTE_NORMAL
       push OPEN_EXISTING
@@ -3997,7 +3966,7 @@
       mov windows64_fun_1_rcx, name_buffer$open_file__to_read
       call [CreateFileA]
       push_argument_stack rax
-   end_windows_function
+   end_windows64_function
       next
 
    }
@@ -4019,7 +3988,7 @@
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-   windows_function 7
+   windows64_function 7
       push 0 ;; null
       push FILE_ATTRIBUTE_NORMAL
       push CREATE_ALWAYS
@@ -4030,7 +3999,7 @@
       mov windows64_fun_1_rcx, name_buffer$open_file__to_write
       call [CreateFileA]
       push_argument_stack rax
-   end_windows_function
+   end_windows64_function
       next
 
    }
@@ -4041,11 +4010,11 @@
 
    define_primitive_function "close-file", close_file
       ;; << file-handle -- >>
-   windows_function 4
+   windows64_function 4
       sub rsp, 8*4
       pop_argument_stack windows64_fun_1_rcx
       call [CloseHandle]
-   end_windows_function
+   end_windows64_function
       next
 
    }
@@ -4060,7 +4029,7 @@
    define_primitive_function "read-file", read_file
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
-   windows_function 5
+   windows64_function 5
       push 0
       sub rsp, 8*4
       mov windows64_fun_4_r9, __counter$read_file
@@ -4068,7 +4037,7 @@
       pop_argument_stack windows64_fun_2_rdx
       pop_argument_stack windows64_fun_1_rcx
       call [ReadFile]
-   end_windows_function
+   end_windows64_function
 
       mov rax, [__counter$read_file]
       push_argument_stack rax
@@ -4087,7 +4056,7 @@
    define_primitive_function "write-file", write_file
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
-   windows_function 5
+   windows64_function 5
       push 0
       sub rsp, 8*4
       mov windows64_fun_4_r9, __counter$write_file
@@ -4097,7 +4066,7 @@
       call [WriteFile]
       mov rax, [__counter$write_file]
       push_argument_stack rax
-   end_windows_function
+   end_windows64_function
 
       next
 
@@ -4190,7 +4159,7 @@
       push name_buffer$open_file__to_read
       call [CreateFileA]
       push_argument_stack rax
-   end_windows_function
+
       next
 
    }
@@ -4222,7 +4191,7 @@
       push name_buffer$open_file__to_write
       call [CreateFileA]
       push_argument_stack rax
-   end_windows_function
+
       next
 
    }
