@@ -28,14 +28,7 @@ syscall equ int 80h
 
 match =windows =32bit, platform machine {
 
-define STD_INPUT_HANDLE  -10
-define STD_OUTPUT_HANDLE -11
-
-}
-
-match =windows =32bit, platform machine {
-
-format PE console as "cicada-nymph-32.exe"
+format PE console as "32.exe"
 
 }
 
@@ -230,24 +223,6 @@ __exit_with_TOS:
 
 }
 
-match =windows =32bit, platform machine {
-
-__exit_with_zero:
-
-   push 0
-   call [ExitProcess]
-
-}
-
-match =windows =32bit, platform machine {
-
-__exit_with_six:
-
-   push 6
-   call [ExitProcess]
-
-}
-
 ;; initial link to point to 0 (as null)
 link = 0
 
@@ -363,22 +338,9 @@ define_primitive_function "end", end
 
 match =windows =32bit, platform machine {
 
-_output_handle:
-   xx 0
-_input_handle:
-   xx 0
-
 begin_to_interpret_threaded_code:
- 
+
    cld ;; set DF = 0, then rsi and rdi are incremented
-
-   push STD_INPUT_HANDLE
-   call [GetStdHandle]
-   mov [_input_handle], rax
-
-   push STD_OUTPUT_HANDLE
-   call [GetStdHandle]
-   mov [_output_handle], rax
 
    mov rax, first_jojo
    push_return_stack rax
@@ -402,15 +364,6 @@ define_function "little_test", little_test
    xx V__little_test_number
    xx exit_with_TOS
    ;;;; 3
-
-define_variable "*un-initialized-memory*", V__un_initialized_memory
-  xx address$un_initialized_memory
-
-define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
-  xx size$un_initialized_memory
-
-define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
-  xx current_free_address$un_initialized_memory
 
 match =windows =32bit, platform machine {
 

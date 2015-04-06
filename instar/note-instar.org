@@ -3,7 +3,9 @@
 #+EMAIL:  xyheme@gmail.com
 
 * note
-  * instars are written for windows 32bit version of the interpreter
+  * instars are written for
+    windows 32bit version of the interpreter
+    for my students
 * 1st-instar
   * indirect-threaded-code interpreter
     1. macro about argument_stack & return_stack

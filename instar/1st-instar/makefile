@@ -1,15 +1,15 @@
 .ONESHELL:
 
 windows32:
-	fasm -m 100000 cicada-nymph.fasm cicada-nymph-32.exe
+	fasm -m 100000 cicada-nymph.fasm
 
 clean*~:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~  
 
-clean*.bin:
-	rm -f *.bin */*.bin */*/*.bin */*/*/*.bin */*/*/*/*.bin  */*/*/*/*/*.bin
+clean*.exe:
+	rm -f *.exe */*.exe */*/*.exe */*/*/*.exe */*/*/*/*.exe  */*/*/*/*/*.exe
 
 clean:
 	make clean*~                                  &&\
-	make clean*.bin                               &&\
+	make clean*.exe                               &&\
 	echo -e "\E[33;1m [ok] clean directory \E[0m"

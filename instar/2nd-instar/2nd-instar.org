@@ -70,7 +70,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
-   format PE console as "cicada-nymph-32.exe"
+   format PE console as "32.exe"
 
    }
    #+end_src

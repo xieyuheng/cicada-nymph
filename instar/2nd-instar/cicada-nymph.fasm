@@ -35,7 +35,7 @@ define STD_OUTPUT_HANDLE -11
 
 match =windows =32bit, platform machine {
 
-format PE console as "cicada-nymph-32.exe"
+format PE console as "32.exe"
 
 }
 
@@ -422,8 +422,8 @@ define_function "little_test", little_test
    ;;;; exit ocde : 3
 
    ;;;; literal
-   ;; xx literal, 4
-   ;; xx exit_with_TOS
+   xx literal, 4
+   xx exit_with_TOS
    ;;;; exit ocde : 4
 
    ;;;; address
@@ -434,10 +434,10 @@ define_function "little_test", little_test
    ;;;; exit ocde : 5
 
    ;;;; taca
-   xx literal, 2
-   xx literal, 4
-   xx power
-   xx exit_with_TOS
+   ;; xx literal, 2
+   ;; xx literal, 4
+   ;; xx power
+   ;; xx exit_with_TOS
    ;;;; exit ocde : 16
 
 define_primitive_function "drop", drop

@@ -647,7 +647,7 @@
        << 2 >>
      * return-stack
        #+begin_src return-stack
-           (square)
+       (square)
        - [ (square) ] - [ (dup) ]
            (end)          (multiple)
                           (end)
@@ -1752,7 +1752,7 @@
    match =64bit, machine {
 
    define_primitive_function "dup", dup
-      ;; << a -- a a >>
+      ;; << a -- a, a >>
       mov  rax, [pointer$argument_stack - (1 * jo_size)]
       push_argument_stack rax
       next

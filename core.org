@@ -122,7 +122,6 @@
   1 6 .12 cr
   6 6 .12 cr
   #+end_src
-* -----------------------------------
 * re-define execute-word & basic-REPL
   * to protect macro & exception from be called from basic-REPL
   #+begin_src cicada-nymph :tangle core.cn
@@ -166,6 +165,7 @@
 
   basic-REPL
   #+end_src
+* -----------------------------------
 * report
 ** show-dictionary,primitive-function
    #+begin_src cicada-nymph :tangle core.cn
