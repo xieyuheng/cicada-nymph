@@ -355,7 +355,7 @@ define_primitive_function "bye", exit_with_TOS
    call __exit_with_TOS
 
 define_variable "", V__little_test_number
-   xx 3
+   xx 16
 
 
 define_function "little_test", little_test
