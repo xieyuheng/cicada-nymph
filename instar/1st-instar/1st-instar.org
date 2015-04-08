@@ -315,7 +315,7 @@
        #+begin_src return-stack
            (square)
        - [ (square) ] - [ (dup) ]
-           (end)          (multiple)
+           (end)          (mul)
                           (end)
        #+end_src
   3. next
@@ -324,7 +324,7 @@
      * return-stack
        #+begin_src return-stack
            (square)       (dup)
-       - [ (square) ] - [ (multiple) ]
+       - [ (square) ] - [ (mul) ]
            (end)          (end)
        #+end_src
   4. next
@@ -332,7 +332,7 @@
      * return-stack
        #+begin_src return-stack
                           (dup)
-           (square)       (multiple)
+           (square)       (mul)
        - [ (square) ] - [ (end) ]
            (end)
        #+end_src
@@ -343,7 +343,7 @@
            (square)
            (square)
        - [ (end) ] - [ (dup) ]
-                       (multiple)
+                       (mul)
                        (end)
        #+end_src
   6. next
@@ -353,7 +353,7 @@
        #+begin_src return-stack
            (square)
            (square)    (dup)
-       - [ (end) ] - [ (multiple) ]
+       - [ (end) ] - [ (mul) ]
                        (end)
        #+end_src
   7. next
@@ -362,7 +362,7 @@
      * return-stack
        #+begin_src return-stack
            (square)    (dup)
-           (square)    (multiple)
+           (square)    (mul)
        - [ (end) ] - [ (end) ]
        #+end_src
   8. next
@@ -593,6 +593,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    first_jojo:
       xx little_test
+      xx end
    #+end_src
 ** exit_with_TOS a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -612,6 +613,24 @@
       xx exit_with_TOS
       ;;;; 3
    #+end_src
+** note
+   * next
+     #+begin_src return-stack
+     - [ (little_test) ]
+         (end)
+     #+end_src
+   * next
+     #+begin_src return-stack
+         (little_test)
+     - [ (end) ] -------- [ (V__little_test_number) ]
+                            (exit_with_TOS)
+     #+end_src
+   * next
+     #+begin_src return-stack
+         (little_test)      (V__little_test_number)
+     - [ (end) ] -------- [ (exit_with_TOS) ]
+
+     #+end_src
 * -----------------------------------
 * epilog
 ** ----------------------------------

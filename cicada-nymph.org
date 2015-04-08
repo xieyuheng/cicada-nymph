@@ -649,7 +649,7 @@
        #+begin_src return-stack
        (square)
        - [ (square) ] - [ (dup) ]
-           (end)          (multiple)
+           (end)          (mul)
                           (end)
        #+end_src
   3. next
@@ -658,7 +658,7 @@
      * return-stack
        #+begin_src return-stack
            (square)       (dup)
-       - [ (square) ] - [ (multiple) ]
+       - [ (square) ] - [ (mul) ]
            (end)          (end)
        #+end_src
   4. next
@@ -666,7 +666,7 @@
      * return-stack
        #+begin_src return-stack
                           (dup)
-           (square)       (multiple)
+           (square)       (mul)
        - [ (square) ] - [ (end) ]
            (end)
        #+end_src
@@ -677,7 +677,7 @@
            (square)
            (square)
        - [ (end) ] - [ (dup) ]
-                       (multiple)
+                       (mul)
                        (end)
        #+end_src
   6. next
@@ -687,7 +687,7 @@
        #+begin_src return-stack
            (square)
            (square)    (dup)
-       - [ (end) ] - [ (multiple) ]
+       - [ (end) ] - [ (mul) ]
                        (end)
        #+end_src
   7. next
@@ -696,7 +696,7 @@
      * return-stack
        #+begin_src return-stack
            (square)    (dup)
-           (square)    (multiple)
+           (square)    (mul)
        - [ (end) ] - [ (end) ]
        #+end_src
   8. next
