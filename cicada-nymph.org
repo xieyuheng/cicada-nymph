@@ -2,7 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* todo
+* todo 
+** home-path & search-path to load-files
 ** [BUG] about div
    * div can not handle the following
      -8 2 div . 
@@ -185,6 +186,8 @@
    #+end_src
 ** ----------------------------------
 ** header [linux64]
+   * /usr/include/asm/unistd_64.h (on archlinux)
+   * http://blog.rchapman.org/post/36801038863/linux-system-call-table-for-x86-64
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -196,12 +199,12 @@
    define linux64_sys_1_rdi rdi
    define linux64_sys_n_rax rax
 
-   define linux64_syscall_read  0
-   define linux64_syscall_write 1
-   define linux64_syscall_open  2
-   define linux64_syscall_close 3
-   define linux64_syscall_exit  60
-
+   define linux64_syscall_read   0
+   define linux64_syscall_write  1
+   define linux64_syscall_open   2
+   define linux64_syscall_close  3
+   define linux64_syscall_getpid 39
+   define linux64_syscall_exit   60
    ;; about open & read & write
 
    open_read         = 0
@@ -246,6 +249,7 @@
    #+end_src
 ** ----------------------------------
 ** header [linux32]
+   * /usr/include/asm/unistd_32.h (on archlinux)
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -257,11 +261,12 @@
    define linux32_sys_1_ebx ebx
    define linux32_sys_n_eax eax
 
-   define linux32_syscall_exit  1
-   define linux32_syscall_read  3
-   define linux32_syscall_write 4
-   define linux32_syscall_open  5
-   define linux32_syscall_close 6
+   define linux32_syscall_exit    1
+   define linux32_syscall_read    3
+   define linux32_syscall_write   4
+   define linux32_syscall_open    5
+   define linux32_syscall_close   6
+   define linux32_syscall_getpid  20
 
    open_read         = 0
    open_write        = 1
@@ -5751,7 +5756,7 @@
 ** save-into,primitive-string-heap
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-      ;; << string[address, length] -- address >>
+      ;; << string[address, length] -- >>
       xx dup, V__current_free_address__primitive_string
       xx save_two_bytes
 
@@ -5770,7 +5775,7 @@
 ** save-into,jo-heap
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "save-into,jo-heap", save_into__jo_heap
-      ;; << number -- address >>
+      ;; << number -- >>
       xx V__current_free_address__jo_heap
       xx save
 

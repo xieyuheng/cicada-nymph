@@ -488,7 +488,7 @@
      execute-word
      snapshot-the-stack-pointer
      cr
-     " [" write-string
+     " * " write-string
         *the-stack-pointer-snapshot*
         *the-stack* sub
         << ad hoc for the BUG of div >>
@@ -500,10 +500,10 @@
           *jo-size* div
         then
         write-integer
-     "]" write-string
-     " <<< " write-string
+     " * " write-string
+     " -- " write-string
        print-argument-stack
-     ">>>" write-string
+     "--" write-string
      cr
      <> stack-REPL
    ; define-function
