@@ -3,6 +3,14 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** [BUG] about div
+   * div can not handle the following
+     -8 2 div . 
+** [BUG] about inline comment
+   * inline comment such as
+     add1 << dup . >> swap
+     will be viewed as
+     add1swap
 ** use cicada home directory to load init-file
 ** [really needed] little tester
 ** error handling of load-file
@@ -113,6 +121,8 @@
     * about comment
       * the comment of the argument & return value of function
         is allowed to be written in free style normal comment
+* note problem
+  * << >> can not be in ""
 * ===================================
 * prolog
 ** ----------------------------------
@@ -1836,6 +1846,12 @@
       push_argument_stack rax
       next
 
+   define_primitive_function "x|over|xxxx", xoverxxxx
+      ;; << a | b c d -- a | b c d | a >>
+      mov  rax, [pointer$argument_stack - (5 * jo_size)]
+      push_argument_stack rax
+      next
+
    define_primitive_function "xx|over|xxxx", xxoverxxxx
       ;; << a b | c d e f -- a b | c d e f | a b >>
       mov  rax, [pointer$argument_stack - (6 * jo_size)]
@@ -1886,6 +1902,13 @@
       ;; << a | b c d -- a | b c d | a >>
       mov rbx, [pointer$argument_stack]
       mov rax, [rbx - (4 * jo_size)]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "x|over|xxxx", xoverxxxx
+      ;; << a | b c d -- a | b c d | a >>
+      mov rbx, [pointer$argument_stack]
+      mov rax, [rbx - (5 * jo_size)]
       push_argument_stack rax
       next
 
@@ -2249,6 +2272,41 @@
       push_argument_stack ebx
       push_argument_stack ecx
       push_argument_stack edx
+      next
+
+   }
+   #+end_src
+** ----------------------------------
+** address
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*the-stack*", V__the_stack
+      xx address$argument_stack
+   #+end_src
+** pointer [64bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_variable "*the-stack-pointer-snapshot*", V__the_stack_pointer_snapshot
+      xx address$argument_stack
+
+   define_primitive_function "snapshot-the-stack-pointer", snapshot_the_stack_pointer
+      ;; << -- >>
+      mov [V__the_stack_pointer_snapshot + jo_size], pointer$argument_stack
+      next
+
+   }
+   #+end_src
+** pointer [32bit]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_variable "*the-stack-pointer-snapshot*", V__the_stack_pointer_snapshot
+      xx address$argument_stack
+
+   define_primitive_function "snapshot-the-stack-pointer", snapshot_the_stack_pointer
+      ;; << -- >>
+      mov eax, [pointer$argument_stack]
+      mov [V__the_stack_pointer_snapshot + jo_size], eax
       next
 
    }

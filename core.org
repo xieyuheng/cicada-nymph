@@ -410,17 +410,35 @@
    #+end_src
 * -----------------------------------
 * allocate
-  * an interface of *un-initialized-memory*
-  #+begin_src cicada-nymph :tangle core.cn
-  : allocate
-    << size -- address >>
-    *un-initialized-memory* tuck
-    add address *un-initialized-memory* save
-    end
-  ; define-function
-  #+end_src
-* ===================================
-* test
+** note
+   * an interface of *un-initialized-memory*
+** clear-memory
+   * ><><>< BUG
+   #+begin_src cicada-nymph
+   : clear-memory
+     << size, address -- >>
+     over zero? if
+       drop2
+       end
+     then
+     0 over save
+     add1 << dup . >> swap
+     sub1 << dup . >> swap
+     <> clear-memory
+   ; define-function
+   #+end_src
+** allocate-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : allocate-memory
+     << size -- address >>
+     << dup *un-initialized-memory* clear-memory >>
+     *un-initialized-memory* tuck << address as return value >>
+     add address *un-initialized-memory* save
+     end
+   ; define-function
+   #+end_src
+* -----------------------------------
+* to load test
   #+begin_src cicada-nymph :tangle core.cn
   : test
     << -- >>
@@ -428,4 +446,68 @@
     end
   ; define-function
   #+end_src
+* -----------------------------------
+* stack-REPL
+** note
+   * print argument-stack in every loop
+** write-argument-stack
+   #+begin_src cicada-nymph :tangle core.cn  
+   : print-argument-stack,loop
+     << address, counter -- >>
+     dup zero? if 
+       drop2
+       end      
+     then
+     sub1 swap
+       dup fetch .
+     *jo-size* add
+     swap     
+     <> print-argument-stack,loop
+   ; define-function
+
+   : print-argument-stack
+     << -- >>
+     snapshot-the-stack-pointer
+     *the-stack-pointer-snapshot*
+     *the-stack* greater-or-equal? if
+       *the-stack*   << address as return value >>
+       *the-stack-pointer-snapshot* *the-stack* sub
+       *jo-size* div << counter as return value >>
+       print-argument-stack,loop
+       end
+     then
+     "BELOW THE STACK " write-string
+     end
+   ; define-function
+   #+end_src
+** stack-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : stack-REPL
+     << unknown -- unknown >>
+     read-word-for-REPL
+     execute-word
+     snapshot-the-stack-pointer
+     cr
+     " [" write-string
+        *the-stack-pointer-snapshot*
+        *the-stack* sub
+        << ad hoc for the BUG of div >>
+        dup negative? if
+          negate
+          *jo-size* div
+          negate
+        else
+          *jo-size* div
+        then
+        write-integer
+     "]" write-string
+     " <<< " write-string
+       print-argument-stack
+     ">>>" write-string
+     cr
+     <> stack-REPL
+   ; define-function
+
+   stack-REPL
+   #+end_src
 * ===================================

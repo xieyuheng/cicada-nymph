@@ -300,9 +300,10 @@ basic-REPL
   end
 ; define-function
 
-: allocate
+: allocate-memory
   << size -- address >>
-  *un-initialized-memory* tuck
+  << dup *un-initialized-memory* clear-memory >>
+  *un-initialized-memory* tuck << address as return value >>
   add address *un-initialized-memory* save
   end
 ; define-function
@@ -312,3 +313,59 @@ basic-REPL
   "core.cn.test" load-file
   end
 ; define-function
+
+: print-argument-stack,loop
+  << address, counter -- >>
+  dup zero? if 
+    drop2
+    end      
+  then
+  sub1 swap
+    dup fetch .
+  *jo-size* add
+  swap     
+  <> print-argument-stack,loop
+; define-function
+
+: print-argument-stack
+  << -- >>
+  snapshot-the-stack-pointer
+  *the-stack-pointer-snapshot*
+  *the-stack* greater-or-equal? if
+    *the-stack*   << address as return value >>
+    *the-stack-pointer-snapshot* *the-stack* sub
+    *jo-size* div << counter as return value >>
+    print-argument-stack,loop
+    end
+  then
+  "BELOW THE STACK " write-string
+  end
+; define-function
+
+: stack-REPL
+  << unknown -- unknown >>
+  read-word-for-REPL
+  execute-word
+  snapshot-the-stack-pointer
+  cr
+  " [" write-string
+     *the-stack-pointer-snapshot*
+     *the-stack* sub
+     << ad hoc for the BUG of div >>
+     dup negative? if
+       negate
+       *jo-size* div
+       negate
+     else
+       *jo-size* div
+     then
+     write-integer
+  "]" write-string
+  " <<< " write-string
+    print-argument-stack
+  ">>>" write-string
+  cr
+  <> stack-REPL
+; define-function
+
+stack-REPL
