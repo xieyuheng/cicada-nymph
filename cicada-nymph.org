@@ -3,6 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** use cicada home directory to load init-file
 ** [really needed] little tester
 ** error handling of load-file
    * error code is different between windows and linux which is problematic
@@ -1030,18 +1031,6 @@
       next
    #+end_src
 ** ----------------------------------
-** *primitive-string-heap*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*primitive-string-heap*", V__primitive_string_heap
-     xx address$primitive_string_heap
-
-   define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
-     xx size$primitive_string_heap
-
-   ;; *current-free-address,primitive-string-heap*
-   ;; is at epilog
-   #+end_src
-** ----------------------------------
 * macro for make-jojo
 ** ----------------------------------
 ** note
@@ -1289,9 +1278,7 @@
       xx literal, jo_size, subtraction
       xx literal, jo_size, subtraction
       xx fetch
-      xx dup
-      xx literal, 2, addition  ;; address
-      xx swap, fetch_two_bytes ;; length
+      xx address_to_primitive_string
       xx end
    #+end_src
 ** jo->link
@@ -1346,6 +1333,27 @@
       xx end
    #+end_src
 ** ----------------------------------
+* primitive-string-heap
+** *primitive-string-heap*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*primitive-string-heap*", V__primitive_string_heap
+      xx address$primitive_string_heap
+
+   define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+      xx size$primitive_string_heap
+
+   ;; *current-free-address,primitive-string-heap*
+   ;; is at epilog
+   #+end_src
+** address->primitive-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "address->primitive-string", address_to_primitive_string
+      ;; << address -- string[address, length] >>
+      xx dup
+      xx literal, 2, addition  ;; address
+      xx swap, fetch_two_bytes ;; length
+      xx end
+   #+end_src
 * type of jo
 ** primitive-function-jo?
    #+begin_src fasm :tangle cicada-nymph.fasm

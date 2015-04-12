@@ -608,15 +608,6 @@ explain$variable:
    push_argument_stack rbx
    next
 
-define_variable "*primitive-string-heap*", V__primitive_string_heap
-  xx address$primitive_string_heap
-
-define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
-  xx size$primitive_string_heap
-
-;; *current-free-address,primitive-string-heap*
-;; is at epilog
-
 macro define_macro string, jo {
 
 define_macro__#jo:
@@ -776,9 +767,7 @@ define_function "jo->name", jo_to_name
    xx literal, jo_size, subtraction
    xx literal, jo_size, subtraction
    xx fetch
-   xx dup
-   xx literal, 2, addition  ;; address
-   xx swap, fetch_two_bytes ;; length
+   xx address_to_primitive_string
    xx end
 
 define_function "jo->link", jo_to_link
@@ -814,6 +803,22 @@ define_function "jo->type", jo_to_type
    xx   end
 
    xx fetch
+   xx end
+
+define_variable "*primitive-string-heap*", V__primitive_string_heap
+   xx address$primitive_string_heap
+
+define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+   xx size$primitive_string_heap
+
+;; *current-free-address,primitive-string-heap*
+;; is at epilog
+
+define_function "address->primitive-string", address_to_primitive_string
+   ;; << address -- string[address, length] >>
+   xx dup
+   xx literal, 2, addition  ;; address
+   xx swap, fetch_two_bytes ;; length
    xx end
 
 define_function "primitive-function-jo?", primitive_function_jo?
@@ -1123,7 +1128,7 @@ define_primitive_function "drop2", drop2
 match =64bit, machine {
 
 define_primitive_function "dup", dup
-   ;; << a -- a a >>
+   ;; << a -- a, a >>
    mov  rax, [pointer$argument_stack - (1 * jo_size)]
    push_argument_stack rax
    next

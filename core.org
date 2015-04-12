@@ -4,6 +4,8 @@
 
 * todo
 ** syntax for exception handling in cicada-nymph
+** big number and 同餘方程
+   * 爲了玩 hash-table
 * ===================================
 * misc
   #+begin_src cicada-nymph :tangle core.cn
