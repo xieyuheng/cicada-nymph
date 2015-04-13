@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* ===================================
 * 題解
   * 蟬語 是 謝宇恆 設計的程序語言
     它的名字 來源與曹植的 蟬賦
@@ -62,3 +63,4 @@
   * to send patch and fix bug
     you can do pull request here
     https://github.com/the-little-language-designer/cicada/pulls
+* ===================================

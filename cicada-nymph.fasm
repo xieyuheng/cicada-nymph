@@ -49,12 +49,12 @@ define linux64_sys_2_rsi rsi
 define linux64_sys_1_rdi rdi
 define linux64_sys_n_rax rax
 
-define linux64_syscall_read  0
-define linux64_syscall_write 1
-define linux64_syscall_open  2
-define linux64_syscall_close 3
-define linux64_syscall_exit  60
-
+define linux64_syscall_read   0
+define linux64_syscall_write  1
+define linux64_syscall_open   2
+define linux64_syscall_close  3
+define linux64_syscall_getpid 39
+define linux64_syscall_exit   60
 ;; about open & read & write
 
 open_read         = 0
@@ -103,11 +103,12 @@ define linux32_sys_2_ecx ecx
 define linux32_sys_1_ebx ebx
 define linux32_sys_n_eax eax
 
-define linux32_syscall_exit  1
-define linux32_syscall_read  3
-define linux32_syscall_write 4
-define linux32_syscall_open  5
-define linux32_syscall_close 6
+define linux32_syscall_exit    1
+define linux32_syscall_read    3
+define linux32_syscall_write   4
+define linux32_syscall_open    5
+define linux32_syscall_close   6
+define linux32_syscall_getpid  20
 
 open_read         = 0
 open_write        = 1
@@ -2485,6 +2486,18 @@ define_function "fetch2", fetch2
 
 }
 
+define_primitive_function "clear-memory", clear_memory
+   ;; << size, address -- >>
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   xor rax, rax
+.loop:
+   mov byte [rdx], al
+   inc rdx
+   dec rcx
+   loop .loop
+   next
+
 match =linux =64bit, platform machine {
 
 buffer$write_byte:
@@ -4114,7 +4127,7 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
-size$jo_heap = 3 * 1024 * 1024 * jo_size
+size$jo_heap = 1024 * 1024 * jo_size
 
 define_variable "*jo-heap*", V__jo_heap
   xx address$jo_heap
@@ -4489,7 +4502,7 @@ define_function "define-variable", CICADA__define_variable
    xx end
 
 define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-   ;; << string[address, length] -- address >>
+   ;; << string[address, length] -- >>
    xx dup, V__current_free_address__primitive_string
    xx save_two_bytes
 
@@ -4506,7 +4519,7 @@ define_function "save-into,primitive-string-heap", save_into__primitive_string_h
    xx end
 
 define_function "save-into,jo-heap", save_into__jo_heap
-   ;; << number -- address >>
+   ;; << number -- >>
    xx V__current_free_address__jo_heap
    xx save
 
@@ -4529,9 +4542,9 @@ define_variable "*current-free-address,primitive-string-heap*", V__current_free_
 
 last_link = link
 
-match =linux =64bit, platform machine {
-
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
+match =linux =64bit, platform machine {
 
 segment readable writeable
 address$un_initialized_memory:
@@ -4541,8 +4554,6 @@ address$un_initialized_memory:
 
 match =linux =32bit, platform machine {
 
-size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
-
 segment readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
@@ -4550,8 +4561,6 @@ address$un_initialized_memory:
 }
 
 match =windows =64bit, platform machine {
-
-size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
 section '.data' data readable writeable
 address$un_initialized_memory:
@@ -4651,8 +4660,6 @@ import kernel32,\
 }
 
 match =windows =32bit, platform machine {
-
-size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
 section '.data' data readable writeable
 address$un_initialized_memory:

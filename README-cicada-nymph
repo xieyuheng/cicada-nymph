@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* ===================================
 * 題解
   * 小蟬語起先是爲教學目的而寫的
     爲教我的朋友如何實現一個簡單的程序語言的解釋器
@@ -18,7 +19,7 @@
     | windows | 32bit |
     |---------+-------|
 * 編譯
-  1. 下載 fasm 
+  1. 下載 fasm
      這裏 : http://flatassembler.net/
      或這裏 : https://github.com/the-little-language-designer/fasm
   2. 通過編輯 "platform-configuration.inc"
@@ -40,7 +41,7 @@
      |-------------------------|
   3. 用下面的命令來編譯源代碼
      fasm -m 100000 cicada-nymph.fasm
-     1) "fasm -m 100000" 
+     1) "fasm -m 100000"
         意思是 fasm 在
         將源代碼文件轉化成目標代碼文件的過程中
         將用掉 100000 Kb 的內存
@@ -133,3 +134,4 @@
     | report-memory   | to get a report of memory usage  |
     | show-dictionary | to get a report of defined words |
     |-----------------+----------------------------------|
+* ===================================

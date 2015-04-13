@@ -77,8 +77,16 @@
 
 basic-REPL
 
+: allocate-memory
+  << size -- address >>
+  dup *current-free-address,un-initialized-memory* clear-memory
+  *current-free-address,un-initialized-memory* swap << address as return value >>
+  address *current-free-address,un-initialized-memory* add-save
+  end
+; define-function
+
 : loop,show-dictionary,primitive-function
-  << counter, jo -- >>
+  << counter, jo -- total >>
   dup zero? if
     drop
     end
@@ -89,7 +97,7 @@ basic-REPL
   then
   swap
     "  " write-string
-    dup . add1
+    add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
@@ -105,14 +113,13 @@ basic-REPL
 : show-dictionary,primitive-function
   << -- >>
   "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
-  1
-  *first-jo-in-dictionary*
+  0 *first-jo-in-dictionary*
   loop,show-dictionary,primitive-function
   end
 ; define-function
 
 : loop,show-dictionary,function
-  << counter, jo -- >>
+  << counter, jo -- total >>
   dup zero? if
     drop
     end
@@ -123,7 +130,7 @@ basic-REPL
   then
   swap
     "  " write-string
-    dup . add1
+    add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
@@ -139,14 +146,13 @@ basic-REPL
 : show-dictionary,function
   << -- >>
   "* ALL FUNCTION IN DICTIONARY :" write-string cr
-  1
-  *first-jo-in-dictionary*
+  0 *first-jo-in-dictionary*
   loop,show-dictionary,function
   end
 ; define-function
 
 : loop,show-dictionary,macro
-  << counter, jo -- >>
+  << counter, jo -- total >>
   dup zero? if
     drop
     end
@@ -157,7 +163,7 @@ basic-REPL
   then
   swap
     "  " write-string
-    dup . add1
+    add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
@@ -173,14 +179,13 @@ basic-REPL
 : show-dictionary,macro
   << -- >>
   "* ALL MACRO IN DICTIONARY :" write-string cr
-  1
-  *first-jo-in-dictionary*
+  0 *first-jo-in-dictionary*
   loop,show-dictionary,macro
   end
 ; define-function
 
 : loop,show-dictionary,exception
-  << counter, jo -- >>
+  << counter, jo -- total >>
   dup zero? if
     drop
     end
@@ -191,7 +196,7 @@ basic-REPL
   then
   swap
     "  " write-string
-    dup . add1
+    add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
@@ -207,14 +212,13 @@ basic-REPL
 : show-dictionary,exception
   << -- >>
   "* ALL EXCEPTION IN DICTIONARY :" write-string cr
-  1
-  *first-jo-in-dictionary*
+  0 *first-jo-in-dictionary*
   loop,show-dictionary,exception
   end
 ; define-function
 
 : loop,show-dictionary,variable
-  << counter, jo -- >>
+  << counter, jo -- total >>
   dup zero? if
     drop
     end
@@ -225,7 +229,7 @@ basic-REPL
   then
   swap
     "  " write-string
-    dup . add1
+    add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
@@ -241,8 +245,7 @@ basic-REPL
 : show-dictionary,variable
   << -- >>
   "* ALL VARIABLE IN DICTIONARY :" write-string cr
-  1
-  *first-jo-in-dictionary*
+  0 *first-jo-in-dictionary*
   loop,show-dictionary,variable
   end
 ; define-function
@@ -254,6 +257,8 @@ basic-REPL
   show-dictionary,macro
   show-dictionary,exception
   show-dictionary,variable
+  "* TOTALLY : " write-string
+  add add add add . cr
   end
 ; define-function
 
@@ -300,30 +305,34 @@ basic-REPL
   end
 ; define-function
 
-: allocate-memory
-  << size -- address >>
-  << dup *un-initialized-memory* clear-memory >>
-  *un-initialized-memory* tuck << address as return value >>
-  add address *un-initialized-memory* save
-  end
-; define-function
-
 : test
   << -- >>
   "core.cn.test" load-file
   end
 ; define-function
 
+: cicada
+  << -- >>
+  "cicada.cn" load-file
+  end
+; define-function
+
+: hi
+  << -- >>
+  " hi ^-^" write-string cr
+  end
+; define-function
+
 : print-argument-stack,loop
   << address, counter -- >>
-  dup zero? if 
+  dup zero? if
     drop2
-    end      
+    end
   then
   sub1 swap
     dup fetch .
   *jo-size* add
-  swap     
+  swap
   <> print-argument-stack,loop
 ; define-function
 
@@ -369,3 +378,5 @@ basic-REPL
 ; define-function
 
 stack-REPL
+
+hi

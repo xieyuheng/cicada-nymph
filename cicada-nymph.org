@@ -2,11 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* todo 
+* todo
 ** home-path & search-path to load-files
 ** [BUG] about div
    * div can not handle the following
-     -8 2 div . 
+     -8 2 div .
 ** [BUG] about inline comment
    * inline comment such as
      add1 << dup . >> swap
@@ -124,6 +124,9 @@
         is allowed to be written in free style normal comment
 * note problem
   * << >> can not be in ""
+  * there are 64 positions below the all those stacks
+    when you are belowing-stack so much
+    bad things happen
 * ===================================
 * prolog
 ** ----------------------------------
@@ -3306,6 +3309,20 @@
 
    }
    #+end_src
+** clear
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "clear-memory", clear_memory
+      ;; << size, address -- >>
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      xor rax, rax
+   .loop:
+      mov byte [rdx], al
+      inc rdx
+      dec rcx
+      loop .loop
+      next
+   #+end_src
 * -----------------------------------
 * basic io
 ** ----------------------------------
@@ -5314,7 +5331,7 @@
 ** ----------------------------------
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$jo_heap = 3 * 1024 * 1024 * jo_size
+   size$jo_heap = 1024 * 1024 * jo_size
 
    define_variable "*jo-heap*", V__jo_heap
      xx address$jo_heap
@@ -5827,11 +5844,14 @@
    last_link = link
    #+end_src
 ** ----------------------------------
+** size$un_initialized_memory
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+   #+end_src
+** ----------------------------------
 ** un_initialized_memory [linux64]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
-
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
    segment readable writeable
    address$un_initialized_memory:
@@ -5844,8 +5864,6 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
-
    segment readable writeable
    address$un_initialized_memory:
       rb size$un_initialized_memory
@@ -5856,8 +5874,6 @@
 ** un_initialized_memory [windows64]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
-
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
    section '.data' data readable writeable
    address$un_initialized_memory:
@@ -5965,8 +5981,6 @@
 ** un_initialized_memory [windows32]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
-
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
    section '.data' data readable writeable
    address$un_initialized_memory:

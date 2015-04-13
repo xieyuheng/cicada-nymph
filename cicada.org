@@ -1,9 +1,11 @@
 #+TITLE:  蟬語 / cicada
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-* name-hash-table
-  * some function to do report about name-hash-table
+
 * todo
+** name-hash-table
+   * better factoring
+   * better naming
 ** title-name-table
 ** data-giver
 * ===================================
@@ -41,7 +43,7 @@
      * 997
      * 499
    #+begin_src cicada-nymph :tangle cicada.cn
-   1000333
+   100333
    : *name-hash-table,size*
    ; define-variable
 
@@ -243,6 +245,15 @@
       end
     ; define-function
     #+end_src
+*** name,no-collision?
+    #+begin_src cicada-nymph :tangle cicada.cn
+    : name,no-collision?
+      << name -- bool >>
+      dup name,fetch-orbiton
+      equal?
+      end
+    ; define-function
+    #+end_src
 ** search
    #+begin_src cicada-nymph :tangle cicada.cn
    : name-hash-table,search,loop
@@ -291,30 +302,34 @@
    #+begin_src cicada-nymph :tangle cicada.cn
    : name-hash-table,insert,loop
      << string[address, length], number, counter
-        -- name
-        -- false >>
+        -- name, true
+        -- name, false >>
      xx|tuck|xx name-hash-table,hash
      xx|tuck|x
      << number, counter, name, string[address, length], name >>
      name,used? false? if
        x|over|xx name,save-string
          xx|tuck|x << name as return value >>
+       << name, number, counter, name >>
        x|over|xx 0 name-hash-table,hash
        swap name,save-orbiton
+       << name, number, counter >>
        swap 0 name-hash-table,hash
        name,save-orbit-length
+       1 address *name-hash-table,counter* add-save
+       true
        end
      then
      << number, counter, name, string[address, length] >>
      x|over|xx name,fetch-string
      xx|over|xx string-equal? if
        drop2 xx|swap|x drop2
+       true
        end
      then
      << number, counter, name, string[address, length] >>
-     x|over|xx name,fetch-orbit-length
-     *name-hash-table,size* equal? if
-       drop2 drop drop2
+     x|over|xxx *name-hash-table,size* equal? if
+       drop2 xx|swap|x drop2
        false
        end
      then
@@ -326,8 +341,8 @@
 
    : name-hash-table,insert
      << string[address, length]
-        -- name
-        -- false >>
+        -- name, true
+        -- name, false >>
      dup2 string->finite-carry-sum
      0 name-hash-table,insert,loop
      end
@@ -339,8 +354,7 @@
    : string->name
      << string[address, length] -- name >>
      name-hash-table,insert
-     dup false? if
-       drop
+     false? if
        "* (string->name) *name-hash-table* IS FULL!" write-string cr
        end
      then
@@ -354,32 +368,101 @@
    ; define-function
    #+end_src
 ** test
+   * set *name-hash-table,size* to a small number [for example 13]
+     then use the following function
+     and (name-hash-table,report) to do test
    #+begin_src cicada-nymph :tangle cicada.cn
    : name-hash-table,test
-     << -- name >>
-     "a-string-to-test-name-hash-table"
-     name-hash-table,insert . cr
-     "a-string-to-test-name-hash-table"
-     name-hash-table,search . . cr
-     "a-string-to-test-name-hash-table,2"
-     name-hash-table,search . . cr
-     "a-string-to-test-name-hash-table,2"
-     name-hash-table,insert . cr
-     "a-string-to-test-name-hash-table,2"
-     name-hash-table,search . . cr
-
-     "a-string-to-test-name-hash-table"
-     string->name dup . cr
-     name->string write-string cr
-     "a-string-to-test-name-hash-table,2"
-     string->name dup . cr
-     name->string write-string cr
+     << -- >>
+     "a-000" string->name . cr
+     "a-111" string->name . cr
+     "a-222" string->name . cr
+     "a-333" string->name . cr
+     "a-444" string->name . cr
+     "a-555" string->name . cr
+     "a-666" string->name . cr
+     "a-777" string->name . cr
+     "a-888" string->name . cr
+     "a-999" string->name . cr
+     "b-000" string->name . cr
+     "b-111" string->name . cr
+     "b-222" string->name . cr
+     "b-333" string->name . cr
+     "b-444" string->name . cr
+     "b-555" string->name . cr
+     "b-666" string->name . cr
+     "b-777" string->name . cr
+     "b-888" string->name . cr
+     "b-999" string->name . cr
      end
    ; define-function
    #+end_src
+** note about report
+   * report point orbit by orbit
+     in the following format
+   * {index} string # orbit-lenght
+     * {index} string
+     * {index} string
+     * {index} string
+   * if used as title
+     add a (AS TITLE) as postfix
 ** report
    #+begin_src cicada-nymph :tangle cicada.cn
-   
+   : name-hash-table,report,orbit
+     << name, counter -- >>
+     over name,fetch-orbit-length
+     over less-than? if
+       drop2
+       end
+     then
+     over name,fetch-string string->finite-carry-sum
+     over name-hash-table,hash
+     dup name,fetch-orbiton
+     << name, counter, new-name, orbiton >>
+     x|over|xxx name,fetch-string string->finite-carry-sum
+     0 name-hash-table,hash
+     equal? if
+       "  {" write-string
+       dup write-nature-number
+       "} " write-string
+       name,fetch-string write-string cr
+     else
+       drop
+     then
+     add1 <> name-hash-table,report,orbit
+   ; define-function
+
+   : name-hash-table,report,loop
+     << name -- >>
+     dup *name-hash-table,size* equal? if
+       drop
+       end
+     then
+     dup name,used? if
+     dup name,no-collision? if
+       << * {index} string # orbit-lenght >>
+       "* {" write-string
+       dup write-nature-number
+       "} " write-string
+       dup name,fetch-string write-string
+       " # " write-string
+       dup name,fetch-orbit-length
+       write-nature-number
+       cr
+       dup 1 name-hash-table,report,orbit
+     then
+     then
+     add1 <> name-hash-table,report,loop
+   ; define-function
+
+   : name-hash-table,report
+     << -- >>
+     0 name-hash-table,report,loop
+     "* TOTALLY : " write-string
+     *name-hash-table,counter* write-nature-number
+     cr
+     end
+   ; define-function
    #+end_src
 * >< title-name-table
 * -----------------------------------
@@ -387,4 +470,10 @@
 * >< argument-stack
 * >< frame-stack
 * -----------------------------------
+* test
+  #+begin_src cicada-nymph
+  cicada
+  name-hash-table,test
+  name-hash-table,report
+  #+end_src
 * ===================================

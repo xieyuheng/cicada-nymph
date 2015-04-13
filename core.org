@@ -3,6 +3,8 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** hi hellow hiya
+** be able to switch REPL
 ** syntax for exception handling in cicada-nymph
 ** big number and 同餘方程
    * 爲了玩 hash-table
@@ -167,12 +169,41 @@
 
   basic-REPL
   #+end_src
+* allocate
+** note
+   * an interface of *un-initialized-memory*
+** clear-memory [not using]
+   * this kinds of functions 
+     must be implemented in assembly code
+   #+begin_src cicada-nymph
+   : clear-memory
+     << size, address -- >>
+     over zero? if
+       drop2
+       end
+     then
+     0 over save
+     add1 swap
+     sub1 swap
+     <> clear-memory
+   ; define-function
+   #+end_src
+** allocate-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : allocate-memory
+     << size -- address >>
+     dup *current-free-address,un-initialized-memory* clear-memory
+     *current-free-address,un-initialized-memory* swap << address as return value >>
+     address *current-free-address,un-initialized-memory* add-save
+     end
+   ; define-function
+   #+end_src
 * -----------------------------------
 * report
 ** show-dictionary,primitive-function
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary,primitive-function
-     << counter, jo -- >>
+     << counter, jo -- total >>
      dup zero? if
        drop
        end
@@ -183,7 +214,7 @@
      then
      swap
        "  " write-string
-       dup . add1
+       add1 dup .
      swap
      dup jo->name
      dup2 space-string? if
@@ -199,8 +230,7 @@
    : show-dictionary,primitive-function
      << -- >>
      "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
-     1
-     *first-jo-in-dictionary*
+     0 *first-jo-in-dictionary*
      loop,show-dictionary,primitive-function
      end
    ; define-function
@@ -208,7 +238,7 @@
 ** show-dictionary,function
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary,function
-     << counter, jo -- >>
+     << counter, jo -- total >>
      dup zero? if
        drop
        end
@@ -219,7 +249,7 @@
      then
      swap
        "  " write-string
-       dup . add1
+       add1 dup .
      swap
      dup jo->name
      dup2 space-string? if
@@ -235,8 +265,7 @@
    : show-dictionary,function
      << -- >>
      "* ALL FUNCTION IN DICTIONARY :" write-string cr
-     1
-     *first-jo-in-dictionary*
+     0 *first-jo-in-dictionary*
      loop,show-dictionary,function
      end
    ; define-function
@@ -244,7 +273,7 @@
 ** show-dictionary,macro
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary,macro
-     << counter, jo -- >>
+     << counter, jo -- total >>
      dup zero? if
        drop
        end
@@ -255,7 +284,7 @@
      then
      swap
        "  " write-string
-       dup . add1
+       add1 dup .
      swap
      dup jo->name
      dup2 space-string? if
@@ -271,8 +300,7 @@
    : show-dictionary,macro
      << -- >>
      "* ALL MACRO IN DICTIONARY :" write-string cr
-     1
-     *first-jo-in-dictionary*
+     0 *first-jo-in-dictionary*
      loop,show-dictionary,macro
      end
    ; define-function
@@ -280,7 +308,7 @@
 ** show-dictionary,exception
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary,exception
-     << counter, jo -- >>
+     << counter, jo -- total >>
      dup zero? if
        drop
        end
@@ -291,7 +319,7 @@
      then
      swap
        "  " write-string
-       dup . add1
+       add1 dup .
      swap
      dup jo->name
      dup2 space-string? if
@@ -307,8 +335,7 @@
    : show-dictionary,exception
      << -- >>
      "* ALL EXCEPTION IN DICTIONARY :" write-string cr
-     1
-     *first-jo-in-dictionary*
+     0 *first-jo-in-dictionary*
      loop,show-dictionary,exception
      end
    ; define-function
@@ -316,7 +343,7 @@
 ** show-dictionary,variable
    #+begin_src cicada-nymph :tangle core.cn
    : loop,show-dictionary,variable
-     << counter, jo -- >>
+     << counter, jo -- total >>
      dup zero? if
        drop
        end
@@ -327,7 +354,7 @@
      then
      swap
        "  " write-string
-       dup . add1
+       add1 dup .
      swap
      dup jo->name
      dup2 space-string? if
@@ -343,8 +370,7 @@
    : show-dictionary,variable
      << -- >>
      "* ALL VARIABLE IN DICTIONARY :" write-string cr
-     1
-     *first-jo-in-dictionary*
+     0 *first-jo-in-dictionary*
      loop,show-dictionary,variable
      end
    ; define-function
@@ -360,6 +386,8 @@
      show-dictionary,macro
      show-dictionary,exception
      show-dictionary,variable
+     "* TOTALLY : " write-string
+     add add add add . cr
      end
    ; define-function
    #+end_src
@@ -408,41 +436,28 @@
      end
    ; define-function
    #+end_src
-* -----------------------------------
-* allocate
-** note
-   * an interface of *un-initialized-memory*
-** clear-memory
-   * ><><>< BUG
-   #+begin_src cicada-nymph
-   : clear-memory
-     << size, address -- >>
-     over zero? if
-       drop2
-       end
-     then
-     0 over save
-     add1 << dup . >> swap
-     sub1 << dup . >> swap
-     <> clear-memory
-   ; define-function
-   #+end_src
-** allocate-memory
+* to load
+** load core.cn.test
    #+begin_src cicada-nymph :tangle core.cn
-   : allocate-memory
-     << size -- address >>
-     << dup *un-initialized-memory* clear-memory >>
-     *un-initialized-memory* tuck << address as return value >>
-     add address *un-initialized-memory* save
+   : test
+     << -- >>
+     "core.cn.test" load-file
      end
    ; define-function
    #+end_src
-* -----------------------------------
-* to load test
+** load cicada.cn
+   #+begin_src cicada-nymph :tangle core.cn
+   : cicada
+     << -- >>
+     "cicada.cn" load-file
+     end
+   ; define-function
+   #+end_src
+* hi hellow hiya
   #+begin_src cicada-nymph :tangle core.cn
-  : test
+  : hi
     << -- >>
-    "core.cn.test" load-file
+    " hi ^-^" write-string cr
     end
   ; define-function
   #+end_src
@@ -451,17 +466,17 @@
 ** note
    * print argument-stack in every loop
 ** write-argument-stack
-   #+begin_src cicada-nymph :tangle core.cn  
+   #+begin_src cicada-nymph :tangle core.cn
    : print-argument-stack,loop
      << address, counter -- >>
-     dup zero? if 
+     dup zero? if
        drop2
-       end      
+       end
      then
      sub1 swap
        dup fetch .
      *jo-size* add
-     swap     
+     swap
      <> print-argument-stack,loop
    ; define-function
 
@@ -510,4 +525,9 @@
 
    stack-REPL
    #+end_src
+* -----------------------------------
+* more welcome
+  #+begin_src cicada-nymph :tangle core.cn
+  hi
+  #+end_src
 * ===================================
