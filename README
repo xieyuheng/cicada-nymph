@@ -1,128 +1,64 @@
+#+TITLE:  快理我 / README
+#+AUTHOR: 謝宇恆 / XIE Yuheng
+#+EMAIL:  xyheme@gmail.com
 
-
-
+* 題解
+  * 蟬語 是 謝宇恆 設計的程序語言
+    它的名字 來源與曹植的 蟬賦
+      實淡泊而寡欲兮 獨咍樂而長吟
+      聲噭噭而彌厲兮 似貞士之介心
+  * 它以 小蟬語 爲基礎 而寫成
+    https://github.com/the-little-language-designer/cicada/blob/master/README-cicada-nymph
+* 瞭解更多
+  * 你可以在這裏找到更多的文檔
+    http://the-little-language-designer.github.io/cicada/intro/contents.html
+* 最新版本
+  * 這個程序的源代碼可以在這裏下載
+    https://github.com/the-little-language-designer/cicada
+* 貢獻
+  * 聊天
+    用 IRC
+    在 irc.freenode.net 服務器的 #cicada-language 頻道
+  * 郵件列表
+    用 google group
+    論壇在這裏
+    https://groups.google.com/forum/#!forum/cicada-language
+  * 分享你的主意和經驗
+    你可以編輯維基頁面
+    https://github.com/the-little-language-designer/cicada/wiki
+  * 發現錯誤 或 要求新性狀
+    你可以在這裏創建話題
+    https://github.com/the-little-language-designer/cicada/issues
+  * 修復錯誤 或 貢獻新的性狀
+    你可以在這裏要求我把你的貢獻狀融合到主要文庫中
+    https://github.com/the-little-language-designer/cicada/pulls
+* ===================================
 * to explain the title
-
-  * the little cicada-nymph is for teaching purpose at first
-
-  * it reuses the code and idea
-    of the early version of cicada-language
-    to teach my friends
-    how to implement a interpreter
-    of a simple programming language
-
-  * I use assembly language (FASM for x86)
-    to implement the interpreter
-
-  * the programming language to be implemented
-    is a threaded-code based (Forth-like) language
-
-  * four versions of the interpreter are implemented
-    |---------+-------|
-    | linux   | 64bit |
-    | windows | 64bit |
-    | linux   | 32bit |
-    | windows | 32bit |
-    |---------+-------|
-
-
-
-* to compile it
-
-  1. download fasm (the flat assembler)
-     from : http://flatassembler.net/
-     or : https://github.com/the-little-language-designer/fasm
-
-  2. choose your platform
-     by editing "platform-configuration.inc"
-     |-------------------------|
-     | configuration           |
-     |-------------------------|
-     | define platform linux   |
-     | define machine  64bit   |
-     |-------------------------|
-     | define platform windows |
-     | define machine  64bit   |
-     |-------------------------|
-     | define platform linux   |
-     | define machine  32bit   |
-     |-------------------------|
-     | define platform windows |
-     | define machine  32bit   |
-     |-------------------------|
-
-  3. the command used to compile the source file
-     
-     fasm -m 100000 cicada-nymph.fasm
-     
-     1) "fasm -m 100000" means that
-        fasm will use 100000 Kb of memory
-        when compiling the source code
-
-     2) you can also use the IDE of fasm (windows only)
-        to compile the source file
-        * for example
-          File -> Open -> (choose the file)
-          Options -> Compiler setup -> (set Memory to : 131072)
-          Run -> Compile
-          (output file will be saved in where the source file is)
-
-
-
-* to play with it
-
-  * just open it ^-^
-    the interpreter will show you a welcome message
-
-  * note that
-    the "core.cn" must be in the same directory as the interpreter
-
-  * when you are running the interpreter
-    you can call a function by typing its name
-    for example
-    |-----------------+----------------------------------|
-    | function name   | usage                            |
-    |-----------------+----------------------------------|
-    | test            | to do a little test              |
-    | report-memory   | to get a report of memory usage  |
-    | show-dictionary | to get a report of defined words |
-    |-----------------+----------------------------------|
-
-
-
+  * the name cicada-language comes from
+    the cicada rhapsody of
+    the ancient Chinese prince CAO Zhi
+  * it is based on cicada-nymph
+    https://github.com/the-little-language-designer/cicada/blob/master/README-cicada-nymph
 * to learn more
-
   * you can find documentations here
-    http://the-little-language-designer.github.io/cicada-nymph/intro/contents.html
-
-
-
+    http://the-little-language-designer.github.io/cicada/intro/contents.html
 * to get the newest version of the program
-
   * the source code of this program can be downloaded from
-    https://github.com/the-little-language-designer/cicada-nymph
-
-
-
+    https://github.com/the-little-language-designer/cicada
 * to contribute
-
   * to chat
     we use IRC
     we have #cicada-language channel on irc.freenode.net
-
   * mailing list
     we use google group
     you can find cicada-language forum here
     https://groups.google.com/forum/#!forum/cicada-language
-
   * to share your ideas and experiences
     you can edit the wiki page here
-    https://github.com/the-little-language-designer/cicada-nymph/wiki
-
-  * to track todos, bugs, feature requests, and more
+    https://github.com/the-little-language-designer/cicada/wiki
+  * to track bugs, feature requests, and more
     you can create an issue here
-    https://github.com/the-little-language-designer/cicada-nymph/issues
-
+    https://github.com/the-little-language-designer/cicada/issues
   * to send patch and fix bug
     you can do pull request here
-    https://github.com/the-little-language-designer/cicada-nymph/pulls
+    https://github.com/the-little-language-designer/cicada/pulls
