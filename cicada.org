@@ -355,7 +355,7 @@
      << string[address, length] -- name >>
      name-hash-table,insert
      false? if
-       "* (string->name) *name-hash-table* IS FULL!" write-string cr
+       "* (string->name) *name-hash-table* IS FULL!" .s
        end
      then
      end
@@ -425,7 +425,8 @@
        "  {" write-string
        dup write-nature-number
        "} " write-string
-       name,fetch-string write-string cr
+       name,fetch-string write-string
+       cr
      else
        drop
      then

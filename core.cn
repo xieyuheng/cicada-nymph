@@ -317,9 +317,33 @@ basic-REPL
   end
 ; define-function
 
+0
+: *hi,random-base*
+; define-variable
+
+: hi,random
+  << -- random-number >>
+  *hi,random-base*
+  *hi,random-base* add1 10 mod
+  address *hi,random-base* save
+  end
+; define-function
+
+: hi,say
+  << number -- >>
+  dup 1 equal? if drop " hi ^-^" .s end then
+  dup 2 equal? if drop " hello :)" .s end then
+  dup 3 equal? if drop " hey *^-^*" .s end then
+  dup 4 equal? if drop " hiya \^o^/" .s end then
+  dup 5 equal? if drop " I wish you a lovely day" .s end then
+  dup 6 equal? if drop " I wish you a lovely day { or night :P }" .s end then
+  drop " love love ^3^" .s end
+; define-function
+
 : hi
   << -- >>
-  " hi ^-^" write-string cr
+  hi,random
+  hi,say
   end
 ; define-function
 

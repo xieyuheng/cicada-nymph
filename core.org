@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** hi hellow hiya
 ** be able to switch REPL
 ** syntax for exception handling in cicada-nymph
 ** big number and 同餘方程
@@ -173,7 +172,7 @@
 ** note
    * an interface of *un-initialized-memory*
 ** clear-memory [not using]
-   * this kinds of functions 
+   * this kinds of functions
      must be implemented in assembly code
    #+begin_src cicada-nymph
    : clear-memory
@@ -453,14 +452,39 @@
      end
    ; define-function
    #+end_src
-* hi hellow hiya
-  #+begin_src cicada-nymph :tangle core.cn
-  : hi
-    << -- >>
-    " hi ^-^" write-string cr
-    end
-  ; define-function
-  #+end_src
+* I wish you a lovely day
+** hi
+   #+begin_src cicada-nymph :tangle core.cn
+   0
+   : *hi,random-base*
+   ; define-variable
+
+   : hi,random
+     << -- random-number >>
+     *hi,random-base*
+     *hi,random-base* add1 10 mod
+     address *hi,random-base* save
+     end
+   ; define-function
+
+   : hi,say
+     << number -- >>
+     dup 1 equal? if drop " hi ^-^" .s end then
+     dup 2 equal? if drop " hello :)" .s end then
+     dup 3 equal? if drop " hey *^-^*" .s end then
+     dup 4 equal? if drop " hiya \^o^/" .s end then
+     dup 5 equal? if drop " I wish you a lovely day" .s end then
+     dup 6 equal? if drop " I wish you a lovely day { or night :P }" .s end then
+     drop " love love ^3^" .s end
+   ; define-function
+
+   : hi
+     << -- >>
+     hi,random
+     hi,say
+     end
+   ; define-function
+   #+end_src
 * -----------------------------------
 * stack-REPL
 ** note
