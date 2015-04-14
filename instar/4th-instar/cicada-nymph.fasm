@@ -1,9 +1,5 @@
-;;;; before you compile the code
-;;;; do not forget to choose your platform
-;;;; in the following code
-
-linux? equ yes
-windows? equ no
+define platform windows
+define machine  32bit
 
 ;; in fasm, "dup" is a reserved word
 dup equ duplicate
@@ -12,201 +8,245 @@ dup equ duplicate
 finish equ end
 end equ exit
 
-if linux? eq yes
+match =32bit, machine {
 
-define sys_6_r8  r8
-define sys_5_r9  r9
-define sys_4_r10 r10
-define sys_3_rdx rdx
-define sys_2_rsi rsi
-define sys_1_rdi rdi
-define sys_n_rax rax
+jo_size = 4 ;; (byte)
+xx equ dd
 
-;; the only three linux syscall we will use
-define syscall_read  0
-define syscall_write 1
-define syscall_exit  60
+rax equ eax
+rbx equ ebx
+rcx equ ecx
+rdx equ edx
+rsp equ esp
+rbp equ ebp
+rsi equ esi
+rdi equ edi
 
-finish if
+syscall equ int 80h
 
-if linux? eq yes
+}
 
-format elf64 executable 3
-
-finish if
-
-if linux? eq yes
-
-entry begin_to_interpret_threaded_code
-segment readable executable writeable
-
-finish if
-
-if windows? eq yes
-
-define fun_4_r9  r9
-define fun_3_r8  r8
-define fun_2_rdx rdx
-define fun_1_rcx rcx
+match =windows =32bit, platform machine {
 
 define STD_INPUT_HANDLE  -10
 define STD_OUTPUT_HANDLE -11
 
-finish if
+}
 
-if windows? eq yes
+match =windows =32bit, platform machine {
 
-format PE64 console
+format PE console as "32.exe"
 
-finish if
+}
 
-if windows? eq yes
+match =windows =32bit, platform machine {
 
 entry begin_to_interpret_threaded_code
 section '.text' code writeable readable executable
 
-finish if
-
-jo_size = 8 ;; (byte)
-xx equ dq
-
-;; if you want to extend cicada in assembly
-;; the following registers must NOT be used
-
-;; =================================
-define pointer$argument_stack   r15
-define pointer$return_stack     r14
-;; =================================
-
-macro push_argument_stack register {
-   mov [pointer$argument_stack], register
-   add pointer$argument_stack, jo_size
-   }
-macro pop_argument_stack register {
-   sub pointer$argument_stack, jo_size
-   mov register, [pointer$argument_stack]
-   }
-
-macro push_return_stack register {
-   mov [pointer$return_stack], register
-   add pointer$return_stack, jo_size
-   }
-macro pop_return_stack register {
-   sub pointer$return_stack, jo_size
-   mov register, [pointer$return_stack]
-   }
+}
 
 current_free_address$un_initialized_memory = address$un_initialized_memory
 
 labeling  equ = current_free_address$un_initialized_memory
 preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
 
-macro next {
+preserve 64 * jo_size
+address$argument_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =64bit, machine {
+
+;; if you want to extend cicada in assembly
+;; the following registers must NOT be used
+
+define pointer$argument_stack r15
+
+}
+
+match =64bit, machine {
+
+macro push_argument_stack register \{
+   mov [pointer$argument_stack], register
+   add pointer$argument_stack, jo_size
+\}
+
+macro pop_argument_stack register \{
+   sub pointer$argument_stack, jo_size
+   mov register, [pointer$argument_stack]
+\}
+
+}
+
+match =32bit, machine {
+
+pointer$argument_stack:
+   xx address$argument_stack
+
+}
+
+match =32bit, machine {
+
+macro push_argument_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$argument_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$argument_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$argument_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$argument_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_argument_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$argument_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$argument_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$argument_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$argument_stack], eax
+   pop eax
+   finish if
+\}
+
+}
+
+preserve 64 * jo_size
+address$return_stack labeling
+   preserve 1024 * 1024 * jo_size
+
+match =64bit, machine {
+
+;; if you want to extend cicada in assembly
+;; the following registers must NOT be used
+
+define pointer$return_stack r14
+
+}
+
+match =64bit, machine {
+
+macro push_return_stack register \{
+   mov [pointer$return_stack], register
+   add pointer$return_stack, jo_size
+\}
+
+macro pop_return_stack register \{
+   sub pointer$return_stack, jo_size
+   mov register, [pointer$return_stack]
+\}
+
+}
+
+match =32bit, machine {
+
+pointer$return_stack:
+   xx address$return_stack
+
+}
+
+match =32bit, machine {
+
+macro push_return_stack register \{
+   if register in <eax>
+   push ebx
+   mov ebx, [pointer$return_stack]
+   mov [ebx], register
+   add ebx, jo_size
+   mov [pointer$return_stack], ebx
+   pop ebx
+   else
+   push eax
+   mov eax, [pointer$return_stack]
+   mov [eax], register
+   add eax, jo_size
+   mov [pointer$return_stack], eax
+   pop eax
+   finish if
+\}
+
+macro pop_return_stack register \{
+   if register in <eax>
+   mov ebx, [pointer$return_stack]
+   sub ebx, jo_size
+   mov register, [ebx]
+   mov [pointer$return_stack], ebx
+   else
+   mov eax, [pointer$return_stack]
+   sub eax, jo_size
+   mov register, [eax]
+   mov [pointer$return_stack], eax
+   finish if
+\}
+
+}
+
+match =64bit, machine {
+
+macro next \{
    pop_return_stack rbx
-     mov rax, qword [rbx]
+     mov rax, [rbx]
    add rbx, jo_size
    push_return_stack rbx
      jmp qword [rax]
+\}
+
 }
 
-if linux? eq yes
+
+match =32bit, machine {
+
+macro next \{
+   pop_return_stack rbx
+     mov rax, [rbx]
+   add rbx, jo_size
+   push_return_stack rbx
+     jmp dword [rax]
+\}
+
+}
+
+match =windows =32bit, platform machine {
 
 __exit_with_TOS:
-   pop_argument_stack sys_1_rdi
-   mov sys_n_rax, syscall_exit
-   syscall
 
-finish if
+   pop_argument_stack rax
+   push rax
+   call [ExitProcess]
 
-if linux? eq yes
+}
+
+match =windows =32bit, platform machine {
 
 __exit_with_zero:
-   xor sys_1_rdi, sys_1_rdi
-   mov sys_n_rax, syscall_exit
-   syscall
 
-finish if
+   push 0
+   call [ExitProcess]
 
-if linux? eq yes
+}
+
+match =windows =32bit, platform machine {
 
 __exit_with_six:
-   mov sys_1_rdi, 6
-   mov sys_n_rax, syscall_exit
-   syscall
 
-finish if
-
-if windows? eq yes
-
-__exit_with_TOS:
-   number_of_arguments = 4
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-   sub rsp, 8*4
-   pop_argument_stack fun_1_rcx
+   push 6
    call [ExitProcess]
 
-   mov rsp, rbp
-   pop rbp
-
-finish if
-
-if windows? eq yes
-
-__exit_with_zero:
-   number_of_arguments = 4
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-   sub rsp, 8*4
-   xor fun_1_rcx, fun_1_rcx
-   call [ExitProcess]
-
-   mov rsp, rbp
-   pop rbp
-
-finish if
-
-if windows? eq yes
-
-__exit_with_six:
-   number_of_arguments = 4
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-   sub rsp, 8*4
-   mov fun_1_rcx, 15
-   call [ExitProcess]
-
-   mov rsp, rbp
-   pop rbp
-
-finish if
+}
 
 ;; initial link to point to 0 (as null)
 link = 0
@@ -260,7 +300,7 @@ jo:
 
    ;; here follows a jojo as function-body
 
-   }
+}
 
 explain$function:
    add rax, jo_size
@@ -288,7 +328,7 @@ assembly_code__#jo:
    ;; here follows assembly code
    ;; as primitive function body
 
-   }
+}
 
 macro define_variable string, jo {
 
@@ -309,7 +349,7 @@ jo:
    ;; here follows a value of jo_size
    ;; only one value is allowed
 
-   }
+}
 
 explain$variable:
    add rax, jo_size
@@ -317,106 +357,34 @@ explain$variable:
    push_argument_stack rbx
    next
 
-macro define_macro string, jo {
-
-define_macro__#jo:
-
-name__#jo:
-   xx current_free_address$primitive_string_heap
-
-   make_primitive_string string
-
-link__#jo:
-   xx link
-   link = link__#jo
-
-jo:
-   xx explain$macro
-
-   ;; here follows a jojo as function-body
-
-   }
-
-explain$macro:
-   add rax, jo_size
-   push_return_stack rax
-   next
-
-macro define_exception string, jo {
-
-define_exception__#jo:
-
-name__#jo:
-   xx current_free_address$primitive_string_heap
-
-   make_primitive_string string
-
-link__#jo:
-   xx link
-   link = link__#jo
-
-jo:
-   xx explain$exception
-
-   ;; here follows a jojo as function-body
-
-   }
-
-explain$exception:
-   mov rsi, rax
-
-.next_jojo:
-   pop_return_stack rbx
-   mov rax, qword [rbx]
-   cmp rax, exception_head
-   je .next_jo
-   cmp pointer$return_stack, address$return_stack
-   je .not_found
-   jmp .next_jojo
-
-
-.next_jo:
-   ;; expecting
-   ;;   rbx jojo
-   ;;   rsi jo (to cmp)
-   add rbx, jo_size
-   mov rax, qword [rbx]
-   cmp rax, rsi
-   je .found
-   test rax, rax
-   jz .next_jojo
-   jmp .next_jo
-
-
-.found:
-   ;; expecting
-   ;;   pointer$return_stack
-   ;;   rsi jo
-   pop_return_stack rax
-   mov pointer$argument_stack, rax
-   add rsi, jo_size
-   push_return_stack rsi
-   next
-
-.not_found:
-   call __exit_with_six
+match =64bit, machine {
 
 define_primitive_function "execute-jo", execute_jo
-   ;; << jo -- unknown >>
+   ;; << jo -- UNKNOWN >>
    pop_argument_stack rax
    jmp qword [rax]
 
+}
+
+
+match =32bit, machine {
+
+define_primitive_function "execute-jo", execute_jo
+   ;; << jo -- UNKNOWN >>
+   pop_argument_stack eax
+   jmp dword [eax]
+
+}
+
 define_variable "*jo-size*", V__jo_size
-   xx 8
+   xx jo_size
 
 define_function "jo->name", jo_to_name
    ;; << jo -- string[address, length] >>
    xx literal, jo_size, subtraction
    xx literal, jo_size, subtraction
    xx fetch
-   xx dup
-   xx   literal, 2, addition, swap
-   xx fetch_two_bytes
+   xx address_to_primitive_string
    xx end
 
 define_function "jo->link", jo_to_link
@@ -436,6 +404,8 @@ define_function "jo->pre-jo", jo_to_pre_jo
    ;; << jo -- pre-jo >>
    xx jo_to_link
    xx fetch
+   xx dup, zero?, false?branch, 2
+   xx   end
    xx literal, jo_size
    xx addition
    xx end
@@ -445,151 +415,78 @@ define_function "jo->type", jo_to_type
    xx dup
 
    xx dup, fetch
-   xx swap, subtraction, literal, 8, equal?, false?branch, 4
+   xx swap, subtraction, literal, jo_size, equal?, false?branch, 4
    xx   drop, zero
    xx   end
 
    xx fetch
    xx end
 
-define_function "primitive-function-jo?", primitive_function_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx zero?
-   xx end
+define_variable "*primitive-string-heap*", V__primitive_string_heap
+   xx address$primitive_string_heap
 
-define_function "function-jo?", function_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx literal, explain$function
-   xx equal?
-   xx end
+define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
+   xx size$primitive_string_heap
 
-define_function "macro-jo?", macro_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx literal, explain$macro
-   xx equal?
-   xx end
+;; *current-free-address,primitive-string-heap*
+;; is at epilog
 
-define_function "exception-jo?", exception_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx literal, explain$exception
-   xx equal?
-   xx end
-
-define_function "variable-jo?", variable_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx literal, explain$variable
-   xx equal?
+define_function "address->primitive-string", address_to_primitive_string
+   ;; << address -- string[address, length] >>
+   xx dup
+   xx literal, 2, addition  ;; address
+   xx swap, fetch_two_bytes ;; length
    xx end
 
 define_primitive_function "end", end
    pop_return_stack rbx
    next
 
+match =64bit, machine {
+
 define_primitive_function "<>", taca
    pop_return_stack rbx
-   mov rax, qword [rbx]
+   mov rax, [rbx]
    jmp qword [rax]
+}
 
-if linux? eq yes
 
-begin_to_interpret_threaded_code:
+match =32bit, machine {
 
-   cld ;; set DF = 0, then rsi and rdi are incremented
+define_primitive_function "<>", taca
+   pop_return_stack rbx
+   mov rax, [rbx]
+   jmp dword [rax]
 
-   mov pointer$argument_stack,  address$argument_stack
-   mov pointer$return_stack,    address$return_stack
+}
 
-   mov rax, first_jojo
-   push_return_stack rax
-   next
+match =windows =32bit, platform machine {
 
-finish if
-
-if windows? eq yes
-
-;;;; for windows
 _output_handle:
-   dq 0
+   xx 0
 _input_handle:
-   dq 0
-;;;;
+   xx 0
 
 begin_to_interpret_threaded_code:
 
    cld ;; set DF = 0, then rsi and rdi are incremented
 
-
-   ;;;; for windows
-   number_of_arguments = 4
-   push rbp
-   mov rbp, rsp
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-
-   sub rsp, 8*4
-   mov fun_1_rcx, STD_INPUT_HANDLE
+   push STD_INPUT_HANDLE
    call [GetStdHandle]
    mov [_input_handle], rax
 
-
-   mov rsp, rbp
-   pop rbp
-
-
-
-   number_of_arguments = 4
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-   sub rsp, 8*4
-   mov fun_1_rcx, STD_OUTPUT_HANDLE
+   push STD_OUTPUT_HANDLE
    call [GetStdHandle]
    mov [_output_handle], rax
-
-   mov rsp, rbp
-   pop rbp
-   ;;;;
-
-
-   mov pointer$argument_stack,  address$argument_stack
-   mov pointer$return_stack,    address$return_stack
 
    mov rax, first_jojo
    push_return_stack rax
    next
 
-finish if
+}
 
 first_jojo:
-   xx basic_REPL
-
-   ;; you can use comment out "xx basic_REPL"
-   ;; and use the following "xx little_test"
-   ;; to do some little tests
-   ;; by set up the code block beneath
-   ;;    define_function "little_test", little_test
-
-   ;; xx little_test
+   xx little_test
 
 define_primitive_function "bye", exit_with_TOS
    call __exit_with_TOS
@@ -603,19 +500,26 @@ define_function "little_test", little_test
    ;;;; variable
    ;; xx V__little_test_number
    ;; xx exit_with_TOS
-   ;;;; 3
+   ;;;; exit ocde : 3
 
    ;;;; literal
    ;; xx literal, 4
    ;; xx exit_with_TOS
-   ;;;; 4
+   ;;;; exit ocde : 4
 
    ;;;; address
    ;; xx address, V__little_test_number, fetch, add2
    ;; xx address, V__little_test_number, save
    ;; xx V__little_test_number
    ;; xx exit_with_TOS
-   ;;;; 5
+   ;;;; exit ocde : 5
+
+   ;;;; taca
+   ;; xx literal, 2
+   ;; xx literal, 4
+   ;; xx power
+   ;; xx exit_with_TOS
+   ;;;; exit ocde : 16
 
    ;;;; write_byte
    ;; xx literal, 64, write_byte
@@ -640,12 +544,12 @@ define_function "little_test", little_test
    ;;;; echo line
 
    ;;;; false?branch
-   ;; xx V__false, false?branch, 9
+   ;; xx false, false?branch, 9
    ;; xx   literal, 64, write_byte
    ;; xx   literal, 10, write_byte
    ;; xx   zero
    ;; xx   exit_with_TOS
-   ;; xx V__true, false?branch, 9
+   ;; xx true, false?branch, 9
    ;; xx   literal, 65, write_byte
    ;; xx   literal, 10, write_byte
    ;; xx   zero
@@ -655,12 +559,12 @@ define_function "little_test", little_test
    ;;;; A
 
    ;;;; read_word & write_string
-   ;; xx read_word, write_string
-   ;; xx literal, 10, write_byte
-   ;; xx read_word_for_REPL, write_string
-   ;; xx literal, 10, write_byte
-   ;; xx zero
-   ;; xx exit_with_TOS
+   xx read_word, write_string
+   xx literal, 10, write_byte
+   xx read_word_for_REPL, write_string
+   xx literal, 10, write_byte
+   xx zero
+   xx exit_with_TOS
    ;;;; read line
    ;;;; write first two words of the line
 
@@ -672,19 +576,47 @@ define_function "little_test", little_test
 
    ;;;; use jo_to_name to test the macro make_primitive_string
    ;; xx literal, jo_to_name, jo_to_name, write_string
+   ;; xx literal, 10, write_byte
+   ;; xx literal, addition, jo_to_name, write_string
+   ;; xx literal, 10, write_byte
    ;; xx zero
    ;; xx exit_with_TOS
    ;;;; print "jo->name"
+   ;;;; print "add"
+
+   ;;;; xxoverxx
+   ;; xx literal, 1
+   ;; xx literal, 2
+   ;; xx literal, 3
+   ;; xx literal, 4
+   ;; xx xxoverxx
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx pretty_write_integer
+   ;; xx zero
+   ;; xx exit_with_TOS
+   ;;;; 2 1 4 3 2 1
+
+   ;;;; find
+   ;; xx read_word, string_to_integer ;; number
+   ;; xx read_word, string_to_integer ;; number
+   ;; xx read_word, find ;; add
+   ;; xx drop ;; true
+   ;; xx execute_jo
+   ;; xx write_integer
+   ;; xx zero
+   ;; xx exit_with_TOS
+   ;;;; 1 2 add
+   ;;;; print "3"
 
    ;;;; basic-REPL (without the ability to define function)
    ;;;; after this test
    ;;;; we will use basic-REPL to do further tests
-   xx basic_REPL
+   ;; xx basic_REPL
    ;;;; 1 2 add .
-
-preserve 64 * jo_size
-address$argument_stack labeling
-   preserve 1024 * 1024 * jo_size
 
 define_primitive_function "drop", drop
    ;; << a -- >>
@@ -697,61 +629,78 @@ define_primitive_function "drop2", drop2
    pop_argument_stack rax
    next
 
+match =32bit, machine {
+
 define_primitive_function "dup", dup
    ;; << a -- a a >>
-   mov  rax, [pointer$argument_stack - (1 * jo_size)]
+   pop_argument_stack rax
+   push_argument_stack rax
    push_argument_stack rax
    next
 
 define_primitive_function "dup2", dup2
    ;; << a b -- a b a b >>
-   mov  rbx, [pointer$argument_stack - (1 * jo_size)]
-   mov  rax, [pointer$argument_stack - (2 * jo_size)]
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rax
+   push_argument_stack rbx
    push_argument_stack rax
    push_argument_stack rbx
    next
 
+}
+
+match =32bit, machine {
+
 define_primitive_function "over", over
    ;; << a b -- a b | a >>
-   mov  rax, [pointer$argument_stack - (2 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (2 * jo_size)]
    push_argument_stack rax
    next
 
 define_primitive_function "x|over|xx", xoverxx
    ;; << a | b c -- a | b c | a >>
-   mov  rax, [pointer$argument_stack - (3 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (3 * jo_size)]
    push_argument_stack rax
    next
 
 define_primitive_function "xx|over|x", xxoverx
    ;; << a b | c -- a b | c | a b >>
-   mov  rax, [pointer$argument_stack - (3 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (3 * jo_size)]
    push_argument_stack rax
-   mov  rax, [pointer$argument_stack - (3 * jo_size)]
+   mov rax, [rbx - (2 * jo_size)]
    push_argument_stack rax
    next
 
 define_primitive_function "xx|over|xx", xxoverxx
    ;; << a b | c d -- a b | c d | a b >>
-   mov  rax, [pointer$argument_stack - (4 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (4 * jo_size)]
    push_argument_stack rax
-   mov  rax, [pointer$argument_stack - (4 * jo_size)]
+   mov rax, [rbx - (3 * jo_size)]
    push_argument_stack rax
    next
 
 define_primitive_function "x|over|xxx", xoverxxx
    ;; << a | b c d -- a | b c d | a >>
-   mov  rax, [pointer$argument_stack - (4 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (4 * jo_size)]
    push_argument_stack rax
    next
 
 define_primitive_function "xx|over|xxxx", xxoverxxxx
    ;; << a b | c d e f -- a b | c d e f | a b >>
-   mov  rax, [pointer$argument_stack - (6 * jo_size)]
+   mov rbx, [pointer$argument_stack]
+   mov rax, [rbx - (6 * jo_size)]
    push_argument_stack rax
-   mov  rax, [pointer$argument_stack - (6 * jo_size)]
+   mov rax, [rbx - (5 * jo_size)]
    push_argument_stack rax
    next
+
+}
 
 define_primitive_function "tuck", tuck
    ;; << a b -- b | a b >>
@@ -812,135 +761,163 @@ define_primitive_function "xxx|tuck|x", xxxtuckx
    push_argument_stack rdx
    next
 
+match =32bit, machine {
+
 define_primitive_function "swap", swap
    ;; << a b -- b a >>
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rax
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack eax
    next
 
 define_primitive_function "x|swap|xx", xswapxx
    ;; << a | b c -- b c | a >>
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
-   push_argument_stack rax
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
+   push_argument_stack eax
    next
 
 define_primitive_function "xx|swap|x", xxswapx
    ;; << a b | c -- c | a b >>
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rcx
-   push_argument_stack rax
-   push_argument_stack rbx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ecx
+   push_argument_stack eax
+   push_argument_stack ebx
    next
 
 define_primitive_function "x|swap|xxx", xswapxxx
    ;; << a | b c d -- b c d | a >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
-   push_argument_stack rdx
-   push_argument_stack rax
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
+   push_argument_stack edx
+   push_argument_stack eax
    next
 
 define_primitive_function "xxx|swap|x", xxxswapx
    ;; << a b c | d -- d | a b c >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rdx
-   push_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack edx
+   push_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
    next
 
 define_primitive_function "xx|swap|xx", xxswapxx
    ;; << a b | c d -- c d | a b >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rcx
-   push_argument_stack rdx
-   push_argument_stack rax
-   push_argument_stack rbx
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ecx
+   push_argument_stack edx
+   push_argument_stack eax
+   push_argument_stack ebx
    next
 
 
 define_primitive_function "x|swap|xxxx", xswapxxxx
    ;; << a | b c d e -- b c d e | a >>
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
-   push_argument_stack rdx
-   push_argument_stack r8 ;; e
-   push_argument_stack rax
+   pop_argument_stack eax ;; e
+   push eax
+
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
+   push_argument_stack edx
+
+   pop eax
+   push_argument_stack eax ;; e
+
+   push_argument_stack eax
    next
 
 define_primitive_function "xxxx|swap|x", xxxxswapx
    ;; << a b c d | e --  e | a b c d >>
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack r8 ;; e
-   push_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
-   push_argument_stack rdx
+   pop_argument_stack eax ;; e
+   push eax
+
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+
+   pop eax
+   push_argument_stack eax ;; e
+
+   push_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
+   push_argument_stack edx
    next
 
 
 define_primitive_function "xx|swap|xxxx", xxswapxxxx
    ;; << a b | c d e f -- c d e f | a b >>
-   pop_argument_stack r9 ;; f
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack rcx
-   push_argument_stack rdx
-   push_argument_stack r8 ;; e
-   push_argument_stack r9 ;; f
-   push_argument_stack rax
-   push_argument_stack rbx
+   pop_argument_stack eax ;; f
+   push eax
+
+   pop_argument_stack eax ;; e
+   push eax
+
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+   push_argument_stack ecx
+   push_argument_stack edx
+
+   pop eax
+   push_argument_stack eax ;; e
+
+   pop eax
+   push_argument_stack eax ;; f
+
+   push_argument_stack eax
+   push_argument_stack ebx
    next
 
 define_primitive_function "xxxx|swap|xx", xxxxswapxx
    ;; << a b c d | e f --  e f | a b c d >>
-   pop_argument_stack r9 ;; f
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack r8 ;; e
-   push_argument_stack r9 ;; f
-   push_argument_stack rax
-   push_argument_stack rbx
-   push_argument_stack rcx
-   push_argument_stack rdx
+   pop_argument_stack eax ;; f
+   push eax
+
+   pop_argument_stack eax ;; e
+   push eax
+
+   pop_argument_stack edx
+   pop_argument_stack ecx
+   pop_argument_stack ebx
+   pop_argument_stack eax
+
+   pop eax
+   push_argument_stack eax ;; e
+
+   pop eax
+   push_argument_stack eax ;; f
+
+   push_argument_stack eax
+   push_argument_stack ebx
+   push_argument_stack ecx
+   push_argument_stack edx
    next
 
-preserve 64 * jo_size
-address$return_stack labeling
-   preserve 1024 * 1024 * jo_size
+}
 
 define_variable "*literal*", V__literal
    xx literal
@@ -1000,33 +977,6 @@ help__false?branch__not_to_branch:
    push_return_stack rbx
    next
 
-define_primitive_function "", prepare_for
-   ;; << -- >>
-   pop_return_stack rbx
-   push_return_stack pointer$argument_stack
-   push_return_stack rbx
-.next:
-   add rbx, jo_size
-   mov rax, qword [rbx]
-   cmp rax, end_of_prepare
-   je .then
-   jmp .next
-.then:
-   add rbx, jo_size
-   push_return_stack rbx
-   next
-
-define_variable "*end-of-prepare*", V__end_of_prepare
-
-end_of_prepare:
-   xx 0
-
-define_primitive_function "", exception_head
-   ;; << -- >>
-   pop_return_stack rax
-   pop_return_stack rax
-   next
-
 define_primitive_function "false", false
    ;; << -- false >>
    xor rax, rax
@@ -1050,28 +1000,36 @@ define_function "true?", true?
    xx true, equal?
    xx end
 
+match =32bit, machine {
+
 define_primitive_function "bitwise-and", bitwise_and
    ;; << a, b -- a and b >>
    pop_argument_stack rbx
-   and [pointer$argument_stack - (1 * jo_size)], rbx
+   mov rax, [pointer$argument_stack]
+   and [rax - (1 * jo_size)], rbx
    next
 
 define_primitive_function "bitwise-or", bitwise_or
    ;; << a, b -- a or b >>
    pop_argument_stack rbx
-   or  [pointer$argument_stack - (1 * jo_size)], rbx
+   mov rax, [pointer$argument_stack]
+   or  [rax - (1 * jo_size)], rbx
    next
 
 define_primitive_function "bitwise-xor", bitwise_xor
    ;; << a, b -- a xor b >>
    pop_argument_stack rbx
-   xor [pointer$argument_stack - (1 * jo_size)], rbx
+   mov rax, [pointer$argument_stack]
+   xor [rax - (1 * jo_size)], rbx
    next
 
 define_primitive_function "bitwise-invert", bitwise_invert
    ;; << a -- invert a >>
-   not qword [pointer$argument_stack - (1 * jo_size)]
+   mov rax, [pointer$argument_stack]
+   not dword [rax - (1 * jo_size)]
    next
+
+}
 
 define_primitive_function "zero", zero
    ;; << -- 0 >>
@@ -1096,69 +1054,109 @@ define_function "one?", one?
    xx one, equal?
    xx end
 
+match =32bit, machine {
+
 define_primitive_function "add1", add1
    ;; << n -- n+1 >>
-   inc qword [pointer$argument_stack - (1 * jo_size)]
+   pop_argument_stack rax
+   inc rax
+   push_argument_stack rax
    next
 
 define_primitive_function "add2", add2
    ;; << n -- n+2 >>
-   add qword [pointer$argument_stack - (1 * jo_size)], 2
+   pop_argument_stack rax
+   inc rax
+   inc rax
+   push_argument_stack rax
    next
 
 define_primitive_function "add3", add3
    ;; << n -- n+3 >>
-   add qword [pointer$argument_stack - (1 * jo_size)], 3
+   pop_argument_stack rax
+   inc rax
+   inc rax
+   inc rax
+   push_argument_stack rax
    next
 
 define_primitive_function "add4", add4
    ;; << n -- n+4 >>
-   add qword [pointer$argument_stack - (1 * jo_size)], 4
+   pop_argument_stack rax
+   inc rax
+   inc rax
+   inc rax
+   inc rax
+   push_argument_stack rax
    next
 
 define_primitive_function "add8", add8
    ;; << n -- n+8 >>
-   add qword [pointer$argument_stack - (1 * jo_size)], 8
+   pop_argument_stack rax
+   add rax, 8
+   push_argument_stack rax
    next
 
 
 define_primitive_function "sub1", sub1
    ;; << n -- n-1 >>
-   dec qword [pointer$argument_stack - (1 * jo_size)]
+   pop_argument_stack rax
+   dec rax
+   push_argument_stack rax
    next
 
 define_primitive_function "sub2", sub2
    ;; << n -- n-2 >>
-   sub qword [pointer$argument_stack - (1 * jo_size)], 2
+   pop_argument_stack rax
+   dec rax
+   dec rax
+   push_argument_stack rax
    next
 
 define_primitive_function "sub3", sub3
    ;; << n -- n-3 >>
-   sub qword [pointer$argument_stack - (1 * jo_size)], 3
+   pop_argument_stack rax
+   dec rax
+   dec rax
+   dec rax
+   push_argument_stack rax
    next
 
 define_primitive_function "sub4", sub4
    ;; << n -- n-4 >>
-   sub qword [pointer$argument_stack - (1 * jo_size)], 4
+   pop_argument_stack rax
+   dec rax
+   dec rax
+   dec rax
+   dec rax
+   push_argument_stack rax
    next
 
 define_primitive_function "sub8", sub8
    ;; << n -- n-8 >>
-   sub qword [pointer$argument_stack - (1 * jo_size)], 8
+   pop_argument_stack rax
+   sub rax, 8
+   push_argument_stack rax
    next
 
 
 define_primitive_function "add", addition
    ;; << a b -- a+b >>
+   pop_argument_stack rbx
    pop_argument_stack rax
-   add qword [pointer$argument_stack - (1 * jo_size)], rax
+   add rax, rbx
+   push_argument_stack rax
    next
 
 define_primitive_function "sub", subtraction
    ;; << a b -- a-b >>
+   pop_argument_stack rbx
    pop_argument_stack rax
-   sub qword [pointer$argument_stack - (1 * jo_size)], rax
+   sub rax, rbx
+   push_argument_stack rax
    next
+
+}
 
 define_primitive_function "mul", multiple
    ;; << a b -- a*b >>
@@ -1170,6 +1168,30 @@ define_primitive_function "mul", multiple
    ;; imul will save the result into the first register
    push_argument_stack rbx
    next
+
+define_function "negate", negate
+   ;; << n --  -n >>
+   xx zero
+   xx swap, subtraction
+   xx end
+
+define_function "power", power
+   ;; n must be nature number for now
+   ;; << a, n -- a^n >>
+   xx literal, 1, swap ;; leave product
+   xx help__power
+   xx end
+
+define_function "help,power", help__power
+   ;; << a, product, n -- a^n >>
+   xx dup, zero?, false?branch, 5
+   xx   drop, swap, drop
+   xx   end
+   xx sub1
+   xx swap
+   xx   xoverxx, multiple
+   xx swap
+   xx taca, help__power
 
 define_primitive_function "moddiv", moddiv
    ;; << a, b -- a mod b, quotient >>
@@ -1202,31 +1224,6 @@ define_function "mod", modulo
    ;; << a, b -- a mod b >>
    xx moddiv, drop
    xx end
-
-define_function "negate", negate
-   ;; << n --  -n >>
-   xx zero
-   xx swap, subtraction
-   xx end
-
-
-define_function "power", power
-   ;; n must be nature number for now
-   ;; << a, n -- a^n >>
-   xx literal, 1, swap ;; leave product
-   xx help__power
-   xx end
-
-define_function "help,power", help__power
-   ;; << a, product, n -- a^n >>
-   xx dup, zero?, false?branch, 5
-   xx   drop, swap, drop
-   xx   end
-   xx sub1
-   xx swap
-   xx   xoverxx, multiple
-   xx swap
-   xx taca, help__power
 
 define_primitive_function "equal?", equal?
    ;; << a, b -- a, b, true of false >>
@@ -1284,6 +1281,8 @@ define_function "positive?", positive?
    xx negative?, false?
    xx end
 
+match =32bit, machine {
+
 ;; "save" and "fetch" default to a jo_size
 ;; the rule of "fetch2" and so on are:
 ;;   in memory:
@@ -1301,7 +1300,7 @@ define_primitive_function "save", save
    ;; ( value, address -- )
    pop_argument_stack rbx
    pop_argument_stack rax
-   mov qword [rbx], rax
+   mov [rbx], rax
    next
 
 define_primitive_function "save-byte", save_byte
@@ -1337,7 +1336,7 @@ define_primitive_function "n-save", n_save
    sub rdx, jo_size
 .loop:
    pop_argument_stack rax
-   mov qword [rdx], rax
+   mov dword [rdx], rax
    sub rdx, jo_size
    loop .loop
    next
@@ -1361,10 +1360,28 @@ define_primitive_function "n-save-byte", n_save_byte
    loop .loop
    next
 
+define_primitive_function "add-save", add_save
+   ;; ( number to add, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   add dword [rbx], rax
+   next
+
+define_primitive_function "sub-save", sub_save
+   ;; ( number to add, address -- )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   sub dword [rbx], rax
+   next
+
+}
+
+match =32bit, machine {
+
 define_primitive_function "fetch", fetch
    ;; ( address -- value )
    pop_argument_stack  rbx
-   mov rax, qword [rbx]
+   mov rax, [rbx]
    push_argument_stack rax
    next
 
@@ -1401,7 +1418,7 @@ define_primitive_function "n-fetch", n_fetch
    pop_argument_stack  rcx
    pop_argument_stack  rdx
 .loop:
-   mov rax, qword [rdx]
+   mov rax, dword [rdx]
    push_argument_stack rax
    add rdx, jo_size
    loop .loop
@@ -1425,323 +1442,199 @@ define_function "fetch2", fetch2
    xx n_fetch
    xx end
 
-define_primitive_function "add-save", add_save
-   ;; ( number to add, address -- )
-   pop_argument_stack rbx
+}
+
+match =windows =32bit, platform machine {
+
+buffer$write_byte:
+   db 0
+
+__counter$write_byte:
+   xx 0
+
+define_primitive_function "write-byte", write_byte
+   ;; << byte -- >>
+   ;; just calls the Linux write system call
    pop_argument_stack rax
-   add qword [rbx], rax
+   ;; write can not just write the char in al to stdout
+   ;; write needs the address of the byte to write
+   mov [buffer$write_byte], al
+
+   push 0
+   push __counter$write_byte
+   push 1
+   push buffer$write_byte
+   mov rax, [_output_handle]
+   push rax
+   call [WriteFile]
+
    next
 
-define_primitive_function "sub-save", sub_save
-   ;; ( number to add, address -- )
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   sub qword [rbx], rax
-   next
+}
 
 max_input_length = 1024 * 1024
 
 buffer$read_byte labeling
    preserve max_input_length
 
-if linux? eq yes
+size$eval_string_stack = 1024 * jo_size
 
-buffer$write_byte:
-   db 0
+   preserve 64 * jo_size
+address$eval_string_stack labeling
+   preserve size$eval_string_stack
 
-define_primitive_function "write-byte", write_byte
-   ;; << byte -- >>
-   ;; just calls the Linux write system call
-   pop_argument_stack rax
-   ;; write can not just write the char in al to stdout
-   ;; write needs the address of the byte to write
-   mov [buffer$write_byte], al
+pointer$eval_string_stack:
+   xx address$eval_string_stack
 
-   ;;;; for linux
-   mov sys_3_rdx, 1                 ;; max length to be write
-   mov sys_2_rsi, buffer$write_byte ;; address
-   mov sys_1_rdi, 1                 ;; stdout
-   mov sys_n_rax, syscall_write
-   ;;;;
+match =64bit, machine {
 
-   syscall
+ define_primitive_function "push-eval-string-stack", push_eval_string_stack
+    ;; argument-stack -> eval-string-stack
+    pop_argument_stack rax
+    mov rbx, [pointer$eval_string_stack]
+    mov [rbx], rax
+    add qword [pointer$eval_string_stack], jo_size
+    next
+
+ define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+    ;; eval-string-stack -> argument-stack
+    sub qword [pointer$eval_string_stack], jo_size
+    mov rbx, [pointer$eval_string_stack]
+    mov rax, [rbx]
+    push_argument_stack rax
+    next
+
+}
+
+match =32bit, machine {
+
+ define_primitive_function "push-eval-string-stack", push_eval_string_stack
+    ;; argument-stack -> eval-string-stack
+    pop_argument_stack rax
+    mov rsi, [pointer$eval_string_stack]
+    mov [rsi], rax
+    add dword [pointer$eval_string_stack], jo_size
+    next
+
+ define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+    ;; eval-string-stack -> argument-stack
+    sub dword [pointer$eval_string_stack], jo_size
+    mov rsi, [pointer$eval_string_stack]
+    mov rax, [rsi]
+    push_argument_stack rax
+    next
+
+}
+
+match =64bit, machine {
+
+define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+   ;; << -- >>
+   mov qword [pointer$eval_string_stack], address$eval_string_stack
    next
 
-finish if
+}
 
-if linux? eq yes
+match =32bit, machine {
 
-flag$unreaded_ket_char:
-   xx 0
+define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+   ;; << -- >>
+   mov eax, address$eval_string_stack
+   mov dword [pointer$eval_string_stack], eax;address$eval_string_stack
+   next
 
-char$unreaded_ket_char:
-   xx 0
+}
 
-define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
    ;; << -- bool >>
-   xx literal, flag$unreaded_ket_char
-   xx fetch
-   xx end
-
-define_function "unread-ket-char", unread_ket_char
-   ;; << char -- >>
-   xx literal, char$unreaded_ket_char, save
-   xx true, literal, flag$unreaded_ket_char
-   xx save
-   xx end
-
-
-;; help__read_byte is the old do function without unread ket-char
-define_function "read-byte", read_byte
-   ;; << -- byte >>
-   xx have_unreaded_ket_char?, false?branch, 9
-   xx   literal, char$unreaded_ket_char, fetch_byte
-   xx   zero, literal, flag$unreaded_ket_char
-   xx   save
-   xx   end
-   xx help__read_byte
-   xx end
-
-
-
-cursor$read_byte:
-   xx 0
-
-border$read_byte:
-   xx 0
-
-define_primitive_function "help,read-byte", help__read_byte
-   ;; << -- byte >>
-   call help__help__read_byte
+   mov rax, [pointer$eval_string_stack]
+   cmp rax, address$eval_string_stack
+   ;; less-than is treated as equal
+   setle al
+   movzx rax, al
    push_argument_stack rax
    next
 
+match =windows =32bit, platform machine {
 
-help__help__read_byte:
-   mov rbx, [cursor$read_byte]
-   cmp rbx, [border$read_byte]
-   ;; [cursor$read_byte] <  [border$read_byte]
-   jl .we_still_have_buffered_byte
-   ;; [cursor$read_byte] >= [border$read_byte]
-   jmp .do_a_new_buffer
+__counter$read_line_from_stdin:
+   xx 0
 
-
-.do_a_new_buffer:
-   mov rbx, buffer$read_byte
-   mov [cursor$read_byte], rbx
-   mov [border$read_byte], rbx
-
-   ;;;; for linux
-   mov sys_3_rdx, max_input_length ;; max length to be read
-   mov sys_2_rsi, buffer$read_byte ;; buffer address
-   xor sys_1_rdi, sys_1_rdi        ;; stdin
-   mov sys_n_rax, syscall_read
-   syscall
-   ;; the return value of syscall read
-   ;; is a count of the number of bytes transferred
-   ;;;;
-
-   ;; the following will let the interpreter exit
-   ;; when meeting end-of-line or reading error
-   test rax, rax
-   jz .error ;; rax = 0
-   js .error ;; rax < 0
-
-   ;; update [border$read_byte]
-   add [border$read_byte], rax
-   jmp help__help__read_byte
-
-
-.we_still_have_buffered_byte:
-   ;; for the following will just uses the al part of rax
-   ;; it is necessary to clear rax
-   xor rax, rax
-   mov al, byte [rbx]
-   inc rbx
-   mov [cursor$read_byte], rbx
-   ret
-
-
-.error:
-   ;; exit with exit code = 0
-   call __exit_with_zero
-
-finish if
-
-if windows? eq yes
-
-buffer$write_byte:
-   db 0
-
-;;;; for windows
-_counter$write_byte:
-   dq 0
-;;;;
-
-define_primitive_function "write-byte", write_byte
-   ;; << byte -- >>
-   ;; just calls the Linux write system call
+define_primitive_function "read-line-from-stdin", read_line_from_stdin
+   ;; << buffer address, max length -- >>
+   push 0
+   push __counter$read_line_from_stdin
    pop_argument_stack rax
-   ;; write can not just write the char in al to stdout
-   ;; write needs the address of the byte to write
-   mov [buffer$write_byte], al
-
-   ;;;; for windows
-   number_of_arguments = 5
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-
-   push 0
-   sub rsp, 8*4
-   mov fun_4_r9, _counter$write_byte
-   mov fun_3_r8, 1
-   mov fun_2_rdx, buffer$write_byte
-   mov fun_1_rcx, [_output_handle]
-   call [WriteFile]
-
-
-   mov rsp, rbp
-   pop rbp
-   ;;;;
-
-   next
-
-finish if
-
-if windows? eq yes
-
-flag$unreaded_ket_char:
-   xx 0
-
-char$unreaded_ket_char:
-   xx 0
-
-define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
-   ;; << -- bool >>
-   xx literal, flag$unreaded_ket_char
-   xx fetch
-   xx end
-
-define_function "unread-ket-char", unread_ket_char
-   ;; << char -- >>
-   xx literal, char$unreaded_ket_char, save
-   xx true, literal, flag$unreaded_ket_char
-   xx save
-   xx end
-
-
-;; help__read_byte is the old do function without unread ket-char
-define_function "read-byte", read_byte
-   ;; << -- byte >>
-   xx have_unreaded_ket_char?, false?branch, 9
-   xx   literal, char$unreaded_ket_char, fetch_byte
-   xx   zero, literal, flag$unreaded_ket_char
-   xx   save
-   xx   end
-   xx help__read_byte
-   xx end
-
-;;;; for windows
-_counter$read_byte:
-   dq 0
-;;;;
-
-cursor$read_byte:
-   xx 0
-
-border$read_byte:
-   xx 0
-
-define_primitive_function "help,read-byte", help__read_byte
-   ;; << -- byte >>
-   call help__help__read_byte
-   push_argument_stack rax
-   next
-
-
-help__help__read_byte:
-   mov rbx, [cursor$read_byte]
-   cmp rbx, [border$read_byte]
-   ;; [cursor$read_byte] <  [border$read_byte]
-   jl .we_still_have_buffered_byte
-   ;; [cursor$read_byte] >= [border$read_byte]
-   jmp .do_a_new_buffer
-
-
-.do_a_new_buffer:
-   mov rbx, buffer$read_byte
-   mov [cursor$read_byte], rbx
-   mov [border$read_byte], rbx
-
-   ;;;; for windows
-   number_of_arguments = 5
-   push rbp
-   mov rbp, rsp
-
-   mov rax, rsp
-   add rax, 8*number_of_arguments
-   mov rbx, 1111b
-   and rbx, rax
-
-   sub rsp, 16
-   add rsp, rbx
-
-   push 0
-   sub rsp, 8*4
-   mov fun_4_r9, _counter$read_byte
-   mov fun_3_r8, max_input_length
-   mov fun_2_rdx, buffer$read_byte
-   mov fun_1_rcx, [_input_handle]
+   push rax
+   pop_argument_stack rax
+   push rax
+   mov rax, [_input_handle]
+   push rax
    call [ReadFile]
-
-   mov rsp, rbp
-   pop rbp
-   ;;;;
-
-   ;; the return value of syscall read
+   ;; the return value
    ;; is a count of the number of bytes transferred
+   mov rax, [__counter$read_line_from_stdin]
+   push_argument_stack rax
 
-   ;;;; for windows
-   mov rax, [_counter$read_byte]
-   ;;;;
+   next
 
-   ;; the following will let the interpreter exit
-   ;; when meeting end-of-line or reading error
-   test rax, rax
-   jz .error ;; rax = 0
-   js .error ;; rax < 0
+}
 
+define_function "read-byte", read_byte
+   ;; << -- byte >>
+   xx have_unreaded_ket_char?, false?branch, 9
+   xx   literal, char$unreaded_ket_char, fetch_byte
+   xx   zero, literal, flag$unreaded_ket_char
+   xx   save
+   xx   end
+   xx read_byte__without_unread
+   xx end
 
-   ;; update [border$read_byte]
-   add [border$read_byte], rax
-   jmp help__help__read_byte
+define_function "read-byte,without-unread", read_byte__without_unread
+   ;; << -- byte >>
+   xx eval_string_stack_empty?, false?branch, (.not_empty-$)/jo_size
+   xx   literal, buffer$read_byte
+   xx   literal, max_input_length
+   xx   read_line_from_stdin
+   xx     dup, positive?, false?, false?branch, 4
+   ;;     ignore <end-of-file>
+   ;;     ignore reading error
+   xx     drop
+   xx     taca, read_byte__without_unread
+   xx   push_eval_string_stack
+   xx   literal, buffer$read_byte
+   xx   push_eval_string_stack
+   xx   taca, read_byte__without_unread
+   .not_empty:
+   xx pop_eval_string_stack
+   xx pop_eval_string_stack
+   xx dup, zero?, false?branch, 4
+   xx   drop2
+   xx   taca, read_byte__without_unread
+   xx sub1, push_eval_string_stack
+   xx dup
+   xx add1, push_eval_string_stack
+   xx fetch_byte
+   xx end
 
+flag$unreaded_ket_char:
+   xx 0
 
-.we_still_have_buffered_byte:
-   ;; for the following will just uses the al part of rax
-   ;; it is necessary to clear rax
-   xor rax, rax
-   mov al, byte [rbx]
-   inc rbx
-   mov [cursor$read_byte], rbx
-   ret
+char$unreaded_ket_char:
+   xx 0
 
+define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
+   ;; << -- bool >>
+   xx literal, flag$unreaded_ket_char
+   xx fetch
+   xx end
 
-.error:
-   ;; exit with exit code = 0
-   call __exit_with_zero
-
-
-finish if
+define_function "unread-ket-char", unread_ket_char
+   ;; << char -- >>
+   xx literal, char$unreaded_ket_char, save
+   xx true, literal, flag$unreaded_ket_char
+   xx save
+   xx end
 
 define_function "space-char?", space_char?
    ;; << char -- bool >>
@@ -1857,6 +1750,8 @@ define_primitive_function "string->buffer!", string_to_buffer!
    rep movsb
    next
 
+match =64bit, machine {
+
 buffer$string_reverse! labeling
    preserve 1024
 
@@ -1879,6 +1774,36 @@ define_primitive_function "string-reverse!", string_reverse!
    loop .loop
 
    next
+
+}
+
+match =32bit, machine {
+
+buffer$string_reverse! labeling
+   preserve 1024
+
+
+define_primitive_function "string-reverse!", string_reverse!
+   ;; << string[address, length] -- string[address, length] >>
+   mov rbx, [pointer$argument_stack]
+   mov rdi, buffer$string_reverse!
+   mov rcx, [rbx - (1 * jo_size)]
+   mov rsi, [rbx - (2 * jo_size)]
+   rep movsb
+
+   mov rcx, [rbx - (1 * jo_size)]
+   dec rdi ;; cursor back into string in buffer$string_reverse!
+   mov rsi, [rbx - (2 * jo_size)]
+.loop:
+   mov al, byte [rdi]
+   mov byte [rsi], al
+   dec rdi
+   inc rsi
+   loop .loop
+
+   next
+
+}
 
 define_function "digital-string?", digital_string?
    ;; << string[address, length] -- bool >>
@@ -2196,7 +2121,7 @@ define_function "string-tail,word", string_tail__word
    xx end
 
 define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
-   xx last_jo_in_assembly
+   xx (last_link + jo_size)
 
 define_function "find", find
    ;; found :
@@ -2213,7 +2138,21 @@ define_function "help,find", help__find
    ;; not found :
    ;; << word[address, length], jo -- false >>
    xx xxtuckx
+
+
    xx jo_to_name, xxoverxx
+
+   ;; for debug
+   ;; xx jo_to_name
+   ;; xx   dup2
+   ;; xx   dup, write_integer, literal, 32, write_byte
+   ;; xx   write_string, literal, 10, write_byte
+   ;; xx xxoverxx
+   ;; xx   dup2
+   ;; xx   dup, write_integer, literal, 32, write_byte
+   ;; xx   write_string, literal, 10, write_byte
+
+
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end
@@ -2259,568 +2198,23 @@ string$undefined_word_report__for_execute_word:
 length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
 
 define_function "basic-REPL", basic_REPL
-   ;; << unknown -- unknown >>
+   ;; << UNKNOWN -- UNKNOWN >>
    xx read_word_for_REPL
    xx execute_word
    xx taca, basic_REPL
 
-define_function "colon-string?", colon_string?
-   ;; << string[address, length] -- bool >>
-   xx literal, ':'
-   xx char_string?
-   xx end
+define_variable "*un-initialized-memory*", V__un_initialized_memory
+  xx address$un_initialized_memory
 
-define_function "semicolon-string?", semicolon_string?
-   ;; << string[address, length] -- bool >>
-   xx literal, ';'
-   xx char_string?
-   xx end
+define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+  xx size$un_initialized_memory
 
-string$comment_begin:
-   db "<<"
+define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+  xx current_free_address$un_initialized_memory
 
-define_function "comment-begin-string?", comment_begin_string?
-   ;; (* string[address, length] -- bool *)
-   xx literal, string$comment_begin
-   xx literal, 2
-   xx string_equal?
-   xx end
+last_link = link
 
-
-string$comment_end:
-   db ">>"
-
-define_function "comment-end-string?", comment_end_string?
-   ;; (* -- *)
-   xx literal, string$comment_end
-   xx literal, 2
-   xx string_equal?
-   xx end
-
-buffer$colon labeling
-   preserve 1024 * 1024
-
-cursor$colon:
-   xx 0
-
-
-define_function ":", colon
-   ;; << -- string[address of buffer$colon, length] >>
-   xx literal, buffer$colon
-   xx literal, cursor$colon, save
-   xx help__loop__colon
-   ;; address
-   xx literal, buffer$colon
-   ;; length
-   xx literal, cursor$colon, fetch
-   xx literal, buffer$colon
-   xx subtraction
-   xx end
-
-
-define_function "", help__loop__colon
-   ;; << -- >>
-   xx read_byte
-   xx help__save_byte__colon
-   xx help__meet_end__colon?, false?branch, 7
-   xx   literal, 3 ;; for the string " ; "
-   xx   literal, cursor$colon
-   xx   sub_save
-   xx   end
-   xx help__meet_comment__colon?, false?branch, 9
-   xx   literal, 4 ;; for the string " << "
-   xx   literal, cursor$colon
-   xx   sub_save
-   xx   ignore_comment
-   xx   taca, help__loop__colon
-   xx taca, help__loop__colon
-
-
-define_function "", help__save_byte__colon
-   ;; << byte -- >>
-   xx literal, cursor$colon, fetch
-   xx save_byte
-   xx one
-   xx literal, cursor$colon
-   xx add_save
-   xx end
-
-
-define_function "", help__meet_end__colon?
-   ;; << -- bool >>
-   xx literal, cursor$colon, fetch
-   xx literal, 3, subtraction
-   xx fetch_byte, space_char?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx literal, cursor$colon, fetch
-   xx literal, 2, subtraction
-   xx fetch_byte, literal, ';', equal?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx literal, cursor$colon, fetch
-   xx literal, 1, subtraction
-   xx fetch_byte, space_char?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx true
-   xx end
-
-define_function "", help__meet_comment__colon?
-   ;; << -- bool >>
-   xx literal, cursor$colon, fetch
-   xx literal, 4, subtraction
-   xx fetch_byte, space_char?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx literal, cursor$colon, fetch
-   xx literal, 3, subtraction
-   xx fetch_byte, literal, '<', equal?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx literal, cursor$colon, fetch
-   xx literal, 2, subtraction
-   xx fetch_byte, literal, '<', equal?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx literal, cursor$colon, fetch
-   xx literal, 1, subtraction
-   xx fetch_byte, space_char?
-   xx false?, false?branch, 3
-   xx   false
-   xx   end
-   xx true
-   xx end
-
-define_function "<<", ignore_comment
-   ;; << -- >>
-   xx read_word
-   xx dup2, comment_begin_string?, false?branch, 5
-   xx   drop2
-   xx     ignore_comment ;; for the new nested-comment
-   xx   taca, ignore_comment ;; for the rest-comment
-   xx dup2, comment_end_string?, false?branch, 3
-   xx   drop2
-   xx   end
-   xx drop2
-   xx taca, ignore_comment
-
-address$jo_heap labeling
-   preserve 3 * 1024 * 1024 * jo_size
-
-define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
-   xx address$jo_heap
-
-define_exception "!undo-make-jojo", !undo_make_jojo
-   ;; << old V__current_free_address__primitive_string
-   ;;    old V__current_free_address__jo_heap
-   ;;    old V__first_jo_in_dictionary
-   ;;    string[address, length]
-   ;;    -- >>
-   xx literal, string$undo_make_jojo_report
-   xx literal, length$undo_make_jojo_report
-   xx write_string
-
-   xx write_string
-   xx literal, 10, write_byte
-   xx literal, ';', write_byte
-   xx literal, 10, write_byte
-
-   xx address, V__first_jo_in_dictionary, save
-   xx address, V__current_free_address__jo_heap, save
-   xx address, V__current_free_address__primitive_string
-   xx save
-   xx end
-
-
-string$undo_make_jojo_report:
-   db "  THE FOLLOWING JOJO IS NOT MADE :"
-   db 10
-   db ": "
-.end:
-length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-
-define_function "make-jojo", make_jojo
-   ;; << string[address, length] -- >>
-   xx dup2, space_string?, false?branch, 3
-   xx   drop2
-   xx   end
-   xx dup2
-   xx string_tail__word
-   xx xxswapxx
-   xx string_head__word
-   ;; << tail[address, length], head[address, length] >>
-   xx make_jojo__dispatch_word
-   xx taca, make_jojo
-
-define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
-   ;; << string[address, length], word[address, length] --
-   ;;    string[address, length] >>
-   xx dup2, integer_string?, false?branch, 7
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   string_to_integer
-   xx     save_into__jo_heap
-   xx     end
-   xx dup2
-   xx find, false?
-   xx false?branch, 7
-   xx   write_undefined_word_report__for_make_jojo
-   xx   write_string
-   xx   literal, 10, write_byte
-   xx   !undo_make_jojo
-   xx xxswapx, drop2 ;; word
-   xx taca, make_jojo__dispatch_jo
-
-define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
-   ;; << string[address, length], jo --
-   ;;    string[address, length] >>
-   xx dup, macro_jo?, false?branch, 3
-   xx   execute_jo
-   xx   end
-
-   ;; the same to
-   ;;   function
-   ;;   primitive-function
-   ;;   variable
-   ;;   exception
-   xx save_into__jo_heap
-   xx end
-
-
-define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_make_jojo
-   xx literal, length$undefined_word_report__for_make_jojo
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_make_jojo:
-   db "* (make-jojo) MEETS UNDEFINED WORD : "
-.end:
-length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
-
-define_macro "address", M__address
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, address
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx find, false?branch, 4
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_undefined_word_report__for_address
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_address
-   xx literal, length$undefined_word_report__for_address
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_address:
-   db "* (make-jojo (address)) THE WORD FOLLOWS (address) IS UNDEFINED : "
-.end:
-length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
-
-define_macro "branch", M__branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_branch
-   xx literal, length$not_integer_string_report__for_branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_branch:
-   db "* (make-jojo (branch)) THE WORD FOLLOWS (branch) MUST BE A INTEGER STRING : "
-.end:
-length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-
-define_macro "false?branch", M__false?branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, false?branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_false?branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_false?branch
-   xx literal, length$not_integer_string_report__for_false?branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_false?branch:
-   db "* (make-jojo (false?branch)) THE WORD FOLLOWS (false?branch) MUST BE A INTEGER STRING : "
-.end:
-length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
-
-define_macro '"', M__double_quote
-   ;; << string[address, length] -- string[address, length] >>
-   xx dup2
-   xx literal, '"', find_char__string
-   xx false?branch, (.not_found-$)/jo_size
-   xx   xoverxx, subtraction
-   ;;   << string[address, length], length >>
-
-   ;; address
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   V__current_free_address__primitive_string, add2
-   xx     save_into__jo_heap
-   xx   xoverxx, over
-   xx     save_into__primitive_string_heap
-
-   ;; length
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   dup
-   xx     save_into__jo_heap
-
-   xx   tuck, subtraction
-   xx   xxswapx
-   xx   addition
-   xx   swap
-
-   xx   string_tail__char ;; over the ending double-quote
-   xx   end
-
-   .not_found:
-   xx write_not_integer_string_report__for_double_quote
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_double_quote
-   xx literal, length$not_integer_string_report__for_double_quote
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_double_quote:
-   db "* (make-jojo (double-quote)) CAN NOT FIND THE ENDING DOUBLE-QUOTE"
-.end:
-length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
-
-define_function "define-function", CICADA__define_function
-   ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
-   xx prepare_for
-   xx   exception_head
-   xx   !undo_make_jojo
-   xx   end_of_prepare
-
-
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
-   xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
-
-   xx V__first_jo_in_dictionary
-   xx jo_to_link
-   xx   save_into__jo_heap
-
-   xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
-   xx save
-
-   xx literal, explain$function
-   xx   save_into__jo_heap
-
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
-   xx drop2
-   xx drop, drop, drop
-   xx end
-
-define_function "define-macro", CICADA__define_macro
-   ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
-   xx prepare_for
-   xx   exception_head
-   xx   !undo_make_jojo
-   xx   end_of_prepare
-
-
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
-   xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
-
-   xx V__first_jo_in_dictionary
-   xx jo_to_link
-   xx   save_into__jo_heap
-
-   xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
-   xx save
-
-   xx literal, explain$macro
-   xx   save_into__jo_heap
-
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
-   xx drop2
-   xx drop, drop, drop
-   xx end
-
-define_function "define-exception", CICADA__define_exception
-   ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
-   xx prepare_for
-   xx   exception_head
-   xx   !undo_make_jojo
-   xx   end_of_prepare
-
-
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
-   xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
-
-   xx V__first_jo_in_dictionary
-   xx jo_to_link
-   xx   save_into__jo_heap
-
-   xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
-   xx save
-
-   xx literal, explain$exception
-   xx   save_into__jo_heap
-
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
-   xx drop2
-   xx drop, drop, drop
-   xx end
-
-define_function "define-variable", CICADA__define_variable
-   ;; << variable, string[address, length] -- >>
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
-   xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
-
-   xx V__first_jo_in_dictionary
-   xx jo_to_link
-   xx   save_into__jo_heap
-
-   xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
-   xx save
-
-   xx literal, explain$variable
-   xx   save_into__jo_heap
-
-   ;; when debugging
-   ;; instead of drop2
-   ;; one may wish to do some thing to the string
-   xx drop2
-   xx save_into__jo_heap
-   xx end
-
-define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-   ;; << string[address, length] -- address >>
-   xx dup, V__current_free_address__primitive_string
-   xx save_two_bytes
-
-   xx literal, 2
-   xx address, V__current_free_address__primitive_string
-   xx add_save
-
-   xx tuck
-   xx V__current_free_address__primitive_string
-   xx string_to_buffer!
-
-   xx address, V__current_free_address__primitive_string
-   xx add_save
-   xx end
-
-define_function "save-into,jo-heap", save_into__jo_heap
-   ;; << number -- address >>
-   xx V__current_free_address__jo_heap
-   xx save
-
-   xx literal, jo_size
-   xx address, V__current_free_address__jo_heap
-   xx add_save
-   xx end
-
-define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
-   xx current_free_address$primitive_string_heap
-
-define_variable "", last_jo_in_assembly
-   ;; << -- >>
-   xx 0
-
-if linux? eq yes
-
-size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
-
-segment readable writeable
-address$un_initialized_memory:
-   rb size$un_initialized_memory
-
-finish if
-
-if windows? eq yes
+match =windows =32bit, platform machine {
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
@@ -2828,15 +2222,15 @@ section '.data' data readable writeable
 address$un_initialized_memory:
    rb size$un_initialized_memory
 
-finish if
+}
 
-if windows? eq yes
+if platform eq windows
+if machine eq 32bit
 
+; Macroinstructions for making import section
 
-;; Macroinstructions for making import section (64-bit)
-
-macro library [name,string]
- { common
+macro library [name,string] {
+   common
     import.data:
    forward
     local _label
@@ -2854,26 +2248,27 @@ macro library [name,string]
       _label db string,0
              rb RVA $ and 1
      finish if
-    finish if }
+    finish if
+}
 
 macro import name,[label,string]
  { common
-    rb (- rva $) and 7
+    rb (- rva $) and 3
     if defined name#.referred
      name#.lookup:
    forward
      if used label
       if string eqtype ''
        local _label
-       dq RVA _label
+       dd RVA _label
       else
-       dq 8000000000000000h + string
+       dd 80000000h + string
       finish if
      finish if
    common
      if $ > name#.lookup
       name#.redundant = 0
-      dq 0
+      dd 0
      else
       name#.redundant = 1
      finish if
@@ -2881,14 +2276,14 @@ macro import name,[label,string]
    forward
      if used label
       if string eqtype ''
-       label dq RVA _label
+       label dd RVA _label
       else
-       label dq 8000000000000000h + string
+       label dd 80000000h + string
       finish if
      finish if
    common
      if ~ name#.redundant
-      dq 0
+      dd 0
      finish if
    forward
      if used label & string eqtype ''
@@ -2897,8 +2292,13 @@ macro import name,[label,string]
             rb RVA $ and 1
      finish if
    common
-    finish if }
+    finish if
+}
 
+finish if
+finish if
+
+match =windows =32bit, platform machine {
 
 section '.idata' import data readable writeable
 
@@ -2908,7 +2308,8 @@ import kernel32,\
        ExitProcess,'ExitProcess',\
        ReadFile,'ReadFile',\
        WriteFile,'WriteFile',\
-       GetStdHandle,'GetStdHandle'
+       GetStdHandle,'GetStdHandle',\
+       CloseHandle, 'CloseHandle',\
+       CreateFileA, 'CreateFileA'
 
-
-finish if
+}

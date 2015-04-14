@@ -3,6 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** stores platform as variable
 ** home-path & search-path to load-files
 ** [BUG] about div
    * div can not handle the following
@@ -122,6 +123,62 @@
     * about comment
       * the comment of the argument & return value of function
         is allowed to be written in free style normal comment
+* note instar
+** 1st-instar
+   * indirect-threaded-code interpreter
+     1. macro about argument_stack & return_stack
+     2. macro about jo & jojo
+     3. macro about next
+     4. the way to do memory allocation
+     5. begin_to_interpret_threaded_code
+     6. little_test
+** 2ed-instar
+   * instruction as special primitive function
+     1. literal
+     2. address
+   * and primitive functions about
+     1. the stack
+     2. bool
+     3. fixnum
+     4. memory
+   * and taca for explicit tail-call
+   * false?branch and taca are needed for "power"
+** 3rd-instar
+   * primitive function about io
+     1. write_byte
+     2. read_byte
+** 4th-instar
+   * more function about io
+     1. about word
+     2. about string
+     3. about number
+   * more function
+     1. jo
+     2. char
+     3. buffer
+   * more in epilog
+     1. last_link
+   * function about dictionary
+     1. find
+     2. execute-word
+   * basic-REPL as postfix-notation function executer
+     1. basic-REPL
+** 5th-instar
+   * type of jo
+   * more in epilog
+     1. *current-free-address,primitive-string-heap*
+   * colon semicolon
+     1. ":" and ";" are used to read a string of words for compiler
+        [looks like bar-ket but special]
+     2. comment is handled here
+        "<< >>" as the only way to do comment
+   * compiler
+     * make-jojo
+       and macro for make-jojo
+       1. macro system
+       2. exception handling system
+     * function about definition
+       which leave data into memory
 * note problem
   * << >> can not be in ""
   * there are 64 positions below the all those stacks
@@ -1683,12 +1740,12 @@
       ;;;; echo line
 
       ;;;; false?branch
-      ;; xx V__false, false?branch, 9
+      ;; xx false, false?branch, 9
       ;; xx   literal, 64, write_byte
       ;; xx   literal, 10, write_byte
       ;; xx   zero
       ;; xx   exit_with_TOS
-      ;; xx V__true, false?branch, 9
+      ;; xx true, false?branch, 9
       ;; xx   literal, 65, write_byte
       ;; xx   literal, 10, write_byte
       ;; xx   zero
@@ -1754,7 +1811,7 @@
       ;;;; basic-REPL (without the ability to define function)
       ;;;; after this test
       ;;;; we will use basic-REPL to do further tests
-      xx basic_REPL
+      ;; xx basic_REPL
       ;;;; 1 2 add .
    #+end_src
 * -----------------------------------
@@ -3439,7 +3496,6 @@
    #+end_src
 ** ----------------------------------
 ** note
-   * calls the linux read system call to fill buffer$read_byte
    * do not exit the program
      when meeting <end-of-file>
      so

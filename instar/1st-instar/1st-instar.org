@@ -3,14 +3,15 @@
 #+EMAIL:  xyheme@gmail.com
 
 * ===================================
-* note
-  * indirect-threaded-code interpreter
-    1. macro about argument_stack & return_stack
-    2. macro about jo & jojo
-    3. macro about next
-    4. the way to do memory allocation
-    5. begin_to_interpret_threaded_code
-    6. little_test
+* note instar
+** 1st-instar
+   * indirect-threaded-code interpreter
+     1. macro about argument_stack & return_stack
+     2. macro about jo & jojo
+     3. macro about next
+     4. the way to do memory allocation
+     5. begin_to_interpret_threaded_code
+     6. little_test
 * ===================================
 * prolog
 ** ----------------------------------
@@ -341,12 +342,20 @@
      * return-stack
        #+begin_src return-stack
            (square)
+       - [ (square) ]
+           (end)
+       #+end_src
+  6. next
+     * argument-stack << 4 >>
+     * return-stack
+       #+begin_src return-stack
+           (square)
            (square)
        - [ (end) ] - [ (dup) ]
                        (mul)
                        (end)
        #+end_src
-  6. next
+  7. next
      * argument-stack
        << 4, 4 >>
      * return-stack
@@ -356,7 +365,7 @@
        - [ (end) ] - [ (mul) ]
                        (end)
        #+end_src
-  7. next
+  8. next
      * argument-stack
        << 16 >>
      * return-stack
@@ -365,7 +374,7 @@
            (square)    (mul)
        - [ (end) ] - [ (end) ]
        #+end_src
-  8. next
+  9. next
      * argument-stack
        << 16 >>
      * return-stack
@@ -374,14 +383,14 @@
            (square)
        - [ (end) ]
        #+end_src
-  9. next
-     * argument-stack
-       << 16 >>
-     * return-stack
-       #+begin_src return-stack
-       - [  ]
-       #+end_src
-  10. it is really simple
+  10. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+        - [  ]
+        #+end_src
+  11. it is really simple
       ^-^
       is it not ?
 * -----------------------------------
@@ -629,7 +638,6 @@
      #+begin_src return-stack
          (little_test)      (V__little_test_number)
      - [ (end) ] -------- [ (exit_with_TOS) ]
-
      #+end_src
 * -----------------------------------
 * epilog
