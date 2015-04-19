@@ -3,8 +3,17 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** cicada-nymph 的關於棧的 macro
 ** stores platform as variable
 ** home-path & search-path to load-files
+   * poi a load-path-manager
+** error handling of load-file
+   * error code is different between windows and linux which is problematic
+** nested load-file
+   * a stack of buffer would solve this problem
+** [maybe] make instruction a type of jo
+   this is needed when doing report of the dictionary
+* note problem
 ** [BUG] about div
    * div can not handle the following
      -8 2 div .
@@ -13,15 +22,12 @@
      add1 << dup . >> swap
      will be viewed as
      add1swap
-** use cicada home directory to load init-file
-** [really needed] little tester
-** error handling of load-file
-   * error code is different between windows and linux which is problematic
-** nested load-file
-   * a stack of buffer would solve this problem
-** [maybe] make instruction a type of jo
-   this is needed when doing report of the dictionary
-** re-generate instars
+** [BUG] about comment in string
+   * << >> can not be in ""
+** [LIMIT] about stack
+   * there are 64 positions below the all those stacks
+     when you are belowing-stack so much
+     bad things happen
 * ===================================
 * note
 ** jo & jojo
@@ -179,11 +185,6 @@
        2. exception handling system
      * function about definition
        which leave data into memory
-* note problem
-  * << >> can not be in ""
-  * there are 64 positions below the all those stacks
-    when you are belowing-stack so much
-    bad things happen
 * ===================================
 * prolog
 ** ----------------------------------
