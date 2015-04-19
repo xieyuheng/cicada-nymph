@@ -1,0 +1,66 @@
+#+TITLE:  快理我 / README
+#+AUTHOR: 謝宇恆 / XIE Yuheng
+#+EMAIL:  xyheme@gmail.com
+
+* ===================================
+* 題解
+  * 蟬語 是 謝宇恆 設計的程序語言
+    它的名字 來源與曹植的 蟬賦
+      實淡泊而寡欲兮 獨咍樂而長吟
+      聲噭噭而彌厲兮 似貞士之介心
+  * 它以 小蟬語 爲基礎 而寫成
+    https://github.com/the-little-language-designer/cicada/blob/master/README-cicada-nymph
+* 瞭解更多
+  * 你可以在這裏找到更多的文檔
+    http://the-little-language-designer.github.io/cicada/intro/contents.html
+* 最新版本
+  * 這個程序的源代碼可以在這裏下載
+    https://github.com/the-little-language-designer/cicada
+* 貢獻
+  * 聊天
+    用 IRC
+    在 irc.freenode.net 服務器的 #cicada-language 頻道
+  * 郵件列表
+    用 google group
+    論壇在這裏
+    https://groups.google.com/forum/#!forum/cicada-language
+  * 分享你的主意和經驗
+    你可以編輯維基頁面
+    https://github.com/the-little-language-designer/cicada/wiki
+  * 發現錯誤 或 要求新性狀
+    你可以在這裏創建話題
+    https://github.com/the-little-language-designer/cicada/issues
+  * 修復錯誤 或 貢獻新的性狀
+    你可以在這裏要求我把你的貢獻狀融合到主要文庫中
+    https://github.com/the-little-language-designer/cicada/pulls
+* ===================================
+* to explain the title
+  * the name cicada-language comes from
+    the cicada rhapsody of
+    the ancient Chinese prince CAO Zhi
+  * it is based on cicada-nymph
+    https://github.com/the-little-language-designer/cicada/blob/master/README-cicada-nymph
+* to learn more
+  * you can find documentations here
+    http://the-little-language-designer.github.io/cicada/intro/contents.html
+* to get the newest version of the program
+  * the source code of this program can be downloaded from
+    https://github.com/the-little-language-designer/cicada
+* to contribute
+  * to chat
+    we use IRC
+    we have #cicada-language channel on irc.freenode.net
+  * mailing list
+    we use google group
+    you can find cicada-language forum here
+    https://groups.google.com/forum/#!forum/cicada-language
+  * to share your ideas and experiences
+    you can edit the wiki page here
+    https://github.com/the-little-language-designer/cicada/wiki
+  * to track bugs, feature requests, and more
+    you can create an issue here
+    https://github.com/the-little-language-designer/cicada/issues
+  * to send patch and fix bug
+    you can do pull request here
+    https://github.com/the-little-language-designer/cicada/pulls
+* ===================================

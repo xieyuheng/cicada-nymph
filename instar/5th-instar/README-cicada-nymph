@@ -1,0 +1,137 @@
+#+TITLE:  快理小蟬語 / README-cicada-nymph
+#+AUTHOR: 謝宇恆 / XIE Yuheng
+#+EMAIL:  xyheme@gmail.com
+
+* ===================================
+* 題解
+  * 小蟬語起先是爲教學目的而寫的
+    爲教我的朋友如何實現一個簡單的程序語言的解釋器
+  * 它重用了老版本的蟬語中的某些代碼和想法
+    我用匯編語言 (x86 平臺上的 fasm)
+    來實現這個解釋器
+  * 所實現的是一個
+    以線串碼爲基礎的語言 (類 Forth 語言)
+  * 我寫了四個版本
+    |---------+-------|
+    | linux   | 64bit |
+    | windows | 64bit |
+    | linux   | 32bit |
+    | windows | 32bit |
+    |---------+-------|
+* 編譯
+  1. 下載 fasm
+     這裏 : http://flatassembler.net/
+     或這裏 : https://github.com/the-little-language-designer/fasm
+  2. 通過編輯 "platform-configuration.inc"
+     來選擇你所在的平臺
+     |-------------------------|
+     | configuration           |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  32bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  32bit   |
+     |-------------------------|
+  3. 用下面的命令來編譯源代碼
+     fasm -m 100000 cicada-nymph.fasm
+     1) "fasm -m 100000"
+        意思是 fasm 在
+        將源代碼文件轉化成目標代碼文件的過程中
+        將用掉 100000 Kb 的內存
+     2) 你寫可以用 fasm 所提供的集成開發環境 (只有 windows 上有這個東西)
+        來編譯源代碼
+        * 例如
+          File -> Open -> (choose the file)
+          Options -> Compiler setup -> (set Memory to : 131072)
+          Run -> Compile
+          (源代碼在哪 生成的目標文件就在哪)
+* 運行
+  * 運行編譯好的解釋器就行了 ^-^
+    你將看到歡迎信息
+  * 注意
+    "core.cn" 這個文件必須在解釋器所在的路徑下
+  * 當你在運行解釋器了的時候
+    你可以通過打入一個函數的名字來調用這個函數
+    例如
+    |-----------------+----------------------------------|
+    | function name   | usage                            |
+    |-----------------+----------------------------------|
+    | test            | to do a little test              |
+    | report-memory   | to get a report of memory usage  |
+    | show-dictionary | to get a report of defined words |
+    |-----------------+----------------------------------|
+* ===================================
+* to explain the title
+  * the little cicada-nymph is for teaching purpose at first
+    of the early version of cicada-language
+    to teach my friends
+    how to implement a interpreter
+    of a simple programming language
+  * it reuses the code and idea
+  * I use assembly language (fasm for x86)
+    to implement the interpreter
+  * the programming language to be implemented
+    is a threaded-code based (Forth-like) language
+  * four versions of the interpreter are implemented
+    |---------+-------|
+    | linux   | 64bit |
+    | windows | 64bit |
+    | linux   | 32bit |
+    | windows | 32bit |
+    |---------+-------|
+* to compile it
+  1. download fasm (the flat assembler)
+     from : http://flatassembler.net/
+     or : https://github.com/the-little-language-designer/fasm
+  2. choose your platform
+     by editing "platform-configuration.inc"
+     |-------------------------|
+     | configuration           |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  64bit   |
+     |-------------------------|
+     | define platform linux   |
+     | define machine  32bit   |
+     |-------------------------|
+     | define platform windows |
+     | define machine  32bit   |
+     |-------------------------|
+  3. the command used to compile the source file
+     fasm -m 100000 cicada-nymph.fasm
+     1) "fasm -m 100000" means that
+        fasm will use 100000 Kb of memory
+        when compiling the source code
+     2) you can also use the IDE of fasm (windows only)
+        to compile the source file
+        * for example
+          File -> Open -> (choose the file)
+          Options -> Compiler setup -> (set Memory to : 131072)
+          Run -> Compile
+          (output file will be saved in where the source file is)
+* to play with it
+  * just open it ^-^
+    the interpreter will show you a welcome message
+  * note that
+    the "core.cn" must be in the same directory as the interpreter
+  * when you are running the interpreter
+    you can call a function by typing its name
+    for example
+    |-----------------+----------------------------------|
+    | function name   | usage                            |
+    |-----------------+----------------------------------|
+    | test            | to do a little test              |
+    | report-memory   | to get a report of memory usage  |
+    | show-dictionary | to get a report of defined words |
+    |-----------------+----------------------------------|
+* ===================================

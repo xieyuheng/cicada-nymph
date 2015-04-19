@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** [maybe] bare-metal version of cicada-nymph for x86
 ** cicada-nymph 的關於棧的 macro
 ** stores platform as variable
 ** home-path & search-path to load-files
@@ -186,8 +185,6 @@
        2. exception handling system
      * function about definition
        which leave data into memory
-** 6th-instar
-   * local-variable
 * ===================================
 * prolog
 ** ----------------------------------
@@ -727,7 +724,7 @@
        << 2 >>
      * return-stack
        #+begin_src return-stack
-           (square)
+       (square)
        - [ (square) ] - [ (dup) ]
            (end)          (mul)
                           (end)
@@ -2482,7 +2479,7 @@
       xx   end_of_prepare
       xx function_1
       xx function_2
-      xx end_of_prepare
+      xx ><><>< end
       #+end_src
    3. return-stack
       #+begin_src return-stack
@@ -5478,8 +5475,7 @@
       xx   literal, 10, write_byte
       xx   !undo_make_jojo
       xx xxswapx, drop2 ;; word
-      xx make_jojo__dispatch_jo
-      xx end
+      xx taca, make_jojo__dispatch_jo
 
    define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
       ;; << string[address, length], jo --
@@ -5876,56 +5872,6 @@
    1 add-three . << 4 >>
    #+end_src
 ** ----------------------------------
-* -----------------------------------
-* local-variable
-** 記 詮釋者與收尾詞
-   * 在進行時
-     每次進入一個函數體的執行
-     即 每次將一串珠珠入棧時
-     同時在這串珠子底部加上
-     current_free_address$local_data_heap
-     即 在 explain$function 中需要做特殊處理
-     注意
-     explain$exception 
-     explain$macro
-     等等
-     和 explain$function 並沒有區別
-     只是名字不一樣而已
-     所以也需要做特殊處理
-   * 這個值在函數退出時 
-     [即 在 end 這個函數中]
-     用以重置 current_free_address$local_data_heap
-     也就是 釋放在這次函數作用過程中所分配的內存
-   * 每次 <:name 的時候
-     都更新 current_free_address$local_data_heap 
-     以分配內存就行了
-   * 也就是說
-     return-stack 中的大多數有效值 
-     都是以兩個值一對的方式存在的
-   * 注意
-     對於明顯的尾遞歸調用
-     並不必做特殊的處理
-     考慮上面的 "兩個值一對的存在" 就明白了
-** 記 語法擴展方面的支持
-   * 這裏需要識別 <:name 還有 :name 等等
-     並對它們做特殊處理
-     這些東西應該藉助設計良好的語法擴展機制來實現
-   * 也就是說 
-     單純的 define-macro 是不充分的
-** memory allocation
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_data_heap = 3 * 1024 * 1024 
-
-   address$local_data_heap labeling
-      preserve size$local_data_heap
-
-   current_free_address$local_data_heap:
-      xx address$local_data_heap
-   #+end_src
-** ><
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   
-   #+end_src
 * -----------------------------------
 * epilog
 ** ----------------------------------

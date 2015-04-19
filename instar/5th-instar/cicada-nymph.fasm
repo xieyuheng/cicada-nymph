@@ -1041,12 +1041,12 @@ define_function "little_test", little_test
    ;;;; echo line
 
    ;;;; false?branch
-   ;; xx false, false?branch, 9
+   ;; xx V__false, false?branch, 9
    ;; xx   literal, 64, write_byte
    ;; xx   literal, 10, write_byte
    ;; xx   zero
    ;; xx   exit_with_TOS
-   ;; xx true, false?branch, 9
+   ;; xx V__true, false?branch, 9
    ;; xx   literal, 65, write_byte
    ;; xx   literal, 10, write_byte
    ;; xx   zero
@@ -1112,7 +1112,7 @@ define_function "little_test", little_test
    ;;;; basic-REPL (without the ability to define function)
    ;;;; after this test
    ;;;; we will use basic-REPL to do further tests
-   ;; xx basic_REPL
+   xx basic_REPL
    ;;;; 1 2 add .
 
 define_primitive_function "drop", drop
@@ -4201,8 +4201,7 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    xx   literal, 10, write_byte
    xx   !undo_make_jojo
    xx xxswapx, drop2 ;; word
-   xx make_jojo__dispatch_jo
-   xx end
+   xx taca, make_jojo__dispatch_jo
 
 define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
    ;; << string[address, length], jo --
@@ -4528,16 +4527,6 @@ define_function "save-into,jo-heap", save_into__jo_heap
    xx address, V__current_free_address__jo_heap
    xx add_save
    xx end
-
-size$local_data_heap = 3 * 1024 * 1024 
-
-address$local_data_heap labeling
-   preserve size$local_data_heap
-
-current_free_address$local_data_heap:
-   xx address$local_data_heap
-
-
 
 define_variable "*un-initialized-memory*", V__un_initialized_memory
   xx address$un_initialized_memory
