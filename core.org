@@ -94,29 +94,30 @@
     end
   ; define-function
 
-
-  cr
-  1 factorial . cr
-  2 factorial . cr
-  3 factorial . cr
-  4 factorial . cr
-  5 factorial . cr
-  6 factorial . cr
-  7 factorial . cr
-  8 factorial . cr
-  9 factorial . cr
-  10 factorial . cr
-  11 factorial . cr
-  12 factorial . cr
-  13 factorial . cr
-  14 factorial . cr
-  15 factorial . cr
-  16 factorial . cr
-  17 factorial . cr
-  18 factorial . cr
-  19 factorial . cr
-  20 factorial . cr
-
+  : factorial,test
+    cr
+    1 factorial . cr
+    2 factorial . cr
+    3 factorial . cr
+    4 factorial . cr
+    5 factorial . cr
+    6 factorial . cr
+    7 factorial . cr
+    8 factorial . cr
+    9 factorial . cr
+    10 factorial . cr
+    11 factorial . cr
+    12 factorial . cr
+    13 factorial . cr
+    14 factorial . cr
+    15 factorial . cr
+    16 factorial . cr
+    17 factorial . cr
+    18 factorial . cr
+    19 factorial . cr
+    20 factorial . cr
+    end
+  ; define-function
 
   : .12
     << 1 2 -- >>
@@ -138,11 +139,18 @@
     end
   ; define-function
 
-  cr
-  1 2 .12 cr
-  6 2 .12 cr
-  1 6 .12 cr
-  6 6 .12 cr
+  : .12,test
+    cr
+    1 2 .12 cr
+    6 2 .12 cr
+    1 6 .12 cr
+    6 6 .12 cr
+    end
+  ; define-function
+
+
+  factorial,test
+  .12,test
   #+end_src
 * re-define execute-word & basic-REPL
   * to protect macro & exception from be called from basic-REPL
@@ -218,197 +226,198 @@
    #+end_src
 * -----------------------------------
 * report
-** show-dictionary,primitive-function
-   #+begin_src cicada-nymph :tangle core.cn
-   : loop,show-dictionary,primitive-function
-     << counter, jo -- total >>
-     dup zero? if
-       drop
-       end
-     then
-     dup primitive-function-jo? false? if
-       jo->pre-jo
-       <> loop,show-dictionary,primitive-function
-     then
-     swap
-       "  " write-string
-       add1 dup .
-     swap
-     dup jo->name
-     dup2 space-string? if
-       drop2
-       "UN-NAMED" write-string cr
-     else
-       write-string cr
-     then
-     jo->pre-jo
-     <> loop,show-dictionary,primitive-function
-   ; define-function
+** report-dictionary
+*** report-dictionary,primitive-function
+    #+begin_src cicada-nymph :tangle core.cn
+    : loop,report-dictionary,primitive-function
+      << counter, jo -- total >>
+      dup zero? if
+        drop
+        end
+      then
+      dup primitive-function-jo? false? if
+        jo->pre-jo
+        <> loop,report-dictionary,primitive-function
+      then
+      swap
+        "  " write-string
+        add1 dup .
+      swap
+      dup jo->name
+      dup2 space-string? if
+        drop2
+        "UN-NAMED" write-string cr
+      else
+        write-string cr
+      then
+      jo->pre-jo
+      <> loop,report-dictionary,primitive-function
+    ; define-function
 
-   : show-dictionary,primitive-function
-     << -- >>
-     "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
-     0 *first-jo-in-dictionary*
-     loop,show-dictionary,primitive-function
-     end
-   ; define-function
-   #+end_src
-** show-dictionary,function
-   #+begin_src cicada-nymph :tangle core.cn
-   : loop,show-dictionary,function
-     << counter, jo -- total >>
-     dup zero? if
-       drop
-       end
-     then
-     dup function-jo? false? if
-       jo->pre-jo
-       <> loop,show-dictionary,function
-     then
-     swap
-       "  " write-string
-       add1 dup .
-     swap
-     dup jo->name
-     dup2 space-string? if
-       drop2
-       "UN-NAMED" write-string cr
-     else
-       write-string cr
-     then
-     jo->pre-jo
-     <> loop,show-dictionary,function
-   ; define-function
+    : report-dictionary,primitive-function
+      << -- >>
+      "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
+      0 *first-jo-in-dictionary*
+      loop,report-dictionary,primitive-function
+      end
+    ; define-function
+    #+end_src
+*** report-dictionary,function
+    #+begin_src cicada-nymph :tangle core.cn
+    : loop,report-dictionary,function
+      << counter, jo -- total >>
+      dup zero? if
+        drop
+        end
+      then
+      dup function-jo? false? if
+        jo->pre-jo
+        <> loop,report-dictionary,function
+      then
+      swap
+        "  " write-string
+        add1 dup .
+      swap
+      dup jo->name
+      dup2 space-string? if
+        drop2
+        "UN-NAMED" write-string cr
+      else
+        write-string cr
+      then
+      jo->pre-jo
+      <> loop,report-dictionary,function
+    ; define-function
 
-   : show-dictionary,function
-     << -- >>
-     "* ALL FUNCTION IN DICTIONARY :" write-string cr
-     0 *first-jo-in-dictionary*
-     loop,show-dictionary,function
-     end
-   ; define-function
-   #+end_src
-** show-dictionary,macro
-   #+begin_src cicada-nymph :tangle core.cn
-   : loop,show-dictionary,macro
-     << counter, jo -- total >>
-     dup zero? if
-       drop
-       end
-     then
-     dup macro-jo? false? if
-       jo->pre-jo
-       <> loop,show-dictionary,macro
-     then
-     swap
-       "  " write-string
-       add1 dup .
-     swap
-     dup jo->name
-     dup2 space-string? if
-       drop2
-       "UN-NAMED" write-string cr
-     else
-       write-string cr
-     then
-     jo->pre-jo
-     <> loop,show-dictionary,macro
-   ; define-function
+    : report-dictionary,function
+      << -- >>
+      "* ALL FUNCTION IN DICTIONARY :" write-string cr
+      0 *first-jo-in-dictionary*
+      loop,report-dictionary,function
+      end
+    ; define-function
+    #+end_src
+*** report-dictionary,macro
+    #+begin_src cicada-nymph :tangle core.cn
+    : loop,report-dictionary,macro
+      << counter, jo -- total >>
+      dup zero? if
+        drop
+        end
+      then
+      dup macro-jo? false? if
+        jo->pre-jo
+        <> loop,report-dictionary,macro
+      then
+      swap
+        "  " write-string
+        add1 dup .
+      swap
+      dup jo->name
+      dup2 space-string? if
+        drop2
+        "UN-NAMED" write-string cr
+      else
+        write-string cr
+      then
+      jo->pre-jo
+      <> loop,report-dictionary,macro
+    ; define-function
 
-   : show-dictionary,macro
-     << -- >>
-     "* ALL MACRO IN DICTIONARY :" write-string cr
-     0 *first-jo-in-dictionary*
-     loop,show-dictionary,macro
-     end
-   ; define-function
-   #+end_src
-** show-dictionary,exception
-   #+begin_src cicada-nymph :tangle core.cn
-   : loop,show-dictionary,exception
-     << counter, jo -- total >>
-     dup zero? if
-       drop
-       end
-     then
-     dup exception-jo? false? if
-       jo->pre-jo
-       <> loop,show-dictionary,exception
-     then
-     swap
-       "  " write-string
-       add1 dup .
-     swap
-     dup jo->name
-     dup2 space-string? if
-       drop2
-       "UN-NAMED" write-string cr
-     else
-       write-string cr
-     then
-     jo->pre-jo
-     <> loop,show-dictionary,exception
-   ; define-function
+    : report-dictionary,macro
+      << -- >>
+      "* ALL MACRO IN DICTIONARY :" write-string cr
+      0 *first-jo-in-dictionary*
+      loop,report-dictionary,macro
+      end
+    ; define-function
+    #+end_src
+*** report-dictionary,exception
+    #+begin_src cicada-nymph :tangle core.cn
+    : loop,report-dictionary,exception
+      << counter, jo -- total >>
+      dup zero? if
+        drop
+        end
+      then
+      dup exception-jo? false? if
+        jo->pre-jo
+        <> loop,report-dictionary,exception
+      then
+      swap
+        "  " write-string
+        add1 dup .
+      swap
+      dup jo->name
+      dup2 space-string? if
+        drop2
+        "UN-NAMED" write-string cr
+      else
+        write-string cr
+      then
+      jo->pre-jo
+      <> loop,report-dictionary,exception
+    ; define-function
 
-   : show-dictionary,exception
-     << -- >>
-     "* ALL EXCEPTION IN DICTIONARY :" write-string cr
-     0 *first-jo-in-dictionary*
-     loop,show-dictionary,exception
-     end
-   ; define-function
-   #+end_src
-** show-dictionary,variable
-   #+begin_src cicada-nymph :tangle core.cn
-   : loop,show-dictionary,variable
-     << counter, jo -- total >>
-     dup zero? if
-       drop
-       end
-     then
-     dup variable-jo? false? if
-       jo->pre-jo
-       <> loop,show-dictionary,variable
-     then
-     swap
-       "  " write-string
-       add1 dup .
-     swap
-     dup jo->name
-     dup2 space-string? if
-       drop2
-       "UN-NAMED" write-string cr
-     else
-       write-string cr
-     then
-     jo->pre-jo
-     <> loop,show-dictionary,variable
-   ; define-function
+    : report-dictionary,exception
+      << -- >>
+      "* ALL EXCEPTION IN DICTIONARY :" write-string cr
+      0 *first-jo-in-dictionary*
+      loop,report-dictionary,exception
+      end
+    ; define-function
+    #+end_src
+*** report-dictionary,variable
+    #+begin_src cicada-nymph :tangle core.cn
+    : loop,report-dictionary,variable
+      << counter, jo -- total >>
+      dup zero? if
+        drop
+        end
+      then
+      dup variable-jo? false? if
+        jo->pre-jo
+        <> loop,report-dictionary,variable
+      then
+      swap
+        "  " write-string
+        add1 dup .
+      swap
+      dup jo->name
+      dup2 space-string? if
+        drop2
+        "UN-NAMED" write-string cr
+      else
+        write-string cr
+      then
+      jo->pre-jo
+      <> loop,report-dictionary,variable
+    ; define-function
 
-   : show-dictionary,variable
-     << -- >>
-     "* ALL VARIABLE IN DICTIONARY :" write-string cr
-     0 *first-jo-in-dictionary*
-     loop,show-dictionary,variable
-     end
-   ; define-function
-   #+end_src
-** show-dictionary
-   * different types of words in dictionary
-     are showed separately
-   #+begin_src cicada-nymph :tangle core.cn
-   : show-dictionary
-     << -- >>
-     show-dictionary,primitive-function
-     show-dictionary,function
-     show-dictionary,macro
-     show-dictionary,exception
-     show-dictionary,variable
-     "* TOTALLY : " write-string
-     add add add add . cr
-     end
-   ; define-function
-   #+end_src
+    : report-dictionary,variable
+      << -- >>
+      "* ALL VARIABLE IN DICTIONARY :" write-string cr
+      0 *first-jo-in-dictionary*
+      loop,report-dictionary,variable
+      end
+    ; define-function
+    #+end_src
+*** report-dictionary
+    * different types of words in dictionary
+      are showed separately
+    #+begin_src cicada-nymph :tangle core.cn
+    : report-dictionary
+      << -- >>
+      report-dictionary,primitive-function
+      report-dictionary,function
+      report-dictionary,macro
+      report-dictionary,exception
+      report-dictionary,variable
+      "* TOTALLY : " write-string
+      add add add add . cr
+      end
+    ; define-function
+    #+end_src
 ** report-memory
    #+begin_src cicada-nymph :tangle core.cn
    : report-memory
@@ -451,6 +460,47 @@
           *current-free-address,jo-heap*
           *jo-heap*
           sub sub . cr
+     end
+   ; define-function
+   #+end_src
+** report-platform
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-platform
+     << -- >>
+     "* PLATFORM : " write-string
+     platform write-string
+     cr
+     end
+   ; define-function
+   #+end_src
+** report-jo-size
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-jo-size
+     << -- >>
+     "* JO-SIZE : " write-string
+     *jo-size* write-nature-number
+     cr
+     end
+   ; define-function
+   #+end_src
+** report-machine-word-size
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-machine-word-size
+     << -- >>
+     "* MACHINE-WORD-SIZE : " write-string
+     *jo-size* 8 mul write-nature-number
+     cr
+     end
+   ; define-function
+   #+end_src
+** initial-report
+   #+begin_src cicada-nymph :tangle core.cn
+   : initial-report
+     << -- >>
+     "  " write-string report-platform
+     "  " write-string report-machine-word-size
+     "  " write-string report-jo-size
+     cr
      end
    ; define-function
    #+end_src
@@ -558,7 +608,7 @@
      "--" write-string
      cr
      <> stack-REPL
-   ; define-function   
+   ; define-function
    #+end_src
 * -----------------------------------
 * name-hash-table
@@ -1014,7 +1064,8 @@
 * >< frame-stack
 * -----------------------------------
 * epilog
-  #+begin_src cicada-nymph :tangle core.cn  
+  #+begin_src cicada-nymph :tangle core.cn
+  initial-report
   stack-REPL
   hi
   #+end_src
@@ -1023,6 +1074,9 @@
   #+begin_src cicada-nymph
   name-hash-table,test
   name-hash-table,report
+
+  report-memory
+  report-dictionary
   #+end_src
 * ===================================
 * ><
@@ -1084,11 +1138,11 @@
      << string[address, length], number, counter
         -- name, true
         -- name, false >>
-     <:counter <:number <::string
+     >:counter >:number >::string
      :number :counter name-hash-table,hash
-     <:name
+     >:name
      :number 0 name-hash-table,hash
-     <:orbit
+     >:orbit
      :name name,used? false? if
        ::string :name
        name,save-string
@@ -1123,4 +1177,3 @@
      end
    ; define-function
    #+end_src
-   

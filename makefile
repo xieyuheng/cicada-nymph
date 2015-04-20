@@ -42,25 +42,25 @@ linux64:
 	@
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  64bit" >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm
+	fasm cicada-nymph.fasm
 
 windows64:
 	@
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  64bit"   >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm 
+	fasm cicada-nymph.fasm 
 
 linux32:
 	@
 	echo "define platform linux" >  platform-configuration.inc
 	echo "define machine  32bit" >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm 
+	fasm cicada-nymph.fasm 
 
 windows32:
 	@
 	echo "define platform windows" >  platform-configuration.inc
 	echo "define machine  32bit"   >> platform-configuration.inc
-	fasm -m 100000 cicada-nymph.fasm 
+	fasm cicada-nymph.fasm 
 
 clean*~:
 	@
