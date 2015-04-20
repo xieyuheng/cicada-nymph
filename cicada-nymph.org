@@ -4,6 +4,7 @@
 
 * todo
 ** [BUG] explain$exception
+   * exception handling about meeting not bound local-variable during compile time
 ** code & doc clean-up
 ** update documentations
 ** [maybe] bare-metal version of cicada-nymph for x86
@@ -33,6 +34,16 @@
    * there are 64 positions below the all those stacks
      when you are belowing-stack so much
      bad things happen
+** [BAD-DESIGN] local-variable
+   * 想要加入
+     @:address <number>
+     或者
+     <number> %>:address
+   * 但是
+     由於對 offset 的計算是在編譯時進行的
+     所以根本就沒利用到這裏所能得到的最大的靈活性
+     以至於沒法以良好的方式實現
+     在 local_data_heap 中動態地分配變長的內存
 * ===================================
 * note
 ** jo & jojo
@@ -6316,103 +6327,65 @@
    }
    #+end_src
 ** ----------------------------------
-** >< 編譯的例子
-   * cicada-nymph
+** note example result
+   * with >::name
+     without @:address
      #+begin_src cicada-nymph
      : example
-       << number1, number2, number3
-          -- number1 + number2 >>
-       >:var2
-       >:var2
-       >:var1
-       :var1
-       :var2
-       add
-       16 %>:address
-       32 %>:address
-       :address drop
+       << number1, number2, number3, number4
+          -- number1, number2 >>
+       >::var2
+       >::var2
+       ::var2
        end
      ; define-function
      #+end_src
-   * fasm
-     1 2 4 example . << 3 >>
+     ----------------
      #+begin_src fasm
      define_function "example", example
-        ;; << number1, number2, number3
-        ;;    -- number1 + number2 >>
 
-        ;; >:var2
-        xx literal, 1, local_data_allocate__jo
-        xx literal, 0, save_local_data
+        ;; >::var2
+        xx literal, 2, local_data_allocate__jo
+        xx literal, 0, literal, 2, n_save_local_data
 
-        ;; >:var2
-        xx literal, 0, save_local_data
+        ;; >::var2
+        xx literal, 0, literal, 2, n_save_local_data
 
-        ;; >:var1
-        xx literal, 1, local_data_allocate__jo
-        xx literal, (0 + jo_size), save_local_data
+        ;; ::var2
+        xx literal, 0, literal, 2, n_fetch_local_data
 
-        ;; :var1
-        xx literal, (0 + jo_size), fetch_local_data
+        xx end
+     #+end_src
+** note example result 2
+   * with @:address
+     without >::name
+     #+begin_src cicada-nymph
+     : example
+       << -- >>
+       @:address 16
+       @:address 32
+       end
+     ; define-function
+     #+end_src
+     ----------------
+     #+begin_src fasm
+     define_function "example", example
 
-        ;; :var2
-        xx literal, 0, fetch_local_data
-
-        ;; add
-        xx addition
-
-        ;; 16 %>:address
+        ;; @:address 16
         xx literal, 1, local_data_allocate__jo
         xx literal, 16
         xx   literal, current_free_address$local_data_heap
         xx   fetch, swap
         xx local_data_allocate__byte
 
-        xx literal, (0 + jo_size + 16), save_local_data
+        xx literal, (0 + jo_size + 16), n_save_local_data
 
-        ;; 32 %>:address
+        ;; @:address 32
         xx literal, 32
         xx   literal, current_free_address$local_data_heap
         xx   fetch, swap
         xx local_data_allocate__byte
-        xx literal, (0 + jo_size + 16), save_local_data
-
-        ;; :address drop
-        xx literal, (0 + jo_size + 16), fetch_local_data
-        xx drop
-        xx end
-     #+end_src
-** >< 編譯的例子2
-   * cicada-nymph
-     #+begin_src cicada-nymph
-     : example
-       << number1, number2, number3, number4
-          -- number1 + number2 >>
-       >::var2
-       >::var2
-       ::var2
-       add
-       end
-     ; define-function
-     #+end_src
-   * fasm
-     #+begin_src fasm
-     define_function "example", example
-        ;; << number1, number2, number3
-        ;;    -- number1 + number2 >>
-
-        ;; >::var2
-        xx literal, 1, local_data_allocate__jo
-        xx literal, 0, save_local_data
-
-        ;; >::var2
-        xx literal, 0, save_local_data
-
-        ;; ::var2
-        xx literal, 0, fetch_local_data
-
-        ;; add
-        xx addition
+        xx literal, (0 + jo_size + 16), n_save_local_data
 
         xx end
      #+end_src
@@ -6428,8 +6401,8 @@
      add
      end
    ; define-function
-
    1 2 4 local-variable,test << 3 >> .
+
 
    : local-variable,test,2
      << number1, number2 -- number2 + number3 >>
@@ -6437,7 +6410,6 @@
      ::var2
      end
    ; define-function
-
    1 2 local-variable,test,2 << 1 2 >> . .
 
 
@@ -6449,7 +6421,6 @@
      add
      end
    ; define-function
-
    1 2 4 local-variable,test,3 << 6 >> .
    #+end_src
 ** count-front-colon
@@ -6473,7 +6444,7 @@
       xx string_tail__char, xswapxx
       xx taca, count_front_colon__loop
    #+end_src
-** local-variable-fetch-string? & its macro
+** local-variable-fetch-string?
    * :name
      ::name
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6490,7 +6461,9 @@
       xx swap, drop
       xx literal, 0, greater_than?
       xx end
-
+   #+end_src
+** M__local_variable_fetch_string
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_macro "", M__local_variable_fetch_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
@@ -6528,7 +6501,7 @@
    .end:
    length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
    #+end_src
-** local-variable-save-string? & its macro
+** local-variable-save-string?
    * >:name
      >::name
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6550,7 +6523,9 @@
       xx swap, drop
       xx literal, 0, greater_than?
       xx end
-
+   #+end_src
+** M__local_variable_save_string
+   #+begin_src fasm :tangle cicada-nymph.fasm
    define_macro "", M__local_variable_save_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
@@ -6596,35 +6571,37 @@
       xx     save_into__jo_heap
       xx end
    #+end_src
-** >< local-variable-save-address-string? & its macro
-   * %>:address
-   #+begin_src fasm :tangle cicada-nymph.fasm
+** >< local-variable-save-address-string?
+   * @:address
+   #+begin_src fasm
    define_function "local-variable-save-address-string?", local_variable_save_address_string?
       ;; << string[address, length] -- bool >>
-      xx dup, zero?, false?branch, 4
+      xx dup, literal, 3, less_than?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, string_head__char
-      xx literal, '%', equal?, false?, false?branch, 4
+      xx literal, '@', equal?, false?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, string_head__char
-      xx literal, '>', equal?, false?, false?branch, 4
+      xx literal, ':', equal?, false?, false?branch, 4
       xx   drop2, false
       xx   end
-      xx string_tail__char
-      xx dup2, count_front_colon
-      xx dup, literal, 0, greater_than?, false?, false?branch, 5
-      xx   drop, drop2, false
-      xx   end
-      xx subtraction
-      xx swap, drop
-      xx literal, 0, greater_than?
+      xx string_head__char
+      xx literal, ':', equal?, false?
       xx end
-
+   #+end_src
+** >< M__local_variable_save_address_string
+   * @:address <literal-number>
+     <literal-number> must be literal
+     for the amount of memory be allocated
+     must be decided as compile-time
+   #+begin_src fasm
    define_macro "", M__local_variable_save_address_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
+      xx string_tail__char
+      xx dup2
 
       xx end
    #+end_src

@@ -4938,35 +4938,6 @@ define_macro "", M__local_variable_save_string
    xx     save_into__jo_heap
    xx end
 
-define_function "local-variable-save-address-string?", local_variable_save_address_string?
-   ;; << string[address, length] -- bool >>
-   xx dup, zero?, false?branch, 4
-   xx   drop2, false
-   xx   end
-   xx dup2, string_head__char
-   xx literal, '%', equal?, false?, false?branch, 4
-   xx   drop2, false
-   xx   end
-   xx dup2, string_head__char
-   xx literal, '>', equal?, false?, false?branch, 4
-   xx   drop2, false
-   xx   end
-   xx string_tail__char
-   xx dup2, count_front_colon
-   xx dup, literal, 0, greater_than?, false?, false?branch, 5
-   xx   drop, drop2, false
-   xx   end
-   xx subtraction
-   xx swap, drop
-   xx literal, 0, greater_than?
-   xx end
-
-define_macro "", M__local_variable_save_address_string
-   ;; << string[address, length], word[address, length] --
-   ;;    string[address, length] >>
-
-   xx end
-
 size$local_variable_table = 100 * 1024
 
 address$local_variable_table labeling
