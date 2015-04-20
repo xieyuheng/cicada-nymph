@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** use name-hash-table to implement local-variable-support
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
 ** compare the improvement about syntax after local-variable is supported
 ** name-hash-table
@@ -479,6 +478,7 @@
      << -- >>
      "* JO-SIZE : " write-string
      *jo-size* write-nature-number
+     " bytes" write-string
      cr
      end
    ; define-function
@@ -489,6 +489,7 @@
      << -- >>
      "* MACHINE-WORD-SIZE : " write-string
      *jo-size* 8 mul write-nature-number
+     " bits" write-string
      cr
      end
    ; define-function
@@ -635,7 +636,8 @@
      * 997
      * 499
    #+begin_src cicada-nymph :tangle core.cn
-   100333
+   100333 drop
+   13
    : *name-hash-table,size*
    ; define-variable
 
@@ -756,7 +758,7 @@
       end
     ; define-function
     #+end_src
-*** name,fetch-title-index
+*** name,fetch-title-index sadsfiljdasd
     #+begin_src cicada-nymph :tangle core.cn
     : name,fetch-title-index
       << name -- index >>
@@ -889,9 +891,9 @@
      end
    ; define-function
    #+end_src
-** insert
+** [old] insert
    * I found that (insert) can not re-use (search)
-   #+begin_src cicada-nymph :tangle core.cn
+   #+begin_src cicada-nymph
    : name-hash-table,insert,loop
      << string[address, length], number, counter
         -- name, true
@@ -928,6 +930,52 @@
      << number, counter, name, string[address, length] >>
      x|swap|xx drop
      xx|swap|xx add1
+     <> name-hash-table,insert,loop
+   ; define-function
+
+   : name-hash-table,insert
+     << string[address, length]
+        -- name, true
+        -- name, false >>
+     dup2 string->finite-carry-sum
+     0 name-hash-table,insert,loop
+     end
+   ; define-function
+   #+end_src
+** insert
+   * I found that (insert) can not re-use (search)
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,insert,loop
+     << string[address, length], number, counter
+        -- name, true
+        -- name, false >>
+     >:counter >:number >::string
+     :number :counter name-hash-table,hash
+     >:name
+     :number 0 name-hash-table,hash
+     >:orbit
+     :name name,used? false? if
+       ::string :name
+       name,save-string
+       :orbit :name
+       name,save-orbiton
+       :counter :orbit
+       name,save-orbit-length
+       1 address *name-hash-table,counter* add-save
+       :name true
+       end
+     then
+     :name name,fetch-string
+     ::string string-equal? if
+       :name true
+       end
+     then
+     :counter *name-hash-table,size* equal? if
+       :name false
+       end
+     then
+     ::string
+     :number :counter add1
      <> name-hash-table,insert,loop
    ; define-function
 
@@ -1079,101 +1127,3 @@
   report-dictionary
   #+end_src
 * ===================================
-* ><
-** insert
-   * I found that (insert) can not re-use (search)
-   #+begin_src cicada-nymph
-   : name-hash-table,insert,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     xx|tuck|xx name-hash-table,hash
-     xx|tuck|x
-     << number, counter, name, string[address, length], name >>
-     name,used? false? if
-       x|over|xx name,save-string
-         xx|tuck|x << name as return value >>
-       << name, number, counter, name >>
-       x|over|xx 0 name-hash-table,hash
-       swap name,save-orbiton
-       << name, number, counter >>
-       swap 0 name-hash-table,hash
-       name,save-orbit-length
-       1 address *name-hash-table,counter* add-save
-       true
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|over|xx name,fetch-string
-     xx|over|xx string-equal? if
-       drop2 xx|swap|x drop2
-       true
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|over|xxx *name-hash-table,size* equal? if
-       drop2 xx|swap|x drop2
-       false
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|swap|xx drop
-     xx|swap|xx add1
-     <> name-hash-table,insert,loop
-   ; define-function
-
-   : name-hash-table,insert
-     << string[address, length]
-        -- name, true
-        -- name, false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
-     end
-   ; define-function
-   #+end_src
-** insert
-   * I found that (insert) can not re-use (search)
-   #+begin_src cicada-nymph
-   : name-hash-table,insert,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     >:counter >:number >::string
-     :number :counter name-hash-table,hash
-     >:name
-     :number 0 name-hash-table,hash
-     >:orbit
-     :name name,used? false? if
-       ::string :name
-       name,save-string
-       :orbit :name
-       name,save-orbiton
-       :counter :orbit
-       name,save-orbit-length
-       1 address *name-hash-table,counter* add-save
-       :name true
-       end
-     then
-     :name name,fetch-string
-     ::string string-equal? if
-       :name true
-       end
-     then
-     :counter *name-hash-table,size* equal? if
-       :name false
-       end
-     then
-     ::string
-     :number :counter add1
-     <> name-hash-table,insert,loop
-   ; define-function
-
-   : name-hash-table,insert
-     << string[address, length]
-        -- name, true
-        -- name, false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
-     end
-   ; define-function
-   #+end_src

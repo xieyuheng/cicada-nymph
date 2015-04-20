@@ -1706,6 +1706,7 @@
       xx welcome
       ;; xx little_test
       xx initialize_dispatch_word_stack
+      xx initialize_local_variable
       xx load_init_file
       xx basic_REPL
    #+end_src
@@ -1719,6 +1720,7 @@
       xx end
 
    string$welcome_to_cicada_nymph:
+      db 10
       db "* welcome to cicada-nymph ^-^"
       db 10
    .end:
@@ -4580,6 +4582,25 @@
       xx drop, false
       xx end
    #+end_src
+** latin-char?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "latin-char?", latin_char?
+      ;; << char -- bool >>
+      xx dup, literal, 'A', less_than?, false?branch, 4
+      xx   drop, false
+      xx   end
+      xx dup, literal, 'Z', less_or_equal?, false?branch, 4
+      xx   drop, true
+      xx   end
+      xx dup, literal, 'a', less_than?, false?branch, 4
+      xx   drop, false
+      xx   end
+      xx dup, literal, 'z', less_or_equal?, false?branch, 4
+      xx   drop, true
+      xx   end
+      xx drop, false
+      xx end
+   #+end_src
 ** note digital
    * a decimal-digital is number from 0 to 9
    * a binary-digital is number from 0 to 1
@@ -5505,6 +5526,12 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "make-jojo", make_jojo
       ;; << string[address, length] -- >>
+      xx local_variable_table__clear
+      xx make_jojo__loop
+      xx end
+
+   define_function "make-jojo,loop", make_jojo__loop
+      ;; << string[address, length] -- >>
       xx dup2, space_string?, false?branch, 3
       xx   drop2
       xx   end
@@ -5514,7 +5541,7 @@
       xx string_head__word
       ;; << tail[address, length], head[address, length] >>
       xx make_jojo__dispatch_word
-      xx taca, make_jojo
+      xx taca, make_jojo__loop
 
    define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
       ;; << string[address, length], word[address, length] --
@@ -6184,76 +6211,117 @@
    current_free_address$local_data_heap:
       xx address$local_data_heap
    #+end_src
-** local_data_allocate__byte
+** local_data_allocate__[byte,jo]
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-data-allocate,byte", local_data_allocate__byte
       ;; << number -- >>
       xx literal, current_free_address$local_data_heap
       xx add_save
       xx end
+
+   define_function "local-data-allocate,jo", local_data_allocate__jo
+      ;; << number -- >>
+      xx V__jo_size, multiple
+      xx literal, current_free_address$local_data_heap
+      xx add_save
+      xx end
    #+end_src
-** fetch & save [64bit]
+** note many fetch & save
+   * in memory
+     | 1 : value-1 |
+     | 1 : value-2 |
+     | 1 : value-3 |
+   * on stack
+     << value-1, value-2, value-3, ... >>
+** n-fetch & n-save [64bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "fetch-local-data", fetch_local_data
-      ;; << offset -- value >>
-      pop_argument_stack rcx
+   define_primitive_function "n-fetch-local-data", n_fetch_local_data
+      ;; << offset, n -- value-1, ..., value-n >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
-      add rbx, rcx
+
+      pop_argument_stack rcx
+      pop_argument_stack rdx
+      add rbx, rdx
+   .loop:
       mov rax, [rbx]
       push_argument_stack rax
+      add rbx, jo_size
+      loop .loop
       next
 
-   define_primitive_function "save-local-data", save_local_data
-      ;; << value, offset -- >>
-      pop_argument_stack rcx
-      pop_argument_stack rax
+   define_primitive_function "n-save-local-data", n_save_local_data
+      ;; << value-n, ..., value-1, offset, n -- >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
-      add rbx, rcx
+
+      pop_argument_stack rcx
+      pop_argument_stack rdx
+      add rbx, rdx
+        mov rax, jo_size
+        imul rax, rcx
+        add rbx, rax
+        ;; for address is based on 0
+        ;; but n is based on 1
+        sub rbx, jo_size
+   .loop:
+      pop_argument_stack rax
       mov [rbx], rax
+      sub rbx, jo_size
+      loop .loop
       next
 
    }
    #+end_src
-** fetch & save [32bit]
+** n-fetch & n-save [32bit]
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "fetch-local-data", fetch_local_data
-      ;; << offset -- value >>
-      pop_return_stack rax
-      pop_return_stack rbx
-      push_return_stack rbx
-      push_return_stack rax
+   define_primitive_function "n-fetch-local-data", n_fetch_local_data
+      ;; << offset, n -- value-1, ..., value-n >>
+      mov rax, [pointer$return_stack]
+      mov rbx, [rax - (2 * jo_size)]
 
       pop_argument_stack rcx
-      add rbx, rcx
+      pop_argument_stack rdx
+      add rbx, rdx
+   .loop:
       mov rax, [rbx]
       push_argument_stack rax
+      add rbx, jo_size
+      loop .loop
       next
 
-   define_primitive_function "save-local-data", save_local_data
-      ;; << value, offset -- >>
-      pop_return_stack rax
-      pop_return_stack rbx
-      push_return_stack rbx
-      push_return_stack rax
+   define_primitive_function "n-save-local-data", n_save_local_data
+      ;; << value-n, ..., value-1, offset, n -- >>
+      mov rax, [pointer$return_stack]
+      mov rbx, [rax - (2 * jo_size)]
 
       pop_argument_stack rcx
+      pop_argument_stack rdx
+      add rbx, rdx
+        mov rax, jo_size
+        imul rax, rcx
+        add rbx, rax
+        ;; for address is based on 0
+        ;; but n is based on 1
+        sub rbx, jo_size
+   .loop:
       pop_argument_stack rax
-      add rbx, rcx
       mov [rbx], rax
+      sub rbx, jo_size
+      loop .loop
       next
 
    }
    #+end_src
 ** ----------------------------------
-** 記 編譯的例子
+** >< 編譯的例子
    * cicada-nymph
      #+begin_src cicada-nymph
      : example
-       << number, number, number -- number >>
+       << number1, number2, number3
+          -- number1 + number2 >>
        >:var2
        >:var2
        >:var1
@@ -6266,20 +6334,22 @@
        end
      ; define-function
      #+end_src
-   * 1 2 4 example . << 3 >>
+   * fasm
+     1 2 4 example . << 3 >>
      #+begin_src fasm
      define_function "example", example
-        ;; << number, number -- number, number >>
+        ;; << number1, number2, number3
+        ;;    -- number1 + number2 >>
 
         ;; >:var2
-        xx literal, jo_size, local_data_allocate__byte
+        xx literal, 1, local_data_allocate__jo
         xx literal, 0, save_local_data
 
         ;; >:var2
         xx literal, 0, save_local_data
 
         ;; >:var1
-        xx literal, jo_size, local_data_allocate__byte
+        xx literal, 1, local_data_allocate__jo
         xx literal, (0 + jo_size), save_local_data
 
         ;; :var1
@@ -6292,7 +6362,7 @@
         xx addition
 
         ;; 16 %>:address
-        xx literal, jo_size, local_data_allocate__byte
+        xx literal, 1, local_data_allocate__jo
         xx literal, 16
         xx   literal, current_free_address$local_data_heap
         xx   fetch, swap
@@ -6312,40 +6382,247 @@
         xx drop
         xx end
      #+end_src
-** >< local-variable-fetch-string? & its macro
+** >< 編譯的例子2
+   * cicada-nymph
+     #+begin_src cicada-nymph
+     : example
+       << number1, number2, number3, number4
+          -- number1 + number2 >>
+       >::var2
+       >::var2
+       ::var2
+       add
+       end
+     ; define-function
+     #+end_src
+   * fasm
+     #+begin_src fasm
+     define_function "example", example
+        ;; << number1, number2, number3
+        ;;    -- number1 + number2 >>
+
+        ;; >::var2
+        xx literal, 1, local_data_allocate__jo
+        xx literal, 0, save_local_data
+
+        ;; >::var2
+        xx literal, 0, save_local_data
+
+        ;; ::var2
+        xx literal, 0, fetch_local_data
+
+        ;; add
+        xx addition
+
+        xx end
+     #+end_src
+** test
+   #+begin_src cicada-nymph
+   : local-variable,test
+     << number1, number2, number3 -- number1 + number2 >>
+     >:var2
+     >:var2
+     >:var1
+     :var1
+     :var2
+     add
+     end
+   ; define-function
+
+   1 2 4 local-variable,test << 3 >> .
+
+   : local-variable,test,2
+     << number1, number2 -- number2 + number3 >>
+     >::var2
+     ::var2
+     end
+   ; define-function
+
+   1 2 local-variable,test,2 << 1 2 >> . .
+
+
+   : local-variable,test,3
+     << number1, number2, number3 -- number2 + number3 >>
+     >::var2
+     >:var1
+     ::var2
+     add
+     end
+   ; define-function
+
+   1 2 4 local-variable,test,3 << 6 >> .
+   #+end_src
+** count-front-colon
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "count-front-colon", count_front_colon
+      ;; << string[address, length] -- number >>
+      xx literal, 0 ;; counter
+      xx count_front_colon__loop
+      xx end
+
+   define_function "count-front-colon,loop", count_front_colon__loop
+      ;; << string[address, length], counter -- number >>
+      xx over, zero?, false?branch, 4
+      xx   xxswapx, drop2
+      xx   end
+      xx xxoverx, string_head__char
+      xx literal, ':', equal?, false?, false?branch, 4
+      xx   xxswapx, drop2
+      xx   end
+      xx add1, xxswapx
+      xx string_tail__char, xswapxx
+      xx taca, count_front_colon__loop
+   #+end_src
+** local-variable-fetch-string? & its macro
+   * :name
+     ::name
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-fetch-string?", local_variable_fetch_string?
       ;; << string[address, length] -- bool >>
-
+      xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, count_front_colon
+      xx dup, literal, 0, greater_than?, false?, false?branch, 5
+      xx   drop, drop2, false
+      xx   end
+      xx subtraction
+      xx swap, drop
+      xx literal, 0, greater_than?
       xx end
 
-   define_macro "", M__local_variable_fetch_string?
+   define_macro "", M__local_variable_fetch_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
-
+      xx dup2
+      xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+      ;;   literal, <offese>, literal, n, n_fetch_local_data
+      xx     literal, literal
+      xx       save_into__jo_heap
+      ;;     offset
+      xx       save_into__jo_heap
+      xx     literal, literal
+      xx       save_into__jo_heap
+      ;;     n
+      xx     count_front_colon
+      xx       save_into__jo_heap
+      xx     literal, n_fetch_local_data
+      xx       save_into__jo_heap
+      xx   end
+   .not_found:
+      ;; ><><>< exception handling
+      xx the_report_local_variable_not_bound
+      xx write_string
+      xx literal, 10, write_byte
       xx end
+
+
+   define_function "report-local-variable-not-bound", the_report_local_variable_not_bound
+      xx literal, string$report_local_variable_not_bound
+      xx literal, length$report_local_variable_not_bound
+      xx write_string
+      xx end
+
+   string$report_local_variable_not_bound:
+      db "* LOCAL-VARIABLE NOT BOUND : "
+   .end:
+   length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
    #+end_src
-** >< local-variable-save-string? & its macro
+** local-variable-save-string? & its macro
+   * >:name
+     >::name
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-save-string?", local_variable_save_string?
       ;; << string[address, length] -- bool >>
-
+      xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, string_head__char
+      xx literal, '>', equal?, false?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx string_tail__char
+      xx dup2, count_front_colon
+      xx dup, literal, 0, greater_than?, false?, false?branch, 5
+      xx   drop, drop2, false
+      xx   end
+      xx subtraction
+      xx swap, drop
+      xx literal, 0, greater_than?
       xx end
 
-   define_macro "", M__local_variable_save_string?
+   define_macro "", M__local_variable_save_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
-
+      xx string_tail__char
+      xx dup2
+      xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+      ;;   literal, <offese>, literal, n, n_save_local_data
+      xx     literal, literal
+      xx       save_into__jo_heap
+      ;;     offset
+      xx       save_into__jo_heap
+      xx     literal, literal
+      xx       save_into__jo_heap
+      ;;     n
+      xx     count_front_colon
+      xx       save_into__jo_heap
+      xx     literal, n_save_local_data
+      xx       save_into__jo_heap
+      xx   end
+   .not_found:
+      xx dup2
+      xx local_variable_table__insert
+      xx xxswapx
+      xx count_front_colon
+      ;; literal, <number>, local_data_allocate__jo
+      xx   literal, literal
+      xx     save_into__jo_heap
+      ;;   number of jo
+      xx     dup, save_into__jo_heap
+      xx   literal, local_data_allocate__jo
+      xx     save_into__jo_heap
+      ;; literal, <offese>, literal, n, save_local_data
+      xx   literal, literal
+      xx     save_into__jo_heap
+      ;;   offset
+      xx   swap
+      xx     save_into__jo_heap
+      xx   literal, literal
+      xx     save_into__jo_heap
+      ;;   n
+      xx     save_into__jo_heap
+      xx   literal, n_save_local_data
+      xx     save_into__jo_heap
       xx end
    #+end_src
 ** >< local-variable-save-address-string? & its macro
+   * %>:address
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-save-address-string?", local_variable_save_address_string?
       ;; << string[address, length] -- bool >>
-
+      xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, string_head__char
+      xx literal, '%', equal?, false?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, string_head__char
+      xx literal, '>', equal?, false?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx string_tail__char
+      xx dup2, count_front_colon
+      xx dup, literal, 0, greater_than?, false?, false?branch, 5
+      xx   drop, drop2, false
+      xx   end
+      xx subtraction
+      xx swap, drop
+      xx literal, 0, greater_than?
       xx end
 
-   define_macro "", M__local_variable_save_address_string?
+   define_macro "", M__local_variable_save_address_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
 
@@ -6359,27 +6636,113 @@
 
    address$local_variable_table labeling
       preserve size$local_variable_table
-
-
-   cursor$local_variable_table:
-      xx address$local_variable_table
    #+end_src
-** find
+** clear
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-table,find", local_variable_table__find
-      ;; << string[address, length]
-      ;;    -- offset, true
-      ;;    -- false >>
+   border$local_variable_table:
+      xx address$local_variable_table
 
+   offset$local_variable_table:
+      xx 0
+
+   define_function "local-variable-table,clear", local_variable_table__clear
+      ;; << -- >>
+      xx literal, address$local_variable_table
+      xx literal, border$local_variable_table, save
+      xx literal, 0
+      xx literal, offset$local_variable_table, save
       xx end
    #+end_src
 ** insert
    #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "local-variable-table,insert", local_variable_table__insert
+      ;; << string[address, length] -- offset >>
 
+      ;; leave offset
+      xx literal, offset$local_variable_table, fetch
+      xx   xxtuckx ;; return value
+      xx literal, border$local_variable_table, fetch, save
+      xx V__jo_size
+      xx literal, border$local_variable_table, add_save
+
+      ;; update offset$local_variable_table
+      xx dup2
+      xx   count_front_colon
+      xx   V__jo_size, multiple
+      xx   literal, offset$local_variable_table, add_save
+
+      ;; leave length
+      xx dup
+      xx literal, border$local_variable_table, fetch, save
+      xx V__jo_size
+      xx literal, border$local_variable_table, add_save
+
+      xx tuck ;; for to update border$local_variable_table
+
+      ;; leave string
+      xx literal, border$local_variable_table, fetch
+      xx string_to_buffer!
+
+      ;; update border$local_variable_table
+      xx literal, border$local_variable_table, add_save
+
+      xx end
    #+end_src
-** clear
+** find
    #+begin_src fasm :tangle cicada-nymph.fasm
+   cursor$local_variable_table:
+      xx address$local_variable_table
 
+   define_function "local-variable-table,find", local_variable_table__find
+      ;; << string[address, length]
+      ;;    -- offset, true
+      ;;    -- false >>
+      xx literal, address$local_variable_table
+      xx literal, cursor$local_variable_table, save
+      xx local_variable_table__find__loop
+      xx end
+
+   define_function "local-variable-table,find,loop", local_variable_table__find__loop
+      ;; << string[address, length]
+      ;;    -- offset, true
+      ;;    -- false >>
+      xx literal, cursor$local_variable_table, fetch
+      xx literal, border$local_variable_table, fetch
+      xx greater_or_equal?, false?branch, 4
+      xx   drop2
+      xx   false
+      xx   end
+      xx dup2
+      xx literal, cursor$local_variable_table, fetch
+      xx   V__jo_size, addition
+      xx   V__jo_size, addition ;; address of string
+      xx literal, cursor$local_variable_table, fetch
+      xx   V__jo_size, addition
+      xx   fetch ;; length of string
+      xx string_equal?, false?branch, 8
+      xx   drop2
+      xx   literal, cursor$local_variable_table, fetch
+      xx     fetch ;; offset
+      xx   true
+      xx   end
+      xx literal, cursor$local_variable_table, fetch
+      xx   V__jo_size, addition
+      xx   fetch ;; length of string
+      xx V__jo_size, addition
+      xx V__jo_size, addition
+      xx literal, cursor$local_variable_table, add_save
+      xx taca, local_variable_table__find__loop
+   #+end_src
+** ----------------------------------
+** initialize-local-variable
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "initialize-local-variable", initialize_local_variable
+      ;; << -- >>
+      xx literal, M__local_variable_save_string,  push_dispatch_word_stack
+      xx literal, local_variable_save_string?,    push_dispatch_word_stack
+      xx literal, M__local_variable_fetch_string, push_dispatch_word_stack
+      xx literal, local_variable_fetch_string?,   push_dispatch_word_stack
+      xx end
    #+end_src
 ** ----------------------------------
 * -----------------------------------

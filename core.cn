@@ -317,6 +317,7 @@ basic-REPL
   << -- >>
   "* JO-SIZE : " write-string
   *jo-size* write-nature-number
+  " bytes" write-string
   cr
   end
 ; define-function
@@ -325,6 +326,7 @@ basic-REPL
   << -- >>
   "* MACHINE-WORD-SIZE : " write-string
   *jo-size* 8 mul write-nature-number
+  " bits" write-string
   cr
   end
 ; define-function
@@ -430,7 +432,8 @@ basic-REPL
   <> stack-REPL
 ; define-function
 
-100333
+100333 drop
+13
 : *name-hash-table,size*
 ; define-variable
 
@@ -632,38 +635,33 @@ allocate-memory
   << string[address, length], number, counter
      -- name, true
      -- name, false >>
-  xx|tuck|xx name-hash-table,hash
-  xx|tuck|x
-  << number, counter, name, string[address, length], name >>
-  name,used? false? if
-    x|over|xx name,save-string
-      xx|tuck|x << name as return value >>
-    << name, number, counter, name >>
-    x|over|xx 0 name-hash-table,hash
-    swap name,save-orbiton
-    << name, number, counter >>
-    swap 0 name-hash-table,hash
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    ::string :name
+    name,save-string
+    :orbit :name
+    name,save-orbiton
+    :counter :orbit
     name,save-orbit-length
     1 address *name-hash-table,counter* add-save
-    true
+    :name true
     end
   then
-  << number, counter, name, string[address, length] >>
-  x|over|xx name,fetch-string
-  xx|over|xx string-equal? if
-    drop2 xx|swap|x drop2
-    true
+  :name name,fetch-string
+  ::string string-equal? if
+    :name true
     end
   then
-  << number, counter, name, string[address, length] >>
-  x|over|xxx *name-hash-table,size* equal? if
-    drop2 xx|swap|x drop2
-    false
+  :counter *name-hash-table,size* equal? if
+    :name false
     end
   then
-  << number, counter, name, string[address, length] >>
-  x|swap|xx drop
-  xx|swap|xx add1
+  ::string
+  :number :counter add1
   <> name-hash-table,insert,loop
 ; define-function
 

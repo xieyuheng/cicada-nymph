@@ -988,6 +988,7 @@ first_jojo:
    xx welcome
    ;; xx little_test
    xx initialize_dispatch_word_stack
+   xx initialize_local_variable
    xx load_init_file
    xx basic_REPL
 
@@ -999,6 +1000,7 @@ define_function "welcome", welcome
    xx end
 
 string$welcome_to_cicada_nymph:
+   db 10
    db "* welcome to cicada-nymph ^-^"
    db 10
 .end:
@@ -3486,6 +3488,23 @@ define_function "digital-char?", decimal_digital_char?
    xx drop, false
    xx end
 
+define_function "latin-char?", latin_char?
+   ;; << char -- bool >>
+   xx dup, literal, 'A', less_than?, false?branch, 4
+   xx   drop, false
+   xx   end
+   xx dup, literal, 'Z', less_or_equal?, false?branch, 4
+   xx   drop, true
+   xx   end
+   xx dup, literal, 'a', less_than?, false?branch, 4
+   xx   drop, false
+   xx   end
+   xx dup, literal, 'z', less_or_equal?, false?branch, 4
+   xx   drop, true
+   xx   end
+   xx drop, false
+   xx end
+
 define_function "char->decimal-digital", char_to_decimal_digital
    ;; << char -- decimal-digital >>
    xx literal, '0'
@@ -4203,6 +4222,12 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
+   xx local_variable_table__clear
+   xx make_jojo__loop
+   xx end
+
+define_function "make-jojo,loop", make_jojo__loop
+   ;; << string[address, length] -- >>
    xx dup2, space_string?, false?branch, 3
    xx   drop2
    xx   end
@@ -4212,7 +4237,7 @@ define_function "make-jojo", make_jojo
    xx string_head__word
    ;; << tail[address, length], head[address, length] >>
    xx make_jojo__dispatch_word
-   xx taca, make_jojo
+   xx taca, make_jojo__loop
 
 define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    ;; << string[address, length], word[address, length] --
@@ -4694,86 +4719,249 @@ define_function "local-data-allocate,byte", local_data_allocate__byte
    xx add_save
    xx end
 
+define_function "local-data-allocate,jo", local_data_allocate__jo
+   ;; << number -- >>
+   xx V__jo_size, multiple
+   xx literal, current_free_address$local_data_heap
+   xx add_save
+   xx end
+
 match =64bit, machine {
 
-define_primitive_function "fetch-local-data", fetch_local_data
-   ;; << offset -- value >>
-   pop_argument_stack rcx
+define_primitive_function "n-fetch-local-data", n_fetch_local_data
+   ;; << offset, n -- value-1, ..., value-n >>
    mov rbx, [pointer$return_stack - (2 * jo_size)]
-   add rbx, rcx
+
+   pop_argument_stack rcx
+   pop_argument_stack rdx
+   add rbx, rdx
+.loop:
    mov rax, [rbx]
    push_argument_stack rax
+   add rbx, jo_size
+   loop .loop
    next
 
-define_primitive_function "save-local-data", save_local_data
-   ;; << value, offset -- >>
-   pop_argument_stack rcx
-   pop_argument_stack rax
+define_primitive_function "n-save-local-data", n_save_local_data
+   ;; << value-n, ..., value-1, offset, n -- >>
    mov rbx, [pointer$return_stack - (2 * jo_size)]
-   add rbx, rcx
+
+   pop_argument_stack rcx
+   pop_argument_stack rdx
+   add rbx, rdx
+     mov rax, jo_size
+     imul rax, rcx
+     add rbx, rax
+     ;; for address is based on 0
+     ;; but n is based on 1
+     sub rbx, jo_size
+.loop:
+   pop_argument_stack rax
    mov [rbx], rax
+   sub rbx, jo_size
+   loop .loop
    next
 
 }
 
 match =32bit, machine {
 
-define_primitive_function "fetch-local-data", fetch_local_data
-   ;; << offset -- value >>
-   pop_return_stack rax
-   pop_return_stack rbx
-   push_return_stack rbx
-   push_return_stack rax
+define_primitive_function "n-fetch-local-data", n_fetch_local_data
+   ;; << offset, n -- value-1, ..., value-n >>
+   mov rax, [pointer$return_stack]
+   mov rbx, [rax - (2 * jo_size)]
 
    pop_argument_stack rcx
-   add rbx, rcx
+   pop_argument_stack rdx
+   add rbx, rdx
+.loop:
    mov rax, [rbx]
    push_argument_stack rax
+   add rbx, jo_size
+   loop .loop
    next
 
-define_primitive_function "save-local-data", save_local_data
-   ;; << value, offset -- >>
-   pop_return_stack rax
-   pop_return_stack rbx
-   push_return_stack rbx
-   push_return_stack rax
+define_primitive_function "n-save-local-data", n_save_local_data
+   ;; << value-n, ..., value-1, offset, n -- >>
+   mov rax, [pointer$return_stack]
+   mov rbx, [rax - (2 * jo_size)]
 
    pop_argument_stack rcx
+   pop_argument_stack rdx
+   add rbx, rdx
+     mov rax, jo_size
+     imul rax, rcx
+     add rbx, rax
+     ;; for address is based on 0
+     ;; but n is based on 1
+     sub rbx, jo_size
+.loop:
    pop_argument_stack rax
-   add rbx, rcx
    mov [rbx], rax
+   sub rbx, jo_size
+   loop .loop
    next
 
 }
 
+define_function "count-front-colon", count_front_colon
+   ;; << string[address, length] -- number >>
+   xx literal, 0 ;; counter
+   xx count_front_colon__loop
+   xx end
+
+define_function "count-front-colon,loop", count_front_colon__loop
+   ;; << string[address, length], counter -- number >>
+   xx over, zero?, false?branch, 4
+   xx   xxswapx, drop2
+   xx   end
+   xx xxoverx, string_head__char
+   xx literal, ':', equal?, false?, false?branch, 4
+   xx   xxswapx, drop2
+   xx   end
+   xx add1, xxswapx
+   xx string_tail__char, xswapxx
+   xx taca, count_front_colon__loop
+
 define_function "local-variable-fetch-string?", local_variable_fetch_string?
    ;; << string[address, length] -- bool >>
-
+   xx dup, zero?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx dup2, count_front_colon
+   xx dup, literal, 0, greater_than?, false?, false?branch, 5
+   xx   drop, drop2, false
+   xx   end
+   xx subtraction
+   xx swap, drop
+   xx literal, 0, greater_than?
    xx end
 
-define_macro "", M__local_variable_fetch_string?
+define_macro "", M__local_variable_fetch_string
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
-
+   xx dup2
+   xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+   ;;   literal, <offese>, literal, n, n_fetch_local_data
+   xx     literal, literal
+   xx       save_into__jo_heap
+   ;;     offset
+   xx       save_into__jo_heap
+   xx     literal, literal
+   xx       save_into__jo_heap
+   ;;     n
+   xx     count_front_colon
+   xx       save_into__jo_heap
+   xx     literal, n_fetch_local_data
+   xx       save_into__jo_heap
+   xx   end
+.not_found:
+   ;; ><><>< exception handling
+   xx the_report_local_variable_not_bound
+   xx write_string
+   xx literal, 10, write_byte
    xx end
+
+
+define_function "report-local-variable-not-bound", the_report_local_variable_not_bound
+   xx literal, string$report_local_variable_not_bound
+   xx literal, length$report_local_variable_not_bound
+   xx write_string
+   xx end
+
+string$report_local_variable_not_bound:
+   db "* LOCAL-VARIABLE NOT BOUND : "
+.end:
+length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
 
 define_function "local-variable-save-string?", local_variable_save_string?
    ;; << string[address, length] -- bool >>
-
+   xx dup, zero?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx dup2, string_head__char
+   xx literal, '>', equal?, false?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx string_tail__char
+   xx dup2, count_front_colon
+   xx dup, literal, 0, greater_than?, false?, false?branch, 5
+   xx   drop, drop2, false
+   xx   end
+   xx subtraction
+   xx swap, drop
+   xx literal, 0, greater_than?
    xx end
 
-define_macro "", M__local_variable_save_string?
+define_macro "", M__local_variable_save_string
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
-
+   xx string_tail__char
+   xx dup2
+   xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+   ;;   literal, <offese>, literal, n, n_save_local_data
+   xx     literal, literal
+   xx       save_into__jo_heap
+   ;;     offset
+   xx       save_into__jo_heap
+   xx     literal, literal
+   xx       save_into__jo_heap
+   ;;     n
+   xx     count_front_colon
+   xx       save_into__jo_heap
+   xx     literal, n_save_local_data
+   xx       save_into__jo_heap
+   xx   end
+.not_found:
+   xx dup2
+   xx local_variable_table__insert
+   xx xxswapx
+   xx count_front_colon
+   ;; literal, <number>, local_data_allocate__jo
+   xx   literal, literal
+   xx     save_into__jo_heap
+   ;;   number of jo
+   xx     dup, save_into__jo_heap
+   xx   literal, local_data_allocate__jo
+   xx     save_into__jo_heap
+   ;; literal, <offese>, literal, n, save_local_data
+   xx   literal, literal
+   xx     save_into__jo_heap
+   ;;   offset
+   xx   swap
+   xx     save_into__jo_heap
+   xx   literal, literal
+   xx     save_into__jo_heap
+   ;;   n
+   xx     save_into__jo_heap
+   xx   literal, n_save_local_data
+   xx     save_into__jo_heap
    xx end
 
 define_function "local-variable-save-address-string?", local_variable_save_address_string?
    ;; << string[address, length] -- bool >>
-
+   xx dup, zero?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx dup2, string_head__char
+   xx literal, '%', equal?, false?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx dup2, string_head__char
+   xx literal, '>', equal?, false?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx string_tail__char
+   xx dup2, count_front_colon
+   xx dup, literal, 0, greater_than?, false?, false?branch, 5
+   xx   drop, drop2, false
+   xx   end
+   xx subtraction
+   xx swap, drop
+   xx literal, 0, greater_than?
    xx end
 
-define_macro "", M__local_variable_save_address_string?
+define_macro "", M__local_variable_save_address_string
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
 
@@ -4784,6 +4972,52 @@ size$local_variable_table = 100 * 1024
 address$local_variable_table labeling
    preserve size$local_variable_table
 
+border$local_variable_table:
+   xx address$local_variable_table
+
+offset$local_variable_table:
+   xx 0
+
+define_function "local-variable-table,clear", local_variable_table__clear
+   ;; << -- >>
+   xx literal, address$local_variable_table
+   xx literal, border$local_variable_table, save
+   xx literal, 0
+   xx literal, offset$local_variable_table, save
+   xx end
+
+define_function "local-variable-table,insert", local_variable_table__insert
+   ;; << string[address, length] -- offset >>
+
+   ;; leave offset
+   xx literal, offset$local_variable_table, fetch
+   xx   xxtuckx ;; return value
+   xx literal, border$local_variable_table, fetch, save
+   xx V__jo_size
+   xx literal, border$local_variable_table, add_save
+
+   ;; update offset$local_variable_table
+   xx dup2
+   xx   count_front_colon
+   xx   V__jo_size, multiple
+   xx   literal, offset$local_variable_table, add_save
+
+   ;; leave length
+   xx dup
+   xx literal, border$local_variable_table, fetch, save
+   xx V__jo_size
+   xx literal, border$local_variable_table, add_save
+
+   xx tuck ;; for to update border$local_variable_table
+
+   ;; leave string
+   xx literal, border$local_variable_table, fetch
+   xx string_to_buffer!
+
+   ;; update border$local_variable_table
+   xx literal, border$local_variable_table, add_save
+
+   xx end
 
 cursor$local_variable_table:
    xx address$local_variable_table
@@ -4792,12 +5026,49 @@ define_function "local-variable-table,find", local_variable_table__find
    ;; << string[address, length]
    ;;    -- offset, true
    ;;    -- false >>
-
+   xx literal, address$local_variable_table
+   xx literal, cursor$local_variable_table, save
+   xx local_variable_table__find__loop
    xx end
 
+define_function "local-variable-table,find,loop", local_variable_table__find__loop
+   ;; << string[address, length]
+   ;;    -- offset, true
+   ;;    -- false >>
+   xx literal, cursor$local_variable_table, fetch
+   xx literal, border$local_variable_table, fetch
+   xx greater_or_equal?, false?branch, 4
+   xx   drop2
+   xx   false
+   xx   end
+   xx dup2
+   xx literal, cursor$local_variable_table, fetch
+   xx   V__jo_size, addition
+   xx   V__jo_size, addition ;; address of string
+   xx literal, cursor$local_variable_table, fetch
+   xx   V__jo_size, addition
+   xx   fetch ;; length of string
+   xx string_equal?, false?branch, 8
+   xx   drop2
+   xx   literal, cursor$local_variable_table, fetch
+   xx     fetch ;; offset
+   xx   true
+   xx   end
+   xx literal, cursor$local_variable_table, fetch
+   xx   V__jo_size, addition
+   xx   fetch ;; length of string
+   xx V__jo_size, addition
+   xx V__jo_size, addition
+   xx literal, cursor$local_variable_table, add_save
+   xx taca, local_variable_table__find__loop
 
-
-
+define_function "initialize-local-variable", initialize_local_variable
+   ;; << -- >>
+   xx literal, M__local_variable_save_string,  push_dispatch_word_stack
+   xx literal, local_variable_save_string?,    push_dispatch_word_stack
+   xx literal, M__local_variable_fetch_string, push_dispatch_word_stack
+   xx literal, local_variable_fetch_string?,   push_dispatch_word_stack
+   xx end
 
 define_function "platform", the_platform
    xx literal, string$platform
