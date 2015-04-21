@@ -558,7 +558,7 @@
      "--" write-string
      cr
      <> stack-REPL
-   ; define-function   
+   ; define-function
    #+end_src
 * -----------------------------------
 * name-hash-table
@@ -1014,7 +1014,7 @@
 * >< frame-stack
 * -----------------------------------
 * epilog
-  #+begin_src cicada-nymph :tangle core.cn  
+  #+begin_src cicada-nymph :tangle core.cn
   stack-REPL
   hi
   #+end_src
@@ -1123,4 +1123,3 @@
      end
    ; define-function
    #+end_src
-   

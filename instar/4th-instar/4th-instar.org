@@ -1957,7 +1957,7 @@
         and saved to a buffer
      2. when reading from stdin
         a whole line is readed at a time
-     3. not that
+     3. note that
         reading line instead of keyboard-code
         will limit the design of the user interface
    * by factoring out the low-level calls
@@ -1971,7 +1971,7 @@
      in my view
      meta-programming should NOT
      be achieved by editing string
-   * not that
+   * note that
      this point of view
      is not conflict with my macro system
 ** memory allocation
