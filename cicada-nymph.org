@@ -3,6 +3,8 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** optimize local-variable by new instruction
+   * too many literal is too waste of memory
 ** [BUG] explain$exception
    * exception handling about meeting not bound local-variable during compile time
 ** code & doc clean-up
@@ -44,6 +46,17 @@
      所以根本就沒利用到這裏所能得到的最大的靈活性
      以至於沒法以良好的方式實現
      在 local_data_heap 中動態地分配變長的內存
+   * 形成這種局面的原因在於
+     對局部變元的名字和值的關係的處理
+     是在編譯時期進行的
+   * 由於這中問題產生於兩種分配內存方式的交織
+     所以
+     其解決辦法也許是
+     再多入返回站一個指針
+     這個指針所指向的數據區中的數據
+     是純粹在運行時動態分配的
+     但是這些數據沒有名字
+     [名字的問題是另外一個指針結局的]
 * ===================================
 * note
 ** jo & jojo
@@ -205,21 +218,52 @@
    * local-variable
 * 記 數據結構與口總結
 ** jojo
+   * jo 的數組
+     每個數組外加一些元數據
 ** dictionary of jojo
+   * 單項鏈接的鏈表
 ** primitive-string
 ** stack
 *** argument-stack
 *** return-stack
+    * jo 的詮釋者
+      決定了 如何入這個棧
+    * 結尾詞
+      決定了 如何出這個棧
 *** eval-string-stack
+    * 兩個一對
 *** dispatch-word-stack
+    * 兩個一對
+      每對爲
+      [語法處理函數, 作用於字符串的謂詞]
 ** local-variable-table
    * a heap like table of string
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
-   * 其中保存作爲 local-variable 名字的 字符串
-     還有與這個 local-variable 所對應的 offset
+     這個數據結構被 M__local_variable_save_string
+     和 M__local_variable_fetch_string 所使用
+   * 其中保存
+     * offset-in-local-data-heap
+     * length-of-string
+     * address-of-string
    * 並且每次在定義一個新的函數體的時候
-     這個 local-variable-table 會被初始話
+     這個 local-variable-table 會被初始化
+   * 基本的接口是
+     * clear
+       清空 offset 和 border
+     * insert
+       插入字符串 和 offset-in-local-data-heap
+     * find
+       通過字符串尋找 offset-in-local-data-heap
+     有兩個全局變量幫助實現這些接口
+     * cursor
+       每次 find 的時候使用一個新的 cursor 來做循環
+     * border
+       insert 會擴大 border
+       find 以 border 爲邊界
+     另外 還有一個全局變量
+     * offset
+       用以計算 offset-in-local-data-heap
 * ===================================
 * prolog
 ** ----------------------------------
@@ -6122,6 +6166,103 @@
 * -----------------------------------
 * local-variable
 ** ----------------------------------
+** note *to compare readability*
+** example code without local-variable
+   #+begin_src cicada-nymph
+   : name-hash-table,insert,loop
+     << string[address, length], number, counter
+        -- name, true
+        -- name, false >>
+     xx|tuck|xx name-hash-table,hash
+     xx|tuck|x
+     << number, counter, name, string[address, length], name >>
+     name,used? false? if
+       x|over|xx name,save-string
+         xx|tuck|x << name as return value >>
+       << name, number, counter, name >>
+       x|over|xx 0 name-hash-table,hash
+       swap name,save-orbiton
+       << name, number, counter >>
+       swap 0 name-hash-table,hash
+       name,save-orbit-length
+       1 address *name-hash-table,counter* add-save
+       true
+       end
+     then
+     << number, counter, name, string[address, length] >>
+     x|over|xx name,fetch-string
+     xx|over|xx string-equal? if
+       drop2 xx|swap|x drop2
+       true
+       end
+     then
+     << number, counter, name, string[address, length] >>
+     x|over|xxx *name-hash-table,size* equal? if
+       drop2 xx|swap|x drop2
+       false
+       end
+     then
+     << number, counter, name, string[address, length] >>
+     x|swap|xx drop
+     xx|swap|xx add1
+     <> name-hash-table,insert,loop
+   ; define-function
+
+   : name-hash-table,insert
+     << string[address, length]
+        -- name, true
+        -- name, false >>
+     dup2 string->finite-carry-sum
+     0 name-hash-table,insert,loop
+     end
+   ; define-function
+   #+end_src
+** example code with local-variable
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,insert,loop
+     << string[address, length], number, counter
+        -- name, true
+        -- name, false >>
+     >:counter >:number >::string
+     :number :counter name-hash-table,hash
+     >:name
+     :number 0 name-hash-table,hash
+     >:orbit
+     :name name,used? false? if
+       ::string :name
+       name,save-string
+       :orbit :name
+       name,save-orbiton
+       :counter :orbit
+       name,save-orbit-length
+       1 address *name-hash-table,counter* add-save
+       :name true
+       end
+     then
+     :name name,fetch-string
+     ::string string-equal? if
+       :name true
+       end
+     then
+     :counter *name-hash-table,size* equal? if
+       :name false
+       end
+     then
+     ::string
+     :number :counter add1
+     <> name-hash-table,insert,loop
+   ; define-function
+
+   : name-hash-table,insert
+     << string[address, length]
+        -- name, true
+        -- name, false >>
+     dup2 string->finite-carry-sum
+     0 name-hash-table,insert,loop
+     end
+   ; define-function
+   #+end_src
+** ----------------------------------
 ** 記 詮釋者 與 收尾詞
    * 在進行時
      每次進入一個函數體的執行
@@ -6444,6 +6585,7 @@
       xx string_tail__char, xswapxx
       xx taca, count_front_colon__loop
    #+end_src
+** ----------------------------------
 ** local-variable-fetch-string?
    * :name
      ::name
@@ -6501,6 +6643,7 @@
    .end:
    length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
    #+end_src
+** ----------------------------------
 ** local-variable-save-string?
    * >:name
      >::name
@@ -6571,6 +6714,7 @@
       xx     save_into__jo_heap
       xx end
    #+end_src
+** ----------------------------------
 ** >< local-variable-save-address-string?
    * @:address
    #+begin_src fasm
