@@ -5,8 +5,6 @@
 * todo
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
-** [BUG] explain$exception
-   * exception handling about meeting not bound local-variable during compile time
 ** code & doc clean-up
 ** update documentations
 ** [maybe] bare-metal version of cicada-nymph for x86
@@ -1344,6 +1342,10 @@
       ;;   rsi jo
       pop_return_stack rax
       mov pointer$argument_stack, rax
+
+      mov rbx, [current_free_address$local_data_heap]
+      push_return_stack rbx
+
       add rsi, jo_size
       push_return_stack rsi
       next
@@ -1391,6 +1393,10 @@
       ;;   rsi jo
       pop_return_stack rax
       mov [pointer$argument_stack], rax
+
+      mov rbx, [current_free_address$local_data_heap]
+      push_return_stack rbx
+
       add rsi, jo_size
       push_return_stack rsi
       next
@@ -6626,22 +6632,22 @@
       xx   end
    .not_found:
       ;; ><><>< exception handling
-      xx the_report_local_variable_not_bound
+      xx write_local_variable_not_bound_report
       xx write_string
       xx literal, 10, write_byte
-      xx end
+      xx !undo_make_jojo
 
 
-   define_function "report-local-variable-not-bound", the_report_local_variable_not_bound
-      xx literal, string$report_local_variable_not_bound
-      xx literal, length$report_local_variable_not_bound
+   define_function "write-local-variable-not-bound-report", write_local_variable_not_bound_report
+      xx literal, string$local_variable_not_bound_report
+      xx literal, length$local_variable_not_bound_report
       xx write_string
       xx end
 
-   string$report_local_variable_not_bound:
+   string$local_variable_not_bound_report:
       db "* LOCAL-VARIABLE NOT BOUND : "
    .end:
-   length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
+   length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
    #+end_src
 ** ----------------------------------
 ** local-variable-save-string?

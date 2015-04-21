@@ -692,6 +692,10 @@ explain$exception:
    ;;   rsi jo
    pop_return_stack rax
    mov pointer$argument_stack, rax
+
+   mov rbx, [current_free_address$local_data_heap]
+   push_return_stack rbx
+
    add rsi, jo_size
    push_return_stack rsi
    next
@@ -736,6 +740,10 @@ explain$exception:
    ;;   rsi jo
    pop_return_stack rax
    mov [pointer$argument_stack], rax
+
+   mov rbx, [current_free_address$local_data_heap]
+   push_return_stack rbx
+
    add rsi, jo_size
    push_return_stack rsi
    next
@@ -4857,22 +4865,22 @@ define_macro "", M__local_variable_fetch_string
    xx   end
 .not_found:
    ;; ><><>< exception handling
-   xx the_report_local_variable_not_bound
+   xx write_local_variable_not_bound_report
    xx write_string
    xx literal, 10, write_byte
-   xx end
+   xx !undo_make_jojo
 
 
-define_function "report-local-variable-not-bound", the_report_local_variable_not_bound
-   xx literal, string$report_local_variable_not_bound
-   xx literal, length$report_local_variable_not_bound
+define_function "write-local-variable-not-bound-report", write_local_variable_not_bound_report
+   xx literal, string$local_variable_not_bound_report
+   xx literal, length$local_variable_not_bound_report
    xx write_string
    xx end
 
-string$report_local_variable_not_bound:
+string$local_variable_not_bound_report:
    db "* LOCAL-VARIABLE NOT BOUND : "
 .end:
-length$report_local_variable_not_bound = (.end - string$report_local_variable_not_bound)
+length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
 
 define_function "local-variable-save-string?", local_variable_save_string?
    ;; << string[address, length] -- bool >>

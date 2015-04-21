@@ -77,5 +77,5 @@
 
 
 (org/tangle "cicada-nymph.org")
-;; (org/tangle "core.org")
+(org/tangle "core.org")
 
