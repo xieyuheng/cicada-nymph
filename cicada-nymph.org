@@ -3,16 +3,18 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** add more notes about the limitations of the program
+** add more notes about exception handling on io functions
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
 ** code clean-up & documentation update
 ** [maybe] bare-metal version of cicada-nymph for x86
-** home-path & search-path to load-files
-   * poi a load-path-manager
+** home-path & search-path to load files
+   * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
      這樣就能實現 little-tester
      還有在不同的平臺下執行不同的代碼
-** error handling of load-file
+** [maybe] better error handling of load-file
    * error code is different between windows and linux which is problematic
 ** nested load-file
    * a stack of buffer would solve this problem
@@ -1051,7 +1053,7 @@
 ** note primitive_string_heap
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$primitive_string_heap = 100 * 1024 ;; (byte)
+   size$primitive_string_heap = 64 * 1024 ;; (byte)
 
    address$primitive_string_heap:
       times size$primitive_string_heap db 0
@@ -1789,7 +1791,7 @@
    match =linux, platform {
       xx init_operating_system_environment
    }
-      xx load_init_file
+      xx load_core_file
       xx basic_REPL
    #+end_src
 ** welcome
@@ -4556,8 +4558,24 @@
   buffer$load_file labeling
     preserve 1024 * 1024
 
+  define_function "report,load-file", report__load_file
+     ;; << -- >>
+     xx literal, string$report__load_file
+     xx literal, length$report__load_file
+     xx write_string
+     xx end
+
+  string$report__load_file:
+     db "* LOADING : "
+  .end:
+  length$report__load_file = (.end - string$report__load_file)
+
   define_function "load-file", load_file
      ;; << name-string[address, length] -- UNKNOWN >>
+     xx report__load_file
+     xx dup2, write_string
+     xx literal, 10, write_byte
+
      xx open_file__to_read
      xx dup
      xx   literal, buffer$load_file ;; buffer
@@ -4573,6 +4591,7 @@
      .error:
      xx error_report__load_file
      xx write_integer
+     xx literal, 10, write_byte
      xx end
 
   define_function "error-report,load-file", error_report__load_file
@@ -4583,7 +4602,7 @@
      xx end
 
   string$error_report__load_file:
-     db "* (load-file) MEETS ERROR : "
+     db "* (load-file) MEETS ERROR  (read-file) ERROR CODE : "
   .end:
   length$error_report__load_file = (.end - string$error_report__load_file)
   #+end_src
@@ -4609,6 +4628,7 @@
 
    }
    #+end_src
+** ----------------------------------
 ** init-pid                           :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -4639,18 +4659,85 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
+   file$init_command_line:
+      db "/cmdline" ;; length of 8
+
+   path$init_command_line:
+      db "/proc/"   ;; length of 6
+   pid$init_command_line:
+      db "********************************"
+
+   address$init_command_line:
+      times 512 db 0
+   length$init_command_line:
+      xx 0
+
    define_function "init-command-line", init_command_line
       ;; << -- >>
+      xx get_pid
+      xx write_nature_number__fill_buffer
+      xx tuck
+      xx literal, pid$init_command_line
+      xx string_to_buffer!
+      xx literal, file$init_command_line
+      xx literal, 8
+      xx literal, pid$init_command_line
+      xx xoverxxx, addition
+      xx string_to_buffer!
+      xx literal, path$init_command_line
+      xx swap
+      xx literal, 8, addition
+      xx literal, 6, addition
+      xx open_file__to_read
+      xx literal, address$init_command_line
+      xx literal, 512
+      xx read_file
+      xx literal, length$init_command_line
+      xx save
       xx end
 
    }
    #+end_src
 ** init-environment-string-variable-list :linux:
+   * the size of /proc/<pid>/environ is limited to 4k
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
+   file$init_environment_string_variable_list:
+      db "/environ" ;; length of 8
+
+   path$init_environment_string_variable_list:
+      db "/proc/"   ;; length of 6
+   pid$init_environment_string_variable_list:
+      db "********************************"
+
+   address$init_environment_string_variable_list:
+      times (4 * 1024) db 0
+   length$init_environment_string_variable_list:
+      xx 0
+
    define_function "init-environment-string-variable-list", init_environment_string_variable_list
       ;; << -- >>
+      xx get_pid
+      xx write_nature_number__fill_buffer
+      xx tuck
+      xx literal, pid$init_environment_string_variable_list
+      xx string_to_buffer!
+      xx literal, file$init_environment_string_variable_list
+      xx literal, 8
+      xx literal, pid$init_environment_string_variable_list
+      xx xoverxxx, addition
+      xx string_to_buffer!
+      xx literal, path$init_environment_string_variable_list
+      xx swap
+      xx literal, 8, addition
+      xx literal, 6, addition
+      xx open_file__to_read
+      xx literal, address$init_environment_string_variable_list
+      xx literal, (4 * 1024)
+      xx read_file
+      xx literal, length$init_environment_string_variable_list
+      xx save
       xx end
 
    }
@@ -4672,34 +4759,140 @@
    #+end_src
 ** get-command-line                   :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
    define_function "get-command-line", get_command_line
-      ;; << -- >>
+      ;; << -- string[address, length] >>
+      xx literal, address$init_command_line
+      xx literal, length$init_command_line, fetch
       xx end
+
+   }
    #+end_src
-** ----------------------------------
-** load-init-file                     :linux:
+** get-environment-string-variable-list :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
-   string$name_of_init_file:
-      db "core.cn"
+   define_function "get-environment-string-variable-list", get_environment_string_variable_list
+      ;; << -- string[address, length] >>
+      xx literal, address$init_environment_string_variable_list
+      xx literal, length$init_environment_string_variable_list, fetch
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** find-environment-string-variable   :linux:
+   * the string used to find an environment-string-variable
+     can not contain "="
+     no error handling on this
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   define_function "find-environment-string-variable", find_environment_string_variable
+      ;; << string[address, length]
+      ;;    -- string[address, length], true
+      ;;    -- false >>
+      xx literal, address$init_environment_string_variable_list ;; cursor
+      xx find_environment_string_variable__loop
+      xx end
+
+   define_function "find-environment-string-variable,loop", find_environment_string_variable__loop
+      ;; << string[address, length], cursor
+      ;;    -- string[address, length], true
+      ;;    -- false >>
+      xx dup
+      xx literal, address$init_environment_string_variable_list
+      xx literal, length$init_environment_string_variable_list, fetch
+      xx addition
+      xx greater_than?, false?branch, 5
+      xx   drop, drop2
+      xx   false
+      xx   end
+      xx xxoverx, xoverxx, swap
+      xx compare_buffer, false?, false?branch, 7
+      xx   literal, 0
+      xx   cursor_to_next_matching_byte
+      xx   add1
+      xx   taca, find_environment_string_variable__loop
+      xx dup, xoverxx, addition, fetch_byte
+      xx literal, '=', equal?, false?, false?branch, 7
+      xx   literal, 0
+      xx   cursor_to_next_matching_byte
+      xx   add1
+      xx   taca, find_environment_string_variable__loop
+      xx xswapxx, drop
+      xx addition, add1
+      xx dup
+      xx literal, 0
+      xx cursor_to_next_matching_byte
+      xx over, subtraction
+      xx true
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** >< get-home-path                   :linux:
+   * need error handling
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   string$get_home_path:
+      db "HOME"
+
+   define_function "get-home-path", get_home_path
+      ;; << -- string[address, length] >>
+      xx literal, string$get_home_path
+      xx literal, 4
+      xx find_environment_string_variable
+      xx drop
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** load-core-file                     :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   path$load_core_file:
+      times 512 db 0
+
+
+   string$load_core_file:
+      db "/.cicada/core.cn"
    .end:
-   length$name_of_init_file = (.end - string$name_of_init_file)
+   length$load_core_file = (.end - string$load_core_file)
 
 
-   define_function "load-init-file", load_init_file
-      ;; << -- >>
-      xx literal, string$name_of_init_file
-      xx literal, length$name_of_init_file
+   define_function "load-core-file", load_core_file
+      ;; << UNKNOWN -- UNKNOWN >>
+      xx get_home_path
+      xx tuck
+      xx literal, path$load_core_file
+      xx string_to_buffer!
+
+      xx literal, string$load_core_file
+      xx literal, length$load_core_file
+      xx xoverxx
+      xx literal, path$load_core_file
+      xx addition
+      xx string_to_buffer!
+
+      xx literal, length$load_core_file
+      xx addition
+      xx literal, path$load_core_file
+      xx swap
       xx load_file
       xx end
 
    }
    #+end_src
 ** ----------------------------------
-** load-init-file                     :windows:64bit:
+** load-core-file                     :windows:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   match =windows =64bit, platform machine {
+   match =windows, platform {
 
    string$name_of_init_file:
       db "core.cn"
@@ -4707,26 +4900,7 @@
    length$name_of_init_file = (.end - string$name_of_init_file)
 
 
-   define_function "load-init-file", load_init_file
-      ;; << -- >>
-      xx literal, string$name_of_init_file
-      xx literal, length$name_of_init_file
-      xx load_file
-      xx end
-
-   }
-   #+end_src
-** load-init-file                     :windows:32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =windows =32bit, platform machine {
-
-   string$name_of_init_file:
-      db "core.cn"
-   .end:
-   length$name_of_init_file = (.end - string$name_of_init_file)
-
-
-   define_function "load-init-file", load_init_file
+   define_function "load-core-file", load_core_file
       ;; << -- >>
       xx literal, string$name_of_init_file
       xx literal, length$name_of_init_file
@@ -4851,6 +5025,20 @@
       movzx rax, al
       push_argument_stack rax
       next
+   #+end_src
+** cursor->next-matching-byte
+   * note that
+     it is the NEXT matching-byte
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "cursor->next-matching-byte", cursor_to_next_matching_byte
+      ;; << cursor, byte -- cursor new address >>
+      xx over, add1, fetch_byte
+      xx over, equal?, false?branch, 4
+      xx   drop, add1
+      xx   end
+      xx swap
+      xx add1, swap
+      xx taca, cursor_to_next_matching_byte
    #+end_src
 * string
 ** ----------------------------------
@@ -5130,22 +5318,26 @@
    counter$write_nature_number:
       xx 0
 
-
    define_function "write-nature-number", write_nature_number
+      ;; << nature-number -- >>
+      xx write_nature_number__fill_buffer
+      xx write_string
+      xx end
+
+   define_function "write-nature-number,fill-buffer", write_nature_number__fill_buffer
       ;; << nature-number -- >>
       xx zero
       xx literal, counter$write_nature_number, save
 
-      xx help__write_nature_number
+      xx write_nature_number__loop
 
       xx literal, buffer$write_nature_number
       xx literal, counter$write_nature_number, fetch
       xx string_reverse!
-      xx write_string
       xx end
 
 
-   define_function "help,write-nature-number", help__write_nature_number
+   define_function "write-nature-number,loop", write_nature_number__loop
       ;; << rest-number -- >>
       xx literal, 10, divmod
 
@@ -5162,7 +5354,7 @@
       xx dup, zero?, false?branch, 3
       xx   drop
       xx   end
-      xx taca, help__write_nature_number
+      xx taca, write_nature_number__loop
    #+end_src
 ** write-integer
    #+begin_src fasm :tangle cicada-nymph.fasm

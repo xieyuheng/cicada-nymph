@@ -333,6 +333,7 @@ basic-REPL
 
 : initial-report
   << -- >>
+  "* INITIAL-REPORT : " write-string cr
   "  " write-string report-platform
   "  " write-string report-machine-word-size
   "  " write-string report-jo-size
