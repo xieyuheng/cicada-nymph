@@ -997,6 +997,9 @@ first_jojo:
    ;; xx little_test
    xx initialize_dispatch_word_stack
    xx initialize_local_variable
+match =linux, platform {
+   xx init_operating_system_environment
+}
    xx load_init_file
    xx basic_REPL
 
@@ -3440,6 +3443,73 @@ string$error_report__load_file:
 .end:
 length$error_report__load_file = (.end - string$error_report__load_file)
 
+match =linux, platform {
+
+define_function "init-operating-system-environment", init_operating_system_environment
+   ;; << -- >>
+   xx init_pid
+   xx init_command_line
+   xx init_environment_string_variable_list
+   xx end
+
+}
+
+match =linux =64bit, platform machine {
+
+define_primitive_function "init-pid", init_pid
+   ;; << -- pid >>
+   mov linux64_sys_n_rax, linux64_syscall_getpid
+   syscall
+   mov [value$get_pid], rax
+   next
+
+}
+
+match =linux =32bit, platform machine {
+
+define_primitive_function "init-pid", init_pid
+   ;; << -- pid >>
+   mov linux32_sys_n_eax, linux32_syscall_getpid
+   syscall
+   mov [value$get_pid], rax
+   next
+
+}
+
+match =linux, platform {
+
+define_function "init-command-line", init_command_line
+   ;; << -- >>
+   xx end
+
+}
+
+match =linux, platform {
+
+define_function "init-environment-string-variable-list", init_environment_string_variable_list
+   ;; << -- >>
+   xx end
+
+}
+
+match =linux, platform {
+
+value$get_pid:
+   xx 2
+
+define_function "get-pid", get_pid
+   ;; << -- pid >>
+   xx literal, value$get_pid, fetch
+   xx end
+
+}
+
+define_function "get-command-line", get_command_line
+   ;; << -- >>
+   xx end
+
+match =linux, platform {
+
 string$name_of_init_file:
    db "core.cn"
 .end:
@@ -3452,6 +3522,42 @@ define_function "load-init-file", load_init_file
    xx literal, length$name_of_init_file
    xx load_file
    xx end
+
+}
+
+match =windows =64bit, platform machine {
+
+string$name_of_init_file:
+   db "core.cn"
+.end:
+length$name_of_init_file = (.end - string$name_of_init_file)
+
+
+define_function "load-init-file", load_init_file
+   ;; << -- >>
+   xx literal, string$name_of_init_file
+   xx literal, length$name_of_init_file
+   xx load_file
+   xx end
+
+}
+
+match =windows =32bit, platform machine {
+
+string$name_of_init_file:
+   db "core.cn"
+.end:
+length$name_of_init_file = (.end - string$name_of_init_file)
+
+
+define_function "load-init-file", load_init_file
+   ;; << -- >>
+   xx literal, string$name_of_init_file
+   xx literal, length$name_of_init_file
+   xx load_file
+   xx end
+
+}
 
 define_function "space-char?", space_char?
    ;; << char -- bool >>

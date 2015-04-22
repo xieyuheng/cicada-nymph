@@ -261,24 +261,25 @@
      另外 還有一個全局變量
      * offset
        用以計算 offset-in-local-data-heap
-* 記 自動管理加載文件時所使用的搜索路徑列表
-  1. 在 cicada-nymph 中 load 一個 file 的時候
-     需要指定出這個 被 load 的 file 的路徑
-  2. 維護一個需要被搜索的路徑的列表
-     以使得 load 的 file 的時候
-     不必使用完整的路徑
-  3. 提供自動管理搜索路徑的機制
-  -------------------------
-  4. 那麼
-     維護 搜索路徑的列表的方式是
+* 記 性狀總結
+** 自動管理加載文件時所使用的搜索路徑列表
+   * 原理如下
+     * 在 cicada-nymph 中 load 一個 file 的時候
+       需要指定出這個 被 load 的 file 的路徑
+     * 維護一個需要被搜索的路徑的列表
+       以使得 load 的 file 的時候
+       不必使用完整的路徑
+     * 提供自動管理搜索路徑的機制
+   * 維護搜索路徑的列表的方式是
      利用文件系統中的一個某個固定路徑
      也就是說 只有唯一的一個需要被找到的路徑
      而其他的路徑都是被自動管理的
      這個路徑將有一個默認值
      並且可以被環境變量覆蓋
-  5. 限制加載文件的方式
+   * 限制加載文件的方式
      使得只能使用所提供的動態管理機制來加載文件
      這樣就可以減輕理解這個系統的困難
+** >< 局部變元
 * ===================================
 * prolog
 ** ----------------------------------
@@ -310,7 +311,7 @@
    end equ exit
    #+end_src
 ** ----------------------------------
-** jo_size [64bit]
+** jo_size                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -319,7 +320,7 @@
 
    }
    #+end_src
-** jo_size [32bit]
+** jo_size                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -340,7 +341,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header [linux64]
+** header                             :linux:64bit:
    * /usr/include/asm/unistd_64.h (on archlinux)
    * http://blog.rchapman.org/post/36801038863/linux-system-call-table-for-x86-64
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -385,7 +386,7 @@
 
    }
    #+end_src
-** format [linux64]
+** format                             :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -393,7 +394,7 @@
 
    }
    #+end_src
-** entry  [linux64]
+** entry                              :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -403,7 +404,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header [linux32]
+** header                             :linux:32bit:
    * /usr/include/asm/unistd_32.h (on archlinux)
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
@@ -433,7 +434,7 @@
 
    }
    #+end_src
-** format [linux32]
+** format                             :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -441,7 +442,7 @@
 
    }
    #+end_src
-** entry  [linux32]
+** entry                              :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -481,7 +482,7 @@
      to handle windows calling convention
      is de-macro-lized and un-optimized
      this is for teaching purpose only
-** header [windows64]
+** header                             :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -495,7 +496,7 @@
 
    }
    #+end_src
-** format [windows64]
+** format                             :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -503,7 +504,7 @@
 
    }
    #+end_src
-** entry  [windows64]
+** entry                              :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -512,7 +513,7 @@
 
    }
    #+end_src
-** macro  [windows64]
+** macro                              :windows:64bit:
    * macro about windows64 calling-convention
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
@@ -550,7 +551,7 @@
    * [[https://msdn.microsoft.com/en-us/library/k2b2ssfy.aspx][Calling Conventions]]
    * [[https://msdn.microsoft.com/en-us/library/a5s9345t.aspx][Calling Example: Function Prototype and Call]]
      [[https://msdn.microsoft.com/en-us/library/25687bhx.aspx][Results of Calling Example]]
-** header [windows32]
+** header                             :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -559,7 +560,7 @@
 
    }
    #+end_src
-** format [windows32]
+** format                             :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -567,7 +568,7 @@
 
    }
    #+end_src
-** entry  [windows32]
+** entry                              :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -610,7 +611,7 @@
       preserve 1024 * 1024 * jo_size
    #+end_src
 ** ----------------------------------
-** pointer    [64bit]
+** pointer                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -621,7 +622,7 @@
 
    }
    #+end_src
-** push & pop [64bit]
+** push & pop                         :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -638,7 +639,7 @@
    }
    #+end_src
 ** ----------------------------------
-** pointer    [32bit]
+** pointer                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -647,7 +648,7 @@
 
    }
    #+end_src
-** push & pop [32bit]
+** push & pop                         :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -699,7 +700,7 @@
       preserve 1024 * 1024 * jo_size
    #+end_src
 ** ----------------------------------
-** pointer    [64bit]
+** pointer                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -710,7 +711,7 @@
 
    }
    #+end_src
-** push & pop [64bit]
+** push & pop                         :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -727,7 +728,7 @@
    }
    #+end_src
 ** ----------------------------------
-** pointer    [32bit]
+** pointer                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -736,7 +737,7 @@
 
    }
    #+end_src
-** push & pop [32bit]
+** push & pop                         :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -892,7 +893,7 @@
 * -----------------------------------
 * helper function in assembly code
 ** ----------------------------------
-** __exit_with_TOS  [linux64]
+** __exit_with_TOS                    :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -903,7 +904,7 @@
 
    }
    #+end_src
-** __exit_with_zero [linux64]
+** __exit_with_zero                   :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -914,7 +915,7 @@
 
    }
    #+end_src
-** __exit_with_six  [linux64]
+** __exit_with_six                    :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -926,7 +927,7 @@
    }
    #+end_src
 ** ----------------------------------
-** __exit_with_TOS  [linux32]
+** __exit_with_TOS                    :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -937,7 +938,7 @@
 
    }
    #+end_src
-** __exit_with_zero [linux32]
+** __exit_with_zero                   :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -948,7 +949,7 @@
 
    }
    #+end_src
-** __exit_with_six  [linux32]
+** __exit_with_six                    :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -960,7 +961,7 @@
    }
    #+end_src
 ** ----------------------------------
-** __exit_with_TOS  [windows64]
+** __exit_with_TOS                    :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -974,7 +975,7 @@
 
    }
    #+end_src
-** __exit_with_zero [windows64]
+** __exit_with_zero                   :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -988,7 +989,7 @@
 
    }
    #+end_src
-** __exit_with_six  [windows64]
+** __exit_with_six                    :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -1003,7 +1004,7 @@
    }
    #+end_src
 ** ----------------------------------
-** __exit_with_TOS  [windows32]
+** __exit_with_TOS                    :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -1015,7 +1016,7 @@
 
    }
    #+end_src
-** __exit_with_zero [windows32]
+** __exit_with_zero                   :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -1026,7 +1027,7 @@
 
    }
    #+end_src
-** __exit_with_six  [windows32]
+** __exit_with_six                    :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -1322,7 +1323,7 @@
      but
      we still can use argument-stack
      to pass arguments
-** explain$exception [64bit]
+** explain$exception                  :64bit:
    * no error handling for now
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -1372,7 +1373,7 @@
 
    }
    #+end_src
-** explain$exception [32bit]
+** explain$exception                  :32bit:
    * no error handling for now
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
@@ -1682,7 +1683,7 @@
       is actually a loop now
 * -----------------------------------
 * *the story begin*
-** begin_to_interpret_threaded_code [linux64]
+** begin_to_interpret_threaded_code   :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -1699,7 +1700,7 @@
 
    }
    #+end_src
-** begin_to_interpret_threaded_code [linux32]
+** begin_to_interpret_threaded_code   :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -1713,7 +1714,7 @@
 
    }
    #+end_src
-** begin_to_interpret_threaded_code [windows64]
+** begin_to_interpret_threaded_code   :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -1749,7 +1750,7 @@
 
    }
    #+end_src
-** begin_to_interpret_threaded_code [windows32]
+** begin_to_interpret_threaded_code   :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -1785,6 +1786,9 @@
       ;; xx little_test
       xx initialize_dispatch_word_stack
       xx initialize_local_variable
+   match =linux, platform {
+      xx init_operating_system_environment
+   }
       xx load_init_file
       xx basic_REPL
    #+end_src
@@ -1961,7 +1965,7 @@
       pop_argument_stack rax
       next
    #+end_src
-** dup  [64bit]
+** dup                                :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -1981,7 +1985,7 @@
 
    }
    #+end_src
-** dup  [32bit]
+** dup                                :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -2004,7 +2008,7 @@
 
    }
    #+end_src
-** over [64bit]
+** over                               :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2058,7 +2062,7 @@
 
    }
    #+end_src
-** over [32bit]
+** over                               :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -2180,7 +2184,7 @@
       push_argument_stack rdx
       next
    #+end_src
-** swap [64bit]
+** swap                               :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2312,7 +2316,7 @@
 
    }
    #+end_src
-** swap [32bit]
+** swap                               :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -2478,7 +2482,7 @@
    define_variable "*the-stack*", V__the_stack
       xx address$argument_stack
    #+end_src
-** pointer [64bit]
+** pointer                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2492,7 +2496,7 @@
 
    }
    #+end_src
-** pointer [32bit]
+** pointer                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -2652,7 +2656,7 @@
 
         the pointer above is into argument-stack
         #+end_src
-** prepare_for [64bit]
+** prepare_for                        :64bit:
    * prepare for a list of exceptions
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -2677,7 +2681,7 @@
 
    }
    #+end_src
-** prepare_for [32bit]
+** prepare_for                        :32bit:
    * prepare for a list of exceptions
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
@@ -2756,7 +2760,7 @@
       xx true, equal?
       xx end
    #+end_src
-** bitwise operations [64bit]
+** bitwise operations                 :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2785,7 +2789,7 @@
 
    }
    #+end_src
-** bitwise operations [32bit]
+** bitwise operations                 :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -2850,7 +2854,7 @@
       xx end
    #+end_src
 ** ----------------------------------
-** add & sub [64bit]
+** add & sub                          :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2920,7 +2924,7 @@
 
    }
    #+end_src
-** add & sub [32bit]
+** add & sub                          :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -3167,7 +3171,7 @@
 ** note
    * although the following functions are all side-effect
      but I use "save" instead of "save!"
-** save  [64bit]
+** save                               :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -3264,7 +3268,7 @@
 
    }
    #+end_src
-** fetch [64bit]
+** fetch                              :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -3334,7 +3338,7 @@
 
    }
    #+end_src
-** save  [32bit]
+** save                               :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -3431,7 +3435,7 @@
 
    }
    #+end_src
-** fetch [32bit]
+** fetch                              :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -3521,7 +3525,7 @@
 ** note byte
    * basic io is about byte
 ** ----------------------------------
-** write-byte [linux64]
+** write-byte                         :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3544,7 +3548,7 @@
 
    }
    #+end_src
-** write-byte [linux32]
+** write-byte                         :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3567,7 +3571,7 @@
 
    }
    #+end_src
-** write-byte [windows64]
+** write-byte                         :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -3599,7 +3603,7 @@
 
    }
    #+end_src
-** write-byte [windows32]
+** write-byte                         :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -3698,7 +3702,7 @@
     pointer$eval_string_stack:
        xx address$eval_string_stack
     #+end_src
-*** push & pop [64bit]
+*** push & pop                        :64bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =64bit, machine {
 
@@ -3720,7 +3724,7 @@
 
     }
     #+end_src
-*** push & pop [32bit]
+*** push & pop                        :32bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =32bit, machine {
 
@@ -3742,7 +3746,7 @@
 
     }
     #+end_src
-*** clear [64bit]
+*** clear                             :64bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =64bit, machine {
 
@@ -3753,7 +3757,7 @@
 
     }
     #+end_src
-*** clear [32bit]
+*** clear                             :32bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =32bit, machine {
 
@@ -3777,7 +3781,7 @@
        push_argument_stack rax
        next
     #+end_src
-** read-line-from-stdin [linux64]
+** read-line-from-stdin               :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3795,7 +3799,7 @@
 
    }
    #+end_src
-** read-line-from-stdin [linux32]
+** read-line-from-stdin               :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3813,7 +3817,7 @@
 
    }
    #+end_src
-** read-line-from-stdin [windows64]
+** read-line-from-stdin               :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -3839,7 +3843,7 @@
 
    }
    #+end_src
-** read-line-from-stdin [windows32]
+** read-line-from-stdin               :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -3951,7 +3955,7 @@
 * -----------------------------------
 * file io
 ** ----------------------------------
-** open-file,to-read  [linux64]
+** open-file,to-read                  :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3977,7 +3981,7 @@
 
    }
    #+end_src
-** open-file,to-write [linux64]
+** open-file,to-write                 :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -4004,7 +4008,7 @@
 
    }
    #+end_src
-** close-file         [linux64]
+** close-file                         :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -4017,7 +4021,7 @@
 
    }
    #+end_src
-** read-file          [linux64]
+** read-file                          :linux:64bit:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -4035,7 +4039,7 @@
 
    }
    #+end_src
-** write-file         [linux64]
+** write-file                         :linux:64bit:
    * from memory to disk
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -4054,7 +4058,7 @@
    }
    #+end_src
 ** ----------------------------------
-** open-file,to-read  [linux32]
+** open-file,to-read                  :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -4080,7 +4084,7 @@
 
    }
    #+end_src
-** open-file,to-write [linux32]
+** open-file,to-write                 :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -4107,7 +4111,7 @@
 
    }
    #+end_src
-** close-file         [linux32]
+** close-file                         :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -4120,7 +4124,7 @@
 
    }
    #+end_src
-** read-file          [linux32]
+** read-file                          :linux:32bit:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
@@ -4138,7 +4142,7 @@
 
    }
    #+end_src
-** write-file         [linux32]
+** write-file                         :linux:32bit:
    * from memory to disk
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
@@ -4157,7 +4161,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header             [windows64]
+** header                             :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4216,7 +4220,7 @@
 
    }
    #+end_src
-** open-file,to-read  [windows64]
+** open-file,to-read                  :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4249,7 +4253,7 @@
 
    }
    #+end_src
-** open-file,to-write [windows64]
+** open-file,to-write                 :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4282,7 +4286,7 @@
 
    }
    #+end_src
-** close-file         [windows64]
+** close-file                         :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4297,7 +4301,7 @@
 
    }
    #+end_src
-** read-file          [windows64]
+** read-file                          :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4324,7 +4328,7 @@
 
    }
    #+end_src
-** write-file         [windows64]
+** write-file                         :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -4351,7 +4355,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header             [windows32]
+** header                             :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4410,7 +4414,7 @@
 
    }
    #+end_src
-** open-file,to-read  [windows32]
+** open-file,to-read                  :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4442,7 +4446,7 @@
 
    }
    #+end_src
-** open-file,to-write [windows32]
+** open-file,to-write                 :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4474,7 +4478,7 @@
 
    }
    #+end_src
-** close-file         [windows32]
+** close-file                         :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4489,7 +4493,7 @@
 
    }
    #+end_src
-** read-file          [windows32]
+** read-file                          :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4517,7 +4521,7 @@
 
    }
    #+end_src
-** write-file         [windows32]
+** write-file                         :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -4583,21 +4587,155 @@
   .end:
   length$error_report__load_file = (.end - string$error_report__load_file)
   #+end_src
-* load-init-file
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  string$name_of_init_file:
-     db "core.cn"
-  .end:
-  length$name_of_init_file = (.end - string$name_of_init_file)
+* to load file
+** ----------------------------------
+** note linux system environment
+   * pid is the key to all the linux system environment
+   * command-line
+     /proc/<pid>/cmdline
+   * environment-string-variable-list
+     /proc/<pid>/environ
+** ----------------------------------
+** init-operating-system-environment  :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   define_function "init-operating-system-environment", init_operating_system_environment
+      ;; << -- >>
+      xx init_pid
+      xx init_command_line
+      xx init_environment_string_variable_list
+      xx end
+
+   }
+   #+end_src
+** init-pid                           :linux:64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   define_primitive_function "init-pid", init_pid
+      ;; << -- pid >>
+      mov linux64_sys_n_rax, linux64_syscall_getpid
+      syscall
+      mov [value$get_pid], rax
+      next
+
+   }
+   #+end_src
+** init-pid                           :linux:32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   define_primitive_function "init-pid", init_pid
+      ;; << -- pid >>
+      mov linux32_sys_n_eax, linux32_syscall_getpid
+      syscall
+      mov [value$get_pid], rax
+      next
+
+   }
+   #+end_src
+** init-command-line                  :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   define_function "init-command-line", init_command_line
+      ;; << -- >>
+      xx end
+
+   }
+   #+end_src
+** init-environment-string-variable-list :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   define_function "init-environment-string-variable-list", init_environment_string_variable_list
+      ;; << -- >>
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** get-pid                            :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   value$get_pid:
+      xx 2
+
+   define_function "get-pid", get_pid
+      ;; << -- pid >>
+      xx literal, value$get_pid, fetch
+      xx end
+
+   }
+   #+end_src
+** get-command-line                   :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "get-command-line", get_command_line
+      ;; << -- >>
+      xx end
+   #+end_src
+** ----------------------------------
+** load-init-file                     :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   string$name_of_init_file:
+      db "core.cn"
+   .end:
+   length$name_of_init_file = (.end - string$name_of_init_file)
 
 
-  define_function "load-init-file", load_init_file
-     ;; << -- >>
-     xx literal, string$name_of_init_file
-     xx literal, length$name_of_init_file
-     xx load_file
-     xx end
-  #+end_src
+   define_function "load-init-file", load_init_file
+      ;; << -- >>
+      xx literal, string$name_of_init_file
+      xx literal, length$name_of_init_file
+      xx load_file
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** load-init-file                     :windows:64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =windows =64bit, platform machine {
+
+   string$name_of_init_file:
+      db "core.cn"
+   .end:
+   length$name_of_init_file = (.end - string$name_of_init_file)
+
+
+   define_function "load-init-file", load_init_file
+      ;; << -- >>
+      xx literal, string$name_of_init_file
+      xx literal, length$name_of_init_file
+      xx load_file
+      xx end
+
+   }
+   #+end_src
+** load-init-file                     :windows:32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =windows =32bit, platform machine {
+
+   string$name_of_init_file:
+      db "core.cn"
+   .end:
+   length$name_of_init_file = (.end - string$name_of_init_file)
+
+
+   define_function "load-init-file", load_init_file
+      ;; << -- >>
+      xx literal, string$name_of_init_file
+      xx literal, length$name_of_init_file
+      xx load_file
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
 * -----------------------------------
 * char
 ** space-char?
@@ -4775,7 +4913,7 @@
       rep movsb
       next
    #+end_src
-** string-reverse! [64bit]
+** string-reverse!                    :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -4804,7 +4942,7 @@
 
    }
    #+end_src
-** string-reverse! [32bit]
+** string-reverse!                    :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -5690,7 +5828,7 @@
     pointer$dispatch_word_stack:
        xx address$dispatch_word_stack
     #+end_src
-*** push & pop [64bit]
+*** push & pop                        :64bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =64bit, machine {
 
@@ -5712,7 +5850,7 @@
 
     }
     #+end_src
-*** push & pop [32bit]
+*** push & pop                        :32bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =32bit, machine {
 
@@ -5734,7 +5872,7 @@
 
     }
     #+end_src
-*** clear [64bit]
+*** clear                             :64bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =64bit, machine {
 
@@ -5745,7 +5883,7 @@
 
     }
     #+end_src
-*** clear [32bit]
+*** clear                             :32bit:
     #+begin_src fasm :tangle cicada-nymph.fasm
     match =32bit, machine {
 
@@ -6408,7 +6546,7 @@
      | 1 : value-3 |
    * on stack
      << value-1, value-2, value-3, ... >>
-** n-fetch & n-save [64bit]
+** n-fetch & n-save                   :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -6448,7 +6586,7 @@
 
    }
    #+end_src
-** n-fetch & n-save [32bit]
+** n-fetch & n-save                   :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -6946,7 +7084,7 @@
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [linux64]
+** un_initialized_memory              :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -6957,7 +7095,7 @@
    }
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [linux32]
+** un_initialized_memory              :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -6968,7 +7106,7 @@
    }
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [windows64]
+** un_initialized_memory              :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -6978,7 +7116,7 @@
 
    }
    #+end_src
-** macro about import    [windows64]
+** macro about import                 :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    if platform eq windows
    if machine eq 64bit
@@ -7056,7 +7194,7 @@
    finish if
 
    #+end_src
-** section about import  [windows64]
+** section about import               :windows:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =64bit, platform machine {
 
@@ -7075,7 +7213,7 @@
    }
    #+end_src
 ** ----------------------------------
-** un_initialized_memory [windows32]
+** un_initialized_memory              :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
@@ -7085,7 +7223,7 @@
 
    }
    #+end_src
-** macro about import    [windows32]
+** macro about import                 :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    if platform eq windows
    if machine eq 32bit
@@ -7161,7 +7299,7 @@
    finish if
    finish if
    #+end_src
-** section about import  [windows32]
+** section about import               :windows:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =windows =32bit, platform machine {
 
