@@ -2724,7 +2724,7 @@ define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
 match =linux =64bit, platform machine {
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << buffer address, max length -- >>
+   ;; << buffer address, max length -- counter >>
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_2_rsi
    xor linux64_sys_1_rdi, linux64_sys_1_rdi ;; stdin
@@ -2740,7 +2740,7 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
 match =linux =32bit, platform machine {
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << buffer address, max length -- >>
+   ;; << buffer address, max length -- counter >>
    pop_argument_stack linux32_sys_3_edx
    pop_argument_stack linux32_sys_2_ecx
    xor linux32_sys_1_ebx, linux32_sys_1_ebx ;; stdin
@@ -2759,7 +2759,7 @@ __counter$read_line_from_stdin:
    xx 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << buffer address, max length -- >>
+   ;; << buffer address, max length -- counter >>
 windows64_function 5
    push 0
    sub rsp, 8*4
@@ -2783,7 +2783,7 @@ __counter$read_line_from_stdin:
    xx 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << buffer address, max length -- >>
+   ;; << buffer address, max length -- counter >>
    push 0
    push __counter$read_line_from_stdin
    pop_argument_stack rax

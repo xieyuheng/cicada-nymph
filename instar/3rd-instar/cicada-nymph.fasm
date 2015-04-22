@@ -1420,7 +1420,7 @@ __counter$read_line_from_stdin:
    xx 0
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
-   ;; << buffer address, max length -- >>
+   ;; << buffer address, max length -- counter >>
    push 0
    push __counter$read_line_from_stdin
    pop_argument_stack rax

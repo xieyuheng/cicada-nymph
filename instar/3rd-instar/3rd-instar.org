@@ -1909,7 +1909,7 @@
       xx 0
 
    define_primitive_function "read-line-from-stdin", read_line_from_stdin
-      ;; << buffer address, max length -- >>
+      ;; << buffer address, max length -- counter >>
       push 0
       push __counter$read_line_from_stdin
       pop_argument_stack rax
@@ -1927,19 +1927,6 @@
       next
 
    }
-   #+end_src
-** test read-line-from-stdin
-   #+begin_src fasm
-   define_function "", test__read_line_from_stdin
-      xx literal, buffer$read_byte
-      xx literal, max_input_length
-      xx read_line_from_stdin
-      xx pretty_write_integer
-      xx literal, buffer$read_byte
-      xx literal, 10
-      xx write_string
-      xx exit_with_TOS
-      xx end
    #+end_src
 ** read-byte
    #+begin_src fasm :tangle cicada-nymph.fasm

@@ -12,4 +12,4 @@ clean*.exe:
 clean:
 	make clean*~                                  &&\
 	make clean*.exe                               &&\
-	echo -e "\E[33;1m [ok] clean directory \E[0m"
+	echo -e "\e[33;1m [ok] clean directory \e[0m"
