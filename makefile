@@ -1,5 +1,13 @@
 .ONESHELL:
 
+ROOT ?=
+SYSTEM_CICADADIR ?= $(ROOT)/etc/cicada
+
+PREFIX ?= /usr
+BINDIR ?= $(PREFIX)/bin
+
+CICADADIR ?= $(HOME)/.cicada
+
 help:
 	@
 	echo -e " \e[33;1m							     \e[0m "
@@ -35,16 +43,17 @@ all:
 	echo -e " "				     &&\
 	echo -e "\e[33;1m [windows32] \e[0m "	     &&\
 	make windows32				     &&\
-	echo -e "\e[33;1m [copy-core-file] \e[0m "   &&\
-	make copy-core-file     	             &&\
 	echo -e " "
 
-copy-core-file:
-	install -D --mode=664 core.cn ~/.cicada/core.cn
+copy-core-file--user:
+	install -D --mode=664 core.cn -t "$(CICADADIR)"
+
+copy-core-file--system:
+	install -D --mode=664 core.cn -t "$(SYSTEM_CICADADIR)"
 
 install:
-	install -D --mode=775 cicada-nymph /usr/local/bin/cicada-nymph
-	install -D --mode=775 cicada-nymph.32 /usr/local/bin/cicada-nymph.32
+	install -D --mode=775 cicada-nymph -t "$(BINDIR)"
+	install -D --mode=775 cicada-nymph.32 -t "$(BINDIR)"
 
 linux64:
 	@

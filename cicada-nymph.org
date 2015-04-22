@@ -3974,7 +3974,7 @@
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-      mov linux64_sys_2_rsi, open_read ;; read onlya
+      mov linux64_sys_2_rsi, open_read ;; read only
       mov linux64_sys_1_rdi, name_buffer$open_file__to_read
       mov linux64_sys_n_rax, linux64_syscall_open
       syscall
@@ -4077,7 +4077,7 @@
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-      mov linux32_sys_2_ecx, open_read ;; read onlya
+      mov linux32_sys_2_ecx, open_read ;; read only
       mov linux32_sys_1_ebx, name_buffer$open_file__to_read
       mov linux32_sys_n_eax, linux32_syscall_open
       syscall
@@ -4551,6 +4551,74 @@
    }
    #+end_src
 ** ----------------------------------
+* more about file
+** path-exist?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "path-exist?", path_exist?
+      ;; << path[address, length] -- bool >>
+      xx open_file__to_read
+      xx dup, negative?, false?, false?branch, 4
+      xx   close_file
+      xx   true
+      xx   end
+      xx literal, -2, equal?, false?branch, 3
+      xx   false
+      xx   end
+      ;; ><><><
+      xx true
+      xx end
+   #+end_src
+** path-directory?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   address$path_directory?:
+      db 0
+
+   define_function "path-directory?", path_directory?
+      ;; << path[address, length] -- bool >>
+      xx open_file__to_read
+      xx dup, negative?, false?branch, 4
+      xx   drop
+      xx   false
+      xx   end
+      xx dup
+      xx literal, address$path_directory?
+      xx literal, 1
+      xx read_file
+      xx swap, close_file
+      xx dup, positive?, false?branch, 4
+      xx   drop
+      xx   false
+      xx   end
+      xx literal, -21, equal?, false?branch, 3
+      xx   true
+      xx   end
+      ;; ><><><
+      xx false
+      xx end
+   #+end_src
+** path-file?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   address$path_file?:
+      db 0
+
+   define_function "path-file?", path_file?
+      ;; << path[address, length] -- bool >>
+      xx open_file__to_read
+      xx dup, negative?, false?branch, 4
+      xx   drop
+      xx   false
+      xx   end
+      xx dup
+      xx literal, address$path_file?
+      xx literal, 1
+      xx read_file
+      xx swap, close_file
+      xx positive?, false?branch, 3
+      xx   true
+      xx   end
+      xx false
+      xx end
+   #+end_src
 * load-file
   * load-file can not be nested for now
     a stack of buffer would solve this problem
@@ -4865,6 +4933,11 @@
    .end:
    length$load_core_file = (.end - string$load_core_file)
 
+   string$load_core_file__system_wide:
+      db "/etc/cicada/core.cn"
+   .end:
+   length$load_core_file__system_wide = (.end - string$load_core_file__system_wide)
+
 
    define_function "load-core-file", load_core_file
       ;; << UNKNOWN -- UNKNOWN >>
@@ -4884,8 +4957,41 @@
       xx addition
       xx literal, path$load_core_file
       xx swap
-      xx load_file
+
+      xx dup2, path_file?, false?branch, 3
+      xx   load_file
+      xx   end
+      xx literal, string$load_core_file__report
+      xx literal, length$load_core_file__report
+      xx write_string
+      xx write_string
+      xx literal, 10, write_byte
+
+      xx literal, string$load_core_file__system_wide
+      xx literal, length$load_core_file__system_wide
+      xx dup2, path_file?, false?branch, 3
+      xx   load_file
+      xx   end
+      xx drop2
+      xx literal, string$load_core_file__report2
+      xx literal, length$load_core_file__report2
+      xx write_string
+      xx literal, 10, write_byte
       xx end
+
+   string$load_core_file__report:
+      db "* (load-core-file)", 10
+      db "  * FALLING BACK TO SYSTEM-WIDE CORE FILE : /etc/cicada/core.cn", 10
+      db "  * BECAUSE CAN NOT LOAD USER'S CORE FILE : "
+   .end:
+   length$load_core_file__report = (.end - string$load_core_file__report)
+
+   string$load_core_file__report2:
+      db "* (load-core-file) ", 10
+      db "  * CAN NOT LOAD SYSTEM-WIDE CORE FILE : /etc/cicada/core.cn", 10
+      db "  * NO CORE FILE IS LOADED"
+   .end:
+   length$load_core_file__report2 = (.end - string$load_core_file__report2)
 
    }
    #+end_src
