@@ -53,6 +53,7 @@ copy-core-file--system:
 
 install:
 	install -D --mode=775 cicada-nymph -t "$(BINDIR)"
+	install -D --mode=775 cn -t "$(BINDIR)"
 	install -D --mode=775 cicada-nymph.32 -t "$(BINDIR)"
 
 linux64:
@@ -60,6 +61,7 @@ linux64:
 	echo "define platform linux" >	platform-configuration.inc
 	echo "define machine  64bit" >> platform-configuration.inc
 	fasm -m 256000 cicada-nymph.fasm
+	cp cicada-nymph cn
 
 windows64:
 	@
