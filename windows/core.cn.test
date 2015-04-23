@@ -1,0 +1,74 @@
+: kkk
+  "kkk took my baby away !" write-string
+  cr
+  end
+; define-function
+
+: factorial
+  << number -- number >>
+  dup
+  one? if
+    end
+  then
+  dup sub1 factorial
+  mul
+  end
+; define-function
+
+: factorial,test
+  cr
+  1 factorial . cr
+  2 factorial . cr
+  3 factorial . cr
+  4 factorial . cr
+  5 factorial . cr
+  6 factorial . cr
+  7 factorial . cr
+  8 factorial . cr
+  9 factorial . cr
+  10 factorial . cr
+  11 factorial . cr
+  12 factorial . cr
+  13 factorial . cr
+  14 factorial . cr
+  15 factorial . cr
+  16 factorial . cr
+  17 factorial . cr
+  18 factorial . cr
+  19 factorial . cr
+  20 factorial . cr
+  end
+; define-function
+
+: .12
+  << 1 2 -- >>
+  2 equal? if
+    "(^-^)" write-string
+    1 equal? if
+      "\^o^/" write-string
+    else
+      "     " write-string
+    then
+  else
+    "     " write-string
+    1 equal? if
+      "\^o^/" write-string
+    else
+      "     " write-string
+    then
+  then
+  end
+; define-function
+
+: .12,test
+  cr
+  1 2 .12 cr
+  6 2 .12 cr
+  1 6 .12 cr
+  6 6 .12 cr
+  end
+; define-function
+
+
+factorial,test
+.12,test

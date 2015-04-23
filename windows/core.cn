@@ -1,0 +1,774 @@
+: cr << cr denotes carriage return >>
+  << -- >>
+  10 write-byte
+  end
+; define-function
+
+: if
+  << string[address, length] --
+     address, string[address, length] >>
+  *false?branch* save-into,jo-heap
+  *current-free-address,jo-heap* xx|swap|x
+  0 save-into,jo-heap
+  end
+; define-macro
+
+: else
+  << address, string[address, length] --
+     address, string[address, length] >>
+  *branch* save-into,jo-heap
+  x|swap|xx
+  *current-free-address,jo-heap* xxx|swap|x
+  0 save-into,jo-heap
+  << address, string[address, length], address >>
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
+; define-macro
+
+: then
+  << address, string[address, length] --
+     string[address, length] >>
+  x|swap|xx
+  *current-free-address,jo-heap*
+  over sub *jo-size* div
+  swap save
+  end
+; define-macro
+
+: execute-word
+  << word[address, length] -- unknown >>
+  dup2 integer-string? if
+    string->integer
+    end
+  then
+  dup2
+  find if
+    dup macro-jo? if
+      drop
+      "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+      write-string cr
+      end
+    then
+    dup exception-jo? if
+      drop
+      "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+      write-string cr
+      end
+    then
+    << function & primitive-function & variable >>
+    xx|swap|x drop2
+    execute-jo
+    end
+  else
+  "* (execute-word) MEETS UNDEFINED WORD : " write-string
+  write-string cr
+  then
+  end
+; define-function
+
+: basic-REPL
+  << unknown -- unknown >>
+  read-word-for-REPL
+  execute-word
+  <> basic-REPL
+; define-function
+
+basic-REPL
+
+: allocate-memory
+  << size -- address >>
+  dup *current-free-address,un-initialized-memory* clear-memory
+  *current-free-address,un-initialized-memory* swap << address as return value >>
+  address *current-free-address,un-initialized-memory* add-save
+  end
+; define-function
+
+: loop,report-dictionary,primitive-function
+  << counter, jo -- total >>
+  dup zero? if
+    drop
+    end
+  then
+  dup primitive-function-jo? false? if
+    jo->pre-jo
+    <> loop,report-dictionary,primitive-function
+  then
+  swap
+    "  " write-string
+    add1 dup .
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,report-dictionary,primitive-function
+; define-function
+
+: report-dictionary,primitive-function
+  << -- >>
+  "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
+  0 *first-jo-in-dictionary*
+  loop,report-dictionary,primitive-function
+  end
+; define-function
+
+: loop,report-dictionary,function
+  << counter, jo -- total >>
+  dup zero? if
+    drop
+    end
+  then
+  dup function-jo? false? if
+    jo->pre-jo
+    <> loop,report-dictionary,function
+  then
+  swap
+    "  " write-string
+    add1 dup .
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,report-dictionary,function
+; define-function
+
+: report-dictionary,function
+  << -- >>
+  "* ALL FUNCTION IN DICTIONARY :" write-string cr
+  0 *first-jo-in-dictionary*
+  loop,report-dictionary,function
+  end
+; define-function
+
+: loop,report-dictionary,macro
+  << counter, jo -- total >>
+  dup zero? if
+    drop
+    end
+  then
+  dup macro-jo? false? if
+    jo->pre-jo
+    <> loop,report-dictionary,macro
+  then
+  swap
+    "  " write-string
+    add1 dup .
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,report-dictionary,macro
+; define-function
+
+: report-dictionary,macro
+  << -- >>
+  "* ALL MACRO IN DICTIONARY :" write-string cr
+  0 *first-jo-in-dictionary*
+  loop,report-dictionary,macro
+  end
+; define-function
+
+: loop,report-dictionary,exception
+  << counter, jo -- total >>
+  dup zero? if
+    drop
+    end
+  then
+  dup exception-jo? false? if
+    jo->pre-jo
+    <> loop,report-dictionary,exception
+  then
+  swap
+    "  " write-string
+    add1 dup .
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,report-dictionary,exception
+; define-function
+
+: report-dictionary,exception
+  << -- >>
+  "* ALL EXCEPTION IN DICTIONARY :" write-string cr
+  0 *first-jo-in-dictionary*
+  loop,report-dictionary,exception
+  end
+; define-function
+
+: loop,report-dictionary,variable
+  << counter, jo -- total >>
+  dup zero? if
+    drop
+    end
+  then
+  dup variable-jo? false? if
+    jo->pre-jo
+    <> loop,report-dictionary,variable
+  then
+  swap
+    "  " write-string
+    add1 dup .
+  swap
+  dup jo->name
+  dup2 space-string? if
+    drop2
+    "UN-NAMED" write-string cr
+  else
+    write-string cr
+  then
+  jo->pre-jo
+  <> loop,report-dictionary,variable
+; define-function
+
+: report-dictionary,variable
+  << -- >>
+  "* ALL VARIABLE IN DICTIONARY :" write-string cr
+  0 *first-jo-in-dictionary*
+  loop,report-dictionary,variable
+  end
+; define-function
+
+: report-dictionary
+  << -- >>
+  report-dictionary,primitive-function
+  report-dictionary,function
+  report-dictionary,macro
+  report-dictionary,exception
+  report-dictionary,variable
+  "* TOTALLY : " write-string
+  add add add add . cr
+  end
+; define-function
+
+: report-memory
+  << -- >>
+  "* *un-initialized-memory*" write-string cr
+  "  * SIZE : " write-string
+       *size,un-initialized-memory*
+       . cr
+  "  * USED : " write-string
+       *current-free-address,un-initialized-memory*
+       *un-initialized-memory*
+       sub . cr
+  "  * FREE : " write-string
+       *size,un-initialized-memory*
+       *current-free-address,un-initialized-memory*
+       *un-initialized-memory*
+       sub sub . cr
+  "* *primitive-string-heap*" write-string cr
+  "  * SIZE : " write-string
+       *size,primitive-string-heap*
+       . cr
+  "  * USED : " write-string
+       *current-free-address,primitive-string-heap*
+       *primitive-string-heap*
+       sub . cr
+  "  * FREE : " write-string
+       *size,primitive-string-heap*
+       *current-free-address,primitive-string-heap*
+       *primitive-string-heap*
+       sub sub . cr
+  "* *jo-heap*" write-string cr
+  "  * SIZE : " write-string
+       *size,jo-heap* . cr
+  "  * USED : " write-string
+       *current-free-address,jo-heap*
+       *jo-heap*
+       sub . cr
+  "  * FREE : " write-string
+       *size,jo-heap*
+       *current-free-address,jo-heap*
+       *jo-heap*
+       sub sub . cr
+  end
+; define-function
+
+: report-platform
+  << -- >>
+  "* PLATFORM : " write-string
+  platform write-string
+  cr
+  end
+; define-function
+
+: report-jo-size
+  << -- >>
+  "* JO-SIZE : " write-string
+  *jo-size* write-nature-number
+  " bytes" write-string
+  cr
+  end
+; define-function
+
+: report-machine-word-size
+  << -- >>
+  "* MACHINE-WORD-SIZE : " write-string
+  *jo-size* 8 mul write-nature-number
+  " bits" write-string
+  cr
+  end
+; define-function
+
+: initial-report
+  << -- >>
+  "* INITIAL-REPORT : " write-string cr
+  "  " write-string report-platform
+  "  " write-string report-machine-word-size
+  "  " write-string report-jo-size
+  cr
+  end
+; define-function
+
+: test
+  << -- >>
+  "core.cn.test" load-file
+  end
+; define-function
+
+0
+: *hi,random-base*
+; define-variable
+
+: hi,random
+  << -- random-number >>
+  *hi,random-base*
+  *hi,random-base* add1 10 mod
+  address *hi,random-base* save
+  end
+; define-function
+
+: hi,say
+  << number -- >>
+  dup 0 equal? if drop " cica cica da yaya !!!" .s end then
+  dup 1 equal? if drop " hi ^-^" .s end then
+  dup 2 equal? if drop " hello :)" .s end then
+  dup 3 equal? if drop " hey *^-^*" .s end then
+  dup 4 equal? if drop " hiya \^o^/" .s end then
+  dup 5 equal? if drop " I wish you a lovely day" .s end then
+  dup 6 equal? if drop " I wish you a lovely day { or night :P }" .s end then
+  dup 7 equal? if drop " o.o" .s end then
+  drop " love love ^3^" .s end
+; define-function
+
+: hi
+  << -- >>
+  hi,random
+  hi,say
+  end
+; define-function
+
+: print-argument-stack,loop
+  << address, counter -- >>
+  dup zero? if
+    drop2
+    end
+  then
+  sub1 swap
+    dup fetch .
+  *jo-size* add
+  swap
+  <> print-argument-stack,loop
+; define-function
+
+: print-argument-stack
+  << -- >>
+  snapshot-the-stack-pointer
+  *the-stack-pointer-snapshot*
+  *the-stack* greater-or-equal? if
+    *the-stack*   << address as return value >>
+    *the-stack-pointer-snapshot* *the-stack* sub
+    *jo-size* div << counter as return value >>
+    print-argument-stack,loop
+    end
+  then
+  "BELOW THE STACK " write-string
+  end
+; define-function
+
+: stack-REPL
+  << unknown -- unknown >>
+  read-word-for-REPL
+  execute-word
+  snapshot-the-stack-pointer
+  cr
+  " * " write-string
+     *the-stack-pointer-snapshot*
+     *the-stack* sub
+     << ad hoc for the BUG of div >>
+     dup negative? if
+       negate
+       *jo-size* div
+       negate
+     else
+       *jo-size* div
+     then
+     write-integer
+  " * " write-string
+  " -- " write-string
+    print-argument-stack
+  "--" write-string
+  cr
+  <> stack-REPL
+; define-function
+
+100333 drop
+13
+: *name-hash-table,size*
+; define-variable
+
+*jo-size* 4 mul
+: *name-hash-table,unit*
+; define-variable
+
+*name-hash-table,size*
+*name-hash-table,unit* mul
+allocate-memory
+: *name-hash-table*
+; define-variable
+
+0
+: *name-hash-table,counter*
+; define-variable
+
+: name-hash-table,hash
+  << number, counter -- index >>
+  add *name-hash-table,size* mod
+  end
+; define-function
+
+16
+: *max-carry-position*
+; define-variable
+
+: string->finite-carry-sum,loop
+  << carry-sum, string[address, length], counter -- carry-sum >>
+  over zero? if
+    drop drop2
+    end
+  then
+  dup *max-carry-position* greater-than? if
+    drop 0 << re-start from 0 >>
+  then
+  xx|over|x
+  string-head,char over
+  2 swap power
+  mul
+  x|swap|xxxx add xxx|swap|x
+  add1 xx|swap|x
+  string-tail,char x|swap|xx
+  <> string->finite-carry-sum,loop
+; define-function
+
+: string->finite-carry-sum
+  << string[address, length] -- carry-sum >>
+  0 xx|swap|x << carry-sum >>
+  0 << counter >>
+  string->finite-carry-sum,loop
+  end
+; define-function
+
+: name->address
+  << name -- address >>
+  *name-hash-table,unit* mul
+  *name-hash-table* add
+  end
+; define-function
+
+: name,used?
+  << name -- bool >>
+  name->address
+  fetch zero? false?
+  end
+; define-function
+
+: name,used-as-title?
+  << name -- bool >>
+  name->address
+  *jo-size* add
+  fetch zero?
+  end
+; define-function
+
+: name,fetch-string
+  << name -- string[address, length] >>
+  name->address
+  fetch
+  address->primitive-string
+  end
+; define-function
+
+: name,fetch-title-index
+  << name -- index >>
+  name->address
+  *jo-size* add
+  fetch
+  end
+; define-function
+
+: name,fetch-orbit-length
+  << name -- length >>
+  name->address
+  *jo-size* add
+  *jo-size* add
+  fetch
+  end
+; define-function
+
+: name,fetch-orbiton
+  << name -- address >>
+  name->address
+  *jo-size* add
+  *jo-size* add
+  *jo-size* add
+  fetch
+  end
+; define-function
+
+: name,save-string
+  << string[address, length], name -- >>
+  *current-free-address,primitive-string-heap*
+  xx|swap|xx
+  save-into,primitive-string-heap
+  swap
+  name->address
+  save
+  end
+; define-function
+
+: name,save-title-index
+  << index, name -- >>
+  name->address
+  *jo-size* add
+  save
+  end
+; define-function
+
+: name,save-orbit-length
+  << index, name -- >>
+  name->address
+  *jo-size* add
+  *jo-size* add
+  save
+  end
+; define-function
+
+: name,save-orbiton
+  << index, name -- >>
+  name->address
+  *jo-size* add
+  *jo-size* add
+  *jo-size* add
+  save
+  end
+; define-function
+
+: name,no-collision?
+  << name -- bool >>
+  dup name,fetch-orbiton
+  equal?
+  end
+; define-function
+
+: name-hash-table,search,loop
+  << string[address, length], number, counter
+     -- name, true
+     -- name, false >>
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    :name false
+    end
+  then
+  :name name,fetch-string
+  ::string string-equal? if
+    :name true
+    end
+  then
+  :name name,fetch-orbit-length
+  :counter equal? if
+    :name false
+    end
+  then
+  ::string
+  :number :counter add1
+  <> name-hash-table,search,loop
+; define-function
+
+: name-hash-table,search
+  << string[address, length]
+     -- name, true
+     -- false >>
+  dup2 string->finite-carry-sum
+  0 name-hash-table,search,loop
+  end
+; define-function
+
+: name-hash-table,insert,loop
+  << string[address, length], number, counter
+     -- name, true
+     -- name, false >>
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    ::string :name
+    name,save-string
+    :orbit :name
+    name,save-orbiton
+    :counter :orbit
+    name,save-orbit-length
+    1 address *name-hash-table,counter* add-save
+    :name true
+    end
+  then
+  :name name,fetch-string
+  ::string string-equal? if
+    :name true
+    end
+  then
+  :counter *name-hash-table,size* equal? if
+    :name false
+    end
+  then
+  ::string
+  :number :counter add1
+  <> name-hash-table,insert,loop
+; define-function
+
+: name-hash-table,insert
+  << string[address, length]
+     -- name, true
+     -- name, false >>
+  dup2 string->finite-carry-sum
+  0 name-hash-table,insert,loop
+  end
+; define-function
+
+: string->name
+  << string[address, length] -- name >>
+  name-hash-table,insert
+  false? if
+    "* (string->name) *name-hash-table* IS FULL!" .s
+    end
+  then
+  end
+; define-function
+
+: name->string
+  << name -- string[address, length]] >>
+  name,fetch-string
+  end
+; define-function
+
+: name-hash-table,test
+  << -- >>
+  "a-000" string->name . cr
+  "a-111" string->name . cr
+  "a-222" string->name . cr
+  "a-333" string->name . cr
+  "a-444" string->name . cr
+  "a-555" string->name . cr
+  "a-666" string->name . cr
+  "a-777" string->name . cr
+  "a-888" string->name . cr
+  "a-999" string->name . cr
+  "b-000" string->name . cr
+  "b-111" string->name . cr
+  "b-222" string->name . cr
+  "b-333" string->name . cr
+  "b-444" string->name . cr
+  "b-555" string->name . cr
+  "b-666" string->name . cr
+  "b-777" string->name . cr
+  "b-888" string->name . cr
+  "b-999" string->name . cr
+  end
+; define-function
+
+: name-hash-table,report,orbit
+  << name, counter -- >>
+  over name,fetch-orbit-length
+  over less-than? if
+    drop2
+    end
+  then
+  over name,fetch-string string->finite-carry-sum
+  over name-hash-table,hash
+  dup name,fetch-orbiton
+  << name, counter, new-name, orbiton >>
+  x|over|xxx name,fetch-string string->finite-carry-sum
+  0 name-hash-table,hash
+  equal? if
+    "  {" write-string
+    dup write-nature-number
+    "} " write-string
+    name,fetch-string write-string
+    cr
+  else
+    drop
+  then
+  add1 <> name-hash-table,report,orbit
+; define-function
+
+: name-hash-table,report,loop
+  << name -- >>
+  dup *name-hash-table,size* equal? if
+    drop
+    end
+  then
+  dup name,used? if
+  dup name,no-collision? if
+    << * {index} string # orbit-lenght >>
+    "* {" write-string
+    dup write-nature-number
+    "} " write-string
+    dup name,fetch-string write-string
+    " # " write-string
+    dup name,fetch-orbit-length
+    write-nature-number
+    cr
+    dup 1 name-hash-table,report,orbit
+  then
+  then
+  add1 <> name-hash-table,report,loop
+; define-function
+
+: name-hash-table,report
+  << -- >>
+  0 name-hash-table,report,loop
+  "* TOTALLY : " write-string
+  *name-hash-table,counter* write-nature-number
+  cr
+  end
+; define-function
+
+initial-report
+stack-REPL
+hi
