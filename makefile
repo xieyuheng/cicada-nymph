@@ -44,7 +44,6 @@ copy-core-file--system:
 install:
 	install -D --mode=775 cn -t "$(BINDIR)"
 	install -D --mode=775 cn32 -t "$(BINDIR)"
-	make copy-core-file--system
 
 linux64:
 	@
