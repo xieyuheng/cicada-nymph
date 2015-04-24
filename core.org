@@ -565,7 +565,7 @@
 * stack-REPL
 ** note
    * print argument-stack in every loop
-** write-argument-stack
+** print-argument-stack
    #+begin_src cicada-nymph :tangle core.cn
    : print-argument-stack,loop
      << address, counter -- >>
@@ -595,12 +595,10 @@
      end
    ; define-function
    #+end_src
-** stack-REPL
+** print-argument-stack,pretty
    #+begin_src cicada-nymph :tangle core.cn
-   : stack-REPL
-     << unknown -- unknown >>
-     read-word-for-REPL
-     execute-word
+   : print-argument-stack,pretty
+     << -- >>
      snapshot-the-stack-pointer
      cr
      " * " write-string
@@ -620,6 +618,16 @@
        print-argument-stack
      "--" write-string
      cr
+     end
+   ; define-function
+   #+end_src
+** stack-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : stack-REPL
+     << unknown -- unknown >>
+     read-word-for-REPL
+     execute-word
+     print-argument-stack,pretty
      <> stack-REPL
    ; define-function
    #+end_src
@@ -674,7 +682,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
      << name[address, length], relative-path[address, length] -- >>
-     
+
      end
    ; define-function
    #+end_src
@@ -1183,6 +1191,9 @@
      initial-report
      hi
      "* you are in the (stack-REPL)" .s
+     "  every time after a word is executed" .s
+     "  the argument-stack get printed" .s
+     print-argument-stack,pretty
      <> stack-REPL
    ; define-function
    #+end_src
@@ -1195,6 +1206,7 @@
      initial-report
      hi
      "* you are in the (basic-REPL)" .s
+     "  this REPL do not print any thing automaticly" .s
      <> basic-REPL
    ; define-function
    #+end_src

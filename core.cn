@@ -414,10 +414,8 @@ basic-REPL
   end
 ; define-function
 
-: stack-REPL
-  << unknown -- unknown >>
-  read-word-for-REPL
-  execute-word
+: print-argument-stack,pretty
+  << -- >>
   snapshot-the-stack-pointer
   cr
   " * " write-string
@@ -437,12 +435,20 @@ basic-REPL
     print-argument-stack
   "--" write-string
   cr
+  end
+; define-function
+
+: stack-REPL
+  << unknown -- unknown >>
+  read-word-for-REPL
+  execute-word
+  print-argument-stack,pretty
   <> stack-REPL
 ; define-function
 
 : poi,add
   << name[address, length], relative-path[address, length] -- >>
-  
+
   end
 ; define-function
 
@@ -824,6 +830,9 @@ allocate-memory
   initial-report
   hi
   "* you are in the (stack-REPL)" .s
+  "  every time after a word is executed" .s
+  "  the argument-stack get printed" .s
+  print-argument-stack,pretty
   <> stack-REPL
 ; define-function
 
@@ -834,6 +843,7 @@ allocate-memory
   initial-report
   hi
   "* you are in the (basic-REPL)" .s
+  "  this REPL do not print any thing automaticly" .s
   <> basic-REPL
 ; define-function
 
