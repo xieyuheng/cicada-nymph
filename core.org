@@ -3,14 +3,20 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** home-path & search-path to load files
+   * poi denotes path-organizer
+   * 實現 條件性的被解釋的代碼
+     這樣就能實現
+     1. little-tester
+     2. 在不同的平臺下執行不同的代碼
+** little tester
+** be able to switch REPL
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
 ** name-hash-table
    * better factoring
    * better naming
-** little tester
 ** title-name-table
 ** data-giver
-** be able to switch REPL
 ** syntax for exception handling in cicada-nymph
 ** big number and 同餘方程
    * 爲了玩 hash-table
@@ -173,7 +179,7 @@
       execute-jo
       end
     else
-    "* (execute-word) MEETS UNDEFINED WORD : " write-string
+    "* (execute-word) meets undefined word : " write-string
     write-string cr
     then
     end
@@ -239,7 +245,7 @@
       dup jo->name
       dup2 space-string? if
         drop2
-        "UN-NAMED" write-string cr
+        " un-named " write-string cr
       else
         write-string cr
       then
@@ -249,7 +255,7 @@
 
     : report-dictionary,primitive-function
       << -- >>
-      "* ALL PRIMITIVE-FUNCTION IN DICTIONARY :" write-string cr
+      "* all primitive-function in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
       loop,report-dictionary,primitive-function
       end
@@ -274,7 +280,7 @@
       dup jo->name
       dup2 space-string? if
         drop2
-        "UN-NAMED" write-string cr
+        " un-named " write-string cr
       else
         write-string cr
       then
@@ -284,7 +290,7 @@
 
     : report-dictionary,function
       << -- >>
-      "* ALL FUNCTION IN DICTIONARY :" write-string cr
+      "* all function in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
       loop,report-dictionary,function
       end
@@ -309,7 +315,7 @@
       dup jo->name
       dup2 space-string? if
         drop2
-        "UN-NAMED" write-string cr
+        " un-named " write-string cr
       else
         write-string cr
       then
@@ -319,7 +325,7 @@
 
     : report-dictionary,macro
       << -- >>
-      "* ALL MACRO IN DICTIONARY :" write-string cr
+      "* all macro in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
       loop,report-dictionary,macro
       end
@@ -344,7 +350,7 @@
       dup jo->name
       dup2 space-string? if
         drop2
-        "UN-NAMED" write-string cr
+        " un-named " write-string cr
       else
         write-string cr
       then
@@ -354,7 +360,7 @@
 
     : report-dictionary,exception
       << -- >>
-      "* ALL EXCEPTION IN DICTIONARY :" write-string cr
+      "* all exception in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
       loop,report-dictionary,exception
       end
@@ -379,7 +385,7 @@
       dup jo->name
       dup2 space-string? if
         drop2
-        "UN-NAMED" write-string cr
+        " un-named " write-string cr
       else
         write-string cr
       then
@@ -389,7 +395,7 @@
 
     : report-dictionary,variable
       << -- >>
-      "* ALL VARIABLE IN DICTIONARY :" write-string cr
+      "* all variable in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
       loop,report-dictionary,variable
       end
@@ -406,7 +412,7 @@
       report-dictionary,macro
       report-dictionary,exception
       report-dictionary,variable
-      "* TOTALLY : " write-string
+      "* totally : " write-string
       add add add add . cr
       end
     ; define-function
@@ -416,39 +422,39 @@
    : report-memory
      << -- >>
      "* *un-initialized-memory*" write-string cr
-     "  * SIZE : " write-string
+     "  * size : " write-string
           *size,un-initialized-memory*
           . cr
-     "  * USED : " write-string
+     "  * used : " write-string
           *current-free-address,un-initialized-memory*
           *un-initialized-memory*
           sub . cr
-     "  * FREE : " write-string
+     "  * free : " write-string
           *size,un-initialized-memory*
           *current-free-address,un-initialized-memory*
           *un-initialized-memory*
           sub sub . cr
      "* *primitive-string-heap*" write-string cr
-     "  * SIZE : " write-string
+     "  * size : " write-string
           *size,primitive-string-heap*
           . cr
-     "  * USED : " write-string
+     "  * used : " write-string
           *current-free-address,primitive-string-heap*
           *primitive-string-heap*
           sub . cr
-     "  * FREE : " write-string
+     "  * free : " write-string
           *size,primitive-string-heap*
           *current-free-address,primitive-string-heap*
           *primitive-string-heap*
           sub sub . cr
      "* *jo-heap*" write-string cr
-     "  * SIZE : " write-string
+     "  * size : " write-string
           *size,jo-heap* . cr
-     "  * USED : " write-string
+     "  * used : " write-string
           *current-free-address,jo-heap*
           *jo-heap*
           sub . cr
-     "  * FREE : " write-string
+     "  * free : " write-string
           *size,jo-heap*
           *current-free-address,jo-heap*
           *jo-heap*
@@ -460,7 +466,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : report-platform
      << -- >>
-     "* PLATFORM : " write-string
+     "* platform : " write-string
      platform write-string
      cr
      end
@@ -470,7 +476,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : report-jo-size
      << -- >>
-     "* JO-SIZE : " write-string
+     "* jo-size : " write-string
      *jo-size* write-nature-number
      " bytes" write-string
      cr
@@ -481,7 +487,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : report-machine-word-size
      << -- >>
-     "* MACHINE-WORD-SIZE : " write-string
+     "* machine-word-size : " write-string
      *jo-size* 8 mul write-nature-number
      " bits" write-string
      cr
@@ -492,11 +498,20 @@
    #+begin_src cicada-nymph :tangle core.cn
    : initial-report
      << -- >>
-     "* INITIAL-REPORT : " write-string cr
+     "* initial-report : " write-string cr
      "  " write-string report-platform
      "  " write-string report-machine-word-size
      "  " write-string report-jo-size
-     cr
+     end
+   ; define-function
+   #+end_src
+** report-loaded-core-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-loaded-core-file
+     << -- >>
+     "* loaded-core-file : " .s
+     "    " write-string
+     get-path,loaded-core-file .s
      end
    ; define-function
    #+end_src
@@ -526,15 +541,15 @@
 
    : hi,say
      << number -- >>
-     dup 0 equal? if drop " cica cica da yaya !!!" .s end then
-     dup 1 equal? if drop " hi ^-^" .s end then
-     dup 2 equal? if drop " hello :)" .s end then
-     dup 3 equal? if drop " hey *^-^*" .s end then
-     dup 4 equal? if drop " hiya \^o^/" .s end then
-     dup 5 equal? if drop " I wish you a lovely day" .s end then
-     dup 6 equal? if drop " I wish you a lovely day { or night :P }" .s end then
-     dup 7 equal? if drop " o.o" .s end then
-     drop " love love ^3^" .s end
+     dup 0 equal? if drop "* cica cica da yaya !!!" .s end then
+     dup 1 equal? if drop "* hi ^-^" .s end then
+     dup 2 equal? if drop "* hello :)" .s end then
+     dup 3 equal? if drop "* hey *^-^*" .s end then
+     dup 4 equal? if drop "* hiya \^o^/" .s end then
+     dup 5 equal? if drop "* I wish you a lovely day" .s end then
+     dup 6 equal? if drop "* I wish you a lovely day { or night :P }" .s end then
+     dup 7 equal? if drop "* o.o" .s end then
+     drop "* love love ^3^" .s end
    ; define-function
 
    : hi
@@ -1051,11 +1066,91 @@
 * >< argument-stack
 * >< frame-stack
 * -----------------------------------
-* epilog
+* command-line-interface
+** command-line,unknow-function
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line,unknow-function
+     << -- >>
+     "* (cicada-nymph) unknow command-line-function : " write-string
+     get-command-line
+     string-tail,word
+     string-head,word .s
+     "* good bye ^-^/" .s
+     bye
+     end
+   ; define-function
+   #+end_src
+** command-line,stack-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line,stack-REPL
+     << -- >>
+     welcome
+     report-loaded-core-file
+     initial-report
+     hi
+     "* you are in the (stack-REPL)" .s
+     <> stack-REPL
+   ; define-function
+   #+end_src
+** command-line,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line,basic-REPL
+     << -- >>
+     welcome
+     report-loaded-core-file
+     initial-report
+     hi
+     "* you are in the (basic-REPL)" .s
+     <> basic-REPL
+   ; define-function
+   #+end_src
+** command-line,poi
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line,poi
+     << -- >>
+     "* poi byebye" .s
+     bye
+     end
+   ; define-function
+   #+end_src
+** command-line,no-function
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line,no-function
+     << -- >>
+     <> command-line,stack-REPL
+   ; define-function
+   #+end_src
+** command-line-dispatcher
+   #+begin_src cicada-nymph :tangle core.cn
+   : command-line-dispatcher
+     << -- >>
+     get-command-line
+     string-tail,word
+     dup2 space-string? if
+       <> command-line,no-function
+     then
+     string-head,word
+     >::1st-word
+     ::1st-word "basic-REPL" string-equal? if
+       <> command-line,basic-REPL
+     then
+     ::1st-word "stack-REPL" string-equal? if
+       <> command-line,stack-REPL
+     then
+     ::1st-word "poi" string-equal? if
+       <> command-line,poi
+     then
+       <> command-line,unknow-function
+   ; define-function
+   #+end_src
+* the-story-begin
   #+begin_src cicada-nymph :tangle core.cn
-  initial-report
-  stack-REPL
-  hi
+  : the-story-begin
+    << -- >>
+    <> command-line-dispatcher
+  ; define-function
+
+  the-story-begin
   #+end_src
 * -----------------------------------
 * test

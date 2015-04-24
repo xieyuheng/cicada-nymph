@@ -29,18 +29,16 @@ help:
 
 all:
 	@
-	echo -e " "				     &&\
-	echo -e "\e[33;1m [linux64] \e[0m "	     &&\
-	make linux64				     &&\
-	echo -e " "				     &&\
-	echo -e "\e[33;1m [linux32] \e[0m "	     &&\
-	make linux32				     &&\
-	echo -e " "
+	make linux64 &&\
+	make linux32 &&\
+	make copy-core-file--user
 
 copy-core-file--user:
+	echo -e "\e[33;1m [copy-core-file--user] \e[0m "
 	install -D --mode=664 core.cn -t "$(CICADADIR)"
 
 copy-core-file--system:
+	echo -e "\e[33;1m [copy-core-file--system] \e[0m "
 	install -D --mode=664 core.cn -t "$(SYSTEM_CICADADIR)"
 
 install:
@@ -49,12 +47,14 @@ install:
 
 linux64:
 	@
+	echo -e "\e[33;1m [linux64] \e[0m "
 	echo "define platform linux" >	platform-configuration.inc
 	echo "define machine  64bit" >> platform-configuration.inc
 	fasm -m 256000 cicada-nymph.fasm cn
 
 linux32:
 	@
+	echo -e "\e[33;1m [linux32] \e[0m "
 	echo "define platform linux" >	platform-configuration.inc
 	echo "define machine  32bit" >> platform-configuration.inc
 	fasm -m 256000 cicada-nymph.fasm cn32

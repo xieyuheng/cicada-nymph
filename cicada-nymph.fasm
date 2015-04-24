@@ -993,7 +993,7 @@ begin_to_interpret_threaded_code:
 }
 
 first_jojo:
-   xx welcome
+   ;; xx welcome
    ;; xx little_test
    xx initialize_dispatch_word_stack
    xx initialize_local_variable
@@ -1011,7 +1011,6 @@ define_function "welcome", welcome
    xx end
 
 string$welcome_to_cicada_nymph:
-   db 10
    db "* welcome to cicada-nymph ^-^"
    db 10
 .end:
@@ -3486,9 +3485,10 @@ length$report__load_file = (.end - string$report__load_file)
 
 define_function "load-file", load_file
    ;; << name-string[address, length] -- UNKNOWN >>
-   xx report__load_file
-   xx dup2, write_string
-   xx literal, 10, write_byte
+
+   ;; xx report__load_file
+   ;; xx dup2, write_string
+   ;; xx literal, 10, write_byte
 
    xx open_file__to_read
    xx dup
@@ -3516,7 +3516,7 @@ define_function "error-report,load-file", error_report__load_file
    xx end
 
 string$error_report__load_file:
-   db "* (load-file) MEETS ERROR  (read-file) ERROR CODE : "
+   db "* (load-file) meets error  (read-file) error code : "
 .end:
 length$error_report__load_file = (.end - string$error_report__load_file)
 
@@ -3714,12 +3714,12 @@ define_function "find-environment-string-variable,loop", find_environment_string
 
 match =linux, platform {
 
-string$get_home_path:
+string$get_path__home:
    db "HOME"
 
-define_function "get-home-path", get_home_path
+define_function "get-path,home", get_path__home
    ;; << -- string[address, length] >>
-   xx literal, string$get_home_path
+   xx literal, string$get_path__home
    xx literal, 4
    xx find_environment_string_variable
    xx drop
@@ -3729,74 +3729,149 @@ define_function "get-home-path", get_home_path
 
 match =linux, platform {
 
-path$load_core_file:
-   times 512 db 0
+string$get_path__user_core_file:
+   times 510 db 0
 
+length$get_path__user_core_file:
+   xx 0
 
-string$load_core_file:
-   db "/.cicada/core.cn"
-.end:
-length$load_core_file = (.end - string$load_core_file)
-
-string$load_core_file__system_wide:
-   db "/etc/cicada/core.cn"
-.end:
-length$load_core_file__system_wide = (.end - string$load_core_file__system_wide)
-
-
-define_function "load-core-file", load_core_file
-   ;; << UNKNOWN -- UNKNOWN >>
-   xx get_home_path
-   xx tuck
-   xx literal, path$load_core_file
-   xx string_to_buffer!
-
-   xx literal, string$load_core_file
-   xx literal, length$load_core_file
-   xx xoverxx
-   xx literal, path$load_core_file
-   xx addition
-   xx string_to_buffer!
-
-   xx literal, length$load_core_file
-   xx addition
-   xx literal, path$load_core_file
-   xx swap
-
-   xx dup2, path_file?, false?branch, 3
-   xx   load_file
-   xx   end
-   xx literal, string$load_core_file__report
-   xx literal, length$load_core_file__report
-   xx write_string
-   xx write_string
-   xx literal, 10, write_byte
-
-   xx literal, string$load_core_file__system_wide
-   xx literal, length$load_core_file__system_wide
-   xx dup2, path_file?, false?branch, 3
-   xx   load_file
-   xx   end
-   xx drop2
-   xx literal, string$load_core_file__report2
-   xx literal, length$load_core_file__report2
-   xx write_string
-   xx literal, 10, write_byte
+define_function "get-path,user-core-file", get_path__user_core_file
+   ;; << -- string[address, length] >>
+   xx literal, string$get_path__user_core_file
+   xx literal, length$get_path__user_core_file, fetch
    xx end
 
-string$load_core_file__report:
-   db "* (load-core-file)", 10
-   db "  * FALLING BACK TO SYSTEM-WIDE CORE FILE : /etc/cicada/core.cn", 10
-   db "  * BECAUSE CAN NOT LOAD USER'S CORE FILE : "
-.end:
-length$load_core_file__report = (.end - string$load_core_file__report)
+}
 
-string$load_core_file__report2:
-   db "* (load-core-file) ", 10
-   db "  * CAN NOT LOAD SYSTEM-WIDE CORE FILE : /etc/cicada/core.cn", 10
-   db "  * NO CORE FILE IS LOADED"
+match =linux, platform {
+
+string$get_path__system_core_file:
+   db "/etc/cicada/core.cn"
 .end:
-length$load_core_file__report2 = (.end - string$load_core_file__report2)
+length$get_path__system_core_file = (.end - string$get_path__system_core_file)
+
+define_function "get-path,system-core-file", get_path__system_core_file
+   ;; << -- string[address, length] >>
+   xx literal, string$get_path__system_core_file
+   xx literal, length$get_path__system_core_file
+   xx end
+
+}
+
+match =linux, platform {
+
+string$get_path__loaded_core_file:
+   times 510 db 0
+
+length$get_path__loaded_core_file:
+   xx 0
+
+define_function "get-path,loaded-core-file", get_path__loaded_core_file
+   ;; << -- string[address, length] >>
+   xx literal, string$get_path__loaded_core_file
+   xx literal, length$get_path__loaded_core_file, fetch
+   xx end
+
+}
+
+match =linux, platform {
+
+string$init_path__user_core_file:
+   db "/.cicada/core.cn"
+.end:
+length$init_path__user_core_file = (.end - string$init_path__user_core_file)
+
+
+define_function "init-path,user-core-file", init_path__user_core_file
+   ;; << -- >>
+   xx get_path__home
+   xx tuck
+   xx literal, string$get_path__user_core_file
+   xx string_to_buffer!
+
+   xx literal, string$init_path__user_core_file
+   xx literal, length$init_path__user_core_file
+   xx xoverxx
+   xx literal, string$get_path__user_core_file
+   xx addition
+   xx string_to_buffer!
+
+   xx literal, length$init_path__user_core_file
+   xx addition
+   xx literal, length$get_path__user_core_file
+   xx save
+   xx end
+
+}
+
+match =linux, platform {
+
+define_function "load-core-file", load_core_file
+   ;; << unknown -- unknown >>
+   xx init_path__user_core_file
+
+   xx get_path__user_core_file, path_file?, false?branch, (.fail_user_core_file-$)/jo_size
+   xx   get_path__user_core_file
+   xx   dup
+   xx   literal, length$get_path__loaded_core_file
+   xx   save
+   xx   literal, string$get_path__loaded_core_file
+   xx   string_to_buffer!
+   xx   get_path__user_core_file, load_file
+   xx   end
+.fail_user_core_file:
+
+   xx get_path__system_core_file, path_file?, false?branch, (.fail_system_core_file-$)/jo_size
+   xx   get_path__system_core_file
+   xx   dup
+   xx   literal, length$get_path__loaded_core_file
+   xx   save
+   xx   literal, string$get_path__loaded_core_file
+   xx   string_to_buffer!
+   xx   get_path__system_core_file, load_file
+   xx   end
+.fail_system_core_file:
+
+   xx literal, string$load_core_file__report_1
+   xx literal, length$load_core_file__report_1
+   xx write_string
+   xx get_path__user_core_file, write_string
+   xx literal, string$load_core_file__report_2
+   xx literal, length$load_core_file__report_2
+   xx write_string
+   xx get_path__system_core_file, write_string
+   xx literal, string$load_core_file__report_3
+   xx literal, length$load_core_file__report_3
+   xx write_string
+
+   xx end
+
+string$load_core_file__report_1:
+   db "* (load-core-file)", 10
+   db "  * no core file is loaded", 10
+   db "  * when cicada-nymph is started", 10
+   db "    first", 10
+   db "    it trys to load the user's core file from :", 10
+   db "       "
+.end:
+length$load_core_file__report_1 = (.end - string$load_core_file__report_1)
+
+string$load_core_file__report_2:
+   db 10
+   db "    if it fails", 10
+   db "    then", 10
+   db "    it trys to load the system core file from :", 10
+   db "       "
+.end:
+length$load_core_file__report_2 = (.end - string$load_core_file__report_2)
+
+string$load_core_file__report_3:
+   db 10
+   db "    if it fails", 10
+   db "    no core file is loaded", 10
+   db "  * now you are running cicada-nymph without core", 10
+.end:
+length$load_core_file__report_3 = (.end - string$load_core_file__report_3)
 
 }
 
@@ -4405,7 +4480,7 @@ define_function "write-undefined-word-report,for-execute-word", write_undefined_
    xx end
 
 string$undefined_word_report__for_execute_word:
-   db "* (execute-word) MEETS UNDEFINED WORD : "
+   db "* (execute-word) meets undefined word : "
 .end:
 length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
 
@@ -4667,7 +4742,7 @@ define_function "write-undefined-word-report,for-make-jojo", write_undefined_wor
    xx end
 
 string$undefined_word_report__for_make_jojo:
-   db "* (make-jojo) MEETS UNDEFINED WORD : "
+   db "* (make-jojo) meets undefined word : "
 .end:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
 
@@ -4811,7 +4886,7 @@ define_function "write-undefined-word-report,for-address", write_undefined_word_
    xx end
 
 string$undefined_word_report__for_address:
-   db "* (make-jojo (address)) THE WORD FOLLOWS (address) IS UNDEFINED : "
+   db "* (make-jojo (address)) the word follows (address) is undefined : "
 .end:
 length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
 
@@ -4842,7 +4917,7 @@ define_function "write-not-integer-string-report,for-branch", write_not_integer_
    xx end
 
 string$not_integer_string_report__for_branch:
-   db "* (make-jojo (branch)) THE WORD FOLLOWS (branch) MUST BE A INTEGER STRING : "
+   db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
 .end:
 length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
 
@@ -4873,7 +4948,7 @@ define_function "write-not-integer-string-report,for-false?branch", write_not_in
    xx end
 
 string$not_integer_string_report__for_false?branch:
-   db "* (make-jojo (false?branch)) THE WORD FOLLOWS (false?branch) MUST BE A INTEGER STRING : "
+   db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
 .end:
 length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
 
@@ -4921,7 +4996,7 @@ define_function "write-not-integer-string-report,for-double-quote", write_not_in
    xx end
 
 string$not_integer_string_report__for_double_quote:
-   db "* (make-jojo (double-quote)) CAN NOT FIND THE ENDING DOUBLE-QUOTE"
+   db "* (make-jojo (double-quote)) can not find the ending double-quote"
 .end:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
