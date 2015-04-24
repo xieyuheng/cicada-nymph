@@ -30,8 +30,7 @@ help:
 all:
 	@
 	make linux64 &&\
-	make linux32 &&\
-	make copy-core-file--user
+	make linux32
 
 copy-core-file--user:
 	echo -e "\e[33;1m [copy-core-file--user] \e[0m "
