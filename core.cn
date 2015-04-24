@@ -47,13 +47,13 @@
   find if
     dup macro-jo? if
       drop
-      "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+      "* (execute-word) can not execute macro directly : " write-string
       write-string cr
       end
     then
     dup exception-jo? if
       drop
-      "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+      "* (execute-word) can not execute exception directly : " write-string
       write-string cr
       end
     then
@@ -440,6 +440,36 @@ basic-REPL
   <> stack-REPL
 ; define-function
 
+: poi,add
+  << name[address, length], relative-path[address, length] -- >>
+  
+  end
+; define-function
+
+: poi,sub
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,up
+  << name[address, length], relative-path[address, length] -- >>
+
+  end
+; define-function
+
+: poi,show
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,list
+  << -- >>
+
+  end
+; define-function
+
 100333 drop
 13
 : *name-hash-table,size*
@@ -770,7 +800,7 @@ allocate-memory
 : name-hash-table,report
   << -- >>
   0 name-hash-table,report,loop
-  "* TOTALLY : " write-string
+  "* totally : " write-string
   *name-hash-table,counter* write-nature-number
   cr
   end
@@ -824,6 +854,7 @@ allocate-memory
   get-command-line
   string-tail,word
   dup2 space-string? if
+    drop2
     <> command-line,no-function
   then
   string-head,word

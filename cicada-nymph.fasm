@@ -995,11 +995,7 @@ begin_to_interpret_threaded_code:
 first_jojo:
    ;; xx welcome
    ;; xx little_test
-   xx initialize_dispatch_word_stack
-   xx initialize_local_variable
-match =linux, platform {
-   xx init_operating_system_environment
-}
+   xx initialization
    xx load_core_file
    xx basic_REPL
 
@@ -3555,6 +3551,18 @@ define_primitive_function "init-pid", init_pid
 
 match =linux, platform {
 
+value$get_pid:
+   xx 2
+
+define_function "get-pid", get_pid
+   ;; << -- pid >>
+   xx literal, value$get_pid, fetch
+   xx end
+
+}
+
+match =linux, platform {
+
 file$init_command_line:
    db "/cmdline" ;; length of 8
 
@@ -3590,6 +3598,12 @@ define_function "init-command-line", init_command_line
    xx read_file
    xx literal, length$init_command_line
    xx save
+   xx end
+
+define_function "get-command-line", get_command_line
+   ;; << -- string[address, length] >>
+   xx literal, address$init_command_line
+   xx literal, length$init_command_line, fetch
    xx end
 
 }
@@ -3632,32 +3646,6 @@ define_function "init-environment-string-variable-list", init_environment_string
    xx literal, length$init_environment_string_variable_list
    xx save
    xx end
-
-}
-
-match =linux, platform {
-
-value$get_pid:
-   xx 2
-
-define_function "get-pid", get_pid
-   ;; << -- pid >>
-   xx literal, value$get_pid, fetch
-   xx end
-
-}
-
-match =linux, platform {
-
-define_function "get-command-line", get_command_line
-   ;; << -- string[address, length] >>
-   xx literal, address$init_command_line
-   xx literal, length$init_command_line, fetch
-   xx end
-
-}
-
-match =linux, platform {
 
 define_function "get-environment-string-variable-list", get_environment_string_variable_list
    ;; << -- string[address, length] >>
@@ -3714,20 +3702,93 @@ define_function "find-environment-string-variable,loop", find_environment_string
 
 match =linux, platform {
 
-string$get_path__home:
+string$init_path__home_directory:
    db "HOME"
 
-define_function "get-path,home", get_path__home
-   ;; << -- string[address, length] >>
-   xx literal, string$get_path__home
+define_function "init-path,home-directory", init_path__home_directory
+   ;; << -- >>
+   xx literal, string$init_path__home_directory
    xx literal, 4
    xx find_environment_string_variable
    xx drop
+   xx dup
+   xx literal, length$get_path__home_directory
+   xx save
+   xx literal, string$get_path__home_directory
+   xx string_to_buffer!
+   xx end
+
+string$get_path__home_directory:
+   times 512 db 0
+length$get_path__home_directory:
+   xx 0
+
+define_function "get-path,home-directory", get_path__home_directory
+   ;; << -- string[address, length] >>
+   xx literal, string$get_path__home_directory
+   xx literal, length$get_path__home_directory, fetch
    xx end
 
 }
 
 match =linux, platform {
+
+string$init_path__working_directory:
+   db "PWD"
+
+define_function "init-path,working-directory", init_path__working_directory
+   ;; << -- >>
+   xx literal, string$init_path__working_directory
+   xx literal, 3
+   xx find_environment_string_variable
+   xx drop
+   xx dup
+   xx literal, length$get_path__working_directory
+   xx save
+   xx literal, string$get_path__working_directory
+   xx string_to_buffer!
+   xx end
+
+string$get_path__working_directory:
+   times 512 db 0
+length$get_path__working_directory:
+   xx 0
+
+define_function "get-path,working-directory", get_path__working_directory
+   ;; << -- string[address, length] >>
+   xx literal, string$get_path__working_directory
+   xx literal, length$get_path__working_directory, fetch
+   xx end
+
+}
+
+match =linux, platform {
+
+string$init_path__user_core_file:
+   db "/.cicada/core.cn"
+.end:
+length$init_path__user_core_file = (.end - string$init_path__user_core_file)
+
+
+define_function "init-path,user-core-file", init_path__user_core_file
+   ;; << -- >>
+   xx get_path__home_directory
+   xx tuck
+   xx literal, string$get_path__user_core_file
+   xx string_to_buffer!
+
+   xx literal, string$init_path__user_core_file
+   xx literal, length$init_path__user_core_file
+   xx xoverxx
+   xx literal, string$get_path__user_core_file
+   xx addition
+   xx string_to_buffer!
+
+   xx literal, length$init_path__user_core_file
+   xx addition
+   xx literal, length$get_path__user_core_file
+   xx save
+   xx end
 
 string$get_path__user_core_file:
    times 510 db 0
@@ -3776,40 +3837,8 @@ define_function "get-path,loaded-core-file", get_path__loaded_core_file
 
 match =linux, platform {
 
-string$init_path__user_core_file:
-   db "/.cicada/core.cn"
-.end:
-length$init_path__user_core_file = (.end - string$init_path__user_core_file)
-
-
-define_function "init-path,user-core-file", init_path__user_core_file
-   ;; << -- >>
-   xx get_path__home
-   xx tuck
-   xx literal, string$get_path__user_core_file
-   xx string_to_buffer!
-
-   xx literal, string$init_path__user_core_file
-   xx literal, length$init_path__user_core_file
-   xx xoverxx
-   xx literal, string$get_path__user_core_file
-   xx addition
-   xx string_to_buffer!
-
-   xx literal, length$init_path__user_core_file
-   xx addition
-   xx literal, length$get_path__user_core_file
-   xx save
-   xx end
-
-}
-
-match =linux, platform {
-
 define_function "load-core-file", load_core_file
    ;; << unknown -- unknown >>
-   xx init_path__user_core_file
-
    xx get_path__user_core_file, path_file?, false?branch, (.fail_user_core_file-$)/jo_size
    xx   get_path__user_core_file
    xx   dup
@@ -3888,6 +3917,27 @@ define_function "load-core-file", load_core_file
    xx literal, string$name_of_init_file
    xx literal, length$name_of_init_file
    xx load_file
+   xx end
+
+}
+
+define_function "initialization", initialization
+   ;; << -- >>
+   xx initialize_dispatch_word_stack
+   xx initialize_local_variable
+match =linux, platform {
+   xx initialize_system
+   }
+   xx end
+
+match =linux, platform {
+
+define_function "initialize-system", initialize_system
+   ;; << -- >>
+   xx init_operating_system_environment
+   xx init_path__home_directory
+   xx init_path__user_core_file
+   xx init_path__working_directory
    xx end
 
 }

@@ -3,6 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** more design about the command-line-interface
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
@@ -12,6 +13,7 @@
 ** little tester
 ** be able to switch REPL
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
+** [how] variable must be able to store string
 ** name-hash-table
    * better factoring
    * better naming
@@ -151,7 +153,7 @@
   factorial,test
   .12,test
   #+end_src
-* re-define execute-word & basic-REPL
+* execute-word & basic-REPL           :redefine:
   * to protect macro & exception from be called from basic-REPL
   #+begin_src cicada-nymph :tangle core.cn
   : execute-word
@@ -164,13 +166,13 @@
     find if
       dup macro-jo? if
         drop
-        "* (execute-word) CAN NOT EXECUTE MACRO DIRECTLY : " write-string
+        "* (execute-word) can not execute macro directly : " write-string
         write-string cr
         end
       then
       dup exception-jo? if
         drop
-        "* (execute-word) CAN NOT EXECUTE EXCEPTION DIRECTLY : " write-string
+        "* (execute-word) can not execute exception directly : " write-string
         write-string cr
         end
       then
@@ -622,6 +624,97 @@
    ; define-function
    #+end_src
 * -----------------------------------
+* path
+** relative-path?
+** full-path?
+* poi
+** note
+   * poi denotes path-organizer
+     it can give a name to a path
+     one path one name
+     it is designed for (load-file)
+** note two directories
+   * two directories to store the name path record
+     1. user :
+        "/home/<user>/.cicada/poi"
+     2. system :
+        "/etc/cicada/poi"
+   * note that
+     these two directories are viewed as one by poi
+     no such things like
+     user overriding system will happen
+     one name can only exist in one of the two directories
+     more on this in the following note
+** note interface for command-line-function
+   * cn poi add  <name> <relative-path>
+   * cn poi sub  <name>
+   * cn poi up   <name> <relative-path>
+   * cn poi show <name>
+   * cn poi list
+   * <relative-path> is converted to <full-path>
+     with the help of working-directory
+   * <relative-path> is in the format of
+     "./dictionary/file"
+     "./dictionary/dictionary"
+     note that
+     for a <relative-path> of dictionary
+     not tailing "/" should be added
+** note interface for load-file
+   * a path can be a file or a directory
+     1. file
+        "name" load-file
+     2. directory
+        "name/file" load-file
+        note that
+        use "name/file"
+        instead of "name/file.cn"
+** note interface in cicada-nymph code
+   * poi should not be called in cicada-nymph code
+** add
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,add
+     << name[address, length], relative-path[address, length] -- >>
+     
+     end
+   ; define-function
+   #+end_src
+** sub
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,sub
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** up
+   * up denotes update
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,up
+     << name[address, length], relative-path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** show
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,show
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** list
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,list
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
+* >< little-tester
+** note
+** ><
+* -----------------------------------
 * name-hash-table
 ** note naming & factoring
    * open addressing
@@ -1054,7 +1147,7 @@
    : name-hash-table,report
      << -- >>
      0 name-hash-table,report,loop
-     "* TOTALLY : " write-string
+     "* totally : " write-string
      *name-hash-table,counter* write-nature-number
      cr
      end
@@ -1067,6 +1160,7 @@
 * >< frame-stack
 * -----------------------------------
 * command-line-interface
+** note
 ** command-line,unknow-function
    #+begin_src cicada-nymph :tangle core.cn
    : command-line,unknow-function
@@ -1127,6 +1221,7 @@
      get-command-line
      string-tail,word
      dup2 space-string? if
+       drop2
        <> command-line,no-function
      then
      string-head,word

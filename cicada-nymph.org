@@ -1781,11 +1781,7 @@
    first_jojo:
       ;; xx welcome
       ;; xx little_test
-      xx initialize_dispatch_word_stack
-      xx initialize_local_variable
-   match =linux, platform {
-      xx init_operating_system_environment
-   }
+      xx initialization
       xx load_core_file
       xx basic_REPL
    #+end_src
@@ -4670,6 +4666,16 @@
   #+end_src
 * to load file
 ** ----------------------------------
+** note two directories
+   * all files about cicada
+     are stored in two directories only
+     1. user :
+        "/home/<user>/.cicada"
+     2. system :
+        "/etc/cicada"
+   * note that
+     the convention of linux is not followed
+     "/share" and "/include" are not used
 ** note linux system environment
    * pid is the key to all the linux system environment
    * command-line
@@ -4717,7 +4723,22 @@
 
    }
    #+end_src
-** init-command-line                  :linux:
+** get-pid                            :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   value$get_pid:
+      xx 2
+
+   define_function "get-pid", get_pid
+      ;; << -- pid >>
+      xx literal, value$get_pid, fetch
+      xx end
+
+   }
+   #+end_src
+** ----------------------------------
+** [init|get]-command-line            :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
@@ -4758,9 +4779,15 @@
       xx save
       xx end
 
+   define_function "get-command-line", get_command_line
+      ;; << -- string[address, length] >>
+      xx literal, address$init_command_line
+      xx literal, length$init_command_line, fetch
+      xx end
+
    }
    #+end_src
-** init-environment-string-variable-list :linux:
+** [init|get]-environment-string-variable-list :linux:
    * the size of /proc/<pid>/environ is limited to 4k
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
@@ -4801,39 +4828,6 @@
       xx literal, length$init_environment_string_variable_list
       xx save
       xx end
-
-   }
-   #+end_src
-** ----------------------------------
-** get-pid                            :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   value$get_pid:
-      xx 2
-
-   define_function "get-pid", get_pid
-      ;; << -- pid >>
-      xx literal, value$get_pid, fetch
-      xx end
-
-   }
-   #+end_src
-** get-command-line                   :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   define_function "get-command-line", get_command_line
-      ;; << -- string[address, length] >>
-      xx literal, address$init_command_line
-      xx literal, length$init_command_line, fetch
-      xx end
-
-   }
-   #+end_src
-** get-environment-string-variable-list :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
 
    define_function "get-environment-string-variable-list", get_environment_string_variable_list
       ;; << -- string[address, length] >>
@@ -4895,27 +4889,103 @@
    }
    #+end_src
 ** ----------------------------------
-** >< get-path,home                   :linux:
+** [init|get]-path,home-directory     :linux:
    * need error handling
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
-   string$get_path__home:
+   string$init_path__home_directory:
       db "HOME"
 
-   define_function "get-path,home", get_path__home
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__home
+   define_function "init-path,home-directory", init_path__home_directory
+      ;; << -- >>
+      xx literal, string$init_path__home_directory
       xx literal, 4
       xx find_environment_string_variable
       xx drop
+      xx dup
+      xx literal, length$get_path__home_directory
+      xx save
+      xx literal, string$get_path__home_directory
+      xx string_to_buffer!
+      xx end
+
+   string$get_path__home_directory:
+      times 512 db 0
+   length$get_path__home_directory:
+      xx 0
+
+   define_function "get-path,home-directory", get_path__home_directory
+      ;; << -- string[address, length] >>
+      xx literal, string$get_path__home_directory
+      xx literal, length$get_path__home_directory, fetch
       xx end
 
    }
    #+end_src
-** get-path,user-core-file            :linux:
+** [init|get]-path,working-directory  :linux:
+   * need error handling
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
+
+   string$init_path__working_directory:
+      db "PWD"
+
+   define_function "init-path,working-directory", init_path__working_directory
+      ;; << -- >>
+      xx literal, string$init_path__working_directory
+      xx literal, 3
+      xx find_environment_string_variable
+      xx drop
+      xx dup
+      xx literal, length$get_path__working_directory
+      xx save
+      xx literal, string$get_path__working_directory
+      xx string_to_buffer!
+      xx end
+
+   string$get_path__working_directory:
+      times 512 db 0
+   length$get_path__working_directory:
+      xx 0
+
+   define_function "get-path,working-directory", get_path__working_directory
+      ;; << -- string[address, length] >>
+      xx literal, string$get_path__working_directory
+      xx literal, length$get_path__working_directory, fetch
+      xx end
+
+   }
+   #+end_src
+** [init|get]-path,user-core-file     :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   string$init_path__user_core_file:
+      db "/.cicada/core.cn"
+   .end:
+   length$init_path__user_core_file = (.end - string$init_path__user_core_file)
+
+
+   define_function "init-path,user-core-file", init_path__user_core_file
+      ;; << -- >>
+      xx get_path__home_directory
+      xx tuck
+      xx literal, string$get_path__user_core_file
+      xx string_to_buffer!
+
+      xx literal, string$init_path__user_core_file
+      xx literal, length$init_path__user_core_file
+      xx xoverxx
+      xx literal, string$get_path__user_core_file
+      xx addition
+      xx string_to_buffer!
+
+      xx literal, length$init_path__user_core_file
+      xx addition
+      xx literal, length$get_path__user_core_file
+      xx save
+      xx end
 
    string$get_path__user_core_file:
       times 510 db 0
@@ -4966,46 +5036,12 @@
 
    }
    #+end_src
-** init-path,user-core-file           :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$init_path__user_core_file:
-      db "/.cicada/core.cn"
-   .end:
-   length$init_path__user_core_file = (.end - string$init_path__user_core_file)
-
-
-   define_function "init-path,user-core-file", init_path__user_core_file
-      ;; << -- >>
-      xx get_path__home
-      xx tuck
-      xx literal, string$get_path__user_core_file
-      xx string_to_buffer!
-
-      xx literal, string$init_path__user_core_file
-      xx literal, length$init_path__user_core_file
-      xx xoverxx
-      xx literal, string$get_path__user_core_file
-      xx addition
-      xx string_to_buffer!
-
-      xx literal, length$init_path__user_core_file
-      xx addition
-      xx literal, length$get_path__user_core_file
-      xx save
-      xx end
-
-   }
-   #+end_src
 ** load-core-file                     :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
    define_function "load-core-file", load_core_file
       ;; << unknown -- unknown >>
-      xx init_path__user_core_file
-
       xx get_path__user_core_file, path_file?, false?branch, (.fail_user_core_file-$)/jo_size
       xx   get_path__user_core_file
       xx   dup
@@ -5092,6 +5128,33 @@
    }
    #+end_src
 ** ----------------------------------
+* -----------------------------------
+* initialization
+** initialization
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "initialization", initialization
+      ;; << -- >>
+      xx initialize_dispatch_word_stack
+      xx initialize_local_variable
+   match =linux, platform {
+      xx initialize_system
+      }
+      xx end
+   #+end_src
+** initialize-system                  :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
+
+   define_function "initialize-system", initialize_system
+      ;; << -- >>
+      xx init_operating_system_environment
+      xx init_path__home_directory
+      xx init_path__user_core_file
+      xx init_path__working_directory
+      xx end
+
+   }
+   #+end_src
 * -----------------------------------
 * char
 ** space-char?
