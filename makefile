@@ -32,11 +32,11 @@ all:
 	make linux64 &&\
 	make linux32
 
-copy-core-file--user:
+user-copy-core-file:
 	echo -e "\e[33;1m [copy-core-file--user] \e[0m "
 	install -D --mode=664 core.cn -t "$(CICADADIR)"
 
-copy-core-file--system:
+system-copy-core-file:
 	echo -e "\e[33;1m [copy-core-file--system] \e[0m "
 	install -D --mode=664 core.cn -t "$(SYSTEM_CICADADIR)"
 

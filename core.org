@@ -517,15 +517,6 @@
      end
    ; define-function
    #+end_src
-* to load
-** load core.cn.test
-   #+begin_src cicada-nymph :tangle core.cn
-   : test
-     << -- >>
-     "core.cn.test" load-file
-     end
-   ; define-function
-   #+end_src
 * I wish you a lovely day
 ** hi
    #+begin_src cicada-nymph :tangle core.cn
@@ -635,6 +626,15 @@
 * path
 ** relative-path?
 ** full-path?
+* load-file
+** ><
+   #+begin_src cicada-nymph :tangle core.cn
+   : load-file
+     << ??? -- >>
+
+     end
+   ; define-function
+   #+end_src
 * poi
 ** note
    * poi denotes path-organizer
@@ -678,6 +678,14 @@
         instead of "name/file.cn"
 ** note interface in cicada-nymph code
    * poi should not be called in cicada-nymph code
+** help
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,help
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
 ** add
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
@@ -1206,7 +1214,7 @@
      initial-report
      hi
      "* you are in the (basic-REPL)" .s
-     "  this REPL do not print any thing automaticly" .s
+     "  this REPL does not print any thing automaticly" .s
      <> basic-REPL
    ; define-function
    #+end_src

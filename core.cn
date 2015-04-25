@@ -348,12 +348,6 @@ basic-REPL
   end
 ; define-function
 
-: test
-  << -- >>
-  "core.cn.test" load-file
-  end
-; define-function
-
 0
 : *hi,random-base*
 ; define-variable
@@ -444,6 +438,18 @@ basic-REPL
   execute-word
   print-argument-stack,pretty
   <> stack-REPL
+; define-function
+
+: load-file
+  << ??? -- >>
+
+  end
+; define-function
+
+: poi,help
+  << -- >>
+
+  end
 ; define-function
 
 : poi,add
@@ -843,7 +849,7 @@ allocate-memory
   initial-report
   hi
   "* you are in the (basic-REPL)" .s
-  "  this REPL do not print any thing automaticly" .s
+  "  this REPL does not print any thing automaticly" .s
   <> basic-REPL
 ; define-function
 

@@ -1429,7 +1429,7 @@
    match =64bit, machine {
 
    define_primitive_function "execute-jo", execute_jo
-      ;; << jo -- UNKNOWN >>
+      ;; << jo -- unknown >>
       pop_argument_stack rax
       jmp qword [rax]
 
@@ -1439,7 +1439,7 @@
    match =32bit, machine {
 
    define_primitive_function "execute-jo", execute_jo
-      ;; << jo -- UNKNOWN >>
+      ;; << jo -- unknown >>
       pop_argument_stack eax
       jmp dword [eax]
 
@@ -3646,17 +3646,6 @@
    * by factoring out the low-level calls
      that read a line from stdin
      we are able to implement eval-string easily
-** note nested call of eval-string
-   * nested call of eval-string is handled
-     by using a eval_string_stack
-     to remember the old string
-   * but
-     in my view
-     meta-programming should NOT
-     be achieved by editing string
-   * note that
-     this point of view
-     is not conflict with my macro system
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    max_input_length = 1024 * 1024
@@ -3664,114 +3653,6 @@
    buffer$read_byte labeling
       preserve max_input_length
    #+end_src
-** eval_string_stack
-*** note
-    * for we do not build border-check
-      into the interface of pop and push
-      we allocation some memory below the stacks
-    * the size$eval_string_stack
-      defines the max depth
-      of nested call to eval string
-    * cursor and border of a evaled string
-      can be stored in eval_string_stack
-      so
-      when evaling a string
-      the eval_string_stack will be
-      << counter, cursor >>
-      when evaling is nested depth is 2
-      << counter, cursor, counter, cursor >>
-*** memory allocation
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    size$eval_string_stack = 1024 * jo_size
-
-       preserve 64 * jo_size
-    address$eval_string_stack labeling
-       preserve size$eval_string_stack
-    #+end_src
-*** pointer
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    pointer$eval_string_stack:
-       xx address$eval_string_stack
-    #+end_src
-*** push & pop                        :64bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =64bit, machine {
-
-     define_primitive_function "push-eval-string-stack", push_eval_string_stack
-        ;; argument-stack -> eval-string-stack
-        pop_argument_stack rax
-        mov rbx, [pointer$eval_string_stack]
-        mov [rbx], rax
-        add qword [pointer$eval_string_stack], jo_size
-        next
-
-     define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
-        ;; eval-string-stack -> argument-stack
-        sub qword [pointer$eval_string_stack], jo_size
-        mov rbx, [pointer$eval_string_stack]
-        mov rax, [rbx]
-        push_argument_stack rax
-        next
-
-    }
-    #+end_src
-*** push & pop                        :32bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =32bit, machine {
-
-     define_primitive_function "push-eval-string-stack", push_eval_string_stack
-        ;; argument-stack -> eval-string-stack
-        pop_argument_stack rax
-        mov rsi, [pointer$eval_string_stack]
-        mov [rsi], rax
-        add dword [pointer$eval_string_stack], jo_size
-        next
-
-     define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
-        ;; eval-string-stack -> argument-stack
-        sub dword [pointer$eval_string_stack], jo_size
-        mov rsi, [pointer$eval_string_stack]
-        mov rax, [rsi]
-        push_argument_stack rax
-        next
-
-    }
-    #+end_src
-*** clear                             :64bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =64bit, machine {
-
-    define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
-       ;; << -- >>
-       mov qword [pointer$eval_string_stack], address$eval_string_stack
-       next
-
-    }
-    #+end_src
-*** clear                             :32bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =32bit, machine {
-
-    define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
-       ;; << -- >>
-       mov eax, address$eval_string_stack
-       mov dword [pointer$eval_string_stack], eax;address$eval_string_stack
-       next
-
-    }
-    #+end_src
-*** empty?
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
-       ;; << -- bool >>
-       mov rax, [pointer$eval_string_stack]
-       cmp rax, address$eval_string_stack
-       ;; less-than is treated as equal
-       setle al
-       movzx rax, al
-       push_argument_stack rax
-       next
-    #+end_src
 ** read-line-from-stdin               :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -3936,13 +3817,135 @@
    #+end_src
 ** ----------------------------------
 * eval-string
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_function "eval-string", eval_string
-     ;; << string[address, length] -- UNKNOWN >>
-     xx push_eval_string_stack
-     xx push_eval_string_stack
-     xx end
-  #+end_src
+** note
+   * for we do not build border-check
+     into the interface of pop and push
+     we allocation some memory below the stacks
+   * the size$eval_string_stack
+     defines the max depth
+     of nested call to eval string
+   * cursor and border of a evaled string
+     can be stored in eval_string_stack
+     so
+     when evaling a string
+     the eval_string_stack will be
+     << counter, cursor >>
+     when evaling is nested depth is 2
+     << counter, cursor, counter, cursor >>
+   * interface to eval-string-stack
+     | eval-string | push |
+     | read-byte   | pop  |
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$eval_string_stack = 1024 * jo_size
+
+      preserve 64 * jo_size
+   address$eval_string_stack labeling
+      preserve size$eval_string_stack
+   #+end_src
+** pointer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   pointer$eval_string_stack:
+      xx address$eval_string_stack
+   #+end_src
+** push & pop                         :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+    define_primitive_function "push-eval-string-stack", push_eval_string_stack
+       ;; argument-stack -> eval-string-stack
+       pop_argument_stack rax
+       mov rbx, [pointer$eval_string_stack]
+       mov [rbx], rax
+       add qword [pointer$eval_string_stack], jo_size
+       next
+
+    define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+       ;; eval-string-stack -> argument-stack
+       sub qword [pointer$eval_string_stack], jo_size
+       mov rbx, [pointer$eval_string_stack]
+       mov rax, [rbx]
+       push_argument_stack rax
+       next
+
+   }
+   #+end_src
+** push & pop                         :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+    define_primitive_function "push-eval-string-stack", push_eval_string_stack
+       ;; argument-stack -> eval-string-stack
+       pop_argument_stack rax
+       mov rsi, [pointer$eval_string_stack]
+       mov [rsi], rax
+       add dword [pointer$eval_string_stack], jo_size
+       next
+
+    define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
+       ;; eval-string-stack -> argument-stack
+       sub dword [pointer$eval_string_stack], jo_size
+       mov rsi, [pointer$eval_string_stack]
+       mov rax, [rsi]
+       push_argument_stack rax
+       next
+
+   }
+   #+end_src
+** clear                              :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+      ;; << -- >>
+      mov qword [pointer$eval_string_stack], address$eval_string_stack
+      next
+
+   }
+   #+end_src
+** clear                              :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
+      ;; << -- >>
+      mov eax, address$eval_string_stack
+      mov dword [pointer$eval_string_stack], eax;address$eval_string_stack
+      next
+
+   }
+   #+end_src
+** empty?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
+      ;; << -- bool >>
+      mov rax, [pointer$eval_string_stack]
+      cmp rax, address$eval_string_stack
+      ;; less-than is treated as equal
+      setle al
+      movzx rax, al
+      push_argument_stack rax
+      next
+   #+end_src
+** note nested call of eval-string
+   * nested call of eval-string is handled
+     by using a eval_string_stack
+     to remember the old string
+   * but
+     in my view
+     meta-programming should NOT
+     be achieved by editing string
+   * note that
+     this point of view
+     is not conflict with my macro system
+** eval-string,ready
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "eval-string,ready", eval_string__ready
+      ;; << string[address, length] -- unknown >>
+      xx push_eval_string_stack
+      xx push_eval_string_stack
+      xx end
+   #+end_src
 * -----------------------------------
 * file io
 ** ----------------------------------
@@ -4540,7 +4543,7 @@
    }
    #+end_src
 ** ----------------------------------
-* more about file
+* path
 ** path-exist?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "path-exist?", path_exist?
@@ -4608,63 +4611,47 @@
       xx false
       xx end
    #+end_src
-* load-file
-  * load-file can not be nested for now
-    a stack of buffer would solve this problem
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  buffer$load_file labeling
-    preserve 1024 * 1024
+* to load core file
+** ----------------------------------
+** load-first-file
+   * load-first-file can not be nested for now
+   * a function (load-file) will be implemented in core
+     to support nested loading
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   buffer$load_first_file labeling
+     preserve 128 * 1024
 
-  define_function "report,load-file", report__load_file
-     ;; << -- >>
-     xx literal, string$report__load_file
-     xx literal, length$report__load_file
-     xx write_string
-     xx end
+   define_function "load-first-file", load_first_file
+      ;; << name-string[address, length] -- unknown >>
+      xx open_file__to_read
+      xx dup
+      xx   literal, buffer$load_first_file ;; buffer
+      xx   literal, 1024 * 1024      ;; length
+      xx   read_file
+      xx swap, close_file
+      xx dup, positive?, false?branch, (.error-$)/jo_size
+      xx   literal, buffer$load_first_file
+      xx   swap
+      xx   eval_string__ready
+      xx   end
+   .error:
+      xx error_report__load_first_file
+      xx write_integer
+      xx literal, 10, write_byte
+      xx end
 
-  string$report__load_file:
-     db "* LOADING : "
-  .end:
-  length$report__load_file = (.end - string$report__load_file)
+   define_function "error-report,load-file", error_report__load_first_file
+      ;; << -- >>
+      xx literal, string$error_report__load_first_file
+      xx literal, length$error_report__load_first_file
+      xx write_string
+      xx end
 
-  define_function "load-file", load_file
-     ;; << name-string[address, length] -- UNKNOWN >>
-
-     ;; xx report__load_file
-     ;; xx dup2, write_string
-     ;; xx literal, 10, write_byte
-
-     xx open_file__to_read
-     xx dup
-     xx   literal, buffer$load_file ;; buffer
-     xx   literal, 1024 * 1024      ;; length
-     xx   read_file
-     xx swap, close_file
-     xx dup, positive?, false?branch, (.error-$)/jo_size
-     xx   literal, buffer$load_file
-     xx   swap
-     xx   push_eval_string_stack
-     xx   push_eval_string_stack
-     xx   end
-     .error:
-     xx error_report__load_file
-     xx write_integer
-     xx literal, 10, write_byte
-     xx end
-
-  define_function "error-report,load-file", error_report__load_file
-     ;; << -- >>
-     xx literal, string$error_report__load_file
-     xx literal, length$error_report__load_file
-     xx write_string
-     xx end
-
-  string$error_report__load_file:
-     db "* (load-file) meets error  (read-file) error code : "
-  .end:
-  length$error_report__load_file = (.end - string$error_report__load_file)
-  #+end_src
-* to load file
+   string$error_report__load_first_file:
+      db "* (load-file) meets error  (read-file) error code : "
+   .end:
+   length$error_report__load_first_file = (.end - string$error_report__load_first_file)
+   #+end_src
 ** ----------------------------------
 ** note two directories
    * all files about cicada
@@ -5049,7 +5036,7 @@
       xx   save
       xx   literal, string$get_path__loaded_core_file
       xx   string_to_buffer!
-      xx   get_path__user_core_file, load_file
+      xx   get_path__user_core_file, load_first_file
       xx   end
    .fail_user_core_file:
 
@@ -5060,7 +5047,7 @@
       xx   save
       xx   literal, string$get_path__loaded_core_file
       xx   string_to_buffer!
-      xx   get_path__system_core_file, load_file
+      xx   get_path__system_core_file, load_first_file
       xx   end
    .fail_system_core_file:
 
@@ -5122,7 +5109,7 @@
       ;; << -- >>
       xx literal, string$name_of_init_file
       xx literal, length$name_of_init_file
-      xx load_file
+      xx load_first_file
       xx end
 
    }
@@ -5901,7 +5888,7 @@
 * basic-REPL
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_function "basic-REPL", basic_REPL
-     ;; << UNKNOWN -- UNKNOWN >>
+     ;; << unknown -- unknown >>
      xx read_word_for_REPL
      xx execute_word
      xx taca, basic_REPL
