@@ -355,21 +355,23 @@ basic-REPL
 : hi,random
   << -- random-number >>
   *hi,random-base*
-  *hi,random-base* add1 10 mod
+  *hi,random-base* add1 13 mod
   address *hi,random-base* save
   end
 ; define-function
 
 : hi,say
   << number -- >>
-  dup 0 equal? if drop "* cica cica da yaya !!!" .s end then
-  dup 1 equal? if drop "* hi ^-^" .s end then
-  dup 2 equal? if drop "* hello :)" .s end then
-  dup 3 equal? if drop "* hey *^-^*" .s end then
-  dup 4 equal? if drop "* hiya \^o^/" .s end then
-  dup 5 equal? if drop "* I wish you a lovely day" .s end then
-  dup 6 equal? if drop "* I wish you a lovely day { or night :P }" .s end then
-  dup 7 equal? if drop "* o.o" .s end then
+  dup 0 equal? if drop "* do not forget to eat good good coder !" .s end then
+  dup 0 equal? if drop "* me wile moku e pona muko ^-^" .s end then
+  dup 1 equal? if drop "* cica cica da yaya !!!" .s end then
+  dup 2 equal? if drop "* hi ^-^" .s end then
+  dup 3 equal? if drop "* hello :)" .s end then
+  dup 4 equal? if drop "* hey *^-^*" .s end then
+  dup 5 equal? if drop "* hiya \^o^/" .s end then
+  dup 6 equal? if drop "* I wish you a lovely day" .s end then
+  dup 7 equal? if drop "* I wish you a lovely day { or night :P }" .s end then
+  dup 8 equal? if drop "* o.o" .s end then
   drop "* love love ^3^" .s end
 ; define-function
 
@@ -481,6 +483,8 @@ basic-REPL
 
   end
 ; define-function
+
+
 
 100333 drop
 13
