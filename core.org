@@ -3,6 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** wrap more syscalls
+   * fsync
+** nested load-file
+   * a stack of buffer would solve this problem
 ** [really needed] error handling for io function
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
@@ -631,7 +635,7 @@
 * -----------------------------------
 * file-tree
 ** note
-   * file-tree is a database 
+   * file-tree is a database
      the following interface is provided
      1. add
      2. sub
@@ -648,7 +652,7 @@
    "/home/xyh/cicada"
 
    << +working+ "." >>
-   {path: +working+ core.cn}   
+   {path: +working+ core.cn}
    "./core.cn"
 
    << +parent+ ".." >>
@@ -759,7 +763,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : load-file
      << ??? -- >>
-     
+
      end
    ; define-function
    #+end_src
@@ -1316,6 +1320,6 @@
   name-hash-table,report
 
   report-memory
-  report-dictionary  
+  report-dictionary
   #+end_src
 * ===================================

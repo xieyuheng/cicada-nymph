@@ -480,7 +480,7 @@ basic-REPL
 
 : load-file
   << ??? -- >>
-  
+
   end
 ; define-function
 

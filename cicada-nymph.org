@@ -3,8 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** wrap more syscalls
-   * fsync
 ** nested load-file
    * a stack of buffer would solve this problem
 ** add more notes about the limitations of the program
@@ -4201,7 +4199,7 @@
       ;; << ..., argument2, argument1,
       ;;    syscall-number,
       ;;    number-of-arguments
-      ;;    -- unknown >>
+      ;;    -- return-value >>
       pop_argument_stack rax
       cmp rax, 0
       je __syscall_with_0
@@ -4222,12 +4220,14 @@
    __syscall_with_0:
       pop_argument_stack linux64_sys_n_rax
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_1:
       pop_argument_stack linux64_sys_n_rax
       pop_argument_stack linux64_sys_1_rdi
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_2:
@@ -4235,6 +4235,7 @@
       pop_argument_stack linux64_sys_1_rdi
       pop_argument_stack linux64_sys_2_rsi
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_3:
@@ -4243,6 +4244,7 @@
       pop_argument_stack linux64_sys_2_rsi
       pop_argument_stack linux64_sys_3_rdx
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_4:
@@ -4252,6 +4254,7 @@
       pop_argument_stack linux64_sys_3_rdx
       pop_argument_stack linux64_sys_4_r10
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_5:
@@ -4262,6 +4265,7 @@
       pop_argument_stack linux64_sys_4_r10
       pop_argument_stack linux64_sys_5_r9
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_6:
@@ -4273,6 +4277,7 @@
       pop_argument_stack linux64_sys_5_r9
       pop_argument_stack linux64_sys_6_r8
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_too_many:
@@ -4288,7 +4293,7 @@
       ;; << ..., argument2, argument1,
       ;;    syscall-number,
       ;;    number-of-arguments
-      ;;    -- unknown >>
+      ;;    -- return-value >>
       pop_argument_stack rax
       cmp rax, 0
       je __syscall_with_0
@@ -4307,12 +4312,14 @@
    __syscall_with_0:
       pop_argument_stack linux32_sys_n_eax
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_1:
       pop_argument_stack linux32_sys_n_eax
       pop_argument_stack linux32_sys_1_ebx
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_2:
@@ -4320,6 +4327,7 @@
       pop_argument_stack linux32_sys_1_ebx
       pop_argument_stack linux32_sys_2_ecx
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_3:
@@ -4328,6 +4336,7 @@
       pop_argument_stack linux32_sys_2_ecx
       pop_argument_stack linux32_sys_3_edx
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_4:
@@ -4337,6 +4346,7 @@
       pop_argument_stack linux32_sys_3_edx
       pop_argument_stack linux32_sys_4_esi
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_5:
@@ -4347,6 +4357,7 @@
       pop_argument_stack linux32_sys_4_esi
       pop_argument_stack linux32_sys_5_edi
       syscall
+      push_argument_stack rax
       next
 
    __syscall_with_too_many:
@@ -6413,10 +6424,18 @@
 ** local-variable-fetch-string?
    * :name
      ::name
+   * but not
+     :name:
+     ::name:
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-fetch-string?", local_variable_fetch_string?
       ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, addition, sub1
+      xx fetch_byte, literal, ':'
+      xx equal?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, count_front_colon
@@ -6471,10 +6490,18 @@
 ** local-variable-save-string?
    * >:name
      >::name
+   * but not
+     >:name:
+     >::name:
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-save-string?", local_variable_save_string?
       ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx dup2, addition, sub1
+      xx fetch_byte, literal, ':'
+      xx equal?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, string_head__char

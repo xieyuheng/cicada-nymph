@@ -3076,7 +3076,7 @@ define_function "string->syscall-string", string_to_syscall_string
    xx   literal, string$string_to_syscall_string
    xx   addition
    xx   literal, 0
-   xx   swap, save_byte      
+   xx   swap, save_byte
    xx literal, string$string_to_syscall_string
    xx string_to_buffer!
    xx literal, string$string_to_syscall_string
@@ -3088,7 +3088,7 @@ define_primitive_function "syscall", __syscall
    ;; << ..., argument2, argument1,
    ;;    syscall-number,
    ;;    number-of-arguments
-   ;;    -- unknown >>
+   ;;    -- return-value >>
    pop_argument_stack rax
    cmp rax, 0
    je __syscall_with_0
@@ -3109,12 +3109,14 @@ define_primitive_function "syscall", __syscall
 __syscall_with_0:
    pop_argument_stack linux64_sys_n_rax
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_1:
    pop_argument_stack linux64_sys_n_rax
    pop_argument_stack linux64_sys_1_rdi
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_2:
@@ -3122,6 +3124,7 @@ __syscall_with_2:
    pop_argument_stack linux64_sys_1_rdi
    pop_argument_stack linux64_sys_2_rsi
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_3:
@@ -3130,6 +3133,7 @@ __syscall_with_3:
    pop_argument_stack linux64_sys_2_rsi
    pop_argument_stack linux64_sys_3_rdx
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_4:
@@ -3139,6 +3143,7 @@ __syscall_with_4:
    pop_argument_stack linux64_sys_3_rdx
    pop_argument_stack linux64_sys_4_r10
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_5:
@@ -3149,6 +3154,7 @@ __syscall_with_5:
    pop_argument_stack linux64_sys_4_r10
    pop_argument_stack linux64_sys_5_r9
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_6:
@@ -3160,10 +3166,11 @@ __syscall_with_6:
    pop_argument_stack linux64_sys_5_r9
    pop_argument_stack linux64_sys_6_r8
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_too_many:
-   call __exit_with_six   
+   call __exit_with_six
 
 }
 
@@ -3173,7 +3180,7 @@ define_primitive_function "syscall", __syscall
    ;; << ..., argument2, argument1,
    ;;    syscall-number,
    ;;    number-of-arguments
-   ;;    -- unknown >>
+   ;;    -- return-value >>
    pop_argument_stack rax
    cmp rax, 0
    je __syscall_with_0
@@ -3192,12 +3199,14 @@ define_primitive_function "syscall", __syscall
 __syscall_with_0:
    pop_argument_stack linux32_sys_n_eax
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_1:
    pop_argument_stack linux32_sys_n_eax
    pop_argument_stack linux32_sys_1_ebx
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_2:
@@ -3205,6 +3214,7 @@ __syscall_with_2:
    pop_argument_stack linux32_sys_1_ebx
    pop_argument_stack linux32_sys_2_ecx
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_3:
@@ -3213,6 +3223,7 @@ __syscall_with_3:
    pop_argument_stack linux32_sys_2_ecx
    pop_argument_stack linux32_sys_3_edx
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_4:
@@ -3222,6 +3233,7 @@ __syscall_with_4:
    pop_argument_stack linux32_sys_3_edx
    pop_argument_stack linux32_sys_4_esi
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_5:
@@ -3232,10 +3244,11 @@ __syscall_with_5:
    pop_argument_stack linux32_sys_4_esi
    pop_argument_stack linux32_sys_5_edi
    syscall
+   push_argument_stack rax
    next
 
 __syscall_with_too_many:
-   call __exit_with_six   
+   call __exit_with_six
 
 }
 
@@ -4657,6 +4670,11 @@ define_function "local-variable-fetch-string?", local_variable_fetch_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, false
    xx   end
+   xx dup2, addition, sub1
+   xx fetch_byte, literal, ':'
+   xx equal?, false?branch, 4
+   xx   drop2, false
+   xx   end
    xx dup2, count_front_colon
    xx dup, literal, 0, greater_than?, false?, false?branch, 5
    xx   drop, drop2, false
@@ -4706,6 +4724,11 @@ length$local_variable_not_bound_report = (.end - string$local_variable_not_bound
 define_function "local-variable-save-string?", local_variable_save_string?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx dup2, addition, sub1
+   xx fetch_byte, literal, ':'
+   xx equal?, false?branch, 4
    xx   drop2, false
    xx   end
    xx dup2, string_head__char
