@@ -3,10 +3,13 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** wrap more syscalls
+   * fsync
 ** nested load-file
    * a stack of buffer would solve this problem
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
+** [maybe] implement all macro by dispatch-word-stack
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
 ** code clean-up & documentation update
@@ -277,6 +280,16 @@
      使得只能使用所提供的動態管理機制來加載文件
      這樣就可以減輕理解這個系統的困難
 ** >< 局部變元
+* note syscall
+  * syscall is not expose to cicada-nymph
+    they are wraped in assembly code
+  * this is for to make cicada-nymph code more clean
+  * but
+    it would be much easier
+    to wrap syscall in cicada-nymph code
+    then to wrap them in assembly code
+    so
+    the costs are payed here
 * ===================================
 * prolog
 ** ----------------------------------
@@ -6229,7 +6242,7 @@
    .end:
    length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
    #+end_src
-** dispatch_word_stack
+** dispatch-word-stack
 *** note
     * for we do not build border-check
       into the interface of pop and push
