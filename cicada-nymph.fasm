@@ -54,27 +54,6 @@ define linux64_syscall_getpid 39
 define linux64_syscall_exit   60
 ;; about open & read & write
 
-open_read         = 0
-open_write        = 1
-open_readAndWrite = 2
-
-open_creat      = 0100o
-open_rewrite    = 1000o ;; rewrite if file exist
-open_append     = 2000o
-
-open_excl       = 0200o ;; ensure that THIS call creates the file
-open_noctty     = 0400o
-open_nonblock   = 4000o
-open_nondelay   = open_nonblock
-open_sync       = 10000o
-open_async      = 20000o
-open_direct     = 40000o
-    ;; to minimize cache effects of the I/O to and from this file.
-
-open_largefile  = 100000o
-open_directory  = 200000o
-open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
-
 }
 
 match =linux =64bit, platform machine {
@@ -106,14 +85,6 @@ define linux32_syscall_write   4
 define linux32_syscall_open    5
 define linux32_syscall_close   6
 define linux32_syscall_getpid  20
-
-open_read         = 0
-open_write        = 1
-open_readAndWrite = 2
-
-open_creat      = 0100o
-open_rewrite    = 1000o ;; rewrite if file exist
-open_append     = 2000o
 
 }
 
@@ -2555,21 +2526,21 @@ define_function "eval-string,ready", eval_string__ready
 
 match =linux =64bit, platform machine {
 
-name_buffer$open_file__to_read labeling
+name_buffer$open_input_port labeling
    preserve 512
 
-define_primitive_function "open-file,to-read", open_file__to_read
+define_primitive_function "open-input-port", open_input_port
    ;; << file-name-string[address, length] --
    ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_file__to_read
+   mov rdi, name_buffer$open_input_port
    rep movsb
    xor rax, rax
    mov byte [rdi], al
-   mov linux64_sys_2_rsi, open_read ;; read only
-   mov linux64_sys_1_rdi, name_buffer$open_file__to_read
+   mov linux64_sys_2_rsi, 0 ;; OPEN__read_only
+   mov linux64_sys_1_rdi, name_buffer$open_input_port
    mov linux64_sys_n_rax, linux64_syscall_open
    syscall
    push_argument_stack rax
@@ -2579,32 +2550,7 @@ define_primitive_function "open-file,to-read", open_file__to_read
 
 match =linux =64bit, platform machine {
 
-name_buffer$open_file__to_write labeling
-   preserve 512
-
-define_primitive_function "open-file,to-write", open_file__to_write
-   ;; << file-name-string[address, length] --
-   ;;    [file handle] or [error code] >>
-   pop_argument_stack rcx
-   pop_argument_stack rsi
-   ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_file__to_write
-   rep movsb
-   xor rax, rax
-   mov byte [rdi], al
-   mov linux64_sys_3_rdx, 110100100b
-   mov linux64_sys_2_rsi, open_readAndWrite or open_creat or open_rewrite
-   mov linux64_sys_1_rdi, name_buffer$open_file__to_write
-   mov linux64_sys_n_rax, linux64_syscall_open
-   syscall
-   push_argument_stack rax
-   next
-
-}
-
-match =linux =64bit, platform machine {
-
-define_primitive_function "close-file", close_file
+define_primitive_function "close-port", close_port
    ;; << file-handle -- >>
    pop_argument_stack linux64_sys_1_rdi
    mov linux64_sys_n_rax, linux64_syscall_close
@@ -2615,7 +2561,7 @@ define_primitive_function "close-file", close_file
 
 match =linux =64bit, platform machine {
 
-define_primitive_function "read-file", read_file
+define_primitive_function "read-port", read_port
    ;; << [file handle], buffer[address, length] --
    ;;    [number of char] or [error code] >>
    pop_argument_stack linux64_sys_3_rdx
@@ -2628,38 +2574,23 @@ define_primitive_function "read-file", read_file
 
 }
 
-match =linux =64bit, platform machine {
-
-define_primitive_function "write-file", write_file
-   ;; << [file handle], buffer[address, length] --
-   ;;    [number of char] or [error code] >>
-   pop_argument_stack linux64_sys_3_rdx
-   pop_argument_stack linux64_sys_2_rsi
-   pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, linux64_syscall_write
-   syscall
-   push_argument_stack rax
-   next
-
-}
-
 match =linux =32bit, platform machine {
 
-name_buffer$open_file__to_read labeling
+name_buffer$open_input_port labeling
    preserve 512
 
-define_primitive_function "open-file,to-read", open_file__to_read
+define_primitive_function "open-input-port", open_input_port
    ;; << file-name-string[address, length] --
    ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_file__to_read
+   mov rdi, name_buffer$open_input_port
    rep movsb
    xor rax, rax
    mov byte [rdi], al
-   mov linux32_sys_2_ecx, open_read ;; read only
-   mov linux32_sys_1_ebx, name_buffer$open_file__to_read
+   mov linux32_sys_2_ecx, 0 ;; OPEN__read_only
+   mov linux32_sys_1_ebx, name_buffer$open_input_port
    mov linux32_sys_n_eax, linux32_syscall_open
    syscall
    push_argument_stack rax
@@ -2669,32 +2600,7 @@ define_primitive_function "open-file,to-read", open_file__to_read
 
 match =linux =32bit, platform machine {
 
-name_buffer$open_file__to_write labeling
-   preserve 512
-
-define_primitive_function "open-file,to-write", open_file__to_write
-   ;; << file-name-string[address, length] --
-   ;;    [file handle] or [error code] >>
-   pop_argument_stack rcx
-   pop_argument_stack rsi
-   ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_file__to_write
-   rep movsb
-   xor rax, rax
-   mov byte [rdi], al
-   mov linux32_sys_3_edx, 110100100b
-   mov linux32_sys_2_ecx, open_readAndWrite or open_creat or open_rewrite
-   mov linux32_sys_1_ebx, name_buffer$open_file__to_write
-   mov linux32_sys_n_eax, linux32_syscall_open
-   syscall
-   push_argument_stack rax
-   next
-
-}
-
-match =linux =32bit, platform machine {
-
-define_primitive_function "close-file", close_file
+define_primitive_function "close-port", close_port
    ;; << file-handle -- >>
    pop_argument_stack linux32_sys_1_ebx
    mov linux32_sys_n_eax, linux32_syscall_close
@@ -2705,7 +2611,7 @@ define_primitive_function "close-file", close_file
 
 match =linux =32bit, platform machine {
 
-define_primitive_function "read-file", read_file
+define_primitive_function "read-port", read_port
    ;; << [file handle], buffer[address, length] --
    ;;    [number of char] or [error code] >>
    pop_argument_stack linux32_sys_3_edx
@@ -2718,67 +2624,12 @@ define_primitive_function "read-file", read_file
 
 }
 
-match =linux =32bit, platform machine {
-
-define_primitive_function "write-file", write_file
-   ;; << [file handle], buffer[address, length] --
-   ;;    [number of char] or [error code] >>
-   pop_argument_stack linux32_sys_3_edx
-   pop_argument_stack linux32_sys_2_ecx
-   pop_argument_stack linux32_sys_1_ebx
-   mov linux32_sys_n_eax, linux32_syscall_write
-   syscall
-   push_argument_stack rax
-   next
-
-}
-
-define_function "path-exist?", path_exist?
-   ;; << path[address, length] -- bool >>
-   xx open_file__to_read
-   xx dup, negative?, false?, false?branch, 4
-   xx   close_file
-   xx   true
-   xx   end
-   xx literal, -2, equal?, false?branch, 3
-   xx   false
-   xx   end
-   ;; ><><><
-   xx true
-   xx end
-
-address$path_directory?:
-   db 0
-
-define_function "path-directory?", path_directory?
-   ;; << path[address, length] -- bool >>
-   xx open_file__to_read
-   xx dup, negative?, false?branch, 4
-   xx   drop
-   xx   false
-   xx   end
-   xx dup
-   xx literal, address$path_directory?
-   xx literal, 1
-   xx read_file
-   xx swap, close_file
-   xx dup, positive?, false?branch, 4
-   xx   drop
-   xx   false
-   xx   end
-   xx literal, -21, equal?, false?branch, 3
-   xx   true
-   xx   end
-   ;; ><><><
-   xx false
-   xx end
-
 address$path_file?:
    db 0
 
 define_function "path-file?", path_file?
    ;; << path[address, length] -- bool >>
-   xx open_file__to_read
+   xx open_input_port
    xx dup, negative?, false?branch, 4
    xx   drop
    xx   false
@@ -2786,8 +2637,8 @@ define_function "path-file?", path_file?
    xx dup
    xx literal, address$path_file?
    xx literal, 1
-   xx read_file
-   xx swap, close_file
+   xx read_port
+   xx swap, close_port
    xx positive?, false?branch, 3
    xx   true
    xx   end
@@ -2799,12 +2650,12 @@ buffer$load_first_file labeling
 
 define_function "load-first-file", load_first_file
    ;; << name-string[address, length] -- unknown >>
-   xx open_file__to_read
+   xx open_input_port
    xx dup
    xx   literal, buffer$load_first_file ;; buffer
    xx   literal, 1024 * 1024      ;; length
-   xx   read_file
-   xx swap, close_file
+   xx   read_port
+   xx swap, close_port
    xx dup, positive?, false?branch, (.error-$)/jo_size
    xx   literal, buffer$load_first_file
    xx   swap
@@ -2824,7 +2675,7 @@ define_function "error-report,load-file", error_report__load_first_file
    xx end
 
 string$error_report__load_first_file:
-   db "* (load-file) meets error  (read-file) error code : "
+   db "* (load-file) meets error  (read-port) error code : "
 .end:
 length$error_report__load_first_file = (.end - string$error_report__load_first_file)
 
@@ -2904,10 +2755,10 @@ define_function "init-command-line", init_command_line
    xx swap
    xx literal, 8, addition
    xx literal, 6, addition
-   xx open_file__to_read
+   xx open_input_port
    xx literal, address$init_command_line
    xx literal, 512
-   xx read_file
+   xx read_port
    xx literal, length$init_command_line
    xx save
    xx end
@@ -2951,10 +2802,10 @@ define_function "init-environment-string-variable-list", init_environment_string
    xx swap
    xx literal, 8, addition
    xx literal, 6, addition
-   xx open_file__to_read
+   xx open_input_port
    xx literal, address$init_environment_string_variable_list
    xx literal, (4 * 1024)
-   xx read_file
+   xx read_port
    xx literal, length$init_environment_string_variable_list
    xx save
    xx end
@@ -3213,6 +3064,178 @@ string$load_core_file__report_3:
    db "  * now you are running cicada-nymph without core", 10
 .end:
 length$load_core_file__report_3 = (.end - string$load_core_file__report_3)
+
+}
+
+string$string_to_syscall_string:
+   times 256 db 0
+
+define_function "string->syscall-string", string_to_syscall_string
+   ;; << string[address, length] -- syscall-string[address] >>
+   xx dup
+   xx   literal, string$string_to_syscall_string
+   xx   addition
+   xx   literal, 0
+   xx   swap, save_byte      
+   xx literal, string$string_to_syscall_string
+   xx string_to_buffer!
+   xx literal, string$string_to_syscall_string
+   xx end
+
+match =linux =64bit, platform machine {
+
+define_primitive_function "syscall", __syscall
+   ;; << ..., argument2, argument1,
+   ;;    syscall-number,
+   ;;    number-of-arguments
+   ;;    -- unknown >>
+   pop_argument_stack rax
+   cmp rax, 0
+   je __syscall_with_0
+   cmp rax, 1
+   je __syscall_with_1
+   cmp rax, 2
+   je __syscall_with_2
+   cmp rax, 3
+   je __syscall_with_3
+   cmp rax, 4
+   je __syscall_with_4
+   cmp rax, 5
+   je __syscall_with_5
+   cmp rax, 6
+   je __syscall_with_6
+   jmp __syscall_with_too_many
+
+__syscall_with_0:
+   pop_argument_stack linux64_sys_n_rax
+   syscall
+   next
+
+__syscall_with_1:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   syscall
+   next
+
+__syscall_with_2:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   pop_argument_stack linux64_sys_2_rsi
+   syscall
+   next
+
+__syscall_with_3:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   pop_argument_stack linux64_sys_2_rsi
+   pop_argument_stack linux64_sys_3_rdx
+   syscall
+   next
+
+__syscall_with_4:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   pop_argument_stack linux64_sys_2_rsi
+   pop_argument_stack linux64_sys_3_rdx
+   pop_argument_stack linux64_sys_4_r10
+   syscall
+   next
+
+__syscall_with_5:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   pop_argument_stack linux64_sys_2_rsi
+   pop_argument_stack linux64_sys_3_rdx
+   pop_argument_stack linux64_sys_4_r10
+   pop_argument_stack linux64_sys_5_r9
+   syscall
+   next
+
+__syscall_with_6:
+   pop_argument_stack linux64_sys_n_rax
+   pop_argument_stack linux64_sys_1_rdi
+   pop_argument_stack linux64_sys_2_rsi
+   pop_argument_stack linux64_sys_3_rdx
+   pop_argument_stack linux64_sys_4_r10
+   pop_argument_stack linux64_sys_5_r9
+   pop_argument_stack linux64_sys_6_r8
+   syscall
+   next
+
+__syscall_with_too_many:
+   call __exit_with_six   
+
+}
+
+match =linux =32bit, platform machine {
+
+define_primitive_function "syscall", __syscall
+   ;; << ..., argument2, argument1,
+   ;;    syscall-number,
+   ;;    number-of-arguments
+   ;;    -- unknown >>
+   pop_argument_stack rax
+   cmp rax, 0
+   je __syscall_with_0
+   cmp rax, 1
+   je __syscall_with_1
+   cmp rax, 2
+   je __syscall_with_2
+   cmp rax, 3
+   je __syscall_with_3
+   cmp rax, 4
+   je __syscall_with_4
+   cmp rax, 5
+   je __syscall_with_5
+   jmp __syscall_with_too_many
+
+__syscall_with_0:
+   pop_argument_stack linux32_sys_n_eax
+   syscall
+   next
+
+__syscall_with_1:
+   pop_argument_stack linux32_sys_n_eax
+   pop_argument_stack linux32_sys_1_ebx
+   syscall
+   next
+
+__syscall_with_2:
+   pop_argument_stack linux32_sys_n_eax
+   pop_argument_stack linux32_sys_1_ebx
+   pop_argument_stack linux32_sys_2_ecx
+   syscall
+   next
+
+__syscall_with_3:
+   pop_argument_stack linux32_sys_n_eax
+   pop_argument_stack linux32_sys_1_ebx
+   pop_argument_stack linux32_sys_2_ecx
+   pop_argument_stack linux32_sys_3_edx
+   syscall
+   next
+
+__syscall_with_4:
+   pop_argument_stack linux32_sys_n_eax
+   pop_argument_stack linux32_sys_1_ebx
+   pop_argument_stack linux32_sys_2_ecx
+   pop_argument_stack linux32_sys_3_edx
+   pop_argument_stack linux32_sys_4_esi
+   syscall
+   next
+
+__syscall_with_5:
+   pop_argument_stack linux32_sys_n_eax
+   pop_argument_stack linux32_sys_1_ebx
+   pop_argument_stack linux32_sys_2_ecx
+   pop_argument_stack linux32_sys_3_edx
+   pop_argument_stack linux32_sys_4_esi
+   pop_argument_stack linux32_sys_5_edi
+   syscall
+   next
+
+__syscall_with_too_many:
+   call __exit_with_six   
 
 }
 
@@ -4877,15 +4900,7 @@ last_link = link
 
 size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
 
-match =linux =64bit, platform machine {
-
-segment readable writeable
-address$un_initialized_memory:
-   rb size$un_initialized_memory
-
-}
-
-match =linux =32bit, platform machine {
+match =linux, platform {
 
 segment readable writeable
 address$un_initialized_memory:

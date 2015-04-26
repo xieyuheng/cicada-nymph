@@ -9,50 +9,14 @@
    * a stack of buffer would solve this problem
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
-** [maybe] implement all macro by dispatch-word-stack
+** implement all macro by dispatch-word-stack :maybe:
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
 ** code clean-up & documentation update
-** [maybe] bare-metal version of cicada-nymph for x86
+** bare-metal version of cicada-nymph for x86 :maybe:
 ** better error handling of load-file
-** [maybe] make instruction a type of jo
+** make instruction a type of jo      :maybe:
    this is needed when doing report of the dictionary
-* note problem
-** [BUG] about div
-   * div can not handle the following
-     -8 2 div .
-** [BUG] about inline comment
-   * inline comment such as
-     add1 << dup . >> swap
-     will be viewed as
-     add1swap
-** [BUG] about comment in string
-   * << >> can not be in ""
-** [LIMIT] about stack
-   * there are 64 positions below the all those stacks
-     when you are belowing-stack so much
-     bad things happen
-** [BAD-DESIGN] local-variable
-   * 想要加入
-     @:address <number>
-     或者
-     <number> %>:address
-   * 但是
-     由於對 offset 的計算是在編譯時進行的
-     所以根本就沒利用到這裏所能得到的最大的靈活性
-     以至於沒法以良好的方式實現
-     在 local_data_heap 中動態地分配變長的內存
-   * 形成這種局面的原因在於
-     對局部變元的名字和值的關係的處理
-     是在編譯時期進行的
-   * 由於這中問題產生於兩種分配內存方式的交織
-     所以
-     其解決辦法也許是
-     再多入返回站一個指針
-     這個指針所指向的數據區中的數據
-     是純粹在運行時動態分配的
-     但是這些數據沒有名字
-     [名字的問題是另外一個指針結局的]
 * ===================================
 * note
 ** jo & jojo
@@ -279,16 +243,42 @@
      使得只能使用所提供的動態管理機制來加載文件
      這樣就可以減輕理解這個系統的困難
 ** >< 局部變元
-* note syscall
-  * syscall is not expose to cicada-nymph
-    they are wraped in assembly code
-  * this is for to make cicada-nymph code more clean
-  * but
-    it would be much easier
-    to wrap syscall in cicada-nymph code
-    then to wrap them in assembly code
-    so
-    the costs are payed here
+* note problem
+** about div                          :bug:
+   * div can not handle the following
+     -8 2 div .
+** about inline comment               :bug:
+   * inline comment such as
+     add1 << dup . >> swap
+     will be viewed as
+     add1swap
+** about comment in string            :bug:
+   * << >> can not be in ""
+** about stack                        :limit:
+   * there are 64 positions below the all those stacks
+     when you are belowing-stack so much
+     bad things happen
+** local-variable                     :design:
+   * 想要加入
+     @:address <number>
+     或者
+     <number> %>:address
+   * 但是
+     由於對 offset 的計算是在編譯時進行的
+     所以根本就沒利用到這裏所能得到的最大的靈活性
+     以至於沒法以良好的方式實現
+     在 local_data_heap 中動態地分配變長的內存
+   * 形成這種局面的原因在於
+     對局部變元的名字和值的關係的處理
+     是在編譯時期進行的
+   * 由於這中問題產生於兩種分配內存方式的交織
+     所以
+     其解決辦法也許是
+     再多入返回站一個指針
+     這個指針所指向的數據區中的數據
+     是純粹在運行時動態分配的
+     但是這些數據沒有名字
+     [名字的問題是另外一個指針結局的]
 * ===================================
 * prolog
 ** ----------------------------------
@@ -347,7 +337,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header                             :linux:64bit:
+** header                             :64bit:linux:
    * /usr/include/asm/unistd_64.h (on archlinux)
    * http://blog.rchapman.org/post/36801038863/linux-system-call-table-for-x86-64
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -369,30 +359,9 @@
    define linux64_syscall_exit   60
    ;; about open & read & write
 
-   open_read         = 0
-   open_write        = 1
-   open_readAndWrite = 2
-
-   open_creat      = 0100o
-   open_rewrite    = 1000o ;; rewrite if file exist
-   open_append     = 2000o
-
-   open_excl       = 0200o ;; ensure that THIS call creates the file
-   open_noctty     = 0400o
-   open_nonblock   = 4000o
-   open_nondelay   = open_nonblock
-   open_sync       = 10000o
-   open_async      = 20000o
-   open_direct     = 40000o
-       ;; to minimize cache effects of the I/O to and from this file.
-
-   open_largefile  = 100000o
-   open_directory  = 200000o
-   open_nofollow   = 400000o ;; If pathname is a symbolic link, then the open fails.
-
    }
    #+end_src
-** format                             :linux:64bit:
+** format                             :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -400,7 +369,7 @@
 
    }
    #+end_src
-** entry                              :linux:64bit:
+** entry                              :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -410,7 +379,7 @@
    }
    #+end_src
 ** ----------------------------------
-** header                             :linux:32bit:
+** header                             :32bit:linux:
    * /usr/include/asm/unistd_32.h (on archlinux)
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
@@ -430,17 +399,9 @@
    define linux32_syscall_close   6
    define linux32_syscall_getpid  20
 
-   open_read         = 0
-   open_write        = 1
-   open_readAndWrite = 2
-
-   open_creat      = 0100o
-   open_rewrite    = 1000o ;; rewrite if file exist
-   open_append     = 2000o
-
    }
    #+end_src
-** format                             :linux:32bit:
+** format                             :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -448,7 +409,7 @@
 
    }
    #+end_src
-** entry                              :linux:32bit:
+** entry                              :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -773,7 +734,7 @@
 * -----------------------------------
 * helper function in assembly code
 ** ----------------------------------
-** __exit_with_TOS                    :linux:64bit:
+** __exit_with_TOS                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -784,7 +745,7 @@
 
    }
    #+end_src
-** __exit_with_zero                   :linux:64bit:
+** __exit_with_zero                   :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -795,7 +756,7 @@
 
    }
    #+end_src
-** __exit_with_six                    :linux:64bit:
+** __exit_with_six                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -807,7 +768,7 @@
    }
    #+end_src
 ** ----------------------------------
-** __exit_with_TOS                    :linux:32bit:
+** __exit_with_TOS                    :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -818,7 +779,7 @@
 
    }
    #+end_src
-** __exit_with_zero                   :linux:32bit:
+** __exit_with_zero                   :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -829,7 +790,7 @@
 
    }
    #+end_src
-** __exit_with_six                    :linux:32bit:
+** __exit_with_six                    :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -1485,7 +1446,7 @@
       is actually a loop now
 * -----------------------------------
 * *the story begin*
-** begin_to_interpret_threaded_code   :linux:64bit:
+** begin_to_interpret_threaded_code   :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -1502,7 +1463,7 @@
 
    }
    #+end_src
-** begin_to_interpret_threaded_code   :linux:32bit:
+** begin_to_interpret_threaded_code   :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3259,7 +3220,7 @@
 ** note byte
    * basic io is about byte
 ** ----------------------------------
-** write-byte                         :linux:64bit:
+** write-byte                         :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3281,7 +3242,7 @@
 
    }
    #+end_src
-** write-byte                         :linux:32bit:
+** write-byte                         :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3333,7 +3294,7 @@
    buffer$read_byte labeling
       preserve max_input_length
    #+end_src
-** read-line-from-stdin               :linux:64bit:
+** read-line-from-stdin               :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3351,7 +3312,7 @@
 
    }
    #+end_src
-** read-line-from-stdin               :linux:32bit:
+** read-line-from-stdin               :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3575,27 +3536,26 @@
    #+end_src
 * -----------------------------------
 * port
-* file
 ** ----------------------------------
-** open-file,to-read                  :linux:64bit:
+** open-input-port                    :linux:64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   name_buffer$open_file__to_read labeling
+   name_buffer$open_input_port labeling
       preserve 512
 
-   define_primitive_function "open-file,to-read", open_file__to_read
+   define_primitive_function "open-input-port", open_input_port
       ;; << file-name-string[address, length] --
       ;;    [file handle] or [error code] >>
       pop_argument_stack rcx
       pop_argument_stack rsi
       ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_file__to_read
+      mov rdi, name_buffer$open_input_port
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-      mov linux64_sys_2_rsi, open_read ;; read only
-      mov linux64_sys_1_rdi, name_buffer$open_file__to_read
+      mov linux64_sys_2_rsi, 0 ;; OPEN__read_only
+      mov linux64_sys_1_rdi, name_buffer$open_input_port
       mov linux64_sys_n_rax, linux64_syscall_open
       syscall
       push_argument_stack rax
@@ -3603,38 +3563,11 @@
 
    }
    #+end_src
-** open-file,to-write                 :linux:64bit:
+** close-port                         :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   name_buffer$open_file__to_write labeling
-      preserve 512
-
-   define_primitive_function "open-file,to-write", open_file__to_write
-      ;; << file-name-string[address, length] --
-      ;;    [file handle] or [error code] >>
-      pop_argument_stack rcx
-      pop_argument_stack rsi
-      ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_file__to_write
-      rep movsb
-      xor rax, rax
-      mov byte [rdi], al
-      mov linux64_sys_3_rdx, 110100100b
-      mov linux64_sys_2_rsi, open_readAndWrite or open_creat or open_rewrite
-      mov linux64_sys_1_rdi, name_buffer$open_file__to_write
-      mov linux64_sys_n_rax, linux64_syscall_open
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** close-file                         :linux:64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "close-file", close_file
+   define_primitive_function "close-port", close_port
       ;; << file-handle -- >>
       pop_argument_stack linux64_sys_1_rdi
       mov linux64_sys_n_rax, linux64_syscall_close
@@ -3643,12 +3576,12 @@
 
    }
    #+end_src
-** read-file                          :linux:64bit:
+** read-port                          :64bit:linux:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   define_primitive_function "read-file", read_file
+   define_primitive_function "read-port", read_port
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
       pop_argument_stack linux64_sys_3_rdx
@@ -3661,44 +3594,26 @@
 
    }
    #+end_src
-** write-file                         :linux:64bit:
-   * from memory to disk
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "write-file", write_file
-      ;; << [file handle], buffer[address, length] --
-      ;;    [number of char] or [error code] >>
-      pop_argument_stack linux64_sys_3_rdx
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, linux64_syscall_write
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
 ** ----------------------------------
-** open-file,to-read                  :linux:32bit:
+** open-input-port                    :linux:32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   name_buffer$open_file__to_read labeling
+   name_buffer$open_input_port labeling
       preserve 512
 
-   define_primitive_function "open-file,to-read", open_file__to_read
+   define_primitive_function "open-input-port", open_input_port
       ;; << file-name-string[address, length] --
       ;;    [file handle] or [error code] >>
       pop_argument_stack rcx
       pop_argument_stack rsi
       ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_file__to_read
+      mov rdi, name_buffer$open_input_port
       rep movsb
       xor rax, rax
       mov byte [rdi], al
-      mov linux32_sys_2_ecx, open_read ;; read only
-      mov linux32_sys_1_ebx, name_buffer$open_file__to_read
+      mov linux32_sys_2_ecx, 0 ;; OPEN__read_only
+      mov linux32_sys_1_ebx, name_buffer$open_input_port
       mov linux32_sys_n_eax, linux32_syscall_open
       syscall
       push_argument_stack rax
@@ -3706,38 +3621,11 @@
 
    }
    #+end_src
-** open-file,to-write                 :linux:32bit:
+** close-port                         :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   name_buffer$open_file__to_write labeling
-      preserve 512
-
-   define_primitive_function "open-file,to-write", open_file__to_write
-      ;; << file-name-string[address, length] --
-      ;;    [file handle] or [error code] >>
-      pop_argument_stack rcx
-      pop_argument_stack rsi
-      ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_file__to_write
-      rep movsb
-      xor rax, rax
-      mov byte [rdi], al
-      mov linux32_sys_3_edx, 110100100b
-      mov linux32_sys_2_ecx, open_readAndWrite or open_creat or open_rewrite
-      mov linux32_sys_1_ebx, name_buffer$open_file__to_write
-      mov linux32_sys_n_eax, linux32_syscall_open
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** close-file                         :linux:32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "close-file", close_file
+   define_primitive_function "close-port", close_port
       ;; << file-handle -- >>
       pop_argument_stack linux32_sys_1_ebx
       mov linux32_sys_n_eax, linux32_syscall_close
@@ -3746,12 +3634,12 @@
 
    }
    #+end_src
-** read-file                          :linux:32bit:
+** read-port                          :32bit:linux:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   define_primitive_function "read-file", read_file
+   define_primitive_function "read-port", read_port
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
       pop_argument_stack linux32_sys_3_edx
@@ -3764,77 +3652,9 @@
 
    }
    #+end_src
-** write-file                         :linux:32bit:
-   * from memory to disk
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "write-file", write_file
-      ;; << [file handle], buffer[address, length] --
-      ;;    [number of char] or [error code] >>
-      pop_argument_stack linux32_sys_3_edx
-      pop_argument_stack linux32_sys_2_ecx
-      pop_argument_stack linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_write
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
 ** ----------------------------------
-* file-tree io
+* to load core file
 ** ----------------------------------
-** file-tree,add                      :linux:64bit:
-** file-tree,sub                      :linux:64bit:
-** file-tree,find                     :linux:64bit:
-** file-tree,list                     :linux:64bit:
-** ----------------------------------
-* path
-** path-exist?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "path-exist?", path_exist?
-      ;; << path[address, length] -- bool >>
-      xx open_file__to_read
-      xx dup, negative?, false?, false?branch, 4
-      xx   close_file
-      xx   true
-      xx   end
-      xx literal, -2, equal?, false?branch, 3
-      xx   false
-      xx   end
-      ;; ><><><
-      xx true
-      xx end
-   #+end_src
-** path-directory?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   address$path_directory?:
-      db 0
-
-   define_function "path-directory?", path_directory?
-      ;; << path[address, length] -- bool >>
-      xx open_file__to_read
-      xx dup, negative?, false?branch, 4
-      xx   drop
-      xx   false
-      xx   end
-      xx dup
-      xx literal, address$path_directory?
-      xx literal, 1
-      xx read_file
-      xx swap, close_file
-      xx dup, positive?, false?branch, 4
-      xx   drop
-      xx   false
-      xx   end
-      xx literal, -21, equal?, false?branch, 3
-      xx   true
-      xx   end
-      ;; ><><><
-      xx false
-      xx end
-   #+end_src
 ** path-file?
    #+begin_src fasm :tangle cicada-nymph.fasm
    address$path_file?:
@@ -3842,7 +3662,7 @@
 
    define_function "path-file?", path_file?
       ;; << path[address, length] -- bool >>
-      xx open_file__to_read
+      xx open_input_port
       xx dup, negative?, false?branch, 4
       xx   drop
       xx   false
@@ -3850,16 +3670,14 @@
       xx dup
       xx literal, address$path_file?
       xx literal, 1
-      xx read_file
-      xx swap, close_file
+      xx read_port
+      xx swap, close_port
       xx positive?, false?branch, 3
       xx   true
       xx   end
       xx false
       xx end
    #+end_src
-* to load core file
-** ----------------------------------
 ** load-first-file
    * load-first-file can not be nested for now
    * a function (load-file) will be implemented in core
@@ -3870,12 +3688,12 @@
 
    define_function "load-first-file", load_first_file
       ;; << name-string[address, length] -- unknown >>
-      xx open_file__to_read
+      xx open_input_port
       xx dup
       xx   literal, buffer$load_first_file ;; buffer
       xx   literal, 1024 * 1024      ;; length
-      xx   read_file
-      xx swap, close_file
+      xx   read_port
+      xx swap, close_port
       xx dup, positive?, false?branch, (.error-$)/jo_size
       xx   literal, buffer$load_first_file
       xx   swap
@@ -3895,7 +3713,7 @@
       xx end
 
    string$error_report__load_first_file:
-      db "* (load-file) meets error  (read-file) error code : "
+      db "* (load-file) meets error  (read-port) error code : "
    .end:
    length$error_report__load_first_file = (.end - string$error_report__load_first_file)
    #+end_src
@@ -3931,7 +3749,7 @@
    }
    #+end_src
 ** ----------------------------------
-** init-pid                           :linux:64bit:
+** init-pid                           :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3944,7 +3762,7 @@
 
    }
    #+end_src
-** init-pid                           :linux:32bit:
+** init-pid                           :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -4005,10 +3823,10 @@
       xx swap
       xx literal, 8, addition
       xx literal, 6, addition
-      xx open_file__to_read
+      xx open_input_port
       xx literal, address$init_command_line
       xx literal, 512
-      xx read_file
+      xx read_port
       xx literal, length$init_command_line
       xx save
       xx end
@@ -4055,10 +3873,10 @@
       xx swap
       xx literal, 8, addition
       xx literal, 6, addition
-      xx open_file__to_read
+      xx open_input_port
       xx literal, address$init_environment_string_variable_list
       xx literal, (4 * 1024)
-      xx read_file
+      xx read_port
       xx literal, length$init_environment_string_variable_list
       xx save
       xx end
@@ -4342,6 +4160,200 @@
    }
    #+end_src
 ** ----------------------------------
+* -----------------------------------
+* to expose syscall
+** note
+   * there are two ways to treat the syscall
+     1. syscall is NOT expose to cicada-nymph
+        system functions are wraped in assembly code
+        thus
+        make cicada-nymph code be more clean
+     2. syscall is expose to cicada-nymph
+        system functions are wraped in cicada-nymph code
+        thus
+        more easy to wraped more system functions
+        and
+        make assembly code be more clean
+        [only needs some system functions to load core file]
+   * I choose the second way for now
+** string->syscall-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$string_to_syscall_string:
+      times 256 db 0
+
+   define_function "string->syscall-string", string_to_syscall_string
+      ;; << string[address, length] -- syscall-string[address] >>
+      xx dup
+      xx   literal, string$string_to_syscall_string
+      xx   addition
+      xx   literal, 0
+      xx   swap, save_byte
+      xx literal, string$string_to_syscall_string
+      xx string_to_buffer!
+      xx literal, string$string_to_syscall_string
+      xx end
+   #+end_src
+** syscall                            :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   define_primitive_function "syscall", __syscall
+      ;; << ..., argument2, argument1,
+      ;;    syscall-number,
+      ;;    number-of-arguments
+      ;;    -- unknown >>
+      pop_argument_stack rax
+      cmp rax, 0
+      je __syscall_with_0
+      cmp rax, 1
+      je __syscall_with_1
+      cmp rax, 2
+      je __syscall_with_2
+      cmp rax, 3
+      je __syscall_with_3
+      cmp rax, 4
+      je __syscall_with_4
+      cmp rax, 5
+      je __syscall_with_5
+      cmp rax, 6
+      je __syscall_with_6
+      jmp __syscall_with_too_many
+
+   __syscall_with_0:
+      pop_argument_stack linux64_sys_n_rax
+      syscall
+      next
+
+   __syscall_with_1:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      syscall
+      next
+
+   __syscall_with_2:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      syscall
+      next
+
+   __syscall_with_3:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      syscall
+      next
+
+   __syscall_with_4:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      syscall
+      next
+
+   __syscall_with_5:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      pop_argument_stack linux64_sys_5_r9
+      syscall
+      next
+
+   __syscall_with_6:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      pop_argument_stack linux64_sys_5_r9
+      pop_argument_stack linux64_sys_6_r8
+      syscall
+      next
+
+   __syscall_with_too_many:
+      call __exit_with_six
+
+   }
+   #+end_src
+** syscall                            :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   define_primitive_function "syscall", __syscall
+      ;; << ..., argument2, argument1,
+      ;;    syscall-number,
+      ;;    number-of-arguments
+      ;;    -- unknown >>
+      pop_argument_stack rax
+      cmp rax, 0
+      je __syscall_with_0
+      cmp rax, 1
+      je __syscall_with_1
+      cmp rax, 2
+      je __syscall_with_2
+      cmp rax, 3
+      je __syscall_with_3
+      cmp rax, 4
+      je __syscall_with_4
+      cmp rax, 5
+      je __syscall_with_5
+      jmp __syscall_with_too_many
+
+   __syscall_with_0:
+      pop_argument_stack linux32_sys_n_eax
+      syscall
+      next
+
+   __syscall_with_1:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      syscall
+      next
+
+   __syscall_with_2:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      syscall
+      next
+
+   __syscall_with_3:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      syscall
+      next
+
+   __syscall_with_4:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      pop_argument_stack linux32_sys_4_esi
+      syscall
+      next
+
+   __syscall_with_5:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      pop_argument_stack linux32_sys_4_esi
+      pop_argument_stack linux32_sys_5_edi
+      syscall
+      next
+
+   __syscall_with_too_many:
+      call __exit_with_six
+
+   }
+   #+end_src
 * -----------------------------------
 * initialization
 ** initialization
@@ -6731,20 +6743,9 @@
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
    #+end_src
 ** ----------------------------------
-** un_initialized_memory              :linux:64bit:
+** un_initialized_memory              :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   segment readable writeable
-   address$un_initialized_memory:
-      rb size$un_initialized_memory
-
-   }
-   #+end_src
-** ----------------------------------
-** un_initialized_memory              :linux:32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
+   match =linux, platform {
 
    segment readable writeable
    address$un_initialized_memory:
