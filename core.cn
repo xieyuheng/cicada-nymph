@@ -363,7 +363,7 @@ basic-REPL
 : hi,say
   << number -- >>
   dup 0 equal? if drop "* do not forget to eat good good coder !" .s end then
-  dup 1 equal? if drop "* me wile moku e pona muko ^-^" .s end then
+  dup 1 equal? if drop "* me wile moku e pona moku ^-^" .s end then
   dup 2 equal? if drop "* cica cica da yaya !!!" .s end then
   dup 3 equal? if drop "* hi ^-^" .s end then
   dup 4 equal? if drop "* hello :)" .s end then
