@@ -20,4 +20,4 @@
       (concat "(org/tangle) [not find] " .file-name)))))
 
 (org/tangle "cicada-nymph.org")
-(org/tangle "core.org")
+(org/tangle "core/core.org")

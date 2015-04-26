@@ -3,8 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** nested load-file
-   * a stack of buffer would solve this problem
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
 ** implement all macro by dispatch-word-stack :maybe:
@@ -181,19 +179,18 @@
 ** dictionary of jojo
    * 單項鏈接的鏈表
 ** primitive-string
-** stack
-*** argument-stack
-*** return-stack
-    * jo 的詮釋者
-      決定了 如何入這個棧
-    * 結尾詞
-      決定了 如何出這個棧
-*** eval-string-stack
-    * 兩個一對
-*** dispatch-word-stack
-    * 兩個一對
-      每對爲
-      [語法處理函數, 作用於字符串的謂詞]
+** argument-stack
+** return-stack
+   * jo 的詮釋者
+     決定了 如何入這個棧
+   * 結尾詞
+     決定了 如何出這個棧
+** eval-string-stack
+   * 兩個一對
+** dispatch-word-stack
+   * 兩個一對
+     每對爲
+     [語法處理函數, 作用於字符串的謂詞]
 ** local-variable-table
    * a heap like table of string
    * 只有一個 local-variable-table

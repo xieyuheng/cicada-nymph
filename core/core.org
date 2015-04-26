@@ -4,9 +4,9 @@
 
 * todo
 ** wrap more syscalls
-   * fsync
 ** nested load-file
-   * a stack of buffer would solve this problem
+   * a stack of allocate buffers in another local-data-heap
+     the previous local-data-heap maybe should be called local-data-vector
 ** [really needed] error handling for io function
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
@@ -44,123 +44,124 @@
     end
   ; define-function
   #+end_src
-* -----------------------------------
 * if & else & then
-  * one predicate can make two branchs
-    three predicates can make four branchs
-    three predicates may only make three branchs
-    but indeed there must be an invisible branch
-  #+begin_src cicada-nymph :tangle core.cn
-  : if
-    << string[address, length] --
-       address, string[address, length] >>
-    *false?branch* save-into,jo-heap
-    *current-free-address,jo-heap* xx|swap|x
-    0 save-into,jo-heap
-    end
-  ; define-macro
+** note
+   * one predicate can make two branchs
+     three predicates can make four branchs
+     three predicates may only make three branchs
+     but indeed there must be an invisible branch
+** if & else & then
+   #+begin_src cicada-nymph :tangle core.cn
+   : if
+     << string[address, length] --
+        address, string[address, length] >>
+     *false?branch* save-into,jo-heap
+     *current-free-address,jo-heap* xx|swap|x
+     0 save-into,jo-heap
+     end
+   ; define-macro
 
-  : else
-    << address, string[address, length] --
-       address, string[address, length] >>
-    *branch* save-into,jo-heap
-    x|swap|xx
-    *current-free-address,jo-heap* xxx|swap|x
-    0 save-into,jo-heap
-    << address, string[address, length], address >>
-    *current-free-address,jo-heap*
-    over sub *jo-size* div
-    swap save
-    end
-  ; define-macro
+   : else
+     << address, string[address, length] --
+        address, string[address, length] >>
+     *branch* save-into,jo-heap
+     x|swap|xx
+     *current-free-address,jo-heap* xxx|swap|x
+     0 save-into,jo-heap
+     << address, string[address, length], address >>
+     *current-free-address,jo-heap*
+     over sub *jo-size* div
+     swap save
+     end
+   ; define-macro
 
-  : then
-    << address, string[address, length] --
-       string[address, length] >>
-    x|swap|xx
-    *current-free-address,jo-heap*
-    over sub *jo-size* div
-    swap save
-    end
-  ; define-macro
-  #+end_src
-* test
-  #+begin_src cicada-nymph :tangle core.cn.test
-  : kkk
-    "kkk took my baby away !" write-string
-    cr
-    end
-  ; define-function
+   : then
+     << address, string[address, length] --
+        string[address, length] >>
+     x|swap|xx
+     *current-free-address,jo-heap*
+     over sub *jo-size* div
+     swap save
+     end
+   ; define-macro
+   #+end_src
+** test
+   #+begin_src cicada-nymph :tangle core.cn.test
+   : kkk
+     "kkk took my baby away !" write-string
+     cr
+     end
+   ; define-function
 
-  : factorial
-    << number -- number >>
-    dup
-    one? if
-      end
-    then
-    dup sub1 factorial
-    mul
-    end
-  ; define-function
+   : factorial
+     << number -- number >>
+     dup
+     one? if
+       end
+     then
+     dup sub1 factorial
+     mul
+     end
+   ; define-function
 
-  : factorial,test
-    cr
-    1 factorial . cr
-    2 factorial . cr
-    3 factorial . cr
-    4 factorial . cr
-    5 factorial . cr
-    6 factorial . cr
-    7 factorial . cr
-    8 factorial . cr
-    9 factorial . cr
-    10 factorial . cr
-    11 factorial . cr
-    12 factorial . cr
-    13 factorial . cr
-    14 factorial . cr
-    15 factorial . cr
-    16 factorial . cr
-    17 factorial . cr
-    18 factorial . cr
-    19 factorial . cr
-    20 factorial . cr
-    end
-  ; define-function
+   : factorial,test
+     cr
+     1 factorial . cr
+     2 factorial . cr
+     3 factorial . cr
+     4 factorial . cr
+     5 factorial . cr
+     6 factorial . cr
+     7 factorial . cr
+     8 factorial . cr
+     9 factorial . cr
+     10 factorial . cr
+     11 factorial . cr
+     12 factorial . cr
+     13 factorial . cr
+     14 factorial . cr
+     15 factorial . cr
+     16 factorial . cr
+     17 factorial . cr
+     18 factorial . cr
+     19 factorial . cr
+     20 factorial . cr
+     end
+   ; define-function
 
-  : .12
-    << 1 2 -- >>
-    2 equal? if
-      "(^-^)" write-string
-      1 equal? if
-        "\^o^/" write-string
-      else
-        "     " write-string
-      then
-    else
-      "     " write-string
-      1 equal? if
-        "\^o^/" write-string
-      else
-        "     " write-string
-      then
-    then
-    end
-  ; define-function
+   : .12
+     << 1 2 -- >>
+     2 equal? if
+       "(^-^)" write-string
+       1 equal? if
+         "\^o^/" write-string
+       else
+         "     " write-string
+       then
+     else
+       "     " write-string
+       1 equal? if
+         "\^o^/" write-string
+       else
+         "     " write-string
+       then
+     then
+     end
+   ; define-function
 
-  : .12,test
-    cr
-    1 2 .12 cr
-    6 2 .12 cr
-    1 6 .12 cr
-    6 6 .12 cr
-    end
-  ; define-function
+   : .12,test
+     cr
+     1 2 .12 cr
+     6 2 .12 cr
+     1 6 .12 cr
+     6 6 .12 cr
+     end
+   ; define-function
 
 
-  factorial,test
-  .12,test
-  #+end_src
+   factorial,test
+   .12,test
+   #+end_src
 * execute-word & basic-REPL           :redefine:
   * to protect macro & exception from be called from basic-REPL
   #+begin_src cicada-nymph :tangle core.cn
@@ -233,7 +234,40 @@
      end
    ; define-function
    #+end_src
-* -----------------------------------
+* init-syscall-number
+  #+begin_src cicada-nymph :tangle core.cn
+  0 : :syscall-number,open:  ; define-variable
+  0 : :syscall-number,close: ; define-variable
+  0 : :syscall-number,read:  ; define-variable
+  0 : :syscall-number,write: ; define-variable
+  0 : :syscall-number,exit:  ; define-variable
+  0 : :syscall-number,times: ; define-variable
+
+  : init-syscall-number
+    << -- >>
+    *jo-size* 8 equal? if
+      2   address :syscall-number,open:  save
+      3   address :syscall-number,close: save
+      0   address :syscall-number,read:  save
+      1   address :syscall-number,write: save
+      60  address :syscall-number,exit:  save
+      100 address :syscall-number,times: save
+      end
+    then
+    *jo-size* 4 equal? if
+      5   address :syscall-number,open:  save
+      6   address :syscall-number,close: save
+      3   address :syscall-number,read:  save
+      4   address :syscall-number,write: save
+      1   address :syscall-number,exit:  save
+      43  address :syscall-number,times: save
+      end
+    then
+    end
+  ; define-function
+
+  init-syscall-number
+  #+end_src
 * report
 ** report-dictionary
 *** report-dictionary,primitive-function
@@ -525,7 +559,6 @@
      end
    ; define-function
    #+end_src
-* I wish you a lovely day
 ** hi
    #+begin_src cicada-nymph :tangle core.cn
    0
@@ -534,9 +567,14 @@
 
    : hi,random
      << -- random-number >>
-     *hi,random-base*
-     *hi,random-base* add1 13 mod
-     address *hi,random-base* save
+     0 :syscall-number,times:
+     1 syscall
+     13 mod
+     <<
+      *hi,random-base*
+      *hi,random-base* add1 13 mod
+      address *hi,random-base* save
+     >>
      end
    ; define-function
 
@@ -562,7 +600,6 @@
      end
    ; define-function
    #+end_src
-* -----------------------------------
 * stack-REPL
 ** note
    * print argument-stack in every loop
@@ -633,7 +670,15 @@
    ; define-function
    #+end_src
 * -----------------------------------
+* port
 * file-tree
+** 記 關於接口
+   * 底層的 IO 函數我還不知道應該如何設計
+     但是相對高層的根文件的簡單讀寫有關的函數
+     已經基本確定了
+     其特點是
+     簡化掉 port 這個參數
+     所有的函數都以路徑爲參數
 ** note
    * file-tree is a database
      the following interface is provided
@@ -1215,11 +1260,6 @@
      end
    ; define-function
    #+end_src
-* >< title-name-table
-* -----------------------------------
-* >< return-stack
-* >< argument-stack
-* >< frame-stack
 * -----------------------------------
 * command-line-interface
 ** note

@@ -41,12 +41,12 @@ all:
 user-copy-core-file:
 	@
 	echo -e "\e[33;1m [copy-core-file--user] \e[0m " &&\
-	install -D --mode=664 core.cn -t "$(CICADADIR)"
+	install -D --mode=664 core/core.cn -t "$(CICADADIR)"
 
 system-copy-core-file:
 	@
 	echo -e "\e[33;1m [copy-core-file--system] \e[0m " &&\
-	install -D --mode=664 core.cn -t "$(SYSTEM_CICADADIR)"
+	install -D --mode=664 core/core.cn -t "$(SYSTEM_CICADADIR)"
 
 install:
 	@
