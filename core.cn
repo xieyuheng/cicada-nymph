@@ -442,12 +442,6 @@ basic-REPL
   <> stack-REPL
 ; define-function
 
-: load-file
-  << ??? -- >>
-
-  end
-; define-function
-
 : poi,help
   << -- >>
 
@@ -472,15 +466,21 @@ basic-REPL
   end
 ; define-function
 
+: poi,list
+  << -- >>
+
+  end
+; define-function
+
 : poi,show
   << name[address, length] -- >>
 
   end
 ; define-function
 
-: poi,list
-  << -- >>
-
+: load-file
+  << ??? -- >>
+  
   end
 ; define-function
 

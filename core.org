@@ -7,7 +7,6 @@
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
 ** round-heap for string literal in REPL
-** use hash-table to organize file-descriptor
 ** more design about the command-line-interface
 ** home-path & search-path to load files
    * poi denotes path-organizer
@@ -630,18 +629,39 @@
    ; define-function
    #+end_src
 * -----------------------------------
+* file-tree
+** note
+   * file-tree is a database 
+     the following interface is provided
+     1. add
+     2. sub
+     3. up
+     4. find
+     5. list
+   * a path is always one of the needed argument
+** note macro about path
+   #+begin_src cicada-nymph
+   {path: home xyh cicada core.cn}
+   "/home/xyh/cicada/core.cn"
+
+   {path: home xyh cicada}
+   "/home/xyh/cicada"
+
+   << +working+ "." >>
+   {path: +working+ core.cn}   
+   "./core.cn"
+
+   << +parent+ ".." >>
+   {path: +parent+ cicada core.cn}
+   "../cicada/core.cn"
+
+   << +library+ "/home/xyh/.cicada/library" >>
+   {path: +library+ kkk main.cn}
+   "/home/xyh/.cicada/library/kkk/main.cn"
+   #+end_src
 * path
 ** relative-path?
 ** full-path?
-* load-file
-** ><
-   #+begin_src cicada-nymph :tangle core.cn
-   : load-file
-     << ??? -- >>
-
-     end
-   ; define-function
-   #+end_src
 * poi
 ** note
    * poi denotes path-organizer
@@ -718,6 +738,14 @@
      end
    ; define-function
    #+end_src
+** list
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,list
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
 ** show
    #+begin_src cicada-nymph :tangle core.cn
    : poi,show
@@ -726,11 +754,12 @@
      end
    ; define-function
    #+end_src
-** list
+* load-file
+** ><
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,list
-     << -- >>
-
+   : load-file
+     << ??? -- >>
+     
      end
    ; define-function
    #+end_src
@@ -1287,6 +1316,6 @@
   name-hash-table,report
 
   report-memory
-  report-dictionary
+  report-dictionary  
   #+end_src
 * ===================================
