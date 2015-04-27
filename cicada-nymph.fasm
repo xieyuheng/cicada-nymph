@@ -3258,8 +3258,7 @@ __syscall_with_too_many:
 
 define_function "initialization", initialization
    ;; << -- >>
-   xx initialize_syntax_stack
-   xx initialize_local_variable
+   xx initialize_syntax_set
 match =linux, platform {
    xx initialize_system
    }
@@ -4022,118 +4021,188 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
-size$syntax_stack = 1024 * jo_size
+size$syntax_set = 1024 * jo_size
 
-   preserve 64 * jo_size
-address$syntax_stack labeling
-   preserve size$syntax_stack
+address$syntax_set labeling
+   preserve size$syntax_set
 
-pointer$syntax_stack:
-   xx address$syntax_stack
+pointer$syntax_set:
+   xx address$syntax_set
 
 match =64bit, machine {
 
-define_primitive_function "push-syntax-stack", push_syntax_stack
-   ;; argument-stack -> syntax-stack
+define_primitive_function "add-syntax", add_syntax
+   ;; << predicate, function -- >>
    pop_argument_stack rax
-   mov rbx, [pointer$syntax_stack]
+   mov rbx, [pointer$syntax_set]
    mov [rbx], rax
-   add qword [pointer$syntax_stack], jo_size
-   next
-
-define_primitive_function "pop-syntax-stack", pop_syntax_stack
-   ;; syntax-stack -> argument-stack
-   sub qword [pointer$syntax_stack], jo_size
-   mov rbx, [pointer$syntax_stack]
-   mov rax, [rbx]
-   push_argument_stack rax
+   add qword [pointer$syntax_set], jo_size
+   pop_argument_stack rax
+   mov rbx, [pointer$syntax_set]
+   mov [rbx], rax
+   add qword [pointer$syntax_set], jo_size
    next
 
 }
 
 match =32bit, machine {
 
-define_primitive_function "push-syntax-stack", push_syntax_stack
-   ;; argument-stack -> syntax-stack
+define_primitive_function "add-syntax", add_syntax
+   ;; << predicate, function -- >>
    pop_argument_stack rax
-   mov rsi, [pointer$syntax_stack]
+   mov rsi, [pointer$syntax_set]
    mov [rsi], rax
-   add dword [pointer$syntax_stack], jo_size
-   next
-
-define_primitive_function "pop-syntax-stack", pop_syntax_stack
-   ;; syntax-stack -> argument-stack
-   sub dword [pointer$syntax_stack], jo_size
-   mov rsi, [pointer$syntax_stack]
-   mov rax, [rsi]
-   push_argument_stack rax
+   add dword [pointer$syntax_set], jo_size
+   pop_argument_stack rax
+   mov rsi, [pointer$syntax_set]
+   mov [rsi], rax
+   add dword [pointer$syntax_set], jo_size
    next
 
 }
 
 match =64bit, machine {
 
-define_primitive_function "clear-syntax-stack", clear_syntax_stack
+define_primitive_function "clear-syntax-set", clear_syntax_set
    ;; << -- >>
-   mov qword [pointer$syntax_stack], address$syntax_stack
+   mov qword [pointer$syntax_set], address$syntax_set
    next
 
 }
 
 match =32bit, machine {
 
-define_primitive_function "clear-syntax-stack", clear_syntax_stack
+define_primitive_function "clear-syntax-set", clear_syntax_set
    ;; << -- >>
-   mov eax, address$syntax_stack
-   mov dword [pointer$syntax_stack], eax;address$syntax_stack
+   mov eax, address$syntax_set
+   mov dword [pointer$syntax_set], eax;address$syntax_set
    next
 
 }
 
-define_function "find-syntax-stack", find_syntax_stack
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx literal, pointer$syntax_stack, fetch
-   xx literal, cursor$find_syntax_stack, save
-   xx find_syntax_stack__loop
-   xx end
-
-cursor$find_syntax_stack:
+cursor$find_syntax:
    xx 0
 
-define_function "find-syntax-stack,loop", find_syntax_stack__loop
+define_function "find-syntax", find_syntax
    ;; << word[address, length]
    ;;    -- jo, true
    ;;    -- false >>
-   xx literal, cursor$find_syntax_stack, fetch
-   xx literal, address$syntax_stack
+   xx literal, pointer$syntax_set, fetch
+   xx literal, cursor$find_syntax, save
+   xx find_syntax__loop
+   xx end
+
+define_function "find-syntax,loop", find_syntax__loop
+   ;; << word[address, length]
+   ;;    -- jo, true
+   ;;    -- false >>
+   xx literal, cursor$find_syntax, fetch
+   xx literal, address$syntax_set
    xx equal?, false?branch, 4
    xx   drop2
    xx   false
    xx   end
    xx dup2
-   xx literal, cursor$find_syntax_stack, fetch
-   xx V__jo_size, subtraction, fetch
+   xx literal, cursor$find_syntax, fetch
+   xx V__jo_size, subtraction ;; note that here needs a subtraction
+   xx fetch
    xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
    xx   drop2
-   xx   literal, cursor$find_syntax_stack, fetch
+   xx   literal, cursor$find_syntax, fetch
    xx   V__jo_size, subtraction
    xx   V__jo_size, subtraction, fetch
    xx   true
    xx   end
-.not_found:
-   xx literal, cursor$find_syntax_stack, fetch
+   .not_found:
+   xx literal, cursor$find_syntax, fetch
    xx V__jo_size, subtraction
    xx V__jo_size, subtraction
-   xx literal, cursor$find_syntax_stack, save
-   xx taca, find_syntax_stack__loop
+   xx literal, cursor$find_syntax, save
+   xx taca, find_syntax__loop
 
-define_function "initialize-syntax-stack", initialize_syntax_stack
+cursor$sub_syntax:
+   xx 0
+
+define_function "sub-syntax", sub_syntax
+   ;; << predicate, function -- >>
+   xx literal, pointer$syntax_set, fetch
+   xx literal, cursor$sub_syntax, save
+   xx sub_syntax__loop
+   xx end
+
+define_function "sub-syntax,loop", sub_syntax__loop
+   ;; << predicate, function -- >>
+   xx literal, cursor$sub_syntax, fetch
+   xx literal, address$syntax_set
+   xx equal?, false?branch, 3
+   xx   drop2
+   xx   end
+   xx dup2
+   xx literal, cursor$sub_syntax, fetch
+   xx V__jo_size, subtraction ;; note that here needs a subtraction
+   xx dup
+   xx fetch
+   xx swap
+   xx V__jo_size, subtraction
+   xx fetch
+   ;; << predicate, function, predicate, function -- >>
+   xx xoverxx, equal?, false?, false?branch, 4
+   xx   drop
+   xx   branch, (.not_found-$)/jo_size
+   xx xoverxx, equal?, false?, false?branch, 3   
+   xx   branch, (.not_found-$)/jo_size
+
+   xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
+   xx   drop2
+   xx   literal, cursor$sub_syntax, fetch
+   xx   V__jo_size, subtraction
+   xx   V__jo_size, subtraction, fetch
+   xx   true
+   xx   end
+
+   .not_found:
+   xx literal, cursor$sub_syntax, fetch
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx literal, cursor$sub_syntax, save
+   xx taca, sub_syntax__loop
+
+cursor$syntax_exist?:
+   xx 0
+
+define_function "syntax-exist?", syntax_exist?
+   ;; << predicate, function -- bool >>   
+
+   xx end
+
+
+define_function "syntax-exist?loop", syntax_exist?loop
+   ;; << predicate, function -- bool >>   
+
+   xx taca, syntax_exist?loop
+
+match =64bit, machine {
+
+define_primitive_function "drop-syntax-set", drop_syntax_set
+   sub qword [pointer$syntax_set], jo_size
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "drop-syntax-set", drop_syntax_set
+   sub dword [pointer$syntax_set], jo_size
+   next
+
+}
+
+define_function "initialize-syntax-set", initialize_syntax_set
    ;; << -- >>
-   xx clear_syntax_stack
-   xx literal, M__integer_string, push_syntax_stack
-   xx literal, integer_string?, push_syntax_stack
+   xx clear_syntax_set
+   xx literal, integer_string?
+   xx literal, M__integer_string
+   xx add_syntax
    xx end
 
 size$jo_heap = 1024 * 1024 * jo_size
@@ -4183,7 +4252,9 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
    xx local_variable_table__clear
+   xx add_syntax__local_variable
    xx make_jojo__loop
+   xx sub_syntax__local_variable
    xx end
 
 define_function "make-jojo,loop", make_jojo__loop
@@ -4203,19 +4274,19 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
-   xx find_syntax_stack, true?, false?branch, 3
+   xx find_syntax, true?, false?branch, 3
    xx   execute_jo
    xx   end
    xx dup2
-   xx find, false?
-   xx false?branch, 7
-   xx   write_undefined_word_report__for_make_jojo
-   xx   write_string
-   xx   literal, 10, write_byte
-   xx   !undo_make_jojo
-   xx xxswapx, drop2 ;; word
-   xx make_jojo__dispatch_jo
-   xx end
+   xx find, false?branch, 5
+   xx   xxswapx, drop2 ;; word
+   xx   make_jojo__dispatch_jo
+   xx   end
+   xx write_undefined_word_report__for_make_jojo
+   xx write_string
+   xx literal, 10, write_byte
+   xx sub_syntax__local_variable
+   xx !undo_make_jojo
 
 define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
    ;; << string[address, length], jo --
@@ -4889,12 +4960,22 @@ define_function "local-variable-table,find,loop", local_variable_table__find__lo
    xx literal, cursor$local_variable_table, add_save
    xx taca, local_variable_table__find__loop
 
-define_function "initialize-local-variable", initialize_local_variable
+define_function "add-syntax,local-variable", add_syntax__local_variable
    ;; << -- >>
-   xx literal, M__local_variable_save_string,  push_syntax_stack
-   xx literal, local_variable_save_string?,    push_syntax_stack
-   xx literal, M__local_variable_fetch_string, push_syntax_stack
-   xx literal, local_variable_fetch_string?,   push_syntax_stack
+   xx literal, local_variable_save_string?
+   xx literal, M__local_variable_save_string
+   xx add_syntax
+   xx literal, local_variable_fetch_string?
+   xx literal, M__local_variable_fetch_string
+   xx add_syntax
+   xx end
+
+define_function "sub-syntax,local-variable", sub_syntax__local_variable
+   ;; << -- >>
+   xx drop_syntax_set
+   xx drop_syntax_set
+   xx drop_syntax_set
+   xx drop_syntax_set
    xx end
 
 size$local_data_heap = 1024 * 1024 * jo_size
