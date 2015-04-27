@@ -15,6 +15,10 @@
 * 最新版本
   * 這個程序的源代碼可以在這裏下載
     https://github.com/the-little-language-designer/cicada
+  * archlinux 用戶可以直接安裝這裏的軟件包
+    https://aur.archlinux.org/packages/cicada-git/
+    或者可以直接使用如下命令 (如果你也安裝了 yaourt 的話)
+      yaourt -S cicada-git
 * 貢獻
   * 聊天
     用 IRC
@@ -44,6 +48,10 @@
 * to get the newest version of the program
   * the source code of this program can be downloaded from
     https://github.com/the-little-language-designer/cicada
+  * archlinux user can just install the following package
+    https://aur.archlinux.org/packages/cicada-git/
+    or by the following command (if you have yaourt installed)
+      yaourt -S cicada-git
 * to contribute
   * to chat
     we use IRC

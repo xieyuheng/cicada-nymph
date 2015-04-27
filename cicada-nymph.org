@@ -2,15 +2,24 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* implement all macro by syntax-stack
+  * 簡化語法擴展機制 統一使用 棧 來保存語法 以形成對語法的靈活地變更
+  * make_jojo__dispatch_jo is not needed anymore
+* local-data-vector & local-data-heap
+  * the current local-data-heap is renamed to local-data-vector
+  * local-data-vector for naming
+    local-data-heap for allocation of non-fixed length of data
+  * for local-data-vector
+    the offset is calculated at compile time
+  * for local-data-heap
+    the offset is calculated at run time
 * todo
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
-** implement all macro by dispatch-word-stack :maybe:
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
 ** code clean-up & documentation update
 ** bare-metal version of cicada-nymph for x86 :maybe:
-** better error handling of load-file
 ** make instruction a type of jo      :maybe:
    this is needed when doing report of the dictionary
 * ===================================
@@ -187,7 +196,7 @@
      決定了 如何出這個棧
 ** eval-string-stack
    * 兩個一對
-** dispatch-word-stack
+** syntax-stack
    * 兩個一對
      每對爲
      [語法處理函數, 作用於字符串的謂詞]
@@ -198,7 +207,7 @@
      這個數據結構被 M__local_variable_save_string
      和 M__local_variable_fetch_string 所使用
    * 其中保存
-     * offset-in-local-data-heap
+     * offset-in-local-data-vector
      * length-of-string
      * address-of-string
    * 並且每次在定義一個新的函數體的時候
@@ -207,9 +216,9 @@
      * clear
        清空 offset 和 border
      * insert
-       插入字符串 和 offset-in-local-data-heap
+       插入字符串 和 offset-in-local-data-vector
      * find
-       通過字符串尋找 offset-in-local-data-heap
+       通過字符串尋找 offset-in-local-data-vector
      有兩個全局變量幫助實現這些接口
      * cursor
        每次 find 的時候使用一個新的 cursor 來做循環
@@ -218,7 +227,7 @@
        find 以 border 爲邊界
      另外 還有一個全局變量
      * offset
-       用以計算 offset-in-local-data-heap
+       用以計算 offset-in-local-data-vector
 * 記 性狀總結
 ** 自動管理加載文件時所使用的搜索路徑列表
    * 原理如下
@@ -262,7 +271,7 @@
      由於對 offset 的計算是在編譯時進行的
      所以根本就沒利用到這裏所能得到的最大的靈活性
      以至於沒法以良好的方式實現
-     在 local_data_heap 中動態地分配變長的內存
+     在 local_data_vector 中動態地分配變長的內存
    * 形成這種局面的原因在於
      對局部變元的名字和值的關係的處理
      是在編譯時期進行的
@@ -442,9 +451,11 @@
      into the interface of pop and push
      we allocation some memory below the stacks
    #+begin_src fasm :tangle cicada-nymph.fasm
+   size$argument_stack = 1024 * 1024 * jo_size
+
       preserve 64 * jo_size
    address$argument_stack labeling
-      preserve 1024 * 1024 * jo_size
+      preserve size$argument_stack
    #+end_src
 ** ----------------------------------
 ** pointer                            :64bit:
@@ -531,9 +542,11 @@
 ** ----------------------------------
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
+   size$return_stack = 1024 * 1024 * jo_size
+
       preserve 64 * jo_size
    address$return_stack labeling
-      preserve 1024 * 1024 * jo_size
+      preserve size$return_stack
    #+end_src
 ** ----------------------------------
 ** pointer                            :64bit:
@@ -886,7 +899,7 @@
      which stores a jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    explain$function:
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_data_vector]
       push_return_stack rbx
       add rax, jo_size
       push_return_stack rax
@@ -994,7 +1007,7 @@
 ** explain$macro
    #+begin_src fasm :tangle cicada-nymph.fasm
    explain$macro:
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_data_vector]
       push_return_stack rbx
       add rax, jo_size
       push_return_stack rax
@@ -1119,7 +1132,7 @@
       pop_return_stack rax
       mov pointer$argument_stack, rax
 
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_data_vector]
       push_return_stack rbx
 
       add rsi, jo_size
@@ -1170,7 +1183,7 @@
       pop_return_stack rax
       mov [pointer$argument_stack], rax
 
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_data_vector]
       push_return_stack rbx
 
       add rsi, jo_size
@@ -1347,7 +1360,7 @@
    define_primitive_function "end", end
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_data_heap], rax
+      mov [current_free_address$local_data_vector], rax
       next
    #+end_src
 ** taca
@@ -1358,7 +1371,7 @@
    define_primitive_function "<>", taca
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_data_heap], rax
+      mov [current_free_address$local_data_vector], rax
       mov rax, [rbx]
       jmp qword [rax]
    }
@@ -1369,7 +1382,7 @@
    define_primitive_function "<>", taca
       pop_return_stack ebx
       pop_return_stack ecx
-      mov [current_free_address$local_data_heap], ecx
+      mov [current_free_address$local_data_vector], ecx
       mov eax, [ebx]
       jmp dword [eax]
 
@@ -1379,7 +1392,7 @@
    ;; define_primitive_function "<>", taca
    ;;    pop_return_stack ebx
    ;;    pop_return_stack eax
-   ;;    mov [current_free_address$local_data_heap], eax
+   ;;    mov [current_free_address$local_data_vector], eax
    ;;    mov eax, [ebx]
    ;;    jmp dword [eax]
 
@@ -1440,7 +1453,7 @@
       it is clear how the example function
       is actually a loop now
 * -----------------------------------
-* *the story begin*
+* *the-story-begin*
 ** begin_to_interpret_threaded_code   :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -3532,7 +3545,7 @@
 * -----------------------------------
 * port
 ** ----------------------------------
-** open-input-port                    :linux:64bit:
+** open-input-port                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -3590,7 +3603,7 @@
    }
    #+end_src
 ** ----------------------------------
-** open-input-port                    :linux:32bit:
+** open-input-port                    :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
@@ -3648,70 +3661,7 @@
    }
    #+end_src
 ** ----------------------------------
-* to load core file
-** ----------------------------------
-** path-file?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   address$path_file?:
-      db 0
-
-   define_function "path-file?", path_file?
-      ;; << path[address, length] -- bool >>
-      xx open_input_port
-      xx dup, negative?, false?branch, 4
-      xx   drop
-      xx   false
-      xx   end
-      xx dup
-      xx literal, address$path_file?
-      xx literal, 1
-      xx read_port
-      xx swap, close_port
-      xx positive?, false?branch, 3
-      xx   true
-      xx   end
-      xx false
-      xx end
-   #+end_src
-** load-first-file
-   * load-first-file can not be nested for now
-   * a function (load-file) will be implemented in core
-     to support nested loading
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   buffer$load_first_file labeling
-     preserve 128 * 1024
-
-   define_function "load-first-file", load_first_file
-      ;; << name-string[address, length] -- unknown >>
-      xx open_input_port
-      xx dup
-      xx   literal, buffer$load_first_file ;; buffer
-      xx   literal, 1024 * 1024      ;; length
-      xx   read_port
-      xx swap, close_port
-      xx dup, positive?, false?branch, (.error-$)/jo_size
-      xx   literal, buffer$load_first_file
-      xx   swap
-      xx   eval_string__ready
-      xx   end
-   .error:
-      xx error_report__load_first_file
-      xx write_integer
-      xx literal, 10, write_byte
-      xx end
-
-   define_function "error-report,load-file", error_report__load_first_file
-      ;; << -- >>
-      xx literal, string$error_report__load_first_file
-      xx literal, length$error_report__load_first_file
-      xx write_string
-      xx end
-
-   string$error_report__load_first_file:
-      db "* (load-file) meets error  (read-port) error code : "
-   .end:
-   length$error_report__load_first_file = (.end - string$error_report__load_first_file)
-   #+end_src
+* system environment
 ** ----------------------------------
 ** note two directories
    * all files about cicada
@@ -4083,6 +4033,71 @@
 
    }
    #+end_src
+** ----------------------------------
+* to load core file
+** path-file?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   address$path_file?:
+      db 0
+
+   define_function "path-file?", path_file?
+      ;; << path[address, length] -- bool >>
+      xx open_input_port
+      xx dup, negative?, false?branch, 4
+      xx   drop
+      xx   false
+      xx   end
+      xx dup
+      xx literal, address$path_file?
+      xx literal, 1
+      xx read_port
+      xx swap, close_port
+      xx positive?, false?branch, 3
+      xx   true
+      xx   end
+      xx false
+      xx end
+   #+end_src
+** load-first-file
+   * load is read and eval
+   * load-first-file can not be nested
+   * a function (load-file) will be implemented in core
+     to support nested loading
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   buffer$load_first_file labeling
+     preserve 128 * 1024
+
+   define_function "load-first-file", load_first_file
+      ;; << name-string[address, length] -- unknown >>
+      xx open_input_port
+      xx dup
+      xx   literal, buffer$load_first_file ;; buffer
+      xx   literal, 1024 * 1024      ;; length
+      xx   read_port
+      xx swap, close_port
+      xx dup, positive?, false?branch, (.error-$)/jo_size
+      xx   literal, buffer$load_first_file
+      xx   swap
+      xx   eval_string__ready
+      xx   end
+   .error:
+      xx error_report__load_first_file
+      xx write_integer
+      xx literal, 10, write_byte
+      xx end
+
+   define_function "error-report,load-file", error_report__load_first_file
+      ;; << -- >>
+      xx literal, string$error_report__load_first_file
+      xx literal, length$error_report__load_first_file
+      xx write_string
+      xx end
+
+   string$error_report__load_first_file:
+      db "* (load-file) meets error  (read-port) error code : "
+   .end:
+   length$error_report__load_first_file = (.end - string$error_report__load_first_file)
+   #+end_src
 ** load-core-file                     :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
@@ -4154,7 +4169,6 @@
 
    }
    #+end_src
-** ----------------------------------
 * -----------------------------------
 * to expose syscall
 ** note
@@ -4368,7 +4382,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "initialization", initialization
       ;; << -- >>
-      xx initialize_dispatch_word_stack
+      xx initialize_syntax_stack
       xx initialize_local_variable
    match =linux, platform {
       xx initialize_system
@@ -5346,6 +5360,146 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
+* syntax-stack
+** note
+   * for we do not build border-check
+     into the interface of pop and push
+     we allocation some memory below the stacks
+   * the size$syntax_stack
+     defines the max number of word dispatchers
+   * values in syntax_stack
+     are two by two
+     << dispatcher [macro, predicate] >>
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$syntax_stack = 1024 * jo_size
+
+      preserve 64 * jo_size
+   address$syntax_stack labeling
+      preserve size$syntax_stack
+   #+end_src
+** pointer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   pointer$syntax_stack:
+      xx address$syntax_stack
+   #+end_src
+** push & pop                         :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "push-syntax-stack", push_syntax_stack
+      ;; argument-stack -> syntax-stack
+      pop_argument_stack rax
+      mov rbx, [pointer$syntax_stack]
+      mov [rbx], rax
+      add qword [pointer$syntax_stack], jo_size
+      next
+
+   define_primitive_function "pop-syntax-stack", pop_syntax_stack
+      ;; syntax-stack -> argument-stack
+      sub qword [pointer$syntax_stack], jo_size
+      mov rbx, [pointer$syntax_stack]
+      mov rax, [rbx]
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** push & pop                         :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "push-syntax-stack", push_syntax_stack
+      ;; argument-stack -> syntax-stack
+      pop_argument_stack rax
+      mov rsi, [pointer$syntax_stack]
+      mov [rsi], rax
+      add dword [pointer$syntax_stack], jo_size
+      next
+
+   define_primitive_function "pop-syntax-stack", pop_syntax_stack
+      ;; syntax-stack -> argument-stack
+      sub dword [pointer$syntax_stack], jo_size
+      mov rsi, [pointer$syntax_stack]
+      mov rax, [rsi]
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** clear                              :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "clear-syntax-stack", clear_syntax_stack
+      ;; << -- >>
+      mov qword [pointer$syntax_stack], address$syntax_stack
+      next
+
+   }
+   #+end_src
+** clear                              :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "clear-syntax-stack", clear_syntax_stack
+      ;; << -- >>
+      mov eax, address$syntax_stack
+      mov dword [pointer$syntax_stack], eax;address$syntax_stack
+      next
+
+   }
+   #+end_src
+** find
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "find-syntax-stack", find_syntax_stack
+      ;; << word[address, length]
+      ;;    -- jo, true
+      ;;    -- false >>
+      xx literal, pointer$syntax_stack, fetch
+      xx literal, cursor$find_syntax_stack, save
+      xx find_syntax_stack__loop
+      xx end
+
+   cursor$find_syntax_stack:
+      xx 0
+
+   define_function "find-syntax-stack,loop", find_syntax_stack__loop
+      ;; << word[address, length]
+      ;;    -- jo, true
+      ;;    -- false >>
+      xx literal, cursor$find_syntax_stack, fetch
+      xx literal, address$syntax_stack
+      xx equal?, false?branch, 4
+      xx   drop2
+      xx   false
+      xx   end
+      xx dup2
+      xx literal, cursor$find_syntax_stack, fetch
+      xx V__jo_size, subtraction, fetch
+      xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
+      xx   drop2
+      xx   literal, cursor$find_syntax_stack, fetch
+      xx   V__jo_size, subtraction
+      xx   V__jo_size, subtraction, fetch
+      xx   true
+      xx   end
+   .not_found:
+      xx literal, cursor$find_syntax_stack, fetch
+      xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
+      xx literal, cursor$find_syntax_stack, save
+      xx taca, find_syntax_stack__loop
+   #+end_src
+** initialize_syntax_stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "initialize-syntax-stack", initialize_syntax_stack
+      ;; << -- >>
+      xx clear_syntax_stack
+      xx literal, M__integer_string, push_syntax_stack
+      xx literal, integer_string?, push_syntax_stack
+      xx end
+   #+end_src
 * function & jojo
 ** ----------------------------------
 ** memory allocation
@@ -5407,7 +5561,7 @@
    #+end_src
 ** make-jojo
    * 這裏又產生了特殊的一類珠
-     它木訥雖然以 "M__" 爲前綴
+     它雖然以 "M__" 爲前綴
      但是沒有作爲字符串的名字
      每個這種珠都與一個謂詞相對
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5427,14 +5581,16 @@
       xx xxswapxx
       xx string_head__word
       ;; << tail[address, length], head[address, length] >>
-      xx make_jojo__dispatch_word
+      xx make_jojo__dispatch_syntax_word
       xx taca, make_jojo__loop
-
-   define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+   #+end_src
+** make-jojo,dispatch-syntax-word
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx dup2
-      xx find_dispatch_word_stack, true?, false?branch, 3
+      xx find_syntax_stack, true?, false?branch, 3
       xx   execute_jo
       xx   end
       xx dup2
@@ -5476,146 +5632,6 @@
    .end:
    length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
    #+end_src
-** dispatch-word-stack
-*** note
-    * for we do not build border-check
-      into the interface of pop and push
-      we allocation some memory below the stacks
-    * the size$dispatch_word_stack
-      defines the max number of word dispatchers
-    * values in dispatch_word_stack
-      are two by two
-      << dispatcher [macro, predicate] >>
-*** memory allocation
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    size$dispatch_word_stack = 1024 * jo_size
-
-       preserve 64 * jo_size
-    address$dispatch_word_stack labeling
-       preserve size$dispatch_word_stack
-    #+end_src
-*** pointer
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    pointer$dispatch_word_stack:
-       xx address$dispatch_word_stack
-    #+end_src
-*** push & pop                        :64bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =64bit, machine {
-
-    define_primitive_function "push-dispatch-word-stack", push_dispatch_word_stack
-       ;; argument-stack -> dispatch-word-stack
-       pop_argument_stack rax
-       mov rbx, [pointer$dispatch_word_stack]
-       mov [rbx], rax
-       add qword [pointer$dispatch_word_stack], jo_size
-       next
-
-    define_primitive_function "pop-dispatch-word-stack", pop_dispatch_word_stack
-       ;; dispatch-word-stack -> argument-stack
-       sub qword [pointer$dispatch_word_stack], jo_size
-       mov rbx, [pointer$dispatch_word_stack]
-       mov rax, [rbx]
-       push_argument_stack rax
-       next
-
-    }
-    #+end_src
-*** push & pop                        :32bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =32bit, machine {
-
-    define_primitive_function "push-dispatch-word-stack", push_dispatch_word_stack
-       ;; argument-stack -> dispatch-word-stack
-       pop_argument_stack rax
-       mov rsi, [pointer$dispatch_word_stack]
-       mov [rsi], rax
-       add dword [pointer$dispatch_word_stack], jo_size
-       next
-
-    define_primitive_function "pop-dispatch-word-stack", pop_dispatch_word_stack
-       ;; dispatch-word-stack -> argument-stack
-       sub dword [pointer$dispatch_word_stack], jo_size
-       mov rsi, [pointer$dispatch_word_stack]
-       mov rax, [rsi]
-       push_argument_stack rax
-       next
-
-    }
-    #+end_src
-*** clear                             :64bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =64bit, machine {
-
-    define_primitive_function "clear-dispatch-word-stack", clear_dispatch_word_stack
-       ;; << -- >>
-       mov qword [pointer$dispatch_word_stack], address$dispatch_word_stack
-       next
-
-    }
-    #+end_src
-*** clear                             :32bit:
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    match =32bit, machine {
-
-    define_primitive_function "clear-dispatch-word-stack", clear_dispatch_word_stack
-       ;; << -- >>
-       mov eax, address$dispatch_word_stack
-       mov dword [pointer$dispatch_word_stack], eax;address$dispatch_word_stack
-       next
-
-    }
-    #+end_src
-*** find
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "find-dispatch-word-stack", find_dispatch_word_stack
-       ;; << word[address, length]
-       ;;    -- jo, true
-       ;;    -- false >>
-       xx literal, pointer$dispatch_word_stack, fetch
-       xx literal, cursor$find_dispatch_word_stack, save
-       xx find_dispatch_word_stack__loop
-       xx end
-
-    cursor$find_dispatch_word_stack:
-       xx 0
-
-    define_function "find-dispatch-word-stack,loop", find_dispatch_word_stack__loop
-       ;; << word[address, length]
-       ;;    -- jo, true
-       ;;    -- false >>
-       xx literal, cursor$find_dispatch_word_stack, fetch
-       xx literal, address$dispatch_word_stack
-       xx equal?, false?branch, 4
-       xx   drop2
-       xx   false
-       xx   end
-       xx dup2
-       xx literal, cursor$find_dispatch_word_stack, fetch
-       xx V__jo_size, subtraction, fetch
-       xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-       xx   drop2
-       xx   literal, cursor$find_dispatch_word_stack, fetch
-       xx   V__jo_size, subtraction
-       xx   V__jo_size, subtraction, fetch
-       xx   true
-       xx   end
-    .not_found:
-       xx literal, cursor$find_dispatch_word_stack, fetch
-       xx V__jo_size, subtraction
-       xx V__jo_size, subtraction
-       xx literal, cursor$find_dispatch_word_stack, save
-       xx taca, find_dispatch_word_stack__loop
-    #+end_src
-*** initialize_dispatch_word_stack
-    #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "initialize-dispatch-word-stack", initialize_dispatch_word_stack
-       ;; << -- >>
-       xx clear_dispatch_word_stack
-       xx literal, M__integer_string, push_dispatch_word_stack
-       xx literal, integer_string?, push_dispatch_word_stack
-       xx end
-    #+end_src
 ** ----------------------------------
 ** note macro in cicada-nymph
    * a macro is a function to be called at compile time
@@ -6050,7 +6066,7 @@
    ; define-function
    #+end_src
 ** example code with local-variable
-   #+begin_src cicada-nymph :tangle core.cn
+   #+begin_src cicada-nymph
    : name-hash-table,insert,loop
      << string[address, length], number, counter
         -- name, true
@@ -6100,7 +6116,7 @@
      每次進入一個函數體的執行
      即 每次將一串珠珠入棧時
      同時在這串珠子底部加上
-     current_free_address$local_data_heap
+     current_free_address$local_data_vector
      即 在 explain$function 中需要做特殊處理
      注意
      explain$exception
@@ -6111,10 +6127,10 @@
      所以也需要做特殊處理
    * 這個值在函數退出時
      [即 在 end 這個函數中]
-     用以重置 current_free_address$local_data_heap
+     用以重置 current_free_address$local_data_vector
      也就是 釋放在這次函數作用過程中所分配的內存
    * 每次 >:name 的時候
-     都更新 current_free_address$local_data_heap
+     都更新 current_free_address$local_data_vector
      以分配內存就行了
    * 也就是說
      return-stack 中的大多數有效值
@@ -6122,7 +6138,7 @@
    * 兩個結尾詞是 end 和 <>
      對於 <>
      即 對於明顯的尾遞歸調用
-     需要利用棧中的值重置 current_free_address$local_data_heap
+     需要利用棧中的值重置 current_free_address$local_data_vector
      但是並不入棧新值
 ** 記 語法擴展方面的支持
    * 這裏需要識別 >:name 還有 :name 等等
@@ -6149,7 +6165,7 @@
      使用 offset 就行了
    * 底層
      local-data-allocate,byte
-     這個只讓 current_free_address$local_data_heap 前進
+     這個只讓 current_free_address$local_data_vector 前進
      而不後退
    * 注意
      最爲重要的特點是
@@ -6185,28 +6201,41 @@
      就被稱作是 "re-factoring"
      即 函數的因子的重新分解
 ** ----------------------------------
+** 記 有名字的局部變量 與 變長的局部數據
+   * local-data-vector
+     用來實現 有名字的局部變量
+     在編譯時計算 offset
+     到這個 local-data-vector 中的 offset 做爲變量的值
+     有 *local-variable-table* 這個數據結構
+     幫助計算 offset
+   * local-data-heap
+     用來分配 變長的局部數據
+     在運行時計算 offset
+   * 兩個機制配合使用
+** ----------------------------------
+** *local-data-vector*
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_data_heap = 3 * 1024 * 1024
+   size$local_data_vector = 1024 * 1024 * jo_size
 
-   address$local_data_heap labeling
-      preserve size$local_data_heap
+   address$local_data_vector labeling
+      preserve size$local_data_vector
 
-   current_free_address$local_data_heap:
-      xx address$local_data_heap
+   current_free_address$local_data_vector:
+      xx address$local_data_vector
    #+end_src
 ** local_data_allocate__[byte,jo]
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-data-allocate,byte", local_data_allocate__byte
       ;; << number -- >>
-      xx literal, current_free_address$local_data_heap
+      xx literal, current_free_address$local_data_vector
       xx add_save
       xx end
 
    define_function "local-data-allocate,jo", local_data_allocate__jo
       ;; << number -- >>
       xx V__jo_size, multiple
-      xx literal, current_free_address$local_data_heap
+      xx literal, current_free_address$local_data_vector
       xx add_save
       xx end
    #+end_src
@@ -6347,7 +6376,7 @@
         ;; @:address 16
         xx literal, 1, local_data_allocate__jo
         xx literal, 16
-        xx   literal, current_free_address$local_data_heap
+        xx   literal, current_free_address$local_data_vector
         xx   fetch, swap
         xx local_data_allocate__byte
 
@@ -6355,7 +6384,7 @@
 
         ;; @:address 32
         xx literal, 32
-        xx   literal, current_free_address$local_data_heap
+        xx   literal, current_free_address$local_data_vector
         xx   fetch, swap
         xx local_data_allocate__byte
         xx literal, (0 + jo_size + 16), n_save_local_data
@@ -6707,13 +6736,24 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "initialize-local-variable", initialize_local_variable
       ;; << -- >>
-      xx literal, M__local_variable_save_string,  push_dispatch_word_stack
-      xx literal, local_variable_save_string?,    push_dispatch_word_stack
-      xx literal, M__local_variable_fetch_string, push_dispatch_word_stack
-      xx literal, local_variable_fetch_string?,   push_dispatch_word_stack
+      xx literal, M__local_variable_save_string,  push_syntax_stack
+      xx literal, local_variable_save_string?,    push_syntax_stack
+      xx literal, M__local_variable_fetch_string, push_syntax_stack
+      xx literal, local_variable_fetch_string?,   push_syntax_stack
       xx end
    #+end_src
 ** ----------------------------------
+** *local-data-heap*
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$local_data_heap = 1024 * 1024 * jo_size
+
+   address$local_data_heap labeling
+      preserve size$local_data_heap
+
+   current_free_address$local_data_heap:
+      xx address$local_data_heap
+   #+end_src
 * -----------------------------------
 * some global variable
 ** platform
@@ -6762,13 +6802,10 @@
    last_link = link
    #+end_src
 ** ----------------------------------
-** size$un_initialized_memory
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
-   #+end_src
-** ----------------------------------
 ** un_initialized_memory              :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
+   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+
    match =linux, platform {
 
    segment readable writeable

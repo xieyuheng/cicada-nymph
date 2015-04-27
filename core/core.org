@@ -3,21 +3,37 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** more and better report
+   * syntax defined 
+     and syntax useing
 ** wrap more syscalls
-** nested load-file
-   * a stack of allocate buffers in another local-data-heap
+** about load-file
+   * nested load-file
+     a stack of allocate buffers in another local-data-heap
      the previous local-data-heap maybe should be called local-data-vector
-** [really needed] error handling for io function
-   * write-file 可能遇到磁盤滿載的情況
-** fixnum in other base
-** round-heap for string literal in REPL
-** more design about the command-line-interface
+   * load-file should maintain a list of loaded files
+     what else meta data should be maintained ?
+     can them make up a well module system ?
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
      這樣就能實現
      1. little-tester
      2. 在不同的平臺下執行不同的代碼
+** debug-REPL
+** [really needed] error handling for io function
+   * write-file 可能遇到磁盤滿載的情況
+** fixnum in other base
+** round-heap for string literal in REPL
+   * 使用新的語法擴展機制
+     這在於對 '"' 這個語關鍵詞的變更
+   * 也就是說
+     還是要實現這個語法兩次了
+   * 也就是說在編譯器開始執行的時候
+     會入棧一些編譯器所需要用到的語法
+     而運行結束之後
+     又把這些語法出棧
+** more design about the command-line-interface
 ** little tester
 ** be able to switch REPL
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
@@ -35,7 +51,7 @@
 ** notation
    * use ","
 ** data section in cicada-nymph
-* -----------------------------------
+* ===================================
 * misc
   #+begin_src cicada-nymph :tangle core.cn
   : cr << cr denotes carriage return >>
@@ -671,6 +687,7 @@
    #+end_src
 * -----------------------------------
 * port
+** 記 關於輸入輸出
 * file-tree
 ** 記 關於接口
    * 底層的 IO 函數我還不知道應該如何設計
@@ -1344,7 +1361,7 @@
        <> command-line,unknow-function
    ; define-function
    #+end_src
-* the-story-begin
+* *the-story-begin*
   #+begin_src cicada-nymph :tangle core.cn
   : the-story-begin
     << -- >>

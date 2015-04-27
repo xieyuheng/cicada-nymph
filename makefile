@@ -10,67 +10,89 @@ CICADADIR ?= $(HOME)/.cicada
 
 help:
 	@
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m   dependencies					     \e[0m "
-	echo -e " \e[33;1m     fasm   to compile				     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m   makefile functions					     \e[0m "
-	echo -e " \e[33;1m     all						     \e[0m "
-	echo -e " \e[33;1m	 linux64					     \e[0m "
-	echo -e " \e[33;1m	 linux32					     \e[0m "
-	echo -e " \e[33;1m     clean						     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m   please read the makefile for more informations	     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
-	echo -e " \e[33;1m   I wish you happy making ^-^			     \e[0m "
-	echo -e " \e[33;1m							     \e[0m "
+	echo -e "\e[33;1m"
+	echo "                                                       "
+	echo "* dependencies                                         "
+	echo "  * fasm                                               "
+	echo "    to compile source code                             "
+	echo "* makefile operations                                  "
+	echo "  * build                                              "
+	echo "    * build-linux64                                    "
+	echo "    * build-linux32                                    "
+	echo "  * tangle                                             "
+	echo "    * tangle-cicada-nymph.org                          "
+	echo "    * tangle-core.org	                             "
+	echo "  * copy-core-file                                     "
+	echo "    * copy-core-file-user                              "
+	echo "    * copy-core-file-system                            "
+	echo "  * install                                            "
+	echo "  * clean                                              "
+	echo "                                                       "
+	echo "* I wish you happy making ^-^                          "
+	echo "  please read the makefile for more informations       "
+	echo "                                                       "
+	echo -e "\e[0m"
 
-all:
+build: build-linux64 build-linux32
+build-linux64:
 	@
-	echo -e "\e[33;1m [linux64] \e[0m " &&\
+	echo -e "\e[33;1m"
+	echo "* build-linux64"
+	echo -e "\e[0m"
 	echo "define platform linux" >	platform-configuration.inc &&\
 	echo "define machine  64bit" >> platform-configuration.inc &&\
-	fasm -m 256000 cicada-nymph.fasm cn &&\
-	echo -e "\e[33;1m [linux32] \e[0m " &&\
+	fasm -m 256000 cicada-nymph.fasm cn
+build-linux32:
+	@
+	echo -e "\e[33;1m"
+	echo "* build-linux32"
+	echo -e "\e[0m"
 	echo "define platform linux" >	platform-configuration.inc &&\
 	echo "define machine  32bit" >> platform-configuration.inc &&\
 	fasm -m 256000 cicada-nymph.fasm cn32
 
-user-copy-core-file:
+tangle: tangle-cicada-nymph.org tangle-core.org
+tangle-cicada-nymph.org:
 	@
-	echo -e "\e[33;1m [copy-core-file--user] \e[0m " &&\
-	install -D --mode=664 core/core.cn -t "$(CICADADIR)"
+	echo -e "\e[33;1m"
+	echo "* tangle-cicada-nymph.org"
+	echo -e "\e[0m"
+	./tangle.el
+tangle-core.org:
+	@
+	cd core &&\
+	echo -e "\e[33;1m" &&\
+	echo "* tangle-core.org" &&\
+	echo -e "\e[0m" &&\
+	./tangle.el
 
-system-copy-core-file:
+copy-core-file: copy-core-file-user copy-core-file-system
+copy-core-file-user:
 	@
-	echo -e "\e[33;1m [copy-core-file--system] \e[0m " &&\
+	echo -e "\e[33;1m"
+	echo "* copy-core-file--user"
+	echo -e "\e[0m"
+	install -D --mode=664 core/core.cn -t "$(CICADADIR)"
+copy-core-file-system:
+	@
+	echo -e "\e[33;1m"
+	echo "* copy-core-file--system"
+	echo -e "\e[0m"
 	install -D --mode=664 core/core.cn -t "$(SYSTEM_CICADADIR)"
 
 install:
 	@
-	echo -e "\e[33;1m [install] \e[0m " &&\
+	echo -e "\e[33;1m"
+	echo "* install"
+	echo -e "\e[0m"
 	install -D --mode=775 cn -t "$(BINDIR)"
 	install -D --mode=775 cn32 -t "$(BINDIR)"
 
-linux64:
-	@
-	echo -e "\e[33;1m [linux64] \e[0m " &&\
-	echo "define platform linux" >	platform-configuration.inc &&\
-	echo "define machine  64bit" >> platform-configuration.inc &&\
-	fasm -m 256000 cicada-nymph.fasm cn
-
-linux32:
-	@
-	echo -e "\e[33;1m [linux32] \e[0m " &&\
-	echo "define platform linux" >	platform-configuration.inc &&\
-	echo "define machine  32bit" >> platform-configuration.inc &&\
-	fasm -m 256000 cicada-nymph.fasm cn32
-
 clean:
 	@
-	echo -e "\e[33;1m [clean] \e[0m"
+	echo -e "\e[33;1m"
+	echo "* clean"
+	echo -e "\e[0m"
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~
 	rm cn
 	rm cn32

@@ -106,9 +106,11 @@ current_free_address$un_initialized_memory = address$un_initialized_memory
 labeling  equ = current_free_address$un_initialized_memory
 preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
 
-preserve 64 * jo_size
+size$argument_stack = 1024 * 1024 * jo_size
+
+   preserve 64 * jo_size
 address$argument_stack labeling
-   preserve 1024 * 1024 * jo_size
+   preserve size$argument_stack
 
 match =64bit, machine {
 
@@ -180,9 +182,11 @@ macro pop_argument_stack register \{
 
 }
 
-preserve 64 * jo_size
+size$return_stack = 1024 * 1024 * jo_size
+
+   preserve 64 * jo_size
 address$return_stack labeling
-   preserve 1024 * 1024 * jo_size
+   preserve size$return_stack
 
 match =64bit, machine {
 
@@ -384,7 +388,7 @@ jo:
 }
 
 explain$function:
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_data_vector]
    push_return_stack rbx
    add rax, jo_size
    push_return_stack rax
@@ -461,7 +465,7 @@ jo:
 }
 
 explain$macro:
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_data_vector]
    push_return_stack rbx
    add rax, jo_size
    push_return_stack rax
@@ -522,7 +526,7 @@ explain$exception:
    pop_return_stack rax
    mov pointer$argument_stack, rax
 
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_data_vector]
    push_return_stack rbx
 
    add rsi, jo_size
@@ -570,7 +574,7 @@ explain$exception:
    pop_return_stack rax
    mov [pointer$argument_stack], rax
 
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_data_vector]
    push_return_stack rbx
 
    add rsi, jo_size
@@ -700,7 +704,7 @@ define_function "variable-jo?", variable_jo?
 define_primitive_function "end", end
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_data_heap], rax
+   mov [current_free_address$local_data_vector], rax
    next
 
 match =64bit, machine {
@@ -708,7 +712,7 @@ match =64bit, machine {
 define_primitive_function "<>", taca
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_data_heap], rax
+   mov [current_free_address$local_data_vector], rax
    mov rax, [rbx]
    jmp qword [rax]
 }
@@ -719,7 +723,7 @@ match =32bit, machine {
 define_primitive_function "<>", taca
    pop_return_stack ebx
    pop_return_stack ecx
-   mov [current_free_address$local_data_heap], ecx
+   mov [current_free_address$local_data_vector], ecx
    mov eax, [ebx]
    jmp dword [eax]
 
@@ -729,7 +733,7 @@ define_primitive_function "<>", taca
 ;; define_primitive_function "<>", taca
 ;;    pop_return_stack ebx
 ;;    pop_return_stack eax
-;;    mov [current_free_address$local_data_heap], eax
+;;    mov [current_free_address$local_data_vector], eax
 ;;    mov eax, [ebx]
 ;;    jmp dword [eax]
 
@@ -2624,61 +2628,6 @@ define_primitive_function "read-port", read_port
 
 }
 
-address$path_file?:
-   db 0
-
-define_function "path-file?", path_file?
-   ;; << path[address, length] -- bool >>
-   xx open_input_port
-   xx dup, negative?, false?branch, 4
-   xx   drop
-   xx   false
-   xx   end
-   xx dup
-   xx literal, address$path_file?
-   xx literal, 1
-   xx read_port
-   xx swap, close_port
-   xx positive?, false?branch, 3
-   xx   true
-   xx   end
-   xx false
-   xx end
-
-buffer$load_first_file labeling
-  preserve 128 * 1024
-
-define_function "load-first-file", load_first_file
-   ;; << name-string[address, length] -- unknown >>
-   xx open_input_port
-   xx dup
-   xx   literal, buffer$load_first_file ;; buffer
-   xx   literal, 1024 * 1024      ;; length
-   xx   read_port
-   xx swap, close_port
-   xx dup, positive?, false?branch, (.error-$)/jo_size
-   xx   literal, buffer$load_first_file
-   xx   swap
-   xx   eval_string__ready
-   xx   end
-.error:
-   xx error_report__load_first_file
-   xx write_integer
-   xx literal, 10, write_byte
-   xx end
-
-define_function "error-report,load-file", error_report__load_first_file
-   ;; << -- >>
-   xx literal, string$error_report__load_first_file
-   xx literal, length$error_report__load_first_file
-   xx write_string
-   xx end
-
-string$error_report__load_first_file:
-   db "* (load-file) meets error  (read-port) error code : "
-.end:
-length$error_report__load_first_file = (.end - string$error_report__load_first_file)
-
 match =linux, platform {
 
 define_function "init-operating-system-environment", init_operating_system_environment
@@ -2998,6 +2947,61 @@ define_function "get-path,loaded-core-file", get_path__loaded_core_file
 
 }
 
+address$path_file?:
+   db 0
+
+define_function "path-file?", path_file?
+   ;; << path[address, length] -- bool >>
+   xx open_input_port
+   xx dup, negative?, false?branch, 4
+   xx   drop
+   xx   false
+   xx   end
+   xx dup
+   xx literal, address$path_file?
+   xx literal, 1
+   xx read_port
+   xx swap, close_port
+   xx positive?, false?branch, 3
+   xx   true
+   xx   end
+   xx false
+   xx end
+
+buffer$load_first_file labeling
+  preserve 128 * 1024
+
+define_function "load-first-file", load_first_file
+   ;; << name-string[address, length] -- unknown >>
+   xx open_input_port
+   xx dup
+   xx   literal, buffer$load_first_file ;; buffer
+   xx   literal, 1024 * 1024      ;; length
+   xx   read_port
+   xx swap, close_port
+   xx dup, positive?, false?branch, (.error-$)/jo_size
+   xx   literal, buffer$load_first_file
+   xx   swap
+   xx   eval_string__ready
+   xx   end
+.error:
+   xx error_report__load_first_file
+   xx write_integer
+   xx literal, 10, write_byte
+   xx end
+
+define_function "error-report,load-file", error_report__load_first_file
+   ;; << -- >>
+   xx literal, string$error_report__load_first_file
+   xx literal, length$error_report__load_first_file
+   xx write_string
+   xx end
+
+string$error_report__load_first_file:
+   db "* (load-file) meets error  (read-port) error code : "
+.end:
+length$error_report__load_first_file = (.end - string$error_report__load_first_file)
+
 match =linux, platform {
 
 define_function "load-core-file", load_core_file
@@ -3254,7 +3258,7 @@ __syscall_with_too_many:
 
 define_function "initialization", initialization
    ;; << -- >>
-   xx initialize_dispatch_word_stack
+   xx initialize_syntax_stack
    xx initialize_local_variable
 match =linux, platform {
    xx initialize_system
@@ -4018,6 +4022,120 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
+size$syntax_stack = 1024 * jo_size
+
+   preserve 64 * jo_size
+address$syntax_stack labeling
+   preserve size$syntax_stack
+
+pointer$syntax_stack:
+   xx address$syntax_stack
+
+match =64bit, machine {
+
+define_primitive_function "push-syntax-stack", push_syntax_stack
+   ;; argument-stack -> syntax-stack
+   pop_argument_stack rax
+   mov rbx, [pointer$syntax_stack]
+   mov [rbx], rax
+   add qword [pointer$syntax_stack], jo_size
+   next
+
+define_primitive_function "pop-syntax-stack", pop_syntax_stack
+   ;; syntax-stack -> argument-stack
+   sub qword [pointer$syntax_stack], jo_size
+   mov rbx, [pointer$syntax_stack]
+   mov rax, [rbx]
+   push_argument_stack rax
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "push-syntax-stack", push_syntax_stack
+   ;; argument-stack -> syntax-stack
+   pop_argument_stack rax
+   mov rsi, [pointer$syntax_stack]
+   mov [rsi], rax
+   add dword [pointer$syntax_stack], jo_size
+   next
+
+define_primitive_function "pop-syntax-stack", pop_syntax_stack
+   ;; syntax-stack -> argument-stack
+   sub dword [pointer$syntax_stack], jo_size
+   mov rsi, [pointer$syntax_stack]
+   mov rax, [rsi]
+   push_argument_stack rax
+   next
+
+}
+
+match =64bit, machine {
+
+define_primitive_function "clear-syntax-stack", clear_syntax_stack
+   ;; << -- >>
+   mov qword [pointer$syntax_stack], address$syntax_stack
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "clear-syntax-stack", clear_syntax_stack
+   ;; << -- >>
+   mov eax, address$syntax_stack
+   mov dword [pointer$syntax_stack], eax;address$syntax_stack
+   next
+
+}
+
+define_function "find-syntax-stack", find_syntax_stack
+   ;; << word[address, length]
+   ;;    -- jo, true
+   ;;    -- false >>
+   xx literal, pointer$syntax_stack, fetch
+   xx literal, cursor$find_syntax_stack, save
+   xx find_syntax_stack__loop
+   xx end
+
+cursor$find_syntax_stack:
+   xx 0
+
+define_function "find-syntax-stack,loop", find_syntax_stack__loop
+   ;; << word[address, length]
+   ;;    -- jo, true
+   ;;    -- false >>
+   xx literal, cursor$find_syntax_stack, fetch
+   xx literal, address$syntax_stack
+   xx equal?, false?branch, 4
+   xx   drop2
+   xx   false
+   xx   end
+   xx dup2
+   xx literal, cursor$find_syntax_stack, fetch
+   xx V__jo_size, subtraction, fetch
+   xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
+   xx   drop2
+   xx   literal, cursor$find_syntax_stack, fetch
+   xx   V__jo_size, subtraction
+   xx   V__jo_size, subtraction, fetch
+   xx   true
+   xx   end
+.not_found:
+   xx literal, cursor$find_syntax_stack, fetch
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx literal, cursor$find_syntax_stack, save
+   xx taca, find_syntax_stack__loop
+
+define_function "initialize-syntax-stack", initialize_syntax_stack
+   ;; << -- >>
+   xx clear_syntax_stack
+   xx literal, M__integer_string, push_syntax_stack
+   xx literal, integer_string?, push_syntax_stack
+   xx end
+
 size$jo_heap = 1024 * 1024 * jo_size
 
 define_variable "*jo-heap*", V__jo_heap
@@ -4078,14 +4196,14 @@ define_function "make-jojo,loop", make_jojo__loop
    xx xxswapxx
    xx string_head__word
    ;; << tail[address, length], head[address, length] >>
-   xx make_jojo__dispatch_word
+   xx make_jojo__dispatch_syntax_word
    xx taca, make_jojo__loop
 
-define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
-   xx find_dispatch_word_stack, true?, false?branch, 3
+   xx find_syntax_stack, true?, false?branch, 3
    xx   execute_jo
    xx   end
    xx dup2
@@ -4126,120 +4244,6 @@ string$undefined_word_report__for_make_jojo:
    db "* (make-jojo) meets undefined word : "
 .end:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
-
-size$dispatch_word_stack = 1024 * jo_size
-
-   preserve 64 * jo_size
-address$dispatch_word_stack labeling
-   preserve size$dispatch_word_stack
-
-pointer$dispatch_word_stack:
-   xx address$dispatch_word_stack
-
-match =64bit, machine {
-
-define_primitive_function "push-dispatch-word-stack", push_dispatch_word_stack
-   ;; argument-stack -> dispatch-word-stack
-   pop_argument_stack rax
-   mov rbx, [pointer$dispatch_word_stack]
-   mov [rbx], rax
-   add qword [pointer$dispatch_word_stack], jo_size
-   next
-
-define_primitive_function "pop-dispatch-word-stack", pop_dispatch_word_stack
-   ;; dispatch-word-stack -> argument-stack
-   sub qword [pointer$dispatch_word_stack], jo_size
-   mov rbx, [pointer$dispatch_word_stack]
-   mov rax, [rbx]
-   push_argument_stack rax
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "push-dispatch-word-stack", push_dispatch_word_stack
-   ;; argument-stack -> dispatch-word-stack
-   pop_argument_stack rax
-   mov rsi, [pointer$dispatch_word_stack]
-   mov [rsi], rax
-   add dword [pointer$dispatch_word_stack], jo_size
-   next
-
-define_primitive_function "pop-dispatch-word-stack", pop_dispatch_word_stack
-   ;; dispatch-word-stack -> argument-stack
-   sub dword [pointer$dispatch_word_stack], jo_size
-   mov rsi, [pointer$dispatch_word_stack]
-   mov rax, [rsi]
-   push_argument_stack rax
-   next
-
-}
-
-match =64bit, machine {
-
-define_primitive_function "clear-dispatch-word-stack", clear_dispatch_word_stack
-   ;; << -- >>
-   mov qword [pointer$dispatch_word_stack], address$dispatch_word_stack
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "clear-dispatch-word-stack", clear_dispatch_word_stack
-   ;; << -- >>
-   mov eax, address$dispatch_word_stack
-   mov dword [pointer$dispatch_word_stack], eax;address$dispatch_word_stack
-   next
-
-}
-
-define_function "find-dispatch-word-stack", find_dispatch_word_stack
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx literal, pointer$dispatch_word_stack, fetch
-   xx literal, cursor$find_dispatch_word_stack, save
-   xx find_dispatch_word_stack__loop
-   xx end
-
-cursor$find_dispatch_word_stack:
-   xx 0
-
-define_function "find-dispatch-word-stack,loop", find_dispatch_word_stack__loop
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx literal, cursor$find_dispatch_word_stack, fetch
-   xx literal, address$dispatch_word_stack
-   xx equal?, false?branch, 4
-   xx   drop2
-   xx   false
-   xx   end
-   xx dup2
-   xx literal, cursor$find_dispatch_word_stack, fetch
-   xx V__jo_size, subtraction, fetch
-   xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-   xx   drop2
-   xx   literal, cursor$find_dispatch_word_stack, fetch
-   xx   V__jo_size, subtraction
-   xx   V__jo_size, subtraction, fetch
-   xx   true
-   xx   end
-.not_found:
-   xx literal, cursor$find_dispatch_word_stack, fetch
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
-   xx literal, cursor$find_dispatch_word_stack, save
-   xx taca, find_dispatch_word_stack__loop
-
-define_function "initialize-dispatch-word-stack", initialize_dispatch_word_stack
-   ;; << -- >>
-   xx clear_dispatch_word_stack
-   xx literal, M__integer_string, push_dispatch_word_stack
-   xx literal, integer_string?, push_dispatch_word_stack
-   xx end
 
 define_macro "address", M__address
    ;; << string[address, length] -- string[address, length] >>
@@ -4547,24 +4551,24 @@ define_function "save-into,jo-heap", save_into__jo_heap
    xx add_save
    xx end
 
-size$local_data_heap = 3 * 1024 * 1024
+size$local_data_vector = 1024 * 1024 * jo_size
 
-address$local_data_heap labeling
-   preserve size$local_data_heap
+address$local_data_vector labeling
+   preserve size$local_data_vector
 
-current_free_address$local_data_heap:
-   xx address$local_data_heap
+current_free_address$local_data_vector:
+   xx address$local_data_vector
 
 define_function "local-data-allocate,byte", local_data_allocate__byte
    ;; << number -- >>
-   xx literal, current_free_address$local_data_heap
+   xx literal, current_free_address$local_data_vector
    xx add_save
    xx end
 
 define_function "local-data-allocate,jo", local_data_allocate__jo
    ;; << number -- >>
    xx V__jo_size, multiple
-   xx literal, current_free_address$local_data_heap
+   xx literal, current_free_address$local_data_vector
    xx add_save
    xx end
 
@@ -4887,11 +4891,19 @@ define_function "local-variable-table,find,loop", local_variable_table__find__lo
 
 define_function "initialize-local-variable", initialize_local_variable
    ;; << -- >>
-   xx literal, M__local_variable_save_string,  push_dispatch_word_stack
-   xx literal, local_variable_save_string?,    push_dispatch_word_stack
-   xx literal, M__local_variable_fetch_string, push_dispatch_word_stack
-   xx literal, local_variable_fetch_string?,   push_dispatch_word_stack
+   xx literal, M__local_variable_save_string,  push_syntax_stack
+   xx literal, local_variable_save_string?,    push_syntax_stack
+   xx literal, M__local_variable_fetch_string, push_syntax_stack
+   xx literal, local_variable_fetch_string?,   push_syntax_stack
    xx end
+
+size$local_data_heap = 1024 * 1024 * jo_size
+
+address$local_data_heap labeling
+   preserve size$local_data_heap
+
+current_free_address$local_data_heap:
+   xx address$local_data_heap
 
 define_function "platform", the_platform
    xx literal, string$platform
