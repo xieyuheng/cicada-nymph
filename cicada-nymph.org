@@ -2,7 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* implement a macro to get a address of a word
+* a way to exit REPLs
 * local-data-vector & local-data-heap
   * the current local-data-heap is renamed to local-data-vector
   * local-data-vector for naming
@@ -11,7 +11,6 @@
     the offset is calculated at compile time
   * for local-data-heap
     the offset is calculated at run time
-* a way to exit REPLs
 * todo
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
@@ -5994,6 +5993,8 @@
       ;;    old V__first_jo_in_dictionary
       ;;    string[address, length]
       ;;    -- >>
+      xx sub_syntax__make_jojo
+
       xx literal, string$undo_make_jojo_report
       xx literal, length$undo_make_jojo_report
       xx write_string
@@ -6061,7 +6062,6 @@
       xx write_undefined_word_report__for_make_jojo
       xx write_string
       xx literal, 10, write_byte
-      xx sub_syntax__make_jojo
       xx !undo_make_jojo
 
    define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
@@ -6786,7 +6786,6 @@
       xx       save_into__jo_heap
       xx   end
    .not_found:
-      ;; ><><>< exception handling
       xx write_local_variable_not_bound_report
       xx write_string
       xx literal, 10, write_byte

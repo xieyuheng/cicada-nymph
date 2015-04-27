@@ -4506,6 +4506,8 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    ;;    old V__first_jo_in_dictionary
    ;;    string[address, length]
    ;;    -- >>
+   xx sub_syntax__make_jojo
+
    xx literal, string$undo_make_jojo_report
    xx literal, length$undo_make_jojo_report
    xx write_string
@@ -4565,7 +4567,6 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx write_undefined_word_report__for_make_jojo
    xx write_string
    xx literal, 10, write_byte
-   xx sub_syntax__make_jojo
    xx !undo_make_jojo
 
 define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
@@ -4917,7 +4918,6 @@ define_macro "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fet
    xx       save_into__jo_heap
    xx   end
 .not_found:
-   ;; ><><>< exception handling
    xx write_local_variable_not_bound_report
    xx write_string
    xx literal, 10, write_byte

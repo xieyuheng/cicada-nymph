@@ -37,6 +37,20 @@
   end
 ; define-macro
 
+: jo
+  << string[address, length] --
+     string[address, length] >>
+  *literal* save-into,jo-heap
+  dup2
+  string-head,word find if
+    save-into,jo-heap
+    string-tail,word
+    end
+  then
+  "* (make-jojo (jo)) the word follows (jo) is undefined : " .s
+  !undo-make-jojo
+; define-macro
+
 : execute-word
   << word[address, length] -- unknown >>
   dup2 integer-string? if
@@ -886,7 +900,7 @@ allocate-memory
   "  every time after a word is executed" .s
   "  the argument-stack get printed" .s
   print-argument-stack,pretty
-  "stack-REPL" find drop
+  jo stack-REPL
   reset-top-level-REPL
 ; define-function
 
@@ -898,7 +912,7 @@ allocate-memory
   hi
   "* you are in the (basic-REPL)" .s
   "  this REPL does not print any thing automaticly" .s
-  "basic-REPL" find drop
+  jo basic-REPL
   reset-top-level-REPL
 ; define-function
 
