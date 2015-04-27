@@ -4111,6 +4111,146 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
+define_macro "address", M__address
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, address
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx find, false?branch, 4
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_undefined_word_report__for_address
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_address
+   xx literal, length$undefined_word_report__for_address
+   xx write_string
+   xx end
+
+string$undefined_word_report__for_address:
+   db "* (make-jojo (address)) the word follows (address) is undefined : "
+.end:
+length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
+
+define_macro "branch", M__branch
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_branch
+   xx literal, length$not_integer_string_report__for_branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_branch:
+   db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
+.end:
+length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
+
+define_macro "false?branch", M__false?branch
+   ;; << string[address, length] -- string[address, length] >>
+   xx literal, false?branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_false?branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_false?branch
+   xx literal, length$not_integer_string_report__for_false?branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_false?branch:
+   db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
+.end:
+length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
+
+define_macro '"', M__double_quote
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup2
+   xx literal, '"', find_char__string
+   xx false?branch, (.not_found-$)/jo_size
+   xx   xoverxx, subtraction
+   ;;   << string[address, length], length >>
+
+   ;; address
+   xx   literal, literal
+   xx     save_into__jo_heap
+   xx   V__current_free_address__primitive_string, add2
+   xx     save_into__jo_heap
+   xx   xoverxx, over
+   xx     save_into__primitive_string_heap
+
+   ;; length
+   xx   literal, literal
+   xx     save_into__jo_heap
+   xx   dup
+   xx     save_into__jo_heap
+
+   xx   tuck, subtraction
+   xx   xxswapx
+   xx   addition
+   xx   swap
+
+   xx   string_tail__char ;; over the ending double-quote
+   xx   end
+
+   .not_found:
+   xx write_not_integer_string_report__for_double_quote
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_double_quote
+   xx literal, length$not_integer_string_report__for_double_quote
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_double_quote:
+   db "* (make-jojo (double-quote)) can not find the ending double-quote"
+.end:
+length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
+
 size$syntax_set = 1024 * jo_size
 
 address$syntax_set labeling
@@ -4333,6 +4473,33 @@ address$jo_heap labeling
 define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
    xx address$jo_heap
 
+define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+   ;; << string[address, length] -- >>
+   xx dup, V__current_free_address__primitive_string
+   xx save_two_bytes
+
+   xx literal, 2
+   xx address, V__current_free_address__primitive_string
+   xx add_save
+
+   xx tuck
+   xx V__current_free_address__primitive_string
+   xx string_to_buffer!
+
+   xx address, V__current_free_address__primitive_string
+   xx add_save
+   xx end
+
+define_function "save-into,jo-heap", save_into__jo_heap
+   ;; << number -- >>
+   xx V__current_free_address__jo_heap
+   xx save
+
+   xx literal, jo_size
+   xx address, V__current_free_address__jo_heap
+   xx add_save
+   xx end
+
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__primitive_string
    ;;    old V__current_free_address__jo_heap
@@ -4432,170 +4599,30 @@ length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_repo
 define_function "add-syntax,make-jojo", add_syntax__make_jojo
    ;; << -- >>
    xx literal, integer_string?
-   xx literal, M__integer_string
+   xx literal, syntax__integer_string__make_jojo
    xx add_syntax
    xx literal, local_variable_save_string?
-   xx literal, M__local_variable_save_string
+   xx literal, syntax__local_variable_save__make_jojo
    xx add_syntax
    xx literal, local_variable_fetch_string?
-   xx literal, M__local_variable_fetch_string
+   xx literal, syntax__local_variable_fetch__make_jojo
    xx add_syntax
    xx end
 
 define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
    ;; << -- >>
    xx literal, integer_string?
-   xx literal, M__integer_string
+   xx literal, syntax__integer_string__make_jojo
    xx sub_syntax
    xx literal, local_variable_save_string?
-   xx literal, M__local_variable_save_string
+   xx literal, syntax__local_variable_save__make_jojo
    xx sub_syntax
    xx literal, local_variable_fetch_string?
-   xx literal, M__local_variable_fetch_string
+   xx literal, syntax__local_variable_fetch__make_jojo
    xx sub_syntax
    xx end
 
-define_macro "address", M__address
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, address
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx find, false?branch, 4
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_undefined_word_report__for_address
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_address
-   xx literal, length$undefined_word_report__for_address
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_address:
-   db "* (make-jojo (address)) the word follows (address) is undefined : "
-.end:
-length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
-
-define_macro "branch", M__branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_branch
-   xx literal, length$not_integer_string_report__for_branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_branch:
-   db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-
-define_macro "false?branch", M__false?branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, false?branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_false?branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_false?branch
-   xx literal, length$not_integer_string_report__for_false?branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_false?branch:
-   db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
-
-define_macro '"', M__double_quote
-   ;; << string[address, length] -- string[address, length] >>
-   xx dup2
-   xx literal, '"', find_char__string
-   xx false?branch, (.not_found-$)/jo_size
-   xx   xoverxx, subtraction
-   ;;   << string[address, length], length >>
-
-   ;; address
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   V__current_free_address__primitive_string, add2
-   xx     save_into__jo_heap
-   xx   xoverxx, over
-   xx     save_into__primitive_string_heap
-
-   ;; length
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   dup
-   xx     save_into__jo_heap
-
-   xx   tuck, subtraction
-   xx   xxswapx
-   xx   addition
-   xx   swap
-
-   xx   string_tail__char ;; over the ending double-quote
-   xx   end
-
-   .not_found:
-   xx write_not_integer_string_report__for_double_quote
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_double_quote
-   xx literal, length$not_integer_string_report__for_double_quote
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_double_quote:
-   db "* (make-jojo (double-quote)) can not find the ending double-quote"
-.end:
-length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
-
-define_macro "", M__integer_string
+define_macro "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx literal, literal
@@ -4732,33 +4759,6 @@ define_function "define-variable", CICADA__define_variable
    ;; one may wish to do some thing to the string
    xx drop2
    xx save_into__jo_heap
-   xx end
-
-define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-   ;; << string[address, length] -- >>
-   xx dup, V__current_free_address__primitive_string
-   xx save_two_bytes
-
-   xx literal, 2
-   xx address, V__current_free_address__primitive_string
-   xx add_save
-
-   xx tuck
-   xx V__current_free_address__primitive_string
-   xx string_to_buffer!
-
-   xx address, V__current_free_address__primitive_string
-   xx add_save
-   xx end
-
-define_function "save-into,jo-heap", save_into__jo_heap
-   ;; << number -- >>
-   xx V__current_free_address__jo_heap
-   xx save
-
-   xx literal, jo_size
-   xx address, V__current_free_address__jo_heap
-   xx add_save
    xx end
 
 size$local_data_vector = 1024 * 1024 * jo_size
@@ -4898,7 +4898,7 @@ define_function "local-variable-fetch-string?", local_variable_fetch_string?
    xx literal, 0, greater_than?
    xx end
 
-define_macro "", M__local_variable_fetch_string
+define_macro "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
@@ -4959,7 +4959,7 @@ define_function "local-variable-save-string?", local_variable_save_string?
    xx literal, 0, greater_than?
    xx end
 
-define_macro "", M__local_variable_save_string
+define_macro "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx string_tail__char

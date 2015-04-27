@@ -3,11 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * implement a macro to get a address of a word
-* implement all macro by syntax-set
-  * 簡化語法擴展機制 統一使用 棧 來保存語法 以形成對語法的靈活地變更
-  * make_jojo__dispatch_jo is not needed anymore
-* no macro anymore, just function with a prefix to denote that it is a macro
-  * how about exceptions ?
 * local-data-vector & local-data-heap
   * the current local-data-heap is renamed to local-data-vector
   * local-data-vector for naming
@@ -205,8 +200,8 @@
    * a heap like table of string
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
-     這個數據結構被 M__local_variable_save_string
-     和 M__local_variable_fetch_string 所使用
+     這個數據結構被 syntax__local_variable_save__make_jojo
+     和 syntax__local_variable_fetch__make_jojo 所使用
    * 其中保存
      * offset-in-local-data-vector
      * length-of-string
@@ -5510,6 +5505,174 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
+* macro
+** note macro in cicada-nymph
+   * a macro is a function to be called at compile time
+     with a string to be compiled as one argument
+     and do side-effect to store data into memory
+     and return a shorter string
+     [this can be viewed as moving a cursor forward]
+   * a macro should be highlight by text editor in a special way
+** note different from syntax-set
+   * syntax-set is dynamic
+     macro-jo is static
+   * I can not implement macro-jo by syntax-set
+     because I have to use macro-jo in assembly code
+   * note that
+     a function in syntax-set
+     is prefixed by "syntax"
+     but defined as macro
+** address
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_macro "address", M__address
+      ;; << string[address, length] -- string[address, length] >>
+      xx literal, address
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx find, false?branch, 4
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_undefined_word_report__for_address
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
+      ;; << -- >>
+      xx literal, string$undefined_word_report__for_address
+      xx literal, length$undefined_word_report__for_address
+      xx write_string
+      xx end
+
+   string$undefined_word_report__for_address:
+      db "* (make-jojo (address)) the word follows (address) is undefined : "
+   .end:
+   length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
+   #+end_src
+** branch
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_macro "branch", M__branch
+      ;; << string[address, length] -- string[address, length] >>
+      xx literal, branch
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx dup2, integer_string?, false?branch, 5
+      xx   string_to_integer
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_not_integer_string_report__for_branch
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_branch
+      xx literal, length$not_integer_string_report__for_branch
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_branch:
+      db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
+   .end:
+   length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
+   #+end_src
+** false?branch
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_macro "false?branch", M__false?branch
+      ;; << string[address, length] -- string[address, length] >>
+      xx literal, false?branch
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx dup2, integer_string?, false?branch, 5
+      xx   string_to_integer
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_not_integer_string_report__for_false?branch
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_false?branch
+      xx literal, length$not_integer_string_report__for_false?branch
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_false?branch:
+      db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
+   .end:
+   length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
+   #+end_src
+** double-quote
+   * primitive-string-heap is used
+     to allocate string literal in function body
+   * in ASCII encode double-quote is 34
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_macro '"', M__double_quote
+      ;; << string[address, length] -- string[address, length] >>
+      xx dup2
+      xx literal, '"', find_char__string
+      xx false?branch, (.not_found-$)/jo_size
+      xx   xoverxx, subtraction
+      ;;   << string[address, length], length >>
+
+      ;; address
+      xx   literal, literal
+      xx     save_into__jo_heap
+      xx   V__current_free_address__primitive_string, add2
+      xx     save_into__jo_heap
+      xx   xoverxx, over
+      xx     save_into__primitive_string_heap
+
+      ;; length
+      xx   literal, literal
+      xx     save_into__jo_heap
+      xx   dup
+      xx     save_into__jo_heap
+
+      xx   tuck, subtraction
+      xx   xxswapx
+      xx   addition
+      xx   swap
+
+      xx   string_tail__char ;; over the ending double-quote
+      xx   end
+
+      .not_found:
+      xx write_not_integer_string_report__for_double_quote
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_double_quote
+      xx literal, length$not_integer_string_report__for_double_quote
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_double_quote:
+      db "* (make-jojo (double-quote)) can not find the ending double-quote"
+   .end:
+   length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
+   #+end_src
 * syntax-set
 ** note interface
    * values in syntax_set
@@ -5761,8 +5924,10 @@
       xx V__jo_size, addition
       xx taca, sub_syntax__move
    #+end_src
-* function & jojo
-** ----------------------------------
+* jojo-heap
+** note
+   * you can see how the naming convention is used
+     for functions that create structured data into memory
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$jo_heap = 1024 * 1024 * jo_size
@@ -5780,6 +5945,38 @@
    define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
       xx address$jo_heap
    #+end_src
+** save-into,primitive-string-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+      ;; << string[address, length] -- >>
+      xx dup, V__current_free_address__primitive_string
+      xx save_two_bytes
+
+      xx literal, 2
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+
+      xx tuck
+      xx V__current_free_address__primitive_string
+      xx string_to_buffer!
+
+      xx address, V__current_free_address__primitive_string
+      xx add_save
+      xx end
+   #+end_src
+** save-into,jo-heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,jo-heap", save_into__jo_heap
+      ;; << number -- >>
+      xx V__current_free_address__jo_heap
+      xx save
+
+      xx literal, jo_size
+      xx address, V__current_free_address__jo_heap
+      xx add_save
+      xx end
+   #+end_src
+* make-jojo
 ** ----------------------------------
 ** note
    * the make-jojo is a macro dispatcher
@@ -5901,13 +6098,13 @@
    define_function "add-syntax,make-jojo", add_syntax__make_jojo
       ;; << -- >>
       xx literal, integer_string?
-      xx literal, M__integer_string
+      xx literal, syntax__integer_string__make_jojo
       xx add_syntax
       xx literal, local_variable_save_string?
-      xx literal, M__local_variable_save_string
+      xx literal, syntax__local_variable_save__make_jojo
       xx add_syntax
       xx literal, local_variable_fetch_string?
-      xx literal, M__local_variable_fetch_string
+      xx literal, syntax__local_variable_fetch__make_jojo
       xx add_syntax
       xx end
    #+end_src
@@ -5916,179 +6113,20 @@
    define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
       ;; << -- >>
       xx literal, integer_string?
-      xx literal, M__integer_string
+      xx literal, syntax__integer_string__make_jojo
       xx sub_syntax
       xx literal, local_variable_save_string?
-      xx literal, M__local_variable_save_string
+      xx literal, syntax__local_variable_save__make_jojo
       xx sub_syntax
       xx literal, local_variable_fetch_string?
-      xx literal, M__local_variable_fetch_string
+      xx literal, syntax__local_variable_fetch__make_jojo
       xx sub_syntax
       xx end
    #+end_src
 ** ----------------------------------
-** note macro in cicada-nymph
-   * a macro is a function to be called at compile time
-     with a string to be compiled as one argument
-     and do side-effect to store data into memory
-     and return a shorter string
-     [this can be viewed as moving a cursor forward]
-   * a macro should be highlight by text editor in a special way
-** address
+** syntax,integer-string,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "address", M__address
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, address
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx find, false?branch, 4
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_undefined_word_report__for_address
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-      ;; << -- >>
-      xx literal, string$undefined_word_report__for_address
-      xx literal, length$undefined_word_report__for_address
-      xx write_string
-      xx end
-
-   string$undefined_word_report__for_address:
-      db "* (make-jojo (address)) the word follows (address) is undefined : "
-   .end:
-   length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
-   #+end_src
-** branch
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "branch", M__branch
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, branch
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx dup2, integer_string?, false?branch, 5
-      xx   string_to_integer
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_not_integer_string_report__for_branch
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_branch
-      xx literal, length$not_integer_string_report__for_branch
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_branch:
-      db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
-   .end:
-   length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-   #+end_src
-** false?branch
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "false?branch", M__false?branch
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, false?branch
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx dup2, integer_string?, false?branch, 5
-      xx   string_to_integer
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_not_integer_string_report__for_false?branch
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_false?branch
-      xx literal, length$not_integer_string_report__for_false?branch
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_false?branch:
-      db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
-   .end:
-   length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
-   #+end_src
-** double-quote
-   * primitive-string-heap is used
-     to allocate string literal in function body
-   * in ASCII encode double-quote is 34
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro '"', M__double_quote
-      ;; << string[address, length] -- string[address, length] >>
-      xx dup2
-      xx literal, '"', find_char__string
-      xx false?branch, (.not_found-$)/jo_size
-      xx   xoverxx, subtraction
-      ;;   << string[address, length], length >>
-
-      ;; address
-      xx   literal, literal
-      xx     save_into__jo_heap
-      xx   V__current_free_address__primitive_string, add2
-      xx     save_into__jo_heap
-      xx   xoverxx, over
-      xx     save_into__primitive_string_heap
-
-      ;; length
-      xx   literal, literal
-      xx     save_into__jo_heap
-      xx   dup
-      xx     save_into__jo_heap
-
-      xx   tuck, subtraction
-      xx   xxswapx
-      xx   addition
-      xx   swap
-
-      xx   string_tail__char ;; over the ending double-quote
-      xx   end
-
-      .not_found:
-      xx write_not_integer_string_report__for_double_quote
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_double_quote
-      xx literal, length$not_integer_string_report__for_double_quote
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_double_quote:
-      db "* (make-jojo (double-quote)) can not find the ending double-quote"
-   .end:
-   length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
-   #+end_src
-** ----------------------------------
-** M__integer_string
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "", M__integer_string
+   define_macro "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
@@ -6098,6 +6136,7 @@
       xx end
    #+end_src
 ** ----------------------------------
+* define-[function|macro|exception|variable]
 ** note
    * for the following function
      I add the "CICADA__" as prefix
@@ -6139,18 +6178,6 @@
       xx drop, drop, drop
       xx end
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   : addadd add add end ; define-function
-   1 2 3 addadd . << 6 >>
-
-   : add1 1 add end ; define-function
-   1 add1 . << 2 >>
-
-   : negate 0 swap sub end ; define-function
-   1 negate . << -1 >>
-   #+end_src
-** ----------------------------------
 ** define-macro
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-macro", CICADA__define_macro
@@ -6188,7 +6215,6 @@
       xx drop, drop, drop
       xx end
    #+end_src
-** ----------------------------------
 ** define-exception
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-exception", CICADA__define_exception
@@ -6226,10 +6252,8 @@
       xx drop, drop, drop
       xx end
    #+end_src
-** ----------------------------------
-** note
-   * not undo is needed for define-variable
 ** define-variable
+   * not undo is needed for define-variable
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-variable", CICADA__define_variable
       ;; << variable, string[address, length] -- >>
@@ -6256,43 +6280,18 @@
       xx save_into__jo_heap
       xx end
    #+end_src
-** ----------------------------------
-** note
-   * you can see how the naming convention is used
-     for functions that create structured data into memory
-** save-into,primitive-string-heap
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
-      ;; << string[address, length] -- >>
-      xx dup, V__current_free_address__primitive_string
-      xx save_two_bytes
+** test define-function
+   #+begin_src cicada-nymph
+   : addadd add add end ; define-function
+   1 2 3 addadd . << 6 >>
 
-      xx literal, 2
-      xx address, V__current_free_address__primitive_string
-      xx add_save
+   : add1 1 add end ; define-function
+   1 add1 . << 2 >>
 
-      xx tuck
-      xx V__current_free_address__primitive_string
-      xx string_to_buffer!
-
-      xx address, V__current_free_address__primitive_string
-      xx add_save
-      xx end
+   : negate 0 swap sub end ; define-function
+   1 negate . << -1 >>
    #+end_src
-** save-into,jo-heap
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,jo-heap", save_into__jo_heap
-      ;; << number -- >>
-      xx V__current_free_address__jo_heap
-      xx save
-
-      xx literal, jo_size
-      xx address, V__current_free_address__jo_heap
-      xx add_save
-      xx end
-   #+end_src
-** ----------------------------------
-** test
+** test define-variable
    #+begin_src cicada-nymph
    233 : *three* ; define-variable
    : add-three *three* add end ; define-function
@@ -6304,7 +6303,6 @@
    fix-*three*
    1 add-three . << 4 >>
    #+end_src
-** ----------------------------------
 * -----------------------------------
 * local-variable
 ** ----------------------------------
@@ -6767,9 +6765,9 @@
       xx literal, 0, greater_than?
       xx end
    #+end_src
-** M__local_variable_fetch_string
+** syntax,local-variable-fetch,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "", M__local_variable_fetch_string
+   define_macro "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx dup2
@@ -6838,9 +6836,9 @@
       xx literal, 0, greater_than?
       xx end
    #+end_src
-** M__local_variable_save_string
+** syntax,local-variable-save,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "", M__local_variable_save_string
+   define_macro "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx string_tail__char
