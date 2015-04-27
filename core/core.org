@@ -35,7 +35,6 @@
      又把這些語法出棧
 ** more design about the command-line-interface
 ** little tester
-** be able to switch REPL
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
 ** [how] variable must be able to store string
 ** name-hash-table
