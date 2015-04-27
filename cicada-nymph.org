@@ -2,10 +2,12 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* implement a macro to get a address of a word
 * implement all macro by syntax-set
   * 簡化語法擴展機制 統一使用 棧 來保存語法 以形成對語法的靈活地變更
   * make_jojo__dispatch_jo is not needed anymore
 * no macro anymore, just function with a prefix to denote that it is a macro
+  * how about exceptions ?
 * local-data-vector & local-data-heap
   * the current local-data-heap is renamed to local-data-vector
   * local-data-vector for naming
@@ -739,77 +741,6 @@
       ^-^
       is it not ?
 * -----------------------------------
-* helper function in assembly code
-** ----------------------------------
-** __exit_with_TOS                    :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   __exit_with_TOS:
-      pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, linux64_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_zero                   :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   __exit_with_zero:
-      xor linux64_sys_1_rdi, linux64_sys_1_rdi
-      mov linux64_sys_n_rax, linux64_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_six                    :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   __exit_with_six:
-      mov linux64_sys_1_rdi, 6
-      mov linux64_sys_n_rax, linux64_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** ----------------------------------
-** __exit_with_TOS                    :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __exit_with_TOS:
-      pop_argument_stack linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_zero                   :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __exit_with_zero:
-      xor linux32_sys_1_ebx, linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_six                    :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __exit_with_six:
-      mov linux32_sys_1_ebx, 6
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** ----------------------------------
-* -----------------------------------
 * macro for jo & explainer
 ** ----------------------------------
 ** link
@@ -1354,6 +1285,27 @@
    #+end_src
 * -----------------------------------
 * end & taca
+** 記 結尾珠
+   * end 和 taca 這兩個結尾珠代表將執行退出操作
+     在退出時
+     它們將會從返回棧頂取出三個值
+     從棧頂開始數 這三個值分別是
+     1. 結束執行的一串珠珠本身
+        這個值是被捨棄的
+     2. local_data_vector 中的一個地址
+        用於重置
+        [current_free_address$local_data_vector]
+     3. local_data_heap 中的一個地址
+        用於重置
+        [current_free_address$local_data_heap]
+   * end 和 taca 的區別在於
+     * end
+       入返回棧一串新的珠珠
+       [三個值一組的存在]
+     * taca
+       用一串新的珠珠
+       代替返回棧頂的一串珠珠
+       [三個值一組的存在]
 ** end
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "end", end
@@ -1452,74 +1404,276 @@
       it is clear how the example function
       is actually a loop now
 * -----------------------------------
-* *the-story-begin*
-** begin_to_interpret_threaded_code   :64bit:linux:
+* helper function in assembly
+** ----------------------------------
+** __exit_with_TOS                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
+
+   __exit_with_TOS:
+      pop_argument_stack linux64_sys_1_rdi
+      mov linux64_sys_n_rax, linux64_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __exit_with_zero                   :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __exit_with_zero:
+      xor linux64_sys_1_rdi, linux64_sys_1_rdi
+      mov linux64_sys_n_rax, linux64_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __exit_with_six                    :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __exit_with_six:
+      mov linux64_sys_1_rdi, 6
+      mov linux64_sys_n_rax, linux64_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __print_string                     :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __print_string:
+      ;; << address, length -- >>
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      pop_argument_stack linux64_sys_3_rdx     ;; max length to be write
+      pop_argument_stack linux64_sys_2_rsi     ;; address
+      mov linux64_sys_1_rdi, 1                 ;; stdout
+      mov linux64_sys_n_rax, linux64_syscall_write
+      syscall
+      ret
+
+   }
+   #+end_src
+** __reset_argument_stack             :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __reset_argument_stack:
+      mov pointer$argument_stack,  address$argument_stack
+      ret
+
+   }
+   #+end_src
+** __reset_return_stack               :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __reset_return_stack:
+      mov pointer$return_stack,    address$return_stack
+      ret
+
+   }
+   #+end_src
+** ----------------------------------
+** __exit_with_TOS                    :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __exit_with_TOS:
+      pop_argument_stack linux32_sys_1_ebx
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __exit_with_zero                   :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __exit_with_zero:
+      xor linux32_sys_1_ebx, linux32_sys_1_ebx
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __exit_with_six                    :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __exit_with_six:
+      mov linux32_sys_1_ebx, 6
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
+   #+end_src
+** __print_string                     :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __print_string:
+      ;; << address, length -- >>
+      ;; write can not just write the char in al to stdout
+      ;; write needs the address of the byte to write
+      pop_argument_stack linux32_sys_3_edx     ;; max length to be write
+      pop_argument_stack linux32_sys_2_ecx     ;; address
+      mov linux32_sys_1_ebx, 1                 ;; stdout
+      mov linux32_sys_n_eax, linux32_syscall_write
+      syscall
+      ret
+
+   }
+   #+end_src
+** __reset_argument_stack             :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __reset_argument_stack:
+      mov rax, address$argument_stack
+      mov [pointer$argument_stack], rax
+      ret
+
+   }
+   #+end_src
+** __reset_return_stack               :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   __reset_return_stack:
+      mov rax, address$return_stack
+      mov [pointer$return_stack], rax
+      ret
+
+   }
+   #+end_src
+** ----------------------------------
+** __reset_local_data_vector
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   __reset_local_data_vector:
+      mov rax, address$local_data_vector
+      mov [current_free_address$local_data_vector], rax
+      ret
+   #+end_src
+** __reset_local_data_heap
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   __reset_local_data_heap:
+      mov rax, address$local_data_heap
+      mov [current_free_address$local_data_heap], rax
+      ret
+   #+end_src
+** ----------------------------------
+* -----------------------------------
+* *the-story-begin*
+** ----------------------------------
+** begin_to_interpret_threaded_code   :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux, platform {
 
    begin_to_interpret_threaded_code:
 
       cld ;; set DF = 0, then rsi and rdi are incremented
 
-      mov pointer$argument_stack,  address$argument_stack
-      mov pointer$return_stack,    address$return_stack
+      call __reset_argument_stack
+      call __reset_return_stack
+
+      pop_return_stack rax
+      mov rax, report_return_stack_is_empty_and_exit
+      push_return_stack rax
+
+      mov rax, address$local_data_vector
+      push_return_stack rax
 
       mov rax, first_jojo
       push_return_stack rax
       next
 
-   }
-   #+end_src
-** begin_to_interpret_threaded_code   :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   begin_to_interpret_threaded_code:
-
-      cld ;; set DF = 0, then rsi and rdi are incremented
-
-      mov eax, first_jojo
-      push_return_stack eax
-      next
-
-   }
-   #+end_src
-** first_jojo
-   * you can use the following "xx little_test"
-     to do some little tests
-   #+begin_src fasm :tangle cicada-nymph.fasm
    first_jojo:
-      ;; xx welcome
       ;; xx little_test
       xx initialization
       xx load_core_file
-      xx basic_REPL
-   #+end_src
-** welcome
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "welcome", welcome
-      ;; << -- >>
-      xx literal, string$welcome_to_cicada_nymph
-      xx literal, length$welcome_to_cicada_nymph
-      xx write_string
-      xx end
+      xx taca, basic_REPL
 
-   string$welcome_to_cicada_nymph:
-      db "* welcome to cicada-nymph ^-^"
-      db 10
-   .end:
-   length$welcome_to_cicada_nymph = (.end - string$welcome_to_cicada_nymph)
+   }
    #+end_src
+** ----------------------------------
+** note top-level-REPL
+   * a top-level-REPL always lives at the bottom of return-stack
+     #+begin_src return-stack
+                     (function)
+                     (function)
+     - [@] - [@] - [ (taca) ]
+                     (top-level-REPL)
+     #+end_src
+   * right below the return-stack
+     there is a (report-return-stack-is-empty-and-exit)
+     so actually
+     #+begin_src return-stack
+                                                                   (function)
+                                                                   (function)
+     - [ (report-return-stack-is-empty-and-exit) ] - [@] - [@] - [ (taca) ]
+                                                                   (top-level-REPL)
+     #+end_src
+   * when you say bye to a top-level-REPL
+     (report-return-stack-is-empty-and-exit) will be executed
+** report-return-stack-is-empty-and-exit
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$report_return_stack_is_empty_and_exit:
+      db "* the return-stack empty", 10
+      db "* good bye ^-^/", 10
+   .end:
+   length$report_return_stack_is_empty_and_exit = (.end - string$report_return_stack_is_empty_and_exit)
+
+   define_primitive_function "report-return-stack-is-empty-and-exit", report_return_stack_is_empty_and_exit
+      ;; << -- >>
+      mov rax, string$report_return_stack_is_empty_and_exit
+      mov rcx, length$report_return_stack_is_empty_and_exit
+      push_argument_stack rax
+      push_argument_stack rcx
+      call __print_string
+      call __exit_with_zero
+   #+end_src
+** reset-top-level-REPL
+   * local_data_vector & local_data_heap
+     will get reseted in by this function
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
+      ;; << top_level_REPL [jo] -- >>
+      call __reset_return_stack
+      call __reset_local_data_vector
+      call __reset_local_data_heap
+      pop_argument_stack rax
+      jmp qword [rax]
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
+      ;; << top_level_REPL [jo] -- >>
+      call __reset_return_stack
+      call __reset_local_data_vector
+      call __reset_local_data_heap
+      pop_argument_stack rax
+      jmp dword [rax]
+
+   }
+   #+end_src
+** ----------------------------------
 ** exit_with_TOS a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bye", exit_with_TOS
       call __exit_with_TOS
    #+end_src
+** ----------------------------------
 ** little_test
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "", V__little_test_number
       xx 3
-
 
    define_function "little_test", little_test
 
@@ -1651,6 +1805,7 @@
       ;; xx basic_REPL
       ;;;; 1 2 add .
    #+end_src
+** ----------------------------------
 * -----------------------------------
 * the stack
 ** ----------------------------------
@@ -4381,10 +4536,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "initialization", initialization
       ;; << -- >>
-      xx initialize_syntax_set
-   match =linux, platform {
       xx initialize_system
-      }
       xx end
    #+end_src
 ** initialize-system                  :linux:
@@ -5359,7 +5511,7 @@
    << kkk >>
    #+end_src
 * syntax-set
-** note
+** note interface
    * values in syntax_set
      are two by two
      << syntax[function, predicate] >>
@@ -5374,6 +5526,18 @@
      4. (find-syntax)
         find a function for a word
         which defines the words semantic
+** 記 使用
+   * syntax-set 是
+     語法謂詞 還有 語法函數 這種對子
+     所形成的有序集合
+   * 這樣就可以形成簡單的語境概念了
+     這種簡單的語境概念也很有趣
+     但是
+     它與我爲蟬語所構想的
+     利用姓名來實現的語境機制是不同的
+   * 每個語境都有責任
+     在進入和退出時
+     維護好 syntax-set
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$syntax_set = 1024 * jo_size
@@ -5478,12 +5642,54 @@
       xx   V__jo_size, subtraction, fetch
       xx   true
       xx   end
-      .not_found:
+   .not_found:
       xx literal, cursor$find_syntax, fetch
       xx V__jo_size, subtraction
       xx V__jo_size, subtraction
       xx literal, cursor$find_syntax, save
       xx taca, find_syntax__loop
+   #+end_src
+** syntax-exist?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   cursor$syntax_exist?:
+      xx 0
+
+   define_function "syntax-exist?", syntax_exist?
+      ;; << predicate, function -- bool >>
+      xx literal, pointer$syntax_set, fetch
+      xx literal, cursor$syntax_exist?, save
+      xx syntax_exist?__loop
+      xx end
+
+   define_function "syntax-exist?,loop", syntax_exist?__loop
+      ;; << predicate, function -- bool >>
+      xx literal, cursor$syntax_exist?, fetch
+      xx literal, address$syntax_set
+      xx equal?, false?branch, 4
+      xx   drop2
+      xx   false
+      xx   end
+      xx literal, cursor$syntax_exist?, fetch
+      xx V__jo_size, subtraction ;; note that here needs a subtraction
+      xx dup
+      xx fetch
+      xx swap
+      xx V__jo_size, subtraction
+      xx fetch
+      ;; << predicate, function, predicate, function -- >>
+      xx xoverxx, equal?, false?, false?branch, 4
+      xx   drop
+      xx   branch, (.not_found-$)/jo_size
+      xx xoverxx, equal?, false?, false?branch, 3
+      xx   branch, (.not_found-$)/jo_size
+      xx drop2
+      xx true
+      xx end
+   .not_found:
+      xx V__jo_size
+      xx V__jo_size, addition
+      xx literal, cursor$syntax_exist?, sub_save
+      xx taca, syntax_exist?__loop
    #+end_src
 ** sub-syntax
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5504,7 +5710,6 @@
       xx equal?, false?branch, 3
       xx   drop2
       xx   end
-      xx dup2
       xx literal, cursor$sub_syntax, fetch
       xx V__jo_size, subtraction ;; note that here needs a subtraction
       xx dup
@@ -5518,67 +5723,43 @@
       xx   branch, (.not_found-$)/jo_size
       xx xoverxx, equal?, false?, false?branch, 3
       xx   branch, (.not_found-$)/jo_size
-
-      xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-      xx   drop2
-      xx   literal, cursor$sub_syntax, fetch
-      xx   V__jo_size, subtraction
-      xx   V__jo_size, subtraction, fetch
-      xx   true
-      xx   end
-
-      .not_found:
+      xx drop2
       xx literal, cursor$sub_syntax, fetch
-      xx V__jo_size, subtraction
-      xx V__jo_size, subtraction
-      xx literal, cursor$sub_syntax, save
+      xx sub_syntax__move
+      xx end
+   .not_found:
+      xx V__jo_size
+      xx V__jo_size, addition
+      xx literal, cursor$sub_syntax, sub_save
       xx taca, sub_syntax__loop
-   #+end_src
-** syntax-exist?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$syntax_exist?:
-      xx 0
 
-   define_function "syntax-exist?", syntax_exist?
-      ;; << predicate, function -- bool >>
-
-      xx end
-
-
-   define_function "syntax-exist?loop", syntax_exist?loop
-      ;; << predicate, function -- bool >>
-
-      xx taca, syntax_exist?loop
-   #+end_src
-** drop                               :64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "drop-syntax-set", drop_syntax_set
-      sub qword [pointer$syntax_set], jo_size
-      next
-
-   }
-   #+end_src
-** drop                               :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "drop-syntax-set", drop_syntax_set
-      sub dword [pointer$syntax_set], jo_size
-      next
-
-   }
-   #+end_src
-** initialize_syntax_set
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "initialize-syntax-set", initialize_syntax_set
-      ;; << -- >>
-      xx clear_syntax_set
-      xx literal, integer_string?
-      xx literal, M__integer_string
-      xx add_syntax
-      xx end
+   define_function "sub-syntax,move", sub_syntax__move
+      ;; << cursor -- >>
+      xx dup
+      xx literal, pointer$syntax_set, fetch
+      xx equal?, false?branch, (.more_to_move-$)/jo_size
+      xx   drop
+      xx   literal, pointer$syntax_set, fetch
+      xx   V__jo_size, subtraction
+      xx   V__jo_size, subtraction
+      xx   literal, pointer$syntax_set, save
+      xx   end
+   .more_to_move:
+      xx dup
+      xx fetch
+      xx over
+      xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
+      xx save
+      xx dup, V__jo_size, subtraction
+      xx fetch
+      xx over
+      xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
+      xx save
+      xx V__jo_size, addition
+      xx V__jo_size, addition
+      xx taca, sub_syntax__move
    #+end_src
 * function & jojo
 ** ----------------------------------
@@ -5648,9 +5829,9 @@
    define_function "make-jojo", make_jojo
       ;; << string[address, length] -- >>
       xx local_variable_table__clear
-      xx add_syntax__local_variable
+      xx add_syntax__make_jojo
       xx make_jojo__loop
-      xx sub_syntax__local_variable
+      xx sub_syntax__make_jojo
       xx end
 
    define_function "make-jojo,loop", make_jojo__loop
@@ -5683,7 +5864,7 @@
       xx write_undefined_word_report__for_make_jojo
       xx write_string
       xx literal, 10, write_byte
-      xx sub_syntax__local_variable
+      xx sub_syntax__make_jojo
       xx !undo_make_jojo
 
    define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
@@ -5713,6 +5894,37 @@
       db "* (make-jojo) meets undefined word : "
    .end:
    length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+   #+end_src
+** ----------------------------------
+** add-syntax,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "add-syntax,make-jojo", add_syntax__make_jojo
+      ;; << -- >>
+      xx literal, integer_string?
+      xx literal, M__integer_string
+      xx add_syntax
+      xx literal, local_variable_save_string?
+      xx literal, M__local_variable_save_string
+      xx add_syntax
+      xx literal, local_variable_fetch_string?
+      xx literal, M__local_variable_fetch_string
+      xx add_syntax
+      xx end
+   #+end_src
+** sub-syntax,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
+      ;; << -- >>
+      xx literal, integer_string?
+      xx literal, M__integer_string
+      xx sub_syntax
+      xx literal, local_variable_save_string?
+      xx literal, M__local_variable_save_string
+      xx sub_syntax
+      xx literal, local_variable_fetch_string?
+      xx literal, M__local_variable_fetch_string
+      xx sub_syntax
+      xx end
    #+end_src
 ** ----------------------------------
 ** note macro in cicada-nymph
@@ -6777,29 +6989,6 @@
       xx V__jo_size, addition
       xx literal, cursor$local_variable_table, add_save
       xx taca, local_variable_table__find__loop
-   #+end_src
-** ----------------------------------
-** add-syntax,local-variable
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "add-syntax,local-variable", add_syntax__local_variable
-      ;; << -- >>
-      xx literal, local_variable_save_string?
-      xx literal, M__local_variable_save_string
-      xx add_syntax
-      xx literal, local_variable_fetch_string?
-      xx literal, M__local_variable_fetch_string
-      xx add_syntax
-      xx end
-   #+end_src
-** sub-syntax,local-variable
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "sub-syntax,local-variable", sub_syntax__local_variable
-      ;; << -- >>
-      xx drop_syntax_set
-      xx drop_syntax_set
-      xx drop_syntax_set
-      xx drop_syntax_set
-      xx end
    #+end_src
 ** ----------------------------------
 ** *local-data-heap*

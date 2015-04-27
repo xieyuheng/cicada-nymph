@@ -4,7 +4,7 @@
 
 * todo
 ** more and better report
-   * syntax defined 
+   * syntax defined
      and syntax useing
 ** wrap more syscalls
 ** about load-file
@@ -285,6 +285,14 @@
   init-syscall-number
   #+end_src
 * report
+** welcome
+   #+begin_src cicada-nymph :tangle core.cn
+   : welcome
+     << -- >>
+     "* welcome to cicada-nymph ^-^" .s
+     end
+   ; define-function
+   #+end_src
 ** report-dictionary
 *** report-dictionary,primitive-function
     #+begin_src cicada-nymph :tangle core.cn
@@ -606,7 +614,7 @@
      dup 7 equal? if drop "* I wish you a lovely day" .s end then
      dup 8 equal? if drop "* I wish you a lovely day { or night :P }" .s end then
      dup 9 equal? if drop "* o.o" .s end then
-     drop "* love love ^3^" .s end
+     drop "* lovely ^3^" .s end
    ; define-function
 
    : hi
@@ -1305,7 +1313,8 @@
      "  every time after a word is executed" .s
      "  the argument-stack get printed" .s
      print-argument-stack,pretty
-     <> stack-REPL
+     "stack-REPL" find drop
+     reset-top-level-REPL
    ; define-function
    #+end_src
 ** command-line,basic-REPL
@@ -1318,7 +1327,8 @@
      hi
      "* you are in the (basic-REPL)" .s
      "  this REPL does not print any thing automaticly" .s
-     <> basic-REPL
+     "basic-REPL" find drop
+     reset-top-level-REPL
    ; define-function
    #+end_src
 ** command-line,poi

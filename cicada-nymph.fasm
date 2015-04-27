@@ -279,60 +279,6 @@ macro next \{
 
 }
 
-match =linux =64bit, platform machine {
-
-__exit_with_TOS:
-   pop_argument_stack linux64_sys_1_rdi
-   mov linux64_sys_n_rax, linux64_syscall_exit
-   syscall
-
-}
-
-match =linux =64bit, platform machine {
-
-__exit_with_zero:
-   xor linux64_sys_1_rdi, linux64_sys_1_rdi
-   mov linux64_sys_n_rax, linux64_syscall_exit
-   syscall
-
-}
-
-match =linux =64bit, platform machine {
-
-__exit_with_six:
-   mov linux64_sys_1_rdi, 6
-   mov linux64_sys_n_rax, linux64_syscall_exit
-   syscall
-
-}
-
-match =linux =32bit, platform machine {
-
-__exit_with_TOS:
-   pop_argument_stack linux32_sys_1_ebx
-   mov linux32_sys_n_eax, linux32_syscall_exit
-   syscall
-
-}
-
-match =linux =32bit, platform machine {
-
-__exit_with_zero:
-   xor linux32_sys_1_ebx, linux32_sys_1_ebx
-   mov linux32_sys_n_eax, linux32_syscall_exit
-   syscall
-
-}
-
-match =linux =32bit, platform machine {
-
-__exit_with_six:
-   mov linux32_sys_1_ebx, 6
-   mov linux32_sys_n_eax, linux32_syscall_exit
-   syscall
-
-}
-
 ;; initial link to point to 0 (as null)
 link = 0
 
@@ -741,57 +687,204 @@ define_primitive_function "<>", taca
 
 match =linux =64bit, platform machine {
 
-begin_to_interpret_threaded_code:
+__exit_with_TOS:
+   pop_argument_stack linux64_sys_1_rdi
+   mov linux64_sys_n_rax, linux64_syscall_exit
+   syscall
 
-   cld ;; set DF = 0, then rsi and rdi are incremented
+}
 
+match =linux =64bit, platform machine {
+
+__exit_with_zero:
+   xor linux64_sys_1_rdi, linux64_sys_1_rdi
+   mov linux64_sys_n_rax, linux64_syscall_exit
+   syscall
+
+}
+
+match =linux =64bit, platform machine {
+
+__exit_with_six:
+   mov linux64_sys_1_rdi, 6
+   mov linux64_sys_n_rax, linux64_syscall_exit
+   syscall
+
+}
+
+match =linux =64bit, platform machine {
+
+__print_string:
+   ;; << address, length -- >>
+   ;; write can not just write the char in al to stdout
+   ;; write needs the address of the byte to write
+   pop_argument_stack linux64_sys_3_rdx     ;; max length to be write
+   pop_argument_stack linux64_sys_2_rsi     ;; address
+   mov linux64_sys_1_rdi, 1                 ;; stdout
+   mov linux64_sys_n_rax, linux64_syscall_write
+   syscall
+   ret
+
+}
+
+match =linux =64bit, platform machine {
+
+__reset_argument_stack:
    mov pointer$argument_stack,  address$argument_stack
-   mov pointer$return_stack,    address$return_stack
+   ret
 
-   mov rax, first_jojo
-   push_return_stack rax
-   next
+}
+
+match =linux =64bit, platform machine {
+
+__reset_return_stack:
+   mov pointer$return_stack,    address$return_stack
+   ret
 
 }
 
 match =linux =32bit, platform machine {
 
+__exit_with_TOS:
+   pop_argument_stack linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   syscall
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_zero:
+   xor linux32_sys_1_ebx, linux32_sys_1_ebx
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   syscall
+
+}
+
+match =linux =32bit, platform machine {
+
+__exit_with_six:
+   mov linux32_sys_1_ebx, 6
+   mov linux32_sys_n_eax, linux32_syscall_exit
+   syscall
+
+}
+
+match =linux =32bit, platform machine {
+
+__print_string:
+   ;; << address, length -- >>
+   ;; write can not just write the char in al to stdout
+   ;; write needs the address of the byte to write
+   pop_argument_stack linux32_sys_3_edx     ;; max length to be write
+   pop_argument_stack linux32_sys_2_ecx     ;; address
+   mov linux32_sys_1_ebx, 1                 ;; stdout
+   mov linux32_sys_n_eax, linux32_syscall_write
+   syscall
+   ret
+
+}
+
+match =linux =32bit, platform machine {
+
+__reset_argument_stack:
+   mov rax, address$argument_stack
+   mov [pointer$argument_stack], rax
+   ret
+
+}
+
+match =linux =32bit, platform machine {
+
+__reset_return_stack:
+   mov rax, address$return_stack
+   mov [pointer$return_stack], rax
+   ret
+
+}
+
+__reset_local_data_vector:
+   mov rax, address$local_data_vector
+   mov [current_free_address$local_data_vector], rax
+   ret
+
+__reset_local_data_heap:
+   mov rax, address$local_data_heap
+   mov [current_free_address$local_data_heap], rax
+   ret
+
+match =linux, platform {
+
 begin_to_interpret_threaded_code:
 
    cld ;; set DF = 0, then rsi and rdi are incremented
 
-   mov eax, first_jojo
-   push_return_stack eax
+   call __reset_argument_stack
+   call __reset_return_stack
+
+   pop_return_stack rax
+   mov rax, report_return_stack_is_empty_and_exit
+   push_return_stack rax
+
+   mov rax, address$local_data_vector
+   push_return_stack rax
+
+   mov rax, first_jojo
+   push_return_stack rax
    next
 
-}
-
 first_jojo:
-   ;; xx welcome
    ;; xx little_test
    xx initialization
    xx load_core_file
-   xx basic_REPL
+   xx taca, basic_REPL
 
-define_function "welcome", welcome
-   ;; << -- >>
-   xx literal, string$welcome_to_cicada_nymph
-   xx literal, length$welcome_to_cicada_nymph
-   xx write_string
-   xx end
+}
 
-string$welcome_to_cicada_nymph:
-   db "* welcome to cicada-nymph ^-^"
-   db 10
+string$report_return_stack_is_empty_and_exit:
+   db "* the return-stack empty", 10
+   db "* good bye ^-^/", 10
 .end:
-length$welcome_to_cicada_nymph = (.end - string$welcome_to_cicada_nymph)
+length$report_return_stack_is_empty_and_exit = (.end - string$report_return_stack_is_empty_and_exit)
+
+define_primitive_function "report-return-stack-is-empty-and-exit", report_return_stack_is_empty_and_exit
+   ;; << -- >>
+   mov rax, string$report_return_stack_is_empty_and_exit
+   mov rcx, length$report_return_stack_is_empty_and_exit
+   push_argument_stack rax
+   push_argument_stack rcx
+   call __print_string
+   call __exit_with_zero
+
+match =64bit, machine {
+
+define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
+   ;; << top_level_REPL [jo] -- >>
+   call __reset_return_stack
+   call __reset_local_data_vector
+   call __reset_local_data_heap
+   pop_argument_stack rax
+   jmp qword [rax]
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
+   ;; << top_level_REPL [jo] -- >>
+   call __reset_return_stack
+   call __reset_local_data_vector
+   call __reset_local_data_heap
+   pop_argument_stack rax
+   jmp dword [rax]
+
+}
 
 define_primitive_function "bye", exit_with_TOS
    call __exit_with_TOS
 
 define_variable "", V__little_test_number
    xx 3
-
 
 define_function "little_test", little_test
 
@@ -3258,10 +3351,7 @@ __syscall_with_too_many:
 
 define_function "initialization", initialization
    ;; << -- >>
-   xx initialize_syntax_set
-match =linux, platform {
    xx initialize_system
-   }
    xx end
 
 match =linux, platform {
@@ -4113,12 +4203,52 @@ define_function "find-syntax,loop", find_syntax__loop
    xx   V__jo_size, subtraction, fetch
    xx   true
    xx   end
-   .not_found:
+.not_found:
    xx literal, cursor$find_syntax, fetch
    xx V__jo_size, subtraction
    xx V__jo_size, subtraction
    xx literal, cursor$find_syntax, save
    xx taca, find_syntax__loop
+
+cursor$syntax_exist?:
+   xx 0
+
+define_function "syntax-exist?", syntax_exist?
+   ;; << predicate, function -- bool >>
+   xx literal, pointer$syntax_set, fetch
+   xx literal, cursor$syntax_exist?, save
+   xx syntax_exist?__loop
+   xx end
+
+define_function "syntax-exist?,loop", syntax_exist?__loop
+   ;; << predicate, function -- bool >>
+   xx literal, cursor$syntax_exist?, fetch
+   xx literal, address$syntax_set
+   xx equal?, false?branch, 4
+   xx   drop2
+   xx   false
+   xx   end
+   xx literal, cursor$syntax_exist?, fetch
+   xx V__jo_size, subtraction ;; note that here needs a subtraction
+   xx dup
+   xx fetch
+   xx swap
+   xx V__jo_size, subtraction
+   xx fetch
+   ;; << predicate, function, predicate, function -- >>
+   xx xoverxx, equal?, false?, false?branch, 4
+   xx   drop
+   xx   branch, (.not_found-$)/jo_size
+   xx xoverxx, equal?, false?, false?branch, 3
+   xx   branch, (.not_found-$)/jo_size
+   xx drop2
+   xx true
+   xx end
+.not_found:
+   xx V__jo_size
+   xx V__jo_size, addition
+   xx literal, cursor$syntax_exist?, sub_save
+   xx taca, syntax_exist?__loop
 
 cursor$sub_syntax:
    xx 0
@@ -4137,7 +4267,6 @@ define_function "sub-syntax,loop", sub_syntax__loop
    xx equal?, false?branch, 3
    xx   drop2
    xx   end
-   xx dup2
    xx literal, cursor$sub_syntax, fetch
    xx V__jo_size, subtraction ;; note that here needs a subtraction
    xx dup
@@ -4149,61 +4278,45 @@ define_function "sub-syntax,loop", sub_syntax__loop
    xx xoverxx, equal?, false?, false?branch, 4
    xx   drop
    xx   branch, (.not_found-$)/jo_size
-   xx xoverxx, equal?, false?, false?branch, 3   
+   xx xoverxx, equal?, false?, false?branch, 3
    xx   branch, (.not_found-$)/jo_size
-
-   xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-   xx   drop2
-   xx   literal, cursor$sub_syntax, fetch
-   xx   V__jo_size, subtraction
-   xx   V__jo_size, subtraction, fetch
-   xx   true
-   xx   end
-
-   .not_found:
+   xx drop2
    xx literal, cursor$sub_syntax, fetch
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
-   xx literal, cursor$sub_syntax, save
+   xx sub_syntax__move
+   xx end
+.not_found:
+   xx V__jo_size
+   xx V__jo_size, addition
+   xx literal, cursor$sub_syntax, sub_save
    xx taca, sub_syntax__loop
 
-cursor$syntax_exist?:
-   xx 0
-
-define_function "syntax-exist?", syntax_exist?
-   ;; << predicate, function -- bool >>   
-
-   xx end
-
-
-define_function "syntax-exist?loop", syntax_exist?loop
-   ;; << predicate, function -- bool >>   
-
-   xx taca, syntax_exist?loop
-
-match =64bit, machine {
-
-define_primitive_function "drop-syntax-set", drop_syntax_set
-   sub qword [pointer$syntax_set], jo_size
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "drop-syntax-set", drop_syntax_set
-   sub dword [pointer$syntax_set], jo_size
-   next
-
-}
-
-define_function "initialize-syntax-set", initialize_syntax_set
-   ;; << -- >>
-   xx clear_syntax_set
-   xx literal, integer_string?
-   xx literal, M__integer_string
-   xx add_syntax
-   xx end
+define_function "sub-syntax,move", sub_syntax__move
+   ;; << cursor -- >>
+   xx dup
+   xx literal, pointer$syntax_set, fetch
+   xx equal?, false?branch, (.more_to_move-$)/jo_size
+   xx   drop
+   xx   literal, pointer$syntax_set, fetch
+   xx   V__jo_size, subtraction
+   xx   V__jo_size, subtraction
+   xx   literal, pointer$syntax_set, save
+   xx   end
+.more_to_move:
+   xx dup
+   xx fetch
+   xx over
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx save
+   xx dup, V__jo_size, subtraction
+   xx fetch
+   xx over
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx save
+   xx V__jo_size, addition
+   xx V__jo_size, addition
+   xx taca, sub_syntax__move
 
 size$jo_heap = 1024 * 1024 * jo_size
 
@@ -4252,9 +4365,9 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
    xx local_variable_table__clear
-   xx add_syntax__local_variable
+   xx add_syntax__make_jojo
    xx make_jojo__loop
-   xx sub_syntax__local_variable
+   xx sub_syntax__make_jojo
    xx end
 
 define_function "make-jojo,loop", make_jojo__loop
@@ -4285,7 +4398,7 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx write_undefined_word_report__for_make_jojo
    xx write_string
    xx literal, 10, write_byte
-   xx sub_syntax__local_variable
+   xx sub_syntax__make_jojo
    xx !undo_make_jojo
 
 define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
@@ -4315,6 +4428,32 @@ string$undefined_word_report__for_make_jojo:
    db "* (make-jojo) meets undefined word : "
 .end:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+
+define_function "add-syntax,make-jojo", add_syntax__make_jojo
+   ;; << -- >>
+   xx literal, integer_string?
+   xx literal, M__integer_string
+   xx add_syntax
+   xx literal, local_variable_save_string?
+   xx literal, M__local_variable_save_string
+   xx add_syntax
+   xx literal, local_variable_fetch_string?
+   xx literal, M__local_variable_fetch_string
+   xx add_syntax
+   xx end
+
+define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
+   ;; << -- >>
+   xx literal, integer_string?
+   xx literal, M__integer_string
+   xx sub_syntax
+   xx literal, local_variable_save_string?
+   xx literal, M__local_variable_save_string
+   xx sub_syntax
+   xx literal, local_variable_fetch_string?
+   xx literal, M__local_variable_fetch_string
+   xx sub_syntax
+   xx end
 
 define_macro "address", M__address
    ;; << string[address, length] -- string[address, length] >>
@@ -4959,24 +5098,6 @@ define_function "local-variable-table,find,loop", local_variable_table__find__lo
    xx V__jo_size, addition
    xx literal, cursor$local_variable_table, add_save
    xx taca, local_variable_table__find__loop
-
-define_function "add-syntax,local-variable", add_syntax__local_variable
-   ;; << -- >>
-   xx literal, local_variable_save_string?
-   xx literal, M__local_variable_save_string
-   xx add_syntax
-   xx literal, local_variable_fetch_string?
-   xx literal, M__local_variable_fetch_string
-   xx add_syntax
-   xx end
-
-define_function "sub-syntax,local-variable", sub_syntax__local_variable
-   ;; << -- >>
-   xx drop_syntax_set
-   xx drop_syntax_set
-   xx drop_syntax_set
-   xx drop_syntax_set
-   xx end
 
 size$local_data_heap = 1024 * 1024 * jo_size
 
