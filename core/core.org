@@ -177,7 +177,7 @@
    .12,test
    #+end_src
 ** jo
-   * currently the same as the macro (address)
+   * NOT the same as the macro (address)
    #+begin_src cicada-nymph :tangle core.cn
    : jo
      << string[address, length] --
@@ -193,15 +193,11 @@
      !undo-make-jojo
    ; define-macro
    #+end_src
-* execute-word & basic-REPL           :redefine:
+* execute-word                  :redefine:
   * to protect macro & exception from be called from basic-REPL
   #+begin_src cicada-nymph :tangle core.cn
   : execute-word
     << word[address, length] -- unknown >>
-    dup2 integer-string? if
-      string->integer
-      end
-    then
     dup2
     find if
       dup macro-jo? if
@@ -226,13 +222,32 @@
     then
     end
   ; define-function
+  #+end_src
+* basic-REPL                    :redefine:
+  #+begin_src cicada-nymph :tangle core.cn
+  : basic-REPL,loop
+    << unknown -- unknown >>
+    read-word-for-REPL
+    dup2 find-syntax if
+      execute-jo
+      <> basic-REPL,loop
+    then
+    execute-word
+    <> basic-REPL,loop
+  ; define-function
 
   : basic-REPL
     << unknown -- unknown >>
-    read-word-for-REPL
-    execute-word
-    <> basic-REPL
+    jo integer-string? jo string->integer add-syntax
+    basic-REPL,loop
+    jo integer-string? jo string->integer sub-syntax
+    end
   ; define-function
+
+  <<
+  the following call is for
+  we need a better REPL for the following code in core file
+  >>
 
   basic-REPL
   #+end_src
@@ -574,6 +589,32 @@
      *jo-size* 8 mul write-nature-number
      " bits" write-string
      cr
+     end
+   ; define-function
+   #+end_src
+** report-syntax-set
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-syntax-set,loop
+     << counter, cursor -- >>
+     dup *syntax-set* equal? if
+       drop2
+       end
+     then
+     "  " write-string
+     swap add1 dup . swap
+     dup *jo-size* sub fetch
+     jo->name write-string " " write-string
+     dup *jo-size* sub *jo-size* sub fetch
+     jo->name write-string cr
+     *jo-size* sub *jo-size* sub
+     <> report-syntax-set,loop
+   ; define-function
+
+   : report-syntax-set
+     << -- >>
+     "* syntax-set : " .s
+     0 *current-free-address,syntax-set*
+     report-syntax-set,loop
      end
    ; define-function
    #+end_src

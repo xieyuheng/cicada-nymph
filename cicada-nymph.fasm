@@ -2152,7 +2152,7 @@ define_primitive_function "add-save", add_save
    next
 
 define_primitive_function "sub-save", sub_save
-   ;; ( number to add, address -- )
+   ;; ( number to sub, address -- )
    pop_argument_stack rbx
    pop_argument_stack rax
    sub qword [rbx], rax
@@ -2315,7 +2315,7 @@ define_primitive_function "add-save", add_save
    next
 
 define_primitive_function "sub-save", sub_save
-   ;; ( number to add, address -- )
+   ;; ( number to sub, address -- )
    pop_argument_stack rbx
    pop_argument_stack rax
    sub dword [rbx], rax
@@ -4256,7 +4256,10 @@ size$syntax_set = 1024 * jo_size
 address$syntax_set labeling
    preserve size$syntax_set
 
-pointer$syntax_set:
+define_variable "*syntax-set*", V__syntax_set
+   xx address$syntax_set
+
+define_variable "*current-free-address,syntax-set*", V__current_free_address__syntax_set
    xx address$syntax_set
 
 match =64bit, machine {
@@ -4264,13 +4267,13 @@ match =64bit, machine {
 define_primitive_function "add-syntax", add_syntax
    ;; << predicate, function -- >>
    pop_argument_stack rax
-   mov rbx, [pointer$syntax_set]
+   mov rbx, [V__current_free_address__syntax_set + jo_size]
    mov [rbx], rax
-   add qword [pointer$syntax_set], jo_size
+   add qword [V__current_free_address__syntax_set + jo_size], jo_size
    pop_argument_stack rax
-   mov rbx, [pointer$syntax_set]
+   mov rbx, [V__current_free_address__syntax_set + jo_size]
    mov [rbx], rax
-   add qword [pointer$syntax_set], jo_size
+   add qword [V__current_free_address__syntax_set + jo_size], jo_size
    next
 
 }
@@ -4280,13 +4283,13 @@ match =32bit, machine {
 define_primitive_function "add-syntax", add_syntax
    ;; << predicate, function -- >>
    pop_argument_stack rax
-   mov rsi, [pointer$syntax_set]
+   mov rsi, [V__current_free_address__syntax_set + jo_size]
    mov [rsi], rax
-   add dword [pointer$syntax_set], jo_size
+   add dword [V__current_free_address__syntax_set + jo_size], jo_size
    pop_argument_stack rax
-   mov rsi, [pointer$syntax_set]
+   mov rsi, [V__current_free_address__syntax_set + jo_size]
    mov [rsi], rax
-   add dword [pointer$syntax_set], jo_size
+   add dword [V__current_free_address__syntax_set + jo_size], jo_size
    next
 
 }
@@ -4295,7 +4298,7 @@ match =64bit, machine {
 
 define_primitive_function "clear-syntax-set", clear_syntax_set
    ;; << -- >>
-   mov qword [pointer$syntax_set], address$syntax_set
+   mov qword [V__current_free_address__syntax_set + jo_size], address$syntax_set
    next
 
 }
@@ -4305,7 +4308,7 @@ match =32bit, machine {
 define_primitive_function "clear-syntax-set", clear_syntax_set
    ;; << -- >>
    mov eax, address$syntax_set
-   mov dword [pointer$syntax_set], eax;address$syntax_set
+   mov dword [V__current_free_address__syntax_set + jo_size], eax;address$syntax_set
    next
 
 }
@@ -4317,7 +4320,7 @@ define_function "find-syntax", find_syntax
    ;; << word[address, length]
    ;;    -- jo, true
    ;;    -- false >>
-   xx literal, pointer$syntax_set, fetch
+   xx V__current_free_address__syntax_set
    xx literal, cursor$find_syntax, save
    xx find_syntax__loop
    xx end
@@ -4327,7 +4330,7 @@ define_function "find-syntax,loop", find_syntax__loop
    ;;    -- jo, true
    ;;    -- false >>
    xx literal, cursor$find_syntax, fetch
-   xx literal, address$syntax_set
+   xx V__syntax_set
    xx equal?, false?branch, 4
    xx   drop2
    xx   false
@@ -4350,12 +4353,21 @@ define_function "find-syntax,loop", find_syntax__loop
    xx literal, cursor$find_syntax, save
    xx taca, find_syntax__loop
 
+define_function "cursor->syntax", cursor_to_syntax
+   ;; << cursor -- syntax[predicate, function] >>
+   ;; note that here needs two subtractions
+   xx V__jo_size, subtraction
+   xx dup, fetch, swap
+   xx V__jo_size, subtraction
+   xx fetch
+   xx end
+
 cursor$syntax_exist?:
    xx 0
 
 define_function "syntax-exist?", syntax_exist?
    ;; << predicate, function -- bool >>
-   xx literal, pointer$syntax_set, fetch
+   xx V__current_free_address__syntax_set
    xx literal, cursor$syntax_exist?, save
    xx syntax_exist?__loop
    xx end
@@ -4363,18 +4375,13 @@ define_function "syntax-exist?", syntax_exist?
 define_function "syntax-exist?,loop", syntax_exist?__loop
    ;; << predicate, function -- bool >>
    xx literal, cursor$syntax_exist?, fetch
-   xx literal, address$syntax_set
+   xx V__syntax_set
    xx equal?, false?branch, 4
    xx   drop2
    xx   false
    xx   end
    xx literal, cursor$syntax_exist?, fetch
-   xx V__jo_size, subtraction ;; note that here needs a subtraction
-   xx dup
-   xx fetch
-   xx swap
-   xx V__jo_size, subtraction
-   xx fetch
+   xx cursor_to_syntax
    ;; << predicate, function, predicate, function -- >>
    xx xoverxx, equal?, false?, false?branch, 4
    xx   drop
@@ -4395,7 +4402,7 @@ cursor$sub_syntax:
 
 define_function "sub-syntax", sub_syntax
    ;; << predicate, function -- >>
-   xx literal, pointer$syntax_set, fetch
+   xx V__current_free_address__syntax_set
    xx literal, cursor$sub_syntax, save
    xx sub_syntax__loop
    xx end
@@ -4403,60 +4410,58 @@ define_function "sub-syntax", sub_syntax
 define_function "sub-syntax,loop", sub_syntax__loop
    ;; << predicate, function -- >>
    xx literal, cursor$sub_syntax, fetch
-   xx literal, address$syntax_set
-   xx equal?, false?branch, 3
+   xx V__syntax_set, equal?, false?branch, 3
    xx   drop2
    xx   end
    xx literal, cursor$sub_syntax, fetch
-   xx V__jo_size, subtraction ;; note that here needs a subtraction
-   xx dup
-   xx fetch
-   xx swap
-   xx V__jo_size, subtraction
-   xx fetch
+   xx cursor_to_syntax
    ;; << predicate, function, predicate, function -- >>
-   xx xoverxx, equal?, false?, false?branch, 4
+   xx xoverxx, equal?, false?, false?branch, 10
    xx   drop
-   xx   branch, (.not_found-$)/jo_size
-   xx xoverxx, equal?, false?, false?branch, 3
-   xx   branch, (.not_found-$)/jo_size
+   xx   V__jo_size
+   xx   V__jo_size, addition
+   xx   literal, cursor$sub_syntax, sub_save
+   xx   taca, sub_syntax__loop
+   xx xoverxx, equal?, false?, false?branch, 9
+   xx   V__jo_size
+   xx   V__jo_size, addition
+   xx   literal, cursor$sub_syntax, sub_save
+   xx   taca, sub_syntax__loop
    xx drop2
    xx literal, cursor$sub_syntax, fetch
    xx sub_syntax__move
    xx end
-.not_found:
-   xx V__jo_size
-   xx V__jo_size, addition
-   xx literal, cursor$sub_syntax, sub_save
-   xx taca, sub_syntax__loop
 
 define_function "sub-syntax,move", sub_syntax__move
    ;; << cursor -- >>
    xx dup
-   xx literal, pointer$syntax_set, fetch
+   xx V__current_free_address__syntax_set
    xx equal?, false?branch, (.more_to_move-$)/jo_size
    xx   drop
-   xx   literal, pointer$syntax_set, fetch
-   xx   V__jo_size, subtraction
-   xx   V__jo_size, subtraction
-   xx   literal, pointer$syntax_set, save
+   xx   V__jo_size
+   xx   V__jo_size, addition
+   xx   address, V__current_free_address__syntax_set
+   xx   sub_save
    xx   end
 .more_to_move:
+   xx sub_syntax__move_one
+   xx taca, sub_syntax__move
+
+define_function "sub-syntax,move_one", sub_syntax__move_one
+   ;; << cursor -- cursor + element-size >>
    xx dup
    xx fetch
-   xx over
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
+   xx over, V__jo_size, subtraction, V__jo_size, subtraction
    xx save
-   xx dup, V__jo_size, subtraction
-   xx fetch
-   xx over
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
+
+   xx dup
+   xx V__jo_size, addition, fetch
+   xx over, V__jo_size, subtraction
    xx save
+
    xx V__jo_size, addition
    xx V__jo_size, addition
-   xx taca, sub_syntax__move
+   xx end
 
 size$jo_heap = 1024 * 1024 * jo_size
 
@@ -4556,7 +4561,7 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
-   xx find_syntax, true?, false?branch, 3
+   xx find_syntax, false?branch, 3
    xx   execute_jo
    xx   end
    xx dup2
