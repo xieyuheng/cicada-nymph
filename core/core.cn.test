@@ -4,6 +4,8 @@
   end
 ; define-function
 
+kkk
+
 : factorial
   << number -- number >>
   dup

@@ -2,6 +2,9 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* more syntax for REPLs
+  * REPL-key-word
+    * jo
 * a way to exit REPLs
 * local-data-vector & local-data-heap
   * the current local-data-heap is renamed to local-data-vector
@@ -902,43 +905,6 @@
 * macro for make-jojo
 ** ----------------------------------
 ** note
-   * the same as function
-     we need to redefine it
-     for the value of explainer
-     is used to decide the type of the jo
-** define_macro
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   macro define_macro string, jo {
-
-   define_macro__#jo:
-
-   name__#jo:
-      xx current_free_address$primitive_string_heap
-
-      make_primitive_string string
-
-   link__#jo:
-      xx link
-      link = link__#jo
-
-   jo:
-      xx explain$macro
-
-      ;; here follows a jojo as function-body
-
-   }
-   #+end_src
-** explain$macro
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   explain$macro:
-      mov rbx, [current_free_address$local_data_vector]
-      push_return_stack rbx
-      add rax, jo_size
-      push_return_stack rax
-      next
-   #+end_src
-** ----------------------------------
-** note
    * explain$exception will
      1. search the return-stack for that exception
      2. special side-effect on return-stack
@@ -1247,15 +1213,6 @@
       ;; << jo -- bool >>
       xx jo_to_type
       xx literal, explain$function
-      xx equal?
-      xx end
-   #+end_src
-** macro-jo?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "macro-jo?", macro_jo?
-      ;; << jo -- bool >>
-      xx jo_to_type
-      xx literal, explain$macro
       xx equal?
       xx end
    #+end_src
@@ -2960,7 +2917,7 @@
 ** equal? & greater-than? & less-than?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "equal?", equal?
-      ;; << a, b -- a, b, true of false >>
+      ;; << a, b -- bool >>
       pop_argument_stack rbx
       pop_argument_stack rax
       cmp   rbx, rax
@@ -3004,6 +2961,17 @@
       movzx rax, al
       push_argument_stack rax
       next
+   #+end_src
+** equal2?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "equal2?", equal2?
+      ;; << a1, b1, a2, b2 -- bool >>
+      xx xswapxx
+      xx equal?, false?, false?branch, 4
+      xx   drop2, false
+      xx   end
+      xx equal?
+      xx end
    #+end_src
 ** negative? & positive?
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4530,14 +4498,15 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "initialization", initialization
       ;; << -- >>
-      xx initialize_system
+      xx init_system
+      xx init__rule_set__make_jojo
       xx end
    #+end_src
 ** initialize-system                  :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux, platform {
 
-   define_function "initialize-system", initialize_system
+   define_function "init-system", init_system
       ;; << -- >>
       xx init_operating_system_environment
       xx init_path__home_directory
@@ -5215,19 +5184,17 @@
       xx (last_link + jo_size)
 
    define_function "find", find
-      ;; found :
-      ;; << word[address, length] -- jo, true >>
-      ;; not found :
-      ;; << word[address, length] -- false >>
+      ;; << word[address, length]
+      ;;    -- jo, true
+      ;;    -- false >>
       xx V__first_jo_in_dictionary
       xx help__find
       xx end
 
    define_function "help,find", help__find
-      ;; found :
-      ;; << word[address, length], jo -- jo, true >>
-      ;; not found :
-      ;; << word[address, length], jo -- false >>
+      ;; << word[address, length], jo
+      ;;    -- jo, true
+      ;;    -- false >>
       xx xxtuckx
 
 
@@ -5504,443 +5471,6 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
-* macro
-** note macro in cicada-nymph
-   * a macro is a function to be called at compile time
-     with a string to be compiled as one argument
-     and do side-effect to store data into memory
-     and return a shorter string
-     [this can be viewed as moving a cursor forward]
-   * a macro should be highlight by text editor in a special way
-** note different from syntax-set
-   * syntax-set is dynamic
-     macro-jo is static
-   * I can not implement macro-jo by syntax-set
-     because I have to use macro-jo in assembly code
-   * note that
-     a function in syntax-set
-     is prefixed by "syntax"
-     but defined as macro
-** address
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "address", M__address
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, address
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx find, false?branch, 4
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_undefined_word_report__for_address
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-      ;; << -- >>
-      xx literal, string$undefined_word_report__for_address
-      xx literal, length$undefined_word_report__for_address
-      xx write_string
-      xx end
-
-   string$undefined_word_report__for_address:
-      db "* (make-jojo (address)) the word follows (address) is undefined : "
-   .end:
-   length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
-   #+end_src
-** branch
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "branch", M__branch
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, branch
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx dup2, integer_string?, false?branch, 5
-      xx   string_to_integer
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_not_integer_string_report__for_branch
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_branch
-      xx literal, length$not_integer_string_report__for_branch
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_branch:
-      db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
-   .end:
-   length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-   #+end_src
-** false?branch
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "false?branch", M__false?branch
-      ;; << string[address, length] -- string[address, length] >>
-      xx literal, false?branch
-      xx save_into__jo_heap
-
-      xx dup2
-      xx string_head__word
-      xx dup2, integer_string?, false?branch, 5
-      xx   string_to_integer
-      xx   save_into__jo_heap
-      xx   string_tail__word
-      xx   end
-
-      xx write_not_integer_string_report__for_false?branch
-      xx dup2, string_head__word, write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_false?branch
-      xx literal, length$not_integer_string_report__for_false?branch
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_false?branch:
-      db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
-   .end:
-   length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
-   #+end_src
-** double-quote
-   * primitive-string-heap is used
-     to allocate string literal in function body
-   * in ASCII encode double-quote is 34
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro '"', M__double_quote
-      ;; << string[address, length] -- string[address, length] >>
-      xx dup2
-      xx literal, '"', find_char__string
-      xx false?branch, (.not_found-$)/jo_size
-      xx   xoverxx, subtraction
-      ;;   << string[address, length], length >>
-
-      ;; address
-      xx   literal, literal
-      xx     save_into__jo_heap
-      xx   V__current_free_address__primitive_string, add2
-      xx     save_into__jo_heap
-      xx   xoverxx, over
-      xx     save_into__primitive_string_heap
-
-      ;; length
-      xx   literal, literal
-      xx     save_into__jo_heap
-      xx   dup
-      xx     save_into__jo_heap
-
-      xx   tuck, subtraction
-      xx   xxswapx
-      xx   addition
-      xx   swap
-
-      xx   string_tail__char ;; over the ending double-quote
-      xx   end
-
-      .not_found:
-      xx write_not_integer_string_report__for_double_quote
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-
-   define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
-      ;; << -- >>
-      xx literal, string$not_integer_string_report__for_double_quote
-      xx literal, length$not_integer_string_report__for_double_quote
-      xx write_string
-      xx end
-
-   string$not_integer_string_report__for_double_quote:
-      db "* (make-jojo (double-quote)) can not find the ending double-quote"
-   .end:
-   length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
-   #+end_src
-* syntax-set
-** 記 接口
-   * 在 syntax-set 中 一個 syntax 的存在是
-     | function | predicate |
-   * 在棧中 一個 syntax 的存在是
-     << predicate, function >>
-   * set is an ordered set
-     its interface is as the following
-     1. (add-syntax)
-        as push a pair of values into stack
-     2. (sub-syntax)
-        try to remove a pair of values from stack
-     3. (syntax-exist?)
-        to see if a pair of values exist in the stack
-     4. (find-syntax)
-        find a function for a word
-        which defines the words semantic
-** 記 使用
-   * syntax-set 是
-     語法謂詞 還有 語法函數 這種對子
-     所形成的有序集合
-   * 這樣就可以形成簡單的語境概念了
-     這種簡單的語境概念也很有趣
-     但是
-     它與我爲蟬語所構想的
-     利用姓名來實現的語境機制是不同的
-   * 每個語境都有責任
-     在進入和退出時
-     維護好 syntax-set
-   * 以 syntax 爲前綴的 macro 的類型常常是
-     1. 以 make-jojo 爲後綴時
-        << string[address, length], word[address, length]
-        -- string[address, length] >>
-     2. 在 REPL 中使用時又可以是
-        << word[address, length] -- integer >>
-     所以在使用時
-     一定要注意維護棧中的值的良好性
-** memory allocation
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$syntax_set = 1024 * jo_size
-
-   address$syntax_set labeling
-      preserve size$syntax_set
-   #+end_src
-** *syntax-set*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*syntax-set*", V__syntax_set
-      xx address$syntax_set
-
-   define_variable "*current-free-address,syntax-set*", V__current_free_address__syntax_set
-      xx address$syntax_set
-   #+end_src
-** add-syntax                         :64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "add-syntax", add_syntax
-      ;; << predicate, function -- >>
-      pop_argument_stack rax
-      mov rbx, [V__current_free_address__syntax_set + jo_size]
-      mov [rbx], rax
-      add qword [V__current_free_address__syntax_set + jo_size], jo_size
-      pop_argument_stack rax
-      mov rbx, [V__current_free_address__syntax_set + jo_size]
-      mov [rbx], rax
-      add qword [V__current_free_address__syntax_set + jo_size], jo_size
-      next
-
-   }
-   #+end_src
-** add-syntax                         :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "add-syntax", add_syntax
-      ;; << predicate, function -- >>
-      pop_argument_stack rax
-      mov rsi, [V__current_free_address__syntax_set + jo_size]
-      mov [rsi], rax
-      add dword [V__current_free_address__syntax_set + jo_size], jo_size
-      pop_argument_stack rax
-      mov rsi, [V__current_free_address__syntax_set + jo_size]
-      mov [rsi], rax
-      add dword [V__current_free_address__syntax_set + jo_size], jo_size
-      next
-
-   }
-   #+end_src
-** clear-syntax-set                   :64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "clear-syntax-set", clear_syntax_set
-      ;; << -- >>
-      mov qword [V__current_free_address__syntax_set + jo_size], address$syntax_set
-      next
-
-   }
-   #+end_src
-** clear-syntax-set                   :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "clear-syntax-set", clear_syntax_set
-      ;; << -- >>
-      mov eax, address$syntax_set
-      mov dword [V__current_free_address__syntax_set + jo_size], eax;address$syntax_set
-      next
-
-   }
-   #+end_src
-** find-syntax
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$find_syntax:
-      xx 0
-
-   define_function "find-syntax", find_syntax
-      ;; << word[address, length]
-      ;;    -- jo, true
-      ;;    -- false >>
-      xx V__current_free_address__syntax_set
-      xx literal, cursor$find_syntax, save
-      xx find_syntax__loop
-      xx end
-
-   define_function "find-syntax,loop", find_syntax__loop
-      ;; << word[address, length]
-      ;;    -- jo, true
-      ;;    -- false >>
-      xx literal, cursor$find_syntax, fetch
-      xx V__syntax_set
-      xx equal?, false?branch, 4
-      xx   drop2
-      xx   false
-      xx   end
-      xx dup2
-      xx literal, cursor$find_syntax, fetch
-      xx V__jo_size, subtraction ;; note that here needs a subtraction
-      xx fetch
-      xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-      xx   drop2
-      xx   literal, cursor$find_syntax, fetch
-      xx   V__jo_size, subtraction
-      xx   V__jo_size, subtraction, fetch
-      xx   true
-      xx   end
-   .not_found:
-      xx literal, cursor$find_syntax, fetch
-      xx V__jo_size, subtraction
-      xx V__jo_size, subtraction
-      xx literal, cursor$find_syntax, save
-      xx taca, find_syntax__loop
-   #+end_src
-** cursor->syntax
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "cursor->syntax", cursor_to_syntax
-      ;; << cursor -- syntax[predicate, function] >>
-      ;; note that here needs two subtractions
-      xx V__jo_size, subtraction
-      xx dup, fetch, swap
-      xx V__jo_size, subtraction
-      xx fetch
-      xx end
-   #+end_src
-** syntax-exist?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$syntax_exist?:
-      xx 0
-
-   define_function "syntax-exist?", syntax_exist?
-      ;; << predicate, function -- bool >>
-      xx V__current_free_address__syntax_set
-      xx literal, cursor$syntax_exist?, save
-      xx syntax_exist?__loop
-      xx end
-
-   define_function "syntax-exist?,loop", syntax_exist?__loop
-      ;; << predicate, function -- bool >>
-      xx literal, cursor$syntax_exist?, fetch
-      xx V__syntax_set
-      xx equal?, false?branch, 4
-      xx   drop2
-      xx   false
-      xx   end
-      xx literal, cursor$syntax_exist?, fetch
-      xx cursor_to_syntax
-      ;; << predicate, function, predicate, function -- >>
-      xx xoverxx, equal?, false?, false?branch, 4
-      xx   drop
-      xx   branch, (.not_found-$)/jo_size
-      xx xoverxx, equal?, false?, false?branch, 3
-      xx   branch, (.not_found-$)/jo_size
-      xx drop2
-      xx true
-      xx end
-   .not_found:
-      xx V__jo_size
-      xx V__jo_size, addition
-      xx literal, cursor$syntax_exist?, sub_save
-      xx taca, syntax_exist?__loop
-   #+end_src
-** sub-syntax
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$sub_syntax:
-      xx 0
-
-   define_function "sub-syntax", sub_syntax
-      ;; << predicate, function -- >>
-      xx V__current_free_address__syntax_set
-      xx literal, cursor$sub_syntax, save
-      xx sub_syntax__loop
-      xx end
-
-   define_function "sub-syntax,loop", sub_syntax__loop
-      ;; << predicate, function -- >>
-      xx literal, cursor$sub_syntax, fetch
-      xx V__syntax_set, equal?, false?branch, 3
-      xx   drop2
-      xx   end
-      xx literal, cursor$sub_syntax, fetch
-      xx cursor_to_syntax
-      ;; << predicate, function, predicate, function -- >>
-      xx xoverxx, equal?, false?, false?branch, 10
-      xx   drop
-      xx   V__jo_size
-      xx   V__jo_size, addition
-      xx   literal, cursor$sub_syntax, sub_save
-      xx   taca, sub_syntax__loop
-      xx xoverxx, equal?, false?, false?branch, 9
-      xx   V__jo_size
-      xx   V__jo_size, addition
-      xx   literal, cursor$sub_syntax, sub_save
-      xx   taca, sub_syntax__loop
-      xx drop2
-      xx literal, cursor$sub_syntax, fetch
-      xx sub_syntax__move
-      xx end
-
-   define_function "sub-syntax,move", sub_syntax__move
-      ;; << cursor -- >>
-      xx dup
-      xx V__current_free_address__syntax_set
-      xx equal?, false?branch, (.more_to_move-$)/jo_size
-      xx   drop
-      xx   V__jo_size
-      xx   V__jo_size, addition
-      xx   address, V__current_free_address__syntax_set
-      xx   sub_save
-      xx   end
-   .more_to_move:
-      xx sub_syntax__move_one
-      xx taca, sub_syntax__move
-
-   define_function "sub-syntax,move_one", sub_syntax__move_one
-      ;; << cursor -- cursor + element-size >>
-      xx dup
-      xx fetch
-      xx over, V__jo_size, subtraction, V__jo_size, subtraction
-      xx save
-
-      xx dup
-      xx V__jo_size, addition, fetch
-      xx over, V__jo_size, subtraction
-      xx save
-
-      xx V__jo_size, addition
-      xx V__jo_size, addition
-      xx end
-   #+end_src
 * jojo-heap
 ** note
    * you can see how the naming convention is used
@@ -5993,8 +5523,660 @@
       xx add_save
       xx end
    #+end_src
-* make-jojo
+* syntax-stack
+** 記
+   * 用 *syntax-stack* 來進行語境轉換
+   * 用 *syntax-set,...* 來進行動態添加
+** memory allocate
+   #+begin_src fasm :tangle cicada-nymph.fasm
+      preserve jo_size * 64
+   address$syntax_stack labeling
+      preserve jo_size * 1024
+
+   define_variable "*pointer-syntax-stack*", V__pointer_syntax_stack
+      xx address$syntax_stack
+   #+end_src
+** push-syntax-stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "push-syntax-stack", push_syntax_stack
+      ;; << syntax-set[address] -- >>
+      xx V__pointer_syntax_stack
+      xx save
+      xx V__jo_size
+      xx address, V__pointer_syntax_stack
+      xx add_save
+      xx end
+   #+end_src
+** pop-syntax-stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "pop-syntax-stack", pop_syntax_stack
+      ;; << -- syntax-set[address] >>
+      xx V__jo_size
+      xx address, V__pointer_syntax_stack
+      xx sub_save
+      xx V__pointer_syntax_stack, fetch
+      xx end
+   #+end_src
+** drop-syntax-stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "drop-syntax-stack", drop_syntax_stack
+      ;; << -- >>
+      xx V__jo_size
+      xx address, V__pointer_syntax_stack
+      xx sub_save
+      xx end
+   #+end_src
+** syntax-stack-empty?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax-stack-empty?", syntax_stack_empty?
+      ;; << -- bool >>
+      xx V__pointer_syntax_stack
+      xx literal, address$syntax_stack
+      xx equal?
+      xx end
+   #+end_src
+** find-syntax
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "find-syntax", find_syntax
+      ;; << word[address, length]
+      ;;    -- function, true
+      ;;    -- false >>
+      xx syntax_stack_empty?, false?branch, 4
+      xx   drop2
+      xx   false
+      xx   end
+      xx V__pointer_syntax_stack
+      xx find_syntax__loop
+      xx end
+
+   define_function "find-syntax,loop", find_syntax__loop
+      ;; << word[address, length], cursor
+      ;;    -- function, true
+      ;;    -- false >>
+      xx dup
+      xx literal, address$syntax_stack
+      xx equal?, false?branch, 5
+      xx   drop, drop2
+      xx   false
+      xx   end
+      xx V__jo_size, subtraction
+      xx xxoverx, xoverxx, fetch
+      xx find_rule, false?branch, 7
+      xx   swap, drop
+      xx   xxswapx, drop2
+      xx   true
+      xx   end
+      xx taca, find_syntax__loop
+   #+end_src
+* rule-set
+** 記 接口
+   * 在 rule-set 中 一個 rule 的存在是
+     | function | predicate |
+   * 在棧中 一個 rule 的存在是
+     << rule[predicate, function] >>
+   * set is an ordered set
+     its interface is as the following
+     1. (add-rule)
+        add a rule into rule-set
+     2. (sub-rule)
+        try to sub a rule from rule-set
+        once a time
+        if can not find the rule in the rule-set
+        do nothing
+     4. (find-rule)
+        find a function from a word
+** 記 使用
+   * rule-set,make-jojo 是
+     語法謂詞 還有 語法函數 這種對子
+     所形成的有序集合
+   * 這樣就可以形成簡單的語境概念了
+     這種簡單的語境概念也很有趣
+     但是
+     它與我爲蟬語所構想的
+     利用姓名來實現的語境機制是不同的
+   * 每個語境都有責任
+     在進入和退出時
+     維護好 rule-set,make-jojo
+   * 以 rule 爲前綴的 macro 的類型常常是
+     1. 以 make-jojo 爲後綴時
+        << string[address, length], word[address, length]
+        -- string[address, length] >>
+     2. 在 REPL 中使用時又可以是
+        << word[address, length] -- integer >>
+     所以在使用時
+     一定要注意維護棧中的值的良好性
+** rule-set,fetch-cursor
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "rule-set,fetch-cursor", rule_set__fetch_cursor
+      ;; << rule-set -- address >>
+      xx V__jo_size, subtraction
+      xx fetch
+      xx end
+   #+end_src
+** rule-set,save-cursor
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "rule-set,save-cursor", rule_set__save_cursor
+      ;; << address, rule-set -- >>
+      xx V__jo_size, subtraction
+      xx save
+      xx end
+   #+end_src
+** add-rule                           :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "add-rule", add_rule
+      ;; << rule[predicate, function], rule-set -- >>
+      pop_argument_stack rdx
+      sub rdx, jo_size ;; cursor$rule_set
+      pop_argument_stack rax
+      mov rbx, [rdx]
+      mov [rbx], rax
+      add qword [rdx], jo_size
+      pop_argument_stack rax
+      mov rbx, [rdx]
+      mov [rbx], rax
+      add qword [rdx], jo_size
+      next
+
+   }
+   #+end_src
+** add-rule                           :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "add-rule", add_rule
+      ;; << rule[predicate, function], rule-set -- >>
+      pop_argument_stack rdx
+      sub rdx, jo_size ;; cursor$rule_set
+      pop_argument_stack rax
+      mov rbx, [rdx]
+      mov [rbx], rax
+      add dword [rdx], jo_size
+      pop_argument_stack rax
+      mov rbx, [rdx]
+      mov [rbx], rax
+      add dword [rdx], jo_size
+      next
+
+   }
+   #+end_src
+** cursor->[rule|function|predicate]
+   * note that here needs two subtractions
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "cursor->rule", cursor_to_rule
+      ;; << cursor -- rule[predicate, function] >>
+      xx V__jo_size, subtraction
+      xx dup, fetch, swap
+      xx V__jo_size, subtraction
+      xx fetch
+      xx end
+
+   define_function "cursor->predicate", cursor_to_predicate
+      ;; << cursor -- predicate >>
+      xx V__jo_size, subtraction
+      xx fetch
+      xx end
+
+   define_function "cursor->function", cursor_to_function
+      ;; << cursor -- function >>
+      xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
+      xx fetch
+      xx end
+   #+end_src
+** sub-rule
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   cursor$sub_rule:
+      xx 0
+
+   define_function "sub-rule", sub_rule
+      ;; << rule[predicate, function], rule-set -- >>
+      xx dup, rule_set__fetch_cursor
+      xx literal, cursor$sub_rule, save
+      xx sub_rule__loop
+      xx end
+
+   define_function "sub-rule,loop", sub_rule__loop
+      ;; << rule[predicate, function], rule-set -- >>
+      xx literal, cursor$sub_rule, fetch
+      xx over, equal?, false?branch, 4
+      xx   drop, drop2
+      xx   end
+      xx xxoverx
+      ;; << predicate, function, rule-set
+      ;;    predicate, function >>
+      xx literal, cursor$sub_rule, fetch
+      xx cursor_to_rule
+      ;; << predicate, function, rule-set
+      ;;    predicate, function, predicate, function >>
+      xx equal?, false?, false?branch, 9
+      xx   V__jo_size
+      xx   V__jo_size, addition
+      xx   literal, cursor$sub_rule, sub_save
+      xx   taca, sub_rule__loop
+      xx dup
+      xx literal, cursor$sub_rule, fetch
+      xx sub_rule__move
+      xx end
+
+   define_function "sub-rule,move", sub_rule__move
+      ;; << rule-set, cursor -- >>
+      xx dup2
+      xx equal?, false?branch, (.more_to_move-$)/jo_size
+      xx   drop
+      xx   dup, rule_set__fetch_cursor
+      xx   V__jo_size, subtraction
+      xx   V__jo_size, subtraction
+      xx   swap
+      xx   rule_set__save_cursor
+      xx   end
+   .more_to_move:
+      xx sub_rule__move_one
+      xx taca, sub_rule__move
+
+   define_function "sub-rule,move_one", sub_rule__move_one
+      ;; << cursor -- cursor + element-size >>
+      xx dup
+      xx fetch
+      xx over, V__jo_size, subtraction, V__jo_size, subtraction
+      xx save
+
+      xx dup
+      xx V__jo_size, addition, fetch
+      xx over, V__jo_size, subtraction
+      xx save
+
+      xx V__jo_size, addition
+      xx V__jo_size, addition
+      xx end
+   #+end_src
+** find-rule
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   cursor$find_rule:
+      xx 0
+
+   define_function "find-rule", find_rule
+      ;; << word[address, length], rule-set
+      ;;    -- jo, true
+      ;;    -- false >>
+      xx dup, rule_set__fetch_cursor
+      xx literal, cursor$find_rule, save
+      xx find_rule__loop
+      xx end
+
+   define_function "find-rule,loop", find_rule__loop
+      ;; << word[address, length], rule-set
+      ;;    -- jo, true
+      ;;    -- false >>
+      xx literal, cursor$find_rule, fetch
+      xx over, equal?, false?branch, 5
+      xx   drop, drop2
+      xx   false
+      xx   end
+      xx xxoverx
+      xx literal, cursor$find_rule, fetch
+      xx cursor_to_predicate
+      xx execute_jo, false?branch, (.not_found-$)/jo_size
+      xx   drop, drop2
+      xx   literal, cursor$find_rule, fetch
+      xx   cursor_to_function
+      xx   true
+      xx   end
+   .not_found:
+      xx literal, cursor$find_rule, fetch
+      xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
+      xx literal, cursor$find_rule, save
+      xx taca, find_rule__loop
+   #+end_src
+* rule-set,make-jojo
 ** ----------------------------------
+** note
+   * a syntax is a function to be called at compile time
+     with a string to be compiled as one argument
+     and do side-effect to store data into memory
+     and return a shorter string
+     [this can be viewed as moving a cursor forward]
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$rule_set__make_jojo = 1024 * jo_size
+
+   cursor$rule_set__make_jojo:
+      xx address$rule_set__make_jojo
+   address$rule_set__make_jojo:
+      times size$rule_set__make_jojo db 0
+   #+end_src
+** *rule-set,make-jojo*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
+      xx address$rule_set__make_jojo
+   #+end_src
+** init,rule-set,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
+      ;; << -- >>
+      xx literal, integer_string?
+      xx literal, syntax__integer_string__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_address?
+      xx literal, syntax__address__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_jo?
+      xx literal, syntax__jo__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_branch?
+      xx literal, syntax__branch__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_false?branch?
+      xx literal, syntax__false?branch__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_double_quote?
+      xx literal, syntax__double_quote__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, local_variable_save_string?
+      xx literal, syntax__local_variable_save__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, local_variable_fetch_string?
+      xx literal, syntax__local_variable_fetch__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx end
+   #+end_src
+** ----------------------------------
+** syntax,integer-string,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
+      ;; << string[address, length], word[address, length] --
+      ;;    string[address, length] >>
+      xx literal, literal
+      xx   save_into__jo_heap
+      xx string_to_integer
+      xx   save_into__jo_heap
+      xx end
+   #+end_src
+** ----------------------------------
+** word:address?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$word_is_address?:
+      db "address"
+   .end:
+   length$word_is_address? = (.end - string$word_is_address?)
+
+   define_function "word:address?", word_is_address?
+      ;; << word[address, length] -- bool >>
+      xx literal, string$word_is_address?
+      xx literal, length$word_is_address?
+      xx string_equal?
+      xx end
+   #+end_src
+** syntax,address,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,address,make-jojo", syntax__address__make_jojo
+      ;; << string[address, length], word:address --
+      ;;    string[address, length] >>
+      xx drop2
+
+      xx literal, address
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx find, false?branch, 4
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_undefined_word_report__for_address
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
+      ;; << -- >>
+      xx literal, string$undefined_word_report__for_address
+      xx literal, length$undefined_word_report__for_address
+      xx write_string
+      xx end
+
+   string$undefined_word_report__for_address:
+      db "* (make-jojo (address)) the word follows (address) is undefined : "
+   .end:
+   length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
+   #+end_src
+** ----------------------------------
+** word:jo?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$word_is_jo?:
+      db "jo"
+   .end:
+   length$word_is_jo? = (.end - string$word_is_jo?)
+
+   define_function "word:jo?", word_is_jo?
+      ;; << word[address, length] -- bool >>
+      xx literal, string$word_is_jo?
+      xx literal, length$word_is_jo?
+      xx string_equal?
+      xx end
+   #+end_src
+** syntax,jo,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
+      ;; << string[address, length], word:jo --
+      ;;    string[address, length] >>
+      xx drop2
+
+      xx literal, literal
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx find, false?branch, 4
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_undefined_word_report__for_jo
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-undefined-word-report,for-jo", write_undefined_word_report__for_jo
+      ;; << -- >>
+      xx literal, string$undefined_word_report__for_jo
+      xx literal, length$undefined_word_report__for_jo
+      xx write_string
+      xx end
+
+   string$undefined_word_report__for_jo:
+      db "* (syntax,jo,make-jojo) the word follows (jo) is undefined : "
+   .end:
+   length$undefined_word_report__for_jo = (.end - string$undefined_word_report__for_jo)
+   #+end_src
+** ----------------------------------
+** word:branch?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$word_is_branch?:
+      db "branch"
+   .end:
+   length$word_is_branch? = (.end - string$word_is_branch?)
+
+   define_function "word:branch?", word_is_branch?
+      ;; << word[branch, length] -- bool >>
+      xx literal, string$word_is_branch?
+      xx literal, length$word_is_branch?
+      xx string_equal?
+      xx end
+   #+end_src
+** syntax,branch,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,branch,make-jojo", syntax__branch__make_jojo
+      ;; << string[address, length], word:jo --
+      ;;    string[address, length] >>
+      xx drop2
+
+      xx literal, branch
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx dup2, integer_string?, false?branch, 5
+      xx   string_to_integer
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_not_integer_string_report__for_branch
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_branch
+      xx literal, length$not_integer_string_report__for_branch
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_branch:
+      db "* (syntax,branch,make-jojo) the word follows (branch) must be a integer string : "
+   .end:
+   length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
+   #+end_src
+** ----------------------------------
+** word:false?branch?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$word_is_false?branch?:
+      db "false?branch"
+   .end:
+   length$word_is_false?branch? = (.end - string$word_is_false?branch?)
+
+   define_function "word:false?branch?", word_is_false?branch?
+      ;; << word[false?branch, length] -- bool >>
+      xx literal, string$word_is_false?branch?
+      xx literal, length$word_is_false?branch?
+      xx string_equal?
+      xx end
+   #+end_src
+** syntax,false?branch,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,false?branch,make-jojo", syntax__false?branch__make_jojo
+      ;; << string[address, length], word:jo --
+      ;;    string[address, length] >>
+      xx drop2
+
+      xx literal, false?branch
+      xx save_into__jo_heap
+
+      xx dup2
+      xx string_head__word
+      xx dup2, integer_string?, false?branch, 5
+      xx   string_to_integer
+      xx   save_into__jo_heap
+      xx   string_tail__word
+      xx   end
+
+      xx write_not_integer_string_report__for_false?branch
+      xx dup2, string_head__word, write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_false?branch
+      xx literal, length$not_integer_string_report__for_false?branch
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_false?branch:
+      db "* (syntax,false?branch,make-jojo) the word follows (false?branch) must be a integer string : "
+   .end:
+   length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
+   #+end_src
+** ----------------------------------
+** word:double-quote?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$word_is_double_quote?:
+      db '"'
+   .end:
+   length$word_is_double_quote? = (.end - string$word_is_double_quote?)
+
+   define_function "word:double-quote?", word_is_double_quote?
+      ;; << word[double-quote, length] -- bool >>
+      xx literal, string$word_is_double_quote?
+      xx literal, length$word_is_double_quote?
+      xx string_equal?
+      xx end
+   #+end_src
+** syntax,double-quote,make-jojo
+   * primitive-string-heap is used
+     to allocate string literal in function body
+   * in ASCII encode double-quote is 34
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
+      ;; << string[address, length], word:jo --
+      ;;    string[address, length] >>
+      xx drop2
+
+      xx dup2
+      xx literal, '"', find_char__string
+      xx false?branch, (.not_found-$)/jo_size
+      xx   xoverxx, subtraction
+      ;;   << string[address, length], length >>
+
+      ;; address
+      xx   literal, literal
+      xx     save_into__jo_heap
+      xx   V__current_free_address__primitive_string, add2
+      xx     save_into__jo_heap
+      xx   xoverxx, over
+      xx     save_into__primitive_string_heap
+
+      ;; length
+      xx   literal, literal
+      xx     save_into__jo_heap
+      xx   dup
+      xx     save_into__jo_heap
+
+      xx   tuck, subtraction
+      xx   xxswapx
+      xx   addition
+      xx   swap
+
+      xx   string_tail__char ;; over the ending double-quote
+      xx   end
+
+      .not_found:
+      xx write_not_integer_string_report__for_double_quote
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+
+   define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
+      ;; << -- >>
+      xx literal, string$not_integer_string_report__for_double_quote
+      xx literal, length$not_integer_string_report__for_double_quote
+      xx write_string
+      xx end
+
+   string$not_integer_string_report__for_double_quote:
+      db "* (syntax,double-quote,make-jojo) can not find the ending double-quote"
+   .end:
+   length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
+   #+end_src
+** ----------------------------------
+* make-jojo
 ** note
    * the make-jojo is a macro dispatcher
      it can be viewed as make-function-body
@@ -6011,7 +6193,7 @@
       ;;    old V__first_jo_in_dictionary
       ;;    string[address, length]
       ;;    -- >>
-      xx sub_syntax__make_jojo
+      xx drop_syntax_stack
 
       xx literal, string$undo_make_jojo_report
       xx literal, length$undo_make_jojo_report
@@ -6030,7 +6212,7 @@
 
 
    string$undo_make_jojo_report:
-      db "  THE FOLLOWING JOJO IS NOT MADE :"
+      db "  the following jojo is not made :"
       db 10
       db ": "
    .end:
@@ -6045,9 +6227,9 @@
    define_function "make-jojo", make_jojo
       ;; << string[address, length] -- >>
       xx local_variable_table__clear
-      xx add_syntax__make_jojo
+      xx V__rule_set__make_jojo, push_syntax_stack
       xx make_jojo__loop
-      xx sub_syntax__make_jojo
+      xx drop_syntax_stack
       xx end
 
    define_function "make-jojo,loop", make_jojo__loop
@@ -6074,29 +6256,13 @@
       xx   end
       xx dup2
       xx find, false?branch, 5
-      xx   xxswapx, drop2 ;; word
-      xx   make_jojo__dispatch_jo
+      xx   xxswapx, drop2 ;; drop word
+      xx   save_into__jo_heap
       xx   end
       xx write_undefined_word_report__for_make_jojo
       xx write_string
       xx literal, 10, write_byte
       xx !undo_make_jojo
-
-   define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
-      ;; << string[address, length], jo --
-      ;;    string[address, length] >>
-      xx dup, macro_jo?, false?branch, 3
-      xx   execute_jo
-      xx   end
-
-      ;; the same to
-      ;;   function
-      ;;   primitive-function
-      ;;   variable
-      ;;   exception
-      xx save_into__jo_heap
-      xx end
-
 
    define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
       ;; << -- >>
@@ -6110,50 +6276,6 @@
    .end:
    length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
    #+end_src
-** ----------------------------------
-** add-syntax,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "add-syntax,make-jojo", add_syntax__make_jojo
-      ;; << -- >>
-      xx literal, integer_string?
-      xx literal, syntax__integer_string__make_jojo
-      xx add_syntax
-      xx literal, local_variable_save_string?
-      xx literal, syntax__local_variable_save__make_jojo
-      xx add_syntax
-      xx literal, local_variable_fetch_string?
-      xx literal, syntax__local_variable_fetch__make_jojo
-      xx add_syntax
-      xx end
-   #+end_src
-** sub-syntax,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
-      ;; << -- >>
-      xx literal, integer_string?
-      xx literal, syntax__integer_string__make_jojo
-      xx sub_syntax
-      xx literal, local_variable_save_string?
-      xx literal, syntax__local_variable_save__make_jojo
-      xx sub_syntax
-      xx literal, local_variable_fetch_string?
-      xx literal, syntax__local_variable_fetch__make_jojo
-      xx sub_syntax
-      xx end
-   #+end_src
-** ----------------------------------
-** syntax,integer-string,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
-      ;; << string[address, length], word[address, length] --
-      ;;    string[address, length] >>
-      xx literal, literal
-      xx   save_into__jo_heap
-      xx string_to_integer
-      xx   save_into__jo_heap
-      xx end
-   #+end_src
-** ----------------------------------
 * define-[function|macro|exception|variable]
 ** note
    * for the following function
@@ -6186,43 +6308,6 @@
       xx save
 
       xx literal, explain$function
-      xx   save_into__jo_heap
-
-      xx dup2, string_tail__word
-      xx   make_jojo
-
-
-      xx drop2
-      xx drop, drop, drop
-      xx end
-   #+end_src
-** define-macro
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "define-macro", CICADA__define_macro
-      ;; << string[address, length] -- >>
-      xx V__current_free_address__primitive_string, xxswapx
-      xx V__current_free_address__jo_heap, xxswapx
-      xx V__first_jo_in_dictionary, xxswapx
-      xx prepare_for
-      xx   exception_head
-      xx   !undo_make_jojo
-      xx   end_of_prepare
-
-
-      xx V__current_free_address__primitive_string
-      xx   save_into__jo_heap
-      xx dup2, string_head__word
-      xx   save_into__primitive_string_heap
-
-      xx V__first_jo_in_dictionary
-      xx jo_to_link
-      xx   save_into__jo_heap
-
-      xx V__current_free_address__jo_heap
-      xx address, V__first_jo_in_dictionary
-      xx save
-
-      xx literal, explain$macro
       xx   save_into__jo_heap
 
       xx dup2, string_tail__word
@@ -6430,7 +6515,6 @@
      即 在 explain$function 中需要做特殊處理
      注意
      explain$exception
-     explain$macro
      等等
      和 explain$function 並沒有區別
      只是名字不一樣而已
@@ -6454,12 +6538,7 @@
    * 這裏需要識別 >:name 還有 :name 等等
      並對它們做特殊處理
      這些東西應該藉助設計良好的語法擴展機制來實現
-   * 也就是說
-     單純的 define-macro 是不充分的
-     需要讓 make-jojo 維護一個列表
-     以動態的方式查找 語法謂詞
-   * 實際上
-     我將使用一個 語法謂詞 的棧
+   * 我將使用一個 語法謂詞 的棧
      可以發現
      這樣的話
      我就能很容易地臨時改變語法了
@@ -6785,7 +6864,7 @@
    #+end_src
 ** syntax,local-variable-fetch,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
+   define_function "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx dup2
@@ -6817,7 +6896,7 @@
       xx end
 
    string$local_variable_not_bound_report:
-      db "* LOCAL-VARIABLE NOT BOUND : "
+      db "* local-variable not bound : "
    .end:
    length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
    #+end_src
@@ -6855,7 +6934,7 @@
    #+end_src
 ** syntax,local-variable-save,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_macro "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
+   define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx string_tail__char

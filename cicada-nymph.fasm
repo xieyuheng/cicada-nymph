@@ -390,33 +390,6 @@ explain$variable:
    push_argument_stack rbx
    next
 
-macro define_macro string, jo {
-
-define_macro__#jo:
-
-name__#jo:
-   xx current_free_address$primitive_string_heap
-
-   make_primitive_string string
-
-link__#jo:
-   xx link
-   link = link__#jo
-
-jo:
-   xx explain$macro
-
-   ;; here follows a jojo as function-body
-
-}
-
-explain$macro:
-   mov rbx, [current_free_address$local_data_vector]
-   push_return_stack rbx
-   add rax, jo_size
-   push_return_stack rax
-   next
-
 macro define_exception string, jo {
 
 define_exception__#jo:
@@ -623,13 +596,6 @@ define_function "function-jo?", function_jo?
    ;; << jo -- bool >>
    xx jo_to_type
    xx literal, explain$function
-   xx equal?
-   xx end
-
-define_function "macro-jo?", macro_jo?
-   ;; << jo -- bool >>
-   xx jo_to_type
-   xx literal, explain$macro
    xx equal?
    xx end
 
@@ -2010,7 +1976,7 @@ define_function "mod", modulo
    xx end
 
 define_primitive_function "equal?", equal?
-   ;; << a, b -- a, b, true of false >>
+   ;; << a, b -- bool >>
    pop_argument_stack rbx
    pop_argument_stack rax
    cmp   rbx, rax
@@ -2054,6 +2020,15 @@ define_primitive_function "greater-or-equal?", greater_or_equal?
    movzx rax, al
    push_argument_stack rax
    next
+
+define_function "equal2?", equal2?
+   ;; << a1, b1, a2, b2 -- bool >>
+   xx xswapxx
+   xx equal?, false?, false?branch, 4
+   xx   drop2, false
+   xx   end
+   xx equal?
+   xx end
 
 define_function "negative?", negative?
    ;; << integer -- bool >>
@@ -3351,12 +3326,13 @@ __syscall_with_too_many:
 
 define_function "initialization", initialization
    ;; << -- >>
-   xx initialize_system
+   xx init_system
+   xx init__rule_set__make_jojo
    xx end
 
 match =linux, platform {
 
-define_function "initialize-system", initialize_system
+define_function "init-system", init_system
    ;; << -- >>
    xx init_operating_system_environment
    xx init_path__home_directory
@@ -3885,19 +3861,17 @@ define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
    xx (last_link + jo_size)
 
 define_function "find", find
-   ;; found :
-   ;; << word[address, length] -- jo, true >>
-   ;; not found :
-   ;; << word[address, length] -- false >>
+   ;; << word[address, length]
+   ;;    -- jo, true
+   ;;    -- false >>
    xx V__first_jo_in_dictionary
    xx help__find
    xx end
 
 define_function "help,find", help__find
-   ;; found :
-   ;; << word[address, length], jo -- jo, true >>
-   ;; not found :
-   ;; << word[address, length], jo -- false >>
+   ;; << word[address, length], jo
+   ;;    -- jo, true
+   ;;    -- false >>
    xx xxtuckx
 
 
@@ -4111,358 +4085,6 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
-define_macro "address", M__address
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, address
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx find, false?branch, 4
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_undefined_word_report__for_address
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_address
-   xx literal, length$undefined_word_report__for_address
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_address:
-   db "* (make-jojo (address)) the word follows (address) is undefined : "
-.end:
-length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
-
-define_macro "branch", M__branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_branch
-   xx literal, length$not_integer_string_report__for_branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_branch:
-   db "* (make-jojo (branch)) the word follows (branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-
-define_macro "false?branch", M__false?branch
-   ;; << string[address, length] -- string[address, length] >>
-   xx literal, false?branch
-   xx save_into__jo_heap
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   save_into__jo_heap
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_false?branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_false?branch
-   xx literal, length$not_integer_string_report__for_false?branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_false?branch:
-   db "* (make-jojo (false?branch)) the word follows (false?branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
-
-define_macro '"', M__double_quote
-   ;; << string[address, length] -- string[address, length] >>
-   xx dup2
-   xx literal, '"', find_char__string
-   xx false?branch, (.not_found-$)/jo_size
-   xx   xoverxx, subtraction
-   ;;   << string[address, length], length >>
-
-   ;; address
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   V__current_free_address__primitive_string, add2
-   xx     save_into__jo_heap
-   xx   xoverxx, over
-   xx     save_into__primitive_string_heap
-
-   ;; length
-   xx   literal, literal
-   xx     save_into__jo_heap
-   xx   dup
-   xx     save_into__jo_heap
-
-   xx   tuck, subtraction
-   xx   xxswapx
-   xx   addition
-   xx   swap
-
-   xx   string_tail__char ;; over the ending double-quote
-   xx   end
-
-   .not_found:
-   xx write_not_integer_string_report__for_double_quote
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_double_quote
-   xx literal, length$not_integer_string_report__for_double_quote
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_double_quote:
-   db "* (make-jojo (double-quote)) can not find the ending double-quote"
-.end:
-length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
-
-size$syntax_set = 1024 * jo_size
-
-address$syntax_set labeling
-   preserve size$syntax_set
-
-define_variable "*syntax-set*", V__syntax_set
-   xx address$syntax_set
-
-define_variable "*current-free-address,syntax-set*", V__current_free_address__syntax_set
-   xx address$syntax_set
-
-match =64bit, machine {
-
-define_primitive_function "add-syntax", add_syntax
-   ;; << predicate, function -- >>
-   pop_argument_stack rax
-   mov rbx, [V__current_free_address__syntax_set + jo_size]
-   mov [rbx], rax
-   add qword [V__current_free_address__syntax_set + jo_size], jo_size
-   pop_argument_stack rax
-   mov rbx, [V__current_free_address__syntax_set + jo_size]
-   mov [rbx], rax
-   add qword [V__current_free_address__syntax_set + jo_size], jo_size
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "add-syntax", add_syntax
-   ;; << predicate, function -- >>
-   pop_argument_stack rax
-   mov rsi, [V__current_free_address__syntax_set + jo_size]
-   mov [rsi], rax
-   add dword [V__current_free_address__syntax_set + jo_size], jo_size
-   pop_argument_stack rax
-   mov rsi, [V__current_free_address__syntax_set + jo_size]
-   mov [rsi], rax
-   add dword [V__current_free_address__syntax_set + jo_size], jo_size
-   next
-
-}
-
-match =64bit, machine {
-
-define_primitive_function "clear-syntax-set", clear_syntax_set
-   ;; << -- >>
-   mov qword [V__current_free_address__syntax_set + jo_size], address$syntax_set
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "clear-syntax-set", clear_syntax_set
-   ;; << -- >>
-   mov eax, address$syntax_set
-   mov dword [V__current_free_address__syntax_set + jo_size], eax;address$syntax_set
-   next
-
-}
-
-cursor$find_syntax:
-   xx 0
-
-define_function "find-syntax", find_syntax
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx V__current_free_address__syntax_set
-   xx literal, cursor$find_syntax, save
-   xx find_syntax__loop
-   xx end
-
-define_function "find-syntax,loop", find_syntax__loop
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx literal, cursor$find_syntax, fetch
-   xx V__syntax_set
-   xx equal?, false?branch, 4
-   xx   drop2
-   xx   false
-   xx   end
-   xx dup2
-   xx literal, cursor$find_syntax, fetch
-   xx V__jo_size, subtraction ;; note that here needs a subtraction
-   xx fetch
-   xx execute_jo, true?, false?branch, (.not_found-$)/jo_size
-   xx   drop2
-   xx   literal, cursor$find_syntax, fetch
-   xx   V__jo_size, subtraction
-   xx   V__jo_size, subtraction, fetch
-   xx   true
-   xx   end
-.not_found:
-   xx literal, cursor$find_syntax, fetch
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
-   xx literal, cursor$find_syntax, save
-   xx taca, find_syntax__loop
-
-define_function "cursor->syntax", cursor_to_syntax
-   ;; << cursor -- syntax[predicate, function] >>
-   ;; note that here needs two subtractions
-   xx V__jo_size, subtraction
-   xx dup, fetch, swap
-   xx V__jo_size, subtraction
-   xx fetch
-   xx end
-
-cursor$syntax_exist?:
-   xx 0
-
-define_function "syntax-exist?", syntax_exist?
-   ;; << predicate, function -- bool >>
-   xx V__current_free_address__syntax_set
-   xx literal, cursor$syntax_exist?, save
-   xx syntax_exist?__loop
-   xx end
-
-define_function "syntax-exist?,loop", syntax_exist?__loop
-   ;; << predicate, function -- bool >>
-   xx literal, cursor$syntax_exist?, fetch
-   xx V__syntax_set
-   xx equal?, false?branch, 4
-   xx   drop2
-   xx   false
-   xx   end
-   xx literal, cursor$syntax_exist?, fetch
-   xx cursor_to_syntax
-   ;; << predicate, function, predicate, function -- >>
-   xx xoverxx, equal?, false?, false?branch, 4
-   xx   drop
-   xx   branch, (.not_found-$)/jo_size
-   xx xoverxx, equal?, false?, false?branch, 3
-   xx   branch, (.not_found-$)/jo_size
-   xx drop2
-   xx true
-   xx end
-.not_found:
-   xx V__jo_size
-   xx V__jo_size, addition
-   xx literal, cursor$syntax_exist?, sub_save
-   xx taca, syntax_exist?__loop
-
-cursor$sub_syntax:
-   xx 0
-
-define_function "sub-syntax", sub_syntax
-   ;; << predicate, function -- >>
-   xx V__current_free_address__syntax_set
-   xx literal, cursor$sub_syntax, save
-   xx sub_syntax__loop
-   xx end
-
-define_function "sub-syntax,loop", sub_syntax__loop
-   ;; << predicate, function -- >>
-   xx literal, cursor$sub_syntax, fetch
-   xx V__syntax_set, equal?, false?branch, 3
-   xx   drop2
-   xx   end
-   xx literal, cursor$sub_syntax, fetch
-   xx cursor_to_syntax
-   ;; << predicate, function, predicate, function -- >>
-   xx xoverxx, equal?, false?, false?branch, 10
-   xx   drop
-   xx   V__jo_size
-   xx   V__jo_size, addition
-   xx   literal, cursor$sub_syntax, sub_save
-   xx   taca, sub_syntax__loop
-   xx xoverxx, equal?, false?, false?branch, 9
-   xx   V__jo_size
-   xx   V__jo_size, addition
-   xx   literal, cursor$sub_syntax, sub_save
-   xx   taca, sub_syntax__loop
-   xx drop2
-   xx literal, cursor$sub_syntax, fetch
-   xx sub_syntax__move
-   xx end
-
-define_function "sub-syntax,move", sub_syntax__move
-   ;; << cursor -- >>
-   xx dup
-   xx V__current_free_address__syntax_set
-   xx equal?, false?branch, (.more_to_move-$)/jo_size
-   xx   drop
-   xx   V__jo_size
-   xx   V__jo_size, addition
-   xx   address, V__current_free_address__syntax_set
-   xx   sub_save
-   xx   end
-.more_to_move:
-   xx sub_syntax__move_one
-   xx taca, sub_syntax__move
-
-define_function "sub-syntax,move_one", sub_syntax__move_one
-   ;; << cursor -- cursor + element-size >>
-   xx dup
-   xx fetch
-   xx over, V__jo_size, subtraction, V__jo_size, subtraction
-   xx save
-
-   xx dup
-   xx V__jo_size, addition, fetch
-   xx over, V__jo_size, subtraction
-   xx save
-
-   xx V__jo_size, addition
-   xx V__jo_size, addition
-   xx end
-
 size$jo_heap = 1024 * 1024 * jo_size
 
 define_variable "*jo-heap*", V__jo_heap
@@ -4505,13 +4127,552 @@ define_function "save-into,jo-heap", save_into__jo_heap
    xx add_save
    xx end
 
+preserve jo_size * 64
+address$syntax_stack labeling
+   preserve jo_size * 1024
+
+define_variable "*pointer-syntax-stack*", V__pointer_syntax_stack
+   xx address$syntax_stack
+
+define_function "push-syntax-stack", push_syntax_stack
+   ;; << syntax-set[address] -- >>
+   xx V__pointer_syntax_stack
+   xx save
+   xx V__jo_size
+   xx address, V__pointer_syntax_stack
+   xx add_save
+   xx end
+
+define_function "pop-syntax-stack", pop_syntax_stack
+   ;; << -- syntax-set[address] >>
+   xx V__jo_size
+   xx address, V__pointer_syntax_stack
+   xx sub_save
+   xx V__pointer_syntax_stack, fetch
+   xx end
+
+define_function "drop-syntax-stack", drop_syntax_stack
+   ;; << -- >>
+   xx V__jo_size
+   xx address, V__pointer_syntax_stack
+   xx sub_save
+   xx end
+
+define_function "syntax-stack-empty?", syntax_stack_empty?
+   ;; << -- bool >>
+   xx V__pointer_syntax_stack
+   xx literal, address$syntax_stack
+   xx equal?
+   xx end
+
+define_function "find-syntax", find_syntax
+   ;; << word[address, length]
+   ;;    -- function, true
+   ;;    -- false >>
+   xx syntax_stack_empty?, false?branch, 4
+   xx   drop2
+   xx   false
+   xx   end
+   xx V__pointer_syntax_stack
+   xx find_syntax__loop
+   xx end
+
+define_function "find-syntax,loop", find_syntax__loop
+   ;; << word[address, length], cursor
+   ;;    -- function, true
+   ;;    -- false >>
+   xx dup
+   xx literal, address$syntax_stack
+   xx equal?, false?branch, 5
+   xx   drop, drop2
+   xx   false
+   xx   end
+   xx V__jo_size, subtraction
+   xx xxoverx, xoverxx, fetch
+   xx find_rule, false?branch, 7
+   xx   swap, drop
+   xx   xxswapx, drop2
+   xx   true
+   xx   end
+   xx taca, find_syntax__loop
+
+define_function "rule-set,fetch-cursor", rule_set__fetch_cursor
+   ;; << rule-set -- address >>
+   xx V__jo_size, subtraction
+   xx fetch
+   xx end
+
+define_function "rule-set,save-cursor", rule_set__save_cursor
+   ;; << address, rule-set -- >>
+   xx V__jo_size, subtraction
+   xx save
+   xx end
+
+match =64bit, machine {
+
+define_primitive_function "add-rule", add_rule
+   ;; << rule[predicate, function], rule-set -- >>
+   pop_argument_stack rdx
+   sub rdx, jo_size ;; cursor$rule_set
+   pop_argument_stack rax
+   mov rbx, [rdx]
+   mov [rbx], rax
+   add qword [rdx], jo_size
+   pop_argument_stack rax
+   mov rbx, [rdx]
+   mov [rbx], rax
+   add qword [rdx], jo_size
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "add-rule", add_rule
+   ;; << rule[predicate, function], rule-set -- >>
+   pop_argument_stack rdx
+   sub rdx, jo_size ;; cursor$rule_set
+   pop_argument_stack rax
+   mov rbx, [rdx]
+   mov [rbx], rax
+   add dword [rdx], jo_size
+   pop_argument_stack rax
+   mov rbx, [rdx]
+   mov [rbx], rax
+   add dword [rdx], jo_size
+   next
+
+}
+
+define_function "cursor->rule", cursor_to_rule
+   ;; << cursor -- rule[predicate, function] >>
+   xx V__jo_size, subtraction
+   xx dup, fetch, swap
+   xx V__jo_size, subtraction
+   xx fetch
+   xx end
+
+define_function "cursor->predicate", cursor_to_predicate
+   ;; << cursor -- predicate >>
+   xx V__jo_size, subtraction
+   xx fetch
+   xx end
+
+define_function "cursor->function", cursor_to_function
+   ;; << cursor -- function >>
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx fetch
+   xx end
+
+cursor$sub_rule:
+   xx 0
+
+define_function "sub-rule", sub_rule
+   ;; << rule[predicate, function], rule-set -- >>
+   xx dup, rule_set__fetch_cursor
+   xx literal, cursor$sub_rule, save
+   xx sub_rule__loop
+   xx end
+
+define_function "sub-rule,loop", sub_rule__loop
+   ;; << rule[predicate, function], rule-set -- >>
+   xx literal, cursor$sub_rule, fetch
+   xx over, equal?, false?branch, 4
+   xx   drop, drop2
+   xx   end
+   xx xxoverx
+   ;; << predicate, function, rule-set
+   ;;    predicate, function >>
+   xx literal, cursor$sub_rule, fetch
+   xx cursor_to_rule
+   ;; << predicate, function, rule-set
+   ;;    predicate, function, predicate, function >>
+   xx equal?, false?, false?branch, 9
+   xx   V__jo_size
+   xx   V__jo_size, addition
+   xx   literal, cursor$sub_rule, sub_save
+   xx   taca, sub_rule__loop
+   xx dup
+   xx literal, cursor$sub_rule, fetch
+   xx sub_rule__move
+   xx end
+
+define_function "sub-rule,move", sub_rule__move
+   ;; << rule-set, cursor -- >>
+   xx dup2
+   xx equal?, false?branch, (.more_to_move-$)/jo_size
+   xx   drop
+   xx   dup, rule_set__fetch_cursor
+   xx   V__jo_size, subtraction
+   xx   V__jo_size, subtraction
+   xx   swap
+   xx   rule_set__save_cursor
+   xx   end
+.more_to_move:
+   xx sub_rule__move_one
+   xx taca, sub_rule__move
+
+define_function "sub-rule,move_one", sub_rule__move_one
+   ;; << cursor -- cursor + element-size >>
+   xx dup
+   xx fetch
+   xx over, V__jo_size, subtraction, V__jo_size, subtraction
+   xx save
+
+   xx dup
+   xx V__jo_size, addition, fetch
+   xx over, V__jo_size, subtraction
+   xx save
+
+   xx V__jo_size, addition
+   xx V__jo_size, addition
+   xx end
+
+cursor$find_rule:
+   xx 0
+
+define_function "find-rule", find_rule
+   ;; << word[address, length], rule-set
+   ;;    -- jo, true
+   ;;    -- false >>
+   xx dup, rule_set__fetch_cursor
+   xx literal, cursor$find_rule, save
+   xx find_rule__loop
+   xx end
+
+define_function "find-rule,loop", find_rule__loop
+   ;; << word[address, length], rule-set
+   ;;    -- jo, true
+   ;;    -- false >>
+   xx literal, cursor$find_rule, fetch
+   xx over, equal?, false?branch, 5
+   xx   drop, drop2
+   xx   false
+   xx   end
+   xx xxoverx
+   xx literal, cursor$find_rule, fetch
+   xx cursor_to_predicate
+   xx execute_jo, false?branch, (.not_found-$)/jo_size
+   xx   drop, drop2
+   xx   literal, cursor$find_rule, fetch
+   xx   cursor_to_function
+   xx   true
+   xx   end
+.not_found:
+   xx literal, cursor$find_rule, fetch
+   xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
+   xx literal, cursor$find_rule, save
+   xx taca, find_rule__loop
+
+size$rule_set__make_jojo = 1024 * jo_size
+
+cursor$rule_set__make_jojo:
+   xx address$rule_set__make_jojo
+address$rule_set__make_jojo:
+   times size$rule_set__make_jojo db 0
+
+define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
+   xx address$rule_set__make_jojo
+
+define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
+   ;; << -- >>
+   xx literal, integer_string?
+   xx literal, syntax__integer_string__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, word_is_address?
+   xx literal, syntax__address__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, word_is_jo?
+   xx literal, syntax__jo__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, word_is_branch?
+   xx literal, syntax__branch__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, word_is_false?branch?
+   xx literal, syntax__false?branch__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, word_is_double_quote?
+   xx literal, syntax__double_quote__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, local_variable_save_string?
+   xx literal, syntax__local_variable_save__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx literal, local_variable_fetch_string?
+   xx literal, syntax__local_variable_fetch__make_jojo
+   xx V__rule_set__make_jojo, add_rule
+
+   xx end
+
+define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
+   ;; << string[address, length], word[address, length] --
+   ;;    string[address, length] >>
+   xx literal, literal
+   xx   save_into__jo_heap
+   xx string_to_integer
+   xx   save_into__jo_heap
+   xx end
+
+string$word_is_address?:
+   db "address"
+.end:
+length$word_is_address? = (.end - string$word_is_address?)
+
+define_function "word:address?", word_is_address?
+   ;; << word[address, length] -- bool >>
+   xx literal, string$word_is_address?
+   xx literal, length$word_is_address?
+   xx string_equal?
+   xx end
+
+define_function "syntax,address,make-jojo", syntax__address__make_jojo
+   ;; << string[address, length], word:address --
+   ;;    string[address, length] >>
+   xx drop2
+
+   xx literal, address
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx find, false?branch, 4
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_undefined_word_report__for_address
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_address
+   xx literal, length$undefined_word_report__for_address
+   xx write_string
+   xx end
+
+string$undefined_word_report__for_address:
+   db "* (make-jojo (address)) the word follows (address) is undefined : "
+.end:
+length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
+
+string$word_is_jo?:
+   db "jo"
+.end:
+length$word_is_jo? = (.end - string$word_is_jo?)
+
+define_function "word:jo?", word_is_jo?
+   ;; << word[address, length] -- bool >>
+   xx literal, string$word_is_jo?
+   xx literal, length$word_is_jo?
+   xx string_equal?
+   xx end
+
+define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
+   ;; << string[address, length], word:jo --
+   ;;    string[address, length] >>
+   xx drop2
+
+   xx literal, literal
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx find, false?branch, 4
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_undefined_word_report__for_jo
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-undefined-word-report,for-jo", write_undefined_word_report__for_jo
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_jo
+   xx literal, length$undefined_word_report__for_jo
+   xx write_string
+   xx end
+
+string$undefined_word_report__for_jo:
+   db "* (syntax,jo,make-jojo) the word follows (jo) is undefined : "
+.end:
+length$undefined_word_report__for_jo = (.end - string$undefined_word_report__for_jo)
+
+string$word_is_branch?:
+   db "branch"
+.end:
+length$word_is_branch? = (.end - string$word_is_branch?)
+
+define_function "word:branch?", word_is_branch?
+   ;; << word[branch, length] -- bool >>
+   xx literal, string$word_is_branch?
+   xx literal, length$word_is_branch?
+   xx string_equal?
+   xx end
+
+define_function "syntax,branch,make-jojo", syntax__branch__make_jojo
+   ;; << string[address, length], word:jo --
+   ;;    string[address, length] >>
+   xx drop2
+
+   xx literal, branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_branch
+   xx literal, length$not_integer_string_report__for_branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_branch:
+   db "* (syntax,branch,make-jojo) the word follows (branch) must be a integer string : "
+.end:
+length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
+
+string$word_is_false?branch?:
+   db "false?branch"
+.end:
+length$word_is_false?branch? = (.end - string$word_is_false?branch?)
+
+define_function "word:false?branch?", word_is_false?branch?
+   ;; << word[false?branch, length] -- bool >>
+   xx literal, string$word_is_false?branch?
+   xx literal, length$word_is_false?branch?
+   xx string_equal?
+   xx end
+
+define_function "syntax,false?branch,make-jojo", syntax__false?branch__make_jojo
+   ;; << string[address, length], word:jo --
+   ;;    string[address, length] >>
+   xx drop2
+
+   xx literal, false?branch
+   xx save_into__jo_heap
+
+   xx dup2
+   xx string_head__word
+   xx dup2, integer_string?, false?branch, 5
+   xx   string_to_integer
+   xx   save_into__jo_heap
+   xx   string_tail__word
+   xx   end
+
+   xx write_not_integer_string_report__for_false?branch
+   xx dup2, string_head__word, write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_false?branch
+   xx literal, length$not_integer_string_report__for_false?branch
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_false?branch:
+   db "* (syntax,false?branch,make-jojo) the word follows (false?branch) must be a integer string : "
+.end:
+length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
+
+string$word_is_double_quote?:
+   db '"'
+.end:
+length$word_is_double_quote? = (.end - string$word_is_double_quote?)
+
+define_function "word:double-quote?", word_is_double_quote?
+   ;; << word[double-quote, length] -- bool >>
+   xx literal, string$word_is_double_quote?
+   xx literal, length$word_is_double_quote?
+   xx string_equal?
+   xx end
+
+define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
+   ;; << string[address, length], word:jo --
+   ;;    string[address, length] >>
+   xx drop2
+
+   xx dup2
+   xx literal, '"', find_char__string
+   xx false?branch, (.not_found-$)/jo_size
+   xx   xoverxx, subtraction
+   ;;   << string[address, length], length >>
+
+   ;; address
+   xx   literal, literal
+   xx     save_into__jo_heap
+   xx   V__current_free_address__primitive_string, add2
+   xx     save_into__jo_heap
+   xx   xoverxx, over
+   xx     save_into__primitive_string_heap
+
+   ;; length
+   xx   literal, literal
+   xx     save_into__jo_heap
+   xx   dup
+   xx     save_into__jo_heap
+
+   xx   tuck, subtraction
+   xx   xxswapx
+   xx   addition
+   xx   swap
+
+   xx   string_tail__char ;; over the ending double-quote
+   xx   end
+
+   .not_found:
+   xx write_not_integer_string_report__for_double_quote
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+
+define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
+   ;; << -- >>
+   xx literal, string$not_integer_string_report__for_double_quote
+   xx literal, length$not_integer_string_report__for_double_quote
+   xx write_string
+   xx end
+
+string$not_integer_string_report__for_double_quote:
+   db "* (syntax,double-quote,make-jojo) can not find the ending double-quote"
+.end:
+length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
+
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__primitive_string
    ;;    old V__current_free_address__jo_heap
    ;;    old V__first_jo_in_dictionary
    ;;    string[address, length]
    ;;    -- >>
-   xx sub_syntax__make_jojo
+   xx drop_syntax_stack
 
    xx literal, string$undo_make_jojo_report
    xx literal, length$undo_make_jojo_report
@@ -4530,7 +4691,7 @@ define_exception "!undo-make-jojo", !undo_make_jojo
 
 
 string$undo_make_jojo_report:
-   db "  THE FOLLOWING JOJO IS NOT MADE :"
+   db "  the following jojo is not made :"
    db 10
    db ": "
 .end:
@@ -4539,9 +4700,9 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
    xx local_variable_table__clear
-   xx add_syntax__make_jojo
+   xx V__rule_set__make_jojo, push_syntax_stack
    xx make_jojo__loop
-   xx sub_syntax__make_jojo
+   xx drop_syntax_stack
    xx end
 
 define_function "make-jojo,loop", make_jojo__loop
@@ -4566,29 +4727,13 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx   end
    xx dup2
    xx find, false?branch, 5
-   xx   xxswapx, drop2 ;; word
-   xx   make_jojo__dispatch_jo
+   xx   xxswapx, drop2 ;; drop word
+   xx   save_into__jo_heap
    xx   end
    xx write_undefined_word_report__for_make_jojo
    xx write_string
    xx literal, 10, write_byte
    xx !undo_make_jojo
-
-define_function "make-jojo,dispatch-jo", make_jojo__dispatch_jo
-   ;; << string[address, length], jo --
-   ;;    string[address, length] >>
-   xx dup, macro_jo?, false?branch, 3
-   xx   execute_jo
-   xx   end
-
-   ;; the same to
-   ;;   function
-   ;;   primitive-function
-   ;;   variable
-   ;;   exception
-   xx save_into__jo_heap
-   xx end
-
 
 define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
    ;; << -- >>
@@ -4601,41 +4746,6 @@ string$undefined_word_report__for_make_jojo:
    db "* (make-jojo) meets undefined word : "
 .end:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
-
-define_function "add-syntax,make-jojo", add_syntax__make_jojo
-   ;; << -- >>
-   xx literal, integer_string?
-   xx literal, syntax__integer_string__make_jojo
-   xx add_syntax
-   xx literal, local_variable_save_string?
-   xx literal, syntax__local_variable_save__make_jojo
-   xx add_syntax
-   xx literal, local_variable_fetch_string?
-   xx literal, syntax__local_variable_fetch__make_jojo
-   xx add_syntax
-   xx end
-
-define_function "sub-syntax,make-jojo", sub_syntax__make_jojo
-   ;; << -- >>
-   xx literal, integer_string?
-   xx literal, syntax__integer_string__make_jojo
-   xx sub_syntax
-   xx literal, local_variable_save_string?
-   xx literal, syntax__local_variable_save__make_jojo
-   xx sub_syntax
-   xx literal, local_variable_fetch_string?
-   xx literal, syntax__local_variable_fetch__make_jojo
-   xx sub_syntax
-   xx end
-
-define_macro "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
-   ;; << string[address, length], word[address, length] --
-   ;;    string[address, length] >>
-   xx literal, literal
-   xx   save_into__jo_heap
-   xx string_to_integer
-   xx   save_into__jo_heap
-   xx end
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
@@ -4662,41 +4772,6 @@ define_function "define-function", CICADA__define_function
    xx save
 
    xx literal, explain$function
-   xx   save_into__jo_heap
-
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
-   xx drop2
-   xx drop, drop, drop
-   xx end
-
-define_function "define-macro", CICADA__define_macro
-   ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
-   xx prepare_for
-   xx   exception_head
-   xx   !undo_make_jojo
-   xx   end_of_prepare
-
-
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
-   xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
-
-   xx V__first_jo_in_dictionary
-   xx jo_to_link
-   xx   save_into__jo_heap
-
-   xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
-   xx save
-
-   xx literal, explain$macro
    xx   save_into__jo_heap
 
    xx dup2, string_tail__word
@@ -4904,7 +4979,7 @@ define_function "local-variable-fetch-string?", local_variable_fetch_string?
    xx literal, 0, greater_than?
    xx end
 
-define_macro "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
+define_function "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
@@ -4936,7 +5011,7 @@ define_function "write-local-variable-not-bound-report", write_local_variable_no
    xx end
 
 string$local_variable_not_bound_report:
-   db "* LOCAL-VARIABLE NOT BOUND : "
+   db "* local-variable not bound : "
 .end:
 length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
 
@@ -4964,7 +5039,7 @@ define_function "local-variable-save-string?", local_variable_save_string?
    xx literal, 0, greater_than?
    xx end
 
-define_macro "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
+define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx string_tail__char

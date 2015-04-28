@@ -14,6 +14,15 @@
    * load-file should maintain a list of loaded files
      what else meta data should be maintained ?
      can them make up a well module system ?
+** round-heap for string literal in REPL
+   * 使用新的語法擴展機制
+     這在於對 '"' 這個語關鍵詞的變更
+   * 也就是說
+     還是要實現這個語法兩次了
+   * 也就是說在編譯器開始執行的時候
+     會入棧一些編譯器所需要用到的語法
+     而運行結束之後
+     又把這些語法出棧
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
@@ -24,15 +33,6 @@
 ** [really needed] error handling for io function
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
-** round-heap for string literal in REPL
-   * 使用新的語法擴展機制
-     這在於對 '"' 這個語關鍵詞的變更
-   * 也就是說
-     還是要實現這個語法兩次了
-   * 也就是說在編譯器開始執行的時候
-     會入棧一些編譯器所需要用到的語法
-     而運行結束之後
-     又把這些語法出棧
 ** more design about the command-line-interface
 ** little tester
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
@@ -59,25 +59,47 @@
     end
   ; define-function
   #+end_src
-* macro
-** if & else & then
+* more syntax for make-jojo
+** word:[if|else|then]?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:if?
+     << word[address, length] -- bool >>
+     "if" string-equal?
+     end
+   ; define-function
+
+   : word:else?
+     << word[address, length] -- bool >>
+     "else" string-equal?
+     end
+   ; define-function
+
+   : word:then?
+     << word[address, length] -- bool >>
+     "then" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,[if|else|then],make-jojo
    * one predicate can make two branchs
      three predicates can make four branchs
      three predicates may only make three branchs
      but indeed there must be an invisible branch
    #+begin_src cicada-nymph :tangle core.cn
-   : if
-     << string[address, length] --
+   : syntax,if,make-jojo
+     << string[address, length], word:if --
         address, string[address, length] >>
+     drop2
      *false?branch* save-into,jo-heap
      *current-free-address,jo-heap* xx|swap|x
      0 save-into,jo-heap
      end
-   ; define-macro
+   ; define-function
 
-   : else
-     << address, string[address, length] --
+   : syntax,else,make-jojo
+     << address, string[address, length], word:else --
         address, string[address, length] >>
+     drop2
      *branch* save-into,jo-heap
      x|swap|xx
      *current-free-address,jo-heap* xxx|swap|x
@@ -87,17 +109,30 @@
      over sub *jo-size* div
      swap save
      end
-   ; define-macro
+   ; define-function
 
-   : then
-     << address, string[address, length] --
+   : syntax,then,make-jojo
+     << address, string[address, length], word:then --
         string[address, length] >>
+     drop2
      x|swap|xx
      *current-free-address,jo-heap*
      over sub *jo-size* div
      swap save
      end
-   ; define-macro
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
    #+end_src
 ** test if & else & then
    #+begin_src cicada-nymph :tangle core.cn.test
@@ -106,6 +141,8 @@
      cr
      end
    ; define-function
+
+   kkk
 
    : factorial
      << number -- number >>
@@ -176,81 +213,116 @@
    factorial,test
    .12,test
    #+end_src
-** jo
-   * NOT the same as the macro (address)
+* basic-REPL                          :redefine:
+** execute-word
+   * to protect exception-jo from be called from basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   : jo
-     << string[address, length] --
-        string[address, length] >>
-     *literal* save-into,jo-heap
+   : execute-word
+     << word[address, length] -- unknown >>
      dup2
-     string-head,word find if
-       save-into,jo-heap
-       string-tail,word
+     integer-string? if
+       string->integer
        end
      then
-     "* (make-jojo (jo)) the word follows (jo) is undefined : " .s
-     !undo-make-jojo
-   ; define-macro
+     dup2
+     find if
+       dup exception-jo? if
+         drop
+         "* (execute-word) can not execute exception directly : " write-string
+         write-string cr
+         end
+       then
+       << function & primitive-function & variable >>
+       xx|swap|x drop2
+       execute-jo
+       end
+     else
+     "* (execute-word) meets undefined word : " write-string
+     write-string cr
+     then
+     end
+   ; define-function
    #+end_src
-* execute-word                  :redefine:
-  * to protect macro & exception from be called from basic-REPL
-  #+begin_src cicada-nymph :tangle core.cn
-  : execute-word
-    << word[address, length] -- unknown >>
-    dup2
-    find if
-      dup macro-jo? if
-        drop
-        "* (execute-word) can not execute macro directly : " write-string
-        write-string cr
-        end
-      then
-      dup exception-jo? if
-        drop
-        "* (execute-word) can not execute exception directly : " write-string
-        write-string cr
-        end
-      then
-      << function & primitive-function & variable >>
-      xx|swap|x drop2
-      execute-jo
-      end
-    else
-    "* (execute-word) meets undefined word : " write-string
-    write-string cr
-    then
-    end
-  ; define-function
-  #+end_src
-* basic-REPL                    :redefine:
-  #+begin_src cicada-nymph :tangle core.cn
-  : basic-REPL,loop
-    << unknown -- unknown >>
-    read-word-for-REPL
-    dup2 find-syntax if
-      execute-jo
-      <> basic-REPL,loop
-    then
-    execute-word
-    <> basic-REPL,loop
-  ; define-function
+** basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : basic-REPL
+     << unknown -- unknown >>
+     read-word-for-REPL
+     execute-word
+     <> basic-REPL
+   ; define-function
 
-  : basic-REPL
-    << unknown -- unknown >>
-    jo integer-string? jo string->integer add-syntax
-    basic-REPL,loop
-    jo integer-string? jo string->integer sub-syntax
-    end
-  ; define-function
+   basic-REPL
+   #+end_src
+* stack-REPL
+** note
+   * print argument-stack in every loop
+** print-argument-stack
+   #+begin_src cicada-nymph :tangle core.cn
+   : print-argument-stack,loop
+     << address, counter -- >>
+     dup zero? if
+       drop2
+       end
+     then
+     sub1 swap
+       dup fetch .
+     *jo-size* add
+     swap
+     <> print-argument-stack,loop
+   ; define-function
 
-  <<
-  the following call is for
-  we need a better REPL for the following code in core file
-  >>
-
-  basic-REPL
-  #+end_src
+   : print-argument-stack
+     << -- >>
+     snapshot-the-stack-pointer
+     *the-stack-pointer-snapshot*
+     *the-stack* greater-or-equal? if
+       *the-stack*   << address as return value >>
+       *the-stack-pointer-snapshot* *the-stack* sub
+       *jo-size* div << counter as return value >>
+       print-argument-stack,loop
+       end
+     then
+     "below the stack " write-string
+     end
+   ; define-function
+   #+end_src
+** print-argument-stack,pretty
+   #+begin_src cicada-nymph :tangle core.cn
+   : print-argument-stack,pretty
+     << -- >>
+     snapshot-the-stack-pointer
+     cr
+     " * " write-string
+        *the-stack-pointer-snapshot*
+        *the-stack* sub
+        << ad hoc for the BUG of div >>
+        dup negative? if
+          negate
+          *jo-size* div
+          negate
+        else
+          *jo-size* div
+        then
+        write-integer
+     " * " write-string
+     " -- " write-string
+       print-argument-stack
+     "--" write-string
+     cr
+     end
+   ; define-function
+   #+end_src
+** stack-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : stack-REPL
+     << unknown -- unknown >>
+     read-word-for-REPL
+     execute-word
+     print-argument-stack,pretty
+     <> stack-REPL
+   ; define-function
+   #+end_src
 * allocate
 ** note
    * an interface of *un-initialized-memory*
@@ -394,41 +466,6 @@
       end
     ; define-function
     #+end_src
-*** report-dictionary,macro
-    #+begin_src cicada-nymph :tangle core.cn
-    : loop,report-dictionary,macro
-      << counter, jo -- total >>
-      dup zero? if
-        drop
-        end
-      then
-      dup macro-jo? false? if
-        jo->pre-jo
-        <> loop,report-dictionary,macro
-      then
-      swap
-        "  " write-string
-        add1 dup .
-      swap
-      dup jo->name
-      dup2 space-string? if
-        drop2
-        " un-named " write-string cr
-      else
-        write-string cr
-      then
-      jo->pre-jo
-      <> loop,report-dictionary,macro
-    ; define-function
-
-    : report-dictionary,macro
-      << -- >>
-      "* all macro in dictionary :" write-string cr
-      0 *first-jo-in-dictionary*
-      loop,report-dictionary,macro
-      end
-    ; define-function
-    #+end_src
 *** report-dictionary,exception
     #+begin_src cicada-nymph :tangle core.cn
     : loop,report-dictionary,exception
@@ -506,12 +543,11 @@
     : report-dictionary
       << -- >>
       report-dictionary,primitive-function
-      report-dictionary,function
-      report-dictionary,macro
-      report-dictionary,exception
-      report-dictionary,variable
+      report-dictionary,function add
+      report-dictionary,exception add
+      report-dictionary,variable add
       "* totally : " write-string
-      add add add add . cr
+      write-integer cr
       end
     ; define-function
     #+end_src
@@ -592,8 +628,8 @@
      end
    ; define-function
    #+end_src
-** report-syntax-set
-   #+begin_src cicada-nymph :tangle core.cn
+** report-syntax-set                  :not_using:
+   #+begin_src cicada-nymph
    : report-syntax-set,loop
      << counter, cursor -- >>
      dup *syntax-set* equal? if
@@ -680,75 +716,6 @@
      end
    ; define-function
    #+end_src
-* stack-REPL
-** note
-   * print argument-stack in every loop
-** print-argument-stack
-   #+begin_src cicada-nymph :tangle core.cn
-   : print-argument-stack,loop
-     << address, counter -- >>
-     dup zero? if
-       drop2
-       end
-     then
-     sub1 swap
-       dup fetch .
-     *jo-size* add
-     swap
-     <> print-argument-stack,loop
-   ; define-function
-
-   : print-argument-stack
-     << -- >>
-     snapshot-the-stack-pointer
-     *the-stack-pointer-snapshot*
-     *the-stack* greater-or-equal? if
-       *the-stack*   << address as return value >>
-       *the-stack-pointer-snapshot* *the-stack* sub
-       *jo-size* div << counter as return value >>
-       print-argument-stack,loop
-       end
-     then
-     "BELOW THE STACK " write-string
-     end
-   ; define-function
-   #+end_src
-** print-argument-stack,pretty
-   #+begin_src cicada-nymph :tangle core.cn
-   : print-argument-stack,pretty
-     << -- >>
-     snapshot-the-stack-pointer
-     cr
-     " * " write-string
-        *the-stack-pointer-snapshot*
-        *the-stack* sub
-        << ad hoc for the BUG of div >>
-        dup negative? if
-          negate
-          *jo-size* div
-          negate
-        else
-          *jo-size* div
-        then
-        write-integer
-     " * " write-string
-     " -- " write-string
-       print-argument-stack
-     "--" write-string
-     cr
-     end
-   ; define-function
-   #+end_src
-** stack-REPL
-   #+begin_src cicada-nymph :tangle core.cn
-   : stack-REPL
-     << unknown -- unknown >>
-     read-word-for-REPL
-     execute-word
-     print-argument-stack,pretty
-     <> stack-REPL
-   ; define-function
-   #+end_src
 * -----------------------------------
 * port
 ** 記 關於輸入輸出
@@ -769,7 +736,7 @@
      4. find
      5. list
    * a path is always one of the needed argument
-** note macro about path
+** note syntax about path
    #+begin_src cicada-nymph
    {path: home xyh cicada core.cn}
    "/home/xyh/cicada/core.cn"
@@ -1231,7 +1198,7 @@
      << string[address, length] -- name >>
      name-hash-table,insert
      false? if
-       "* (string->name) *name-hash-table* IS FULL!" .s
+       "* (string->name) *name-hash-table* is full!" .s
        end
      then
      end
@@ -1436,7 +1403,7 @@
 
   the-story-begin
   #+end_src
-* -----------------------------------
+* ===================================
 * test
   #+begin_src cicada-nymph
   name-hash-table,test
