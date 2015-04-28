@@ -2,6 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* 更多的中文筆記
+* add more notes about exception handling
 * more syntax for REPLs
   * REPL-key-word
     * jo
@@ -14,12 +16,13 @@
     the offset is calculated at compile time
   * for local-data-heap
     the offset is calculated at run time
+* 在 local-data-heap 之後更新文檔
+  * 爲三元組做文檔
 * todo
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
-** code clean-up & documentation update
 ** bare-metal version of cicada-nymph for x86 :maybe:
 ** make instruction a type of jo      :maybe:
    this is needed when doing report of the dictionary
@@ -947,25 +950,23 @@
       #+end_src
    3. return-stack
       #+begin_src return-stack
-                                               (prepare_for)
-                                                 (exception_head)
-                                                 (!exception_1)
-                                                 (!exception_2)
-                                                 (end_of_prepare)
-                      (prepare_for)            (function_1)
-      - [ pointer ] - [ (exception_head) ] - [ (function_2) ] - [ (!exception_1) ]
-                        (!exception_1)         (end)              (end)
-                        (!exception_2)
-                        (end_of_prepare)
-                      (function_1)
-                      (function_2)
-                      (end)
-
-      the pointer above is into argument-stack
+                                    (prepare_for)
+                                      (exception_head)
+                                      (!exception_1)
+                                      (!exception_2)
+                                      (end_of_prepare)
+           (prepare_for)            (function_1)
+      - [@][ (exception_head) ] - [ (function_2) ] - ... - [ (!exception_1) ]
+             (!exception_1)         (end)                    (end)
+             (!exception_2)
+             (end_of_prepare)
+           (function_1)
+           (function_2)
+           (end)
       #+end_src
    4. next
       * pointer$argument_stack
-        should be set to the pointer above
+        should be set to the above [@]
       * and
         to call "next" again
         the return-stack should be change to
@@ -1553,19 +1554,19 @@
 ** note top-level-REPL
    * a top-level-REPL always lives at the bottom of return-stack
      #+begin_src return-stack
-                     (function)
-                     (function)
-     - [@] - [@] - [ (taca) ]
-                     (top-level-REPL)
+               (function)
+               (function)
+     - [@][@][ (taca) ]
+               (top-level-REPL)
      #+end_src
    * right below the return-stack
      there is a (report-return-stack-is-empty-and-exit)
      so actually
      #+begin_src return-stack
-                                                                   (function)
-                                                                   (function)
-     - [ (report-return-stack-is-empty-and-exit) ] - [@] - [@] - [ (taca) ]
-                                                                   (top-level-REPL)
+                                                             (function)
+                                                             (function)
+     - [ (report-return-stack-is-empty-and-exit) ] - [@][@][ (taca) ]
+                                                             (top-level-REPL)
      #+end_src
    * when you say bye to a top-level-REPL
      (report-return-stack-is-empty-and-exit) will be executed
@@ -1759,6 +1760,9 @@
 ** ----------------------------------
 * -----------------------------------
 * the stack
+** ----------------------------------
+** note
+   * the stack is the argument-stack
 ** ----------------------------------
 ** drop
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -2425,44 +2429,42 @@
       #+end_src
    3. return-stack
       #+begin_src return-stack
-      - [ (prepare_for) ]
-            (exception_head)
-            (!exception_1)
-            (!exception_2)
-            (end_of_prepare)
-          (function_1)
-          (function_2)
-          (end)
+      - [@][@][ (prepare_for) ]
+                  (exception_head)
+                  (!exception_1)
+                  (!exception_2)
+                  (end_of_prepare)
+                (function_1)
+                (function_2)
+                (end)
       #+end_src
    4. next
       * this is how the return-stack looks
         right before exception_head is executed
         #+begin_src return-stack
-          (prepare_for)
-        - [ (exception_head) ]
-            (!exception_1)
-            (!exception_2)
-            (end_of_prepare)
-          (function_1)
-          (function_2)
-          (end)
+                (prepare_for)
+        - [@][@][ (exception_head) ]
+                  (!exception_1)
+                  (!exception_2)
+                  (end_of_prepare)
+                (function_1)
+                (function_2)
+                (end)
         #+end_src
       * after exception_head is executed
         #+begin_src return-stack
-                                                 (prepare_for)
-                                                   (exception_head)
-                                                   (!exception_1)
-                                                   (!exception_2)
-                        (prepare_for)              (end_of_prepare)
-        - [ pointer ] - [ (exception_head) ] - [ (function_1) ]
-                          (!exception_1)         (function_2)
-                          (!exception_2)         (end)
-                          (end_of_prepare)
-                        (function_1)
-                        (function_2)
-                        (end)
-
-        the pointer above is into argument-stack
+                                      (prepare_for)
+                                        (exception_head)
+                                        (!exception_1)
+                                        (!exception_2)
+             (prepare_for)              (end_of_prepare)
+        - [@][ (exception_head) ] - [ (function_1) ]
+               (!exception_1)         (function_2)
+               (!exception_2)         (end)
+               (end_of_prepare)
+             (function_1)
+             (function_2)
+             (end)
         #+end_src
 ** prepare_for                        :64bit:
    * prepare for a list of exceptions
@@ -6185,39 +6187,6 @@
      make-jojo can be viewed as the "compiler" of the cicada-nymph
      it does NOT (can not) compile file to file
      but creates structured data directly into memory
-** !undo-make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_exception "!undo-make-jojo", !undo_make_jojo
-      ;; << old V__current_free_address__primitive_string
-      ;;    old V__current_free_address__jo_heap
-      ;;    old V__first_jo_in_dictionary
-      ;;    string[address, length]
-      ;;    -- >>
-      xx drop_syntax_stack
-
-      xx literal, string$undo_make_jojo_report
-      xx literal, length$undo_make_jojo_report
-      xx write_string
-
-      xx write_string
-      xx literal, 10, write_byte
-      xx literal, ';', write_byte
-      xx literal, 10, write_byte
-
-      xx address, V__first_jo_in_dictionary, save
-      xx address, V__current_free_address__jo_heap, save
-      xx address, V__current_free_address__primitive_string
-      xx save
-      xx end
-
-
-   string$undo_make_jojo_report:
-      db "  the following jojo is not made :"
-      db 10
-      db ": "
-   .end:
-   length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-   #+end_src
 ** make-jojo
    * 這裏又產生了特殊的一類珠
      它雖然以 "M__" 爲前綴
@@ -6276,11 +6245,44 @@
    .end:
    length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
    #+end_src
-* define-[function|macro|exception|variable]
+* define-[function|exception|variable]
 ** note
    * for the following function
      I add the "CICADA__" as prefix
      to distinguish from their assembly code version
+** !undo-make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_exception "!undo-make-jojo", !undo_make_jojo
+      ;; << old V__current_free_address__primitive_string
+      ;;    old V__current_free_address__jo_heap
+      ;;    old V__first_jo_in_dictionary
+      ;;    string[address, length]
+      ;;    -- >>
+      xx drop_syntax_stack
+
+      xx literal, string$undo_make_jojo_report
+      xx literal, length$undo_make_jojo_report
+      xx write_string
+
+      xx write_string
+      xx literal, 10, write_byte
+      xx literal, ';', write_byte
+      xx literal, 10, write_byte
+
+      xx address, V__first_jo_in_dictionary, save
+      xx address, V__current_free_address__jo_heap, save
+      xx address, V__current_free_address__primitive_string
+      xx save
+      xx end
+
+
+   string$undo_make_jojo_report:
+      db "  the following jojo is not made :"
+      db 10
+      db ": "
+   .end:
+   length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
+   #+end_src
 ** define-function
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function

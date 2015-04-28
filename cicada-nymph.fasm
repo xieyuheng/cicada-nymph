@@ -4666,37 +4666,6 @@ string$not_integer_string_report__for_double_quote:
 .end:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
-define_exception "!undo-make-jojo", !undo_make_jojo
-   ;; << old V__current_free_address__primitive_string
-   ;;    old V__current_free_address__jo_heap
-   ;;    old V__first_jo_in_dictionary
-   ;;    string[address, length]
-   ;;    -- >>
-   xx drop_syntax_stack
-
-   xx literal, string$undo_make_jojo_report
-   xx literal, length$undo_make_jojo_report
-   xx write_string
-
-   xx write_string
-   xx literal, 10, write_byte
-   xx literal, ';', write_byte
-   xx literal, 10, write_byte
-
-   xx address, V__first_jo_in_dictionary, save
-   xx address, V__current_free_address__jo_heap, save
-   xx address, V__current_free_address__primitive_string
-   xx save
-   xx end
-
-
-string$undo_make_jojo_report:
-   db "  the following jojo is not made :"
-   db 10
-   db ": "
-.end:
-length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
    xx local_variable_table__clear
@@ -4746,6 +4715,37 @@ string$undefined_word_report__for_make_jojo:
    db "* (make-jojo) meets undefined word : "
 .end:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+
+define_exception "!undo-make-jojo", !undo_make_jojo
+   ;; << old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    string[address, length]
+   ;;    -- >>
+   xx drop_syntax_stack
+
+   xx literal, string$undo_make_jojo_report
+   xx literal, length$undo_make_jojo_report
+   xx write_string
+
+   xx write_string
+   xx literal, 10, write_byte
+   xx literal, ';', write_byte
+   xx literal, 10, write_byte
+
+   xx address, V__first_jo_in_dictionary, save
+   xx address, V__current_free_address__jo_heap, save
+   xx address, V__current_free_address__primitive_string
+   xx save
+   xx end
+
+
+string$undo_make_jojo_report:
+   db "  the following jojo is not made :"
+   db 10
+   db ": "
+.end:
+length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>

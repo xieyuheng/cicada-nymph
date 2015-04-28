@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* syntax for exception handling in cicada-nymph
 * todo
 ** more and better report
    * syntax defined
@@ -42,7 +43,6 @@
    * better naming
 ** title-name-table
 ** data-giver
-** syntax for exception handling in cicada-nymph
 ** big number and 同餘方程
    * 爲了玩 hash-table
 * ===================================
@@ -135,7 +135,7 @@
    more,rule-set,make-jojo
    #+end_src
 ** test if & else & then
-   #+begin_src cicada-nymph :tangle core.cn.test
+   #+begin_src cicada-nymph
    : kkk
      "kkk took my baby away !" write-string
      cr
@@ -212,6 +212,10 @@
 
    factorial,test
    .12,test
+   #+end_src
+** exception
+   #+begin_src cicada-nymph :tangle core.cn
+
    #+end_src
 * basic-REPL                          :redefine:
 ** execute-word
