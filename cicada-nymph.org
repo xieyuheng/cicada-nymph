@@ -4,10 +4,6 @@
 
 * better naming of headings
 * 更多的中文筆記
-* more syntax for REPLs
-  * REPL-key-word
-    * jo
-* a way to exit REPLs
 * local-data-vector & local-data-heap
   * the current local-data-heap is renamed to local-data-vector
   * local-data-vector for naming
@@ -911,6 +907,9 @@
    * (!exception)
      其 jo 本身用以搜索到位置
      而 定義其 jo 的 jojo 被植入到所搜索到的位置
+   * 設計的不足之處在於
+     在調用 (!exception) 的時候
+     調用它的函數不能傳遞給 (!exception) 一些參數
 ** note
    * explain$exception will
      1. search the return-stack for that exception
@@ -958,12 +957,12 @@
                                             (exception_head)
                                             (!exception_1)
                                             (!exception_2)
-                                            (end_of_prepare)
+                                            (end)
            (prepare_for)                  (function_1)
       - [@][ (exception_head) ] - [@][@][ (function_2) ] - ... - [@][@][ (!exception_1) ]
              (!exception_1)               (end)                          (end)
              (!exception_2)
-             (end_of_prepare)
+             (end)
            (function_1)
            (function_2)
            (end)
@@ -2426,18 +2425,22 @@
       xx exception_head
       xx   !exception_1
       xx   !exception_2
-      xx   end_of_prepare
+      xx   end
       xx function_1
       xx function_2
-      xx end_of_prepare
+      xx end
       #+end_src
+   3. note that
+      for (prepare_for)
+      (end) is used as an unique id
+      but not a ending-jo
    3. return-stack
       #+begin_src return-stack
       - [@][@][ (prepare_for) ]
                   (exception_head)
                   (!exception_1)
                   (!exception_2)
-                  (end_of_prepare)
+                  (end)
                 (function_1)
                 (function_2)
                 (end)
@@ -2450,22 +2453,22 @@
         - [@][@][ (exception_head) ]
                   (!exception_1)
                   (!exception_2)
-                  (end_of_prepare)
+                  (end)
                 (function_1)
                 (function_2)
                 (end)
         #+end_src
       * after exception_head is executed
         #+begin_src return-stack
-                                          (prepare_for)
-                                            (exception_head)
-                                            (!exception_1)
-                                            (!exception_2)
-             (prepare_for)                  (end_of_prepare)
+                                            (prepare_for)
+                                              (exception_head)
+                                              (!exception_1)
+                                              (!exception_2)
+             (prepare_for)                    (end)
         - [@][ (exception_head) ] - [@][@][ (function_1) ]
                (!exception_1)               (function_2)
                (!exception_2)               (end)
-               (end_of_prepare)
+               (end)
              (function_1)
              (function_2)
              (end)
@@ -2485,7 +2488,7 @@
    .next:
       add rbx, jo_size
       mov rax, qword [rbx]
-      cmp rax, end_of_prepare
+      cmp rax, end
       je .then
       jmp .next
    .then:
@@ -2511,7 +2514,7 @@
    .next:
       add ebx, jo_size
       mov eax, dword [ebx]
-      cmp eax, end_of_prepare
+      cmp eax, end
       je .then
       jmp .next
    .then:
@@ -2521,14 +2524,10 @@
 
    }
    #+end_src
-** end_of_prepare
+** *prepare-for*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*end-of-prepare*", V__end_of_prepare
-
-   ;; the following address
-   ;; is used as an unique id
-   end_of_prepare:
-      xx 0
+   define_variable "*prepare-for*", V__prepare_for
+      xx prepare_for
    #+end_src
 ** exception_head
    * this jo is served as a label in return-stack
@@ -2543,6 +2542,11 @@
       pop_return_stack rax
       pop_return_stack rax
       next
+   #+end_src
+** *exception-head*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*exception-head*", V__exception_head
+      xx exception_head
    #+end_src
 ** ----------------------------------
 * bool
@@ -6280,7 +6284,6 @@
       xx save
       xx end
 
-
    string$undo_make_jojo_report:
       db "  the following jojo is not made :"
       db 10
@@ -6295,11 +6298,15 @@
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
       xx V__first_jo_in_dictionary, xxswapx
+      ;; << old V__current_free_address__primitive_string
+      ;;    old V__current_free_address__jo_heap
+      ;;    old V__first_jo_in_dictionary
+      ;;    string[address, length] >>
+
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
-      xx   end_of_prepare
-
+      xx   end
 
       xx V__current_free_address__primitive_string
       xx   save_into__jo_heap
@@ -6317,10 +6324,9 @@
       xx literal, explain$function
       xx   save_into__jo_heap
 
-      xx dup2, string_tail__word
-      xx   make_jojo
-
-
+      xx dup2
+      xx string_tail__word
+      xx make_jojo
       xx drop2
       xx drop, drop, drop
       xx end
@@ -6332,11 +6338,15 @@
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
       xx V__first_jo_in_dictionary, xxswapx
+      ;; << old V__current_free_address__primitive_string
+      ;;    old V__current_free_address__jo_heap
+      ;;    old V__first_jo_in_dictionary
+      ;;    string[address, length] >>
+
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
-      xx   end_of_prepare
-
+      xx   end
 
       xx V__current_free_address__primitive_string
       xx   save_into__jo_heap
@@ -6354,10 +6364,9 @@
       xx literal, explain$exception
       xx   save_into__jo_heap
 
-      xx dup2, string_tail__word
-      xx   make_jojo
-
-
+      xx dup2
+      xx string_tail__word
+      xx make_jojo
       xx drop2
       xx drop, drop, drop
       xx end

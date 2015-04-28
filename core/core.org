@@ -2,7 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* syntax for exception handling in cicada-nymph
+* *rule-set,basic-REPL*
+* a way to exit REPLs
 * todo
 ** more and better report
    * syntax defined
@@ -213,9 +214,35 @@
    factorial,test
    .12,test
    #+end_src
-** exception
+** word:prepare-for?
    #+begin_src cicada-nymph :tangle core.cn
+   : word:prepare-for?
+     << word[address, length] -- bool >>
+     "prepare-for" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,prepare-for,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,prepare-for,make-jojo
+     << string[address, length], word:prepare-for --
+        string[address, length] >>
+     drop2
+     *prepare-for*    save-into,jo-heap
+     *exception-head* save-into,jo-heap
+     end
+   ; define-function
 
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
    #+end_src
 * basic-REPL                          :redefine:
 ** execute-word

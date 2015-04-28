@@ -1588,7 +1588,7 @@ define_primitive_function "", prepare_for
 .next:
    add rbx, jo_size
    mov rax, qword [rbx]
-   cmp rax, end_of_prepare
+   cmp rax, end
    je .then
    jmp .next
 .then:
@@ -1611,7 +1611,7 @@ define_primitive_function "", prepare_for
 .next:
    add ebx, jo_size
    mov eax, dword [ebx]
-   cmp eax, end_of_prepare
+   cmp eax, end
    je .then
    jmp .next
 .then:
@@ -1621,16 +1621,17 @@ define_primitive_function "", prepare_for
 
 }
 
-define_variable "*end-of-prepare*", V__end_of_prepare
-
-end_of_prepare:
-   xx 0
+define_variable "*prepare-for*", V__prepare_for
+   xx prepare_for
 
 define_primitive_function "", exception_head
    ;; << -- >>
    pop_return_stack rax
    pop_return_stack rax
    next
+
+define_variable "*exception-head*", V__exception_head
+   xx exception_head
 
 define_primitive_function "false", false
    ;; << -- false >>
@@ -4739,7 +4740,6 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx save
    xx end
 
-
 string$undo_make_jojo_report:
    db "  the following jojo is not made :"
    db 10
@@ -4752,11 +4752,15 @@ define_function "define-function", CICADA__define_function
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
    xx V__first_jo_in_dictionary, xxswapx
+   ;; << old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    string[address, length] >>
+
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
-   xx   end_of_prepare
-
+   xx   end
 
    xx V__current_free_address__primitive_string
    xx   save_into__jo_heap
@@ -4774,10 +4778,9 @@ define_function "define-function", CICADA__define_function
    xx literal, explain$function
    xx   save_into__jo_heap
 
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
+   xx dup2
+   xx string_tail__word
+   xx make_jojo
    xx drop2
    xx drop, drop, drop
    xx end
@@ -4787,11 +4790,15 @@ define_function "define-exception", CICADA__define_exception
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
    xx V__first_jo_in_dictionary, xxswapx
+   ;; << old V__current_free_address__primitive_string
+   ;;    old V__current_free_address__jo_heap
+   ;;    old V__first_jo_in_dictionary
+   ;;    string[address, length] >>
+
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
-   xx   end_of_prepare
-
+   xx   end
 
    xx V__current_free_address__primitive_string
    xx   save_into__jo_heap
@@ -4809,10 +4816,9 @@ define_function "define-exception", CICADA__define_exception
    xx literal, explain$exception
    xx   save_into__jo_heap
 
-   xx dup2, string_tail__word
-   xx   make_jojo
-
-
+   xx dup2
+   xx string_tail__word
+   xx make_jojo
    xx drop2
    xx drop, drop, drop
    xx end

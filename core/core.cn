@@ -68,7 +68,28 @@
 
 more,rule-set,make-jojo
 
+: word:prepare-for?
+  << word[address, length] -- bool >>
+  "prepare-for" string-equal?
+  end
+; define-function
 
+: syntax,prepare-for,make-jojo
+  << string[address, length], word:prepare-for --
+     string[address, length] >>
+  drop2
+  *prepare-for*    save-into,jo-heap
+  *exception-head* save-into,jo-heap
+  end
+; define-function
+
+: more,rule-set,make-jojo
+  << -- >>
+  jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
+  end
+; define-function
+
+more,rule-set,make-jojo
 
 : execute-word
   << word[address, length] -- unknown >>
