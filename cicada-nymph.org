@@ -2,8 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* better naming of headings
 * 更多的中文筆記
-* add more notes about exception handling
 * more syntax for REPLs
   * REPL-key-word
     * jo
@@ -16,8 +16,6 @@
     the offset is calculated at compile time
   * for local-data-heap
     the offset is calculated at run time
-* 在 local-data-heap 之後更新文檔
-  * 爲三元組做文檔
 * todo
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
@@ -660,75 +658,75 @@
        << 2 >>
      * return-stack
        #+begin_src return-stack
-       - [ (square) ]
-           (square)
-           (end)
+       - [@][@][ (square) ]
+                 (square)
+                 (end)
        #+end_src
   2. next
      * argument-stack
        << 2 >>
      * return-stack
        #+begin_src return-stack
-           (square)
-       - [ (square) ] - [ (dup) ]
-           (end)          (mul)
-                          (end)
+                 (square)
+       - [@][@][ (square) ] - [@][@][ (dup) ]
+                 (end)                (mul)
+                                      (end)
        #+end_src
   3. next
      * argument-stack
        << 2, 2 >>
      * return-stack
        #+begin_src return-stack
-           (square)       (dup)
-       - [ (square) ] - [ (mul) ]
-           (end)          (end)
+                 (square)             (dup)
+       - [@][@][ (square) ] - [@][@][ (mul) ]
+                 (end)                (end)
        #+end_src
   4. next
      * argument-stack << 4 >>
      * return-stack
        #+begin_src return-stack
-                          (dup)
-           (square)       (mul)
-       - [ (square) ] - [ (end) ]
-           (end)
+                                      (dup)
+                 (square)             (mul)
+       - [@][@][ (square) ] - [@][@][ (end) ]
+                 (end)
        #+end_src
   5. next
      * argument-stack << 4 >>
      * return-stack
        #+begin_src return-stack
-           (square)
-           (square)
-       - [ (end) ] - [ (dup) ]
-                       (mul)
-                       (end)
+                 (square)
+                 (square)
+       - [@][@][ (end) ] - [@][@][ (dup) ]
+                                   (mul)
+                                   (end)
        #+end_src
   6. next
      * argument-stack
        << 4, 4 >>
      * return-stack
        #+begin_src return-stack
-           (square)
-           (square)    (dup)
-       - [ (end) ] - [ (mul) ]
-                       (end)
+                 (square)
+                 (square)          (dup)
+       - [@][@][ (end) ] - [@][@][ (mul) ]
+                                   (end)
        #+end_src
   7. next
      * argument-stack
        << 16 >>
      * return-stack
        #+begin_src return-stack
-           (square)    (dup)
-           (square)    (mul)
-       - [ (end) ] - [ (end) ]
+                 (square)          (dup)
+                 (square)          (mul)
+       - [@][@][ (end) ] - [@][@][ (end) ]
        #+end_src
   8. next
      * argument-stack
        << 16 >>
      * return-stack
        #+begin_src return-stack
-           (square)
-           (square)
-       - [ (end) ]
+                 (square)
+                 (square)
+       - [@][@][ (end) ]
        #+end_src
   9. next
      * argument-stack
@@ -905,8 +903,14 @@
       next
    #+end_src
 ** ----------------------------------
-* macro for make-jojo
+* macro and explainer for exceptions
 ** ----------------------------------
+** 記
+   * (prepare-for) 展開
+   * (exception_head) 無爲
+   * (!exception)
+     其 jo 本身用以搜索到位置
+     而 定義其 jo 的 jojo 被植入到所搜索到的位置
 ** note
    * explain$exception will
      1. search the return-stack for that exception
@@ -950,14 +954,14 @@
       #+end_src
    3. return-stack
       #+begin_src return-stack
-                                    (prepare_for)
-                                      (exception_head)
-                                      (!exception_1)
-                                      (!exception_2)
-                                      (end_of_prepare)
-           (prepare_for)            (function_1)
-      - [@][ (exception_head) ] - [ (function_2) ] - ... - [ (!exception_1) ]
-             (!exception_1)         (end)                    (end)
+                                          (prepare_for)
+                                            (exception_head)
+                                            (!exception_1)
+                                            (!exception_2)
+                                            (end_of_prepare)
+           (prepare_for)                  (function_1)
+      - [@][ (exception_head) ] - [@][@][ (function_2) ] - ... - [@][@][ (!exception_1) ]
+             (!exception_1)               (end)                          (end)
              (!exception_2)
              (end_of_prepare)
            (function_1)
@@ -971,9 +975,9 @@
         to call "next" again
         the return-stack should be change to
         #+begin_src return-stack
-        - [ (fun1) ]
-            (fun2)
-            (end)
+        - [@][@][ (fun1) ]
+                  (fun2)
+                  (end)
         #+end_src
 ** note the plan
    * so
@@ -1317,39 +1321,39 @@
       #+end_src
    4. and we have the following jojo in return-stack
       #+begin_src return-stack
-      - [ (example) ]
-          (end)
+      - [@][@][ (example) ]
+                (end)
       #+end_src
    5. next
       #+begin_src return-stack
-          (example)
-      - [ (end) ] - [ (fun1) ]
-                      (fun2)
-                      (taca)
-                      (example)
+                (example)
+      - [@][@][ (end) ] - [@][@][ (fun1) ]
+                                  (fun2)
+                                  (taca)
+                                  (example)
       #+end_src
    6. next
       #+begin_src return-stack
-          (example)   (fun1)
-      - [ (end) ] - [ (fun2) ]
-                      (taca)
-                      (example)
+                (example)         (fun1)
+      - [@][@][ (end) ] - [@][@][ (fun2) ]
+                                  (taca)
+                                  (example)
       #+end_src
    7. next
       #+begin_src return-stack
-                      (fun1)
-          (example)   (fun2)
-      - [ (end) ] - [ (taca) ]
-                      (example)
+                                  (fun1)
+                (example)         (fun2)
+      - [@][@][ (end) ] - [@][@][ (taca) ]
+                                  (example)
       #+end_src
    8. next
       by the definition of taca
       #+begin_src return-stack
-          (example)
-      - [ (end) ] - [ (fun1) ]
-                      (fun2)
-                      (taca)
-                      (example)
+                (example)
+      - [@][@][ (end) ] - [@][@][ (fun1) ]
+                                  (fun2)
+                                  (taca)
+                                  (example)
       #+end_src
    9. you can see return-stack of (8.)
       is the same as (5.)
@@ -2453,14 +2457,14 @@
         #+end_src
       * after exception_head is executed
         #+begin_src return-stack
-                                      (prepare_for)
-                                        (exception_head)
-                                        (!exception_1)
-                                        (!exception_2)
-             (prepare_for)              (end_of_prepare)
-        - [@][ (exception_head) ] - [ (function_1) ]
-               (!exception_1)         (function_2)
-               (!exception_2)         (end)
+                                          (prepare_for)
+                                            (exception_head)
+                                            (!exception_1)
+                                            (!exception_2)
+             (prepare_for)                  (end_of_prepare)
+        - [@][ (exception_head) ] - [@][@][ (function_1) ]
+               (!exception_1)               (function_2)
+               (!exception_2)               (end)
                (end_of_prepare)
              (function_1)
              (function_2)
@@ -2518,10 +2522,11 @@
    }
    #+end_src
 ** end_of_prepare
-   * used as an unique id
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*end-of-prepare*", V__end_of_prepare
 
+   ;; the following address
+   ;; is used as an unique id
    end_of_prepare:
       xx 0
    #+end_src
