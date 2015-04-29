@@ -789,7 +789,7 @@ begin_to_interpret_threaded_code:
    call __reset_return_stack
 
    pop_return_stack rax
-   mov rax, report_return_stack_is_empty_and_exit
+   mov rax, jojo_for__report_return_stack_is_empty_and_exit
    push_return_stack rax
 
    mov rax, address$local_data_vector
@@ -821,6 +821,9 @@ define_primitive_function "report-return-stack-is-empty-and-exit", report_return
    push_argument_stack rcx
    call __print_string
    call __exit_with_zero
+
+jojo_for__report_return_stack_is_empty_and_exit:
+   xx report_return_stack_is_empty_and_exit
 
 match =64bit, machine {
 
@@ -4152,6 +4155,14 @@ define_function "pop-syntax-stack", pop_syntax_stack
    xx V__pointer_syntax_stack, fetch
    xx end
 
+define_function "tos-syntax-stack", tos_syntax_stack
+   ;; << -- syntax-set[address] >>
+   xx V__pointer_syntax_stack
+   xx V__jo_size
+   xx subtraction
+   xx fetch
+   xx end
+
 define_function "drop-syntax-stack", drop_syntax_stack
    ;; << -- >>
    xx V__jo_size
@@ -4174,28 +4185,9 @@ define_function "find-syntax", find_syntax
    xx   drop2
    xx   false
    xx   end
-   xx V__pointer_syntax_stack
-   xx find_syntax__loop
+   xx tos_syntax_stack
+   xx find_rule
    xx end
-
-define_function "find-syntax,loop", find_syntax__loop
-   ;; << word[address, length], cursor
-   ;;    -- function, true
-   ;;    -- false >>
-   xx dup
-   xx literal, address$syntax_stack
-   xx equal?, false?branch, 5
-   xx   drop, drop2
-   xx   false
-   xx   end
-   xx V__jo_size, subtraction
-   xx xxoverx, xoverxx, fetch
-   xx find_rule, false?branch, 7
-   xx   swap, drop
-   xx   xxswapx, drop2
-   xx   true
-   xx   end
-   xx taca, find_syntax__loop
 
 define_function "rule-set,fetch-cursor", rule_set__fetch_cursor
    ;; << rule-set -- address >>
@@ -4335,7 +4327,7 @@ cursor$find_rule:
 
 define_function "find-rule", find_rule
    ;; << word[address, length], rule-set
-   ;;    -- jo, true
+   ;;    -- function, true
    ;;    -- false >>
    xx dup, rule_set__fetch_cursor
    xx literal, cursor$find_rule, save
@@ -4344,7 +4336,7 @@ define_function "find-rule", find_rule
 
 define_function "find-rule,loop", find_rule__loop
    ;; << word[address, length], rule-set
-   ;;    -- jo, true
+   ;;    -- function, true
    ;;    -- false >>
    xx literal, cursor$find_rule, fetch
    xx over, equal?, false?branch, 5

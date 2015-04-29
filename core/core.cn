@@ -91,13 +91,33 @@ more,rule-set,make-jojo
 
 more,rule-set,make-jojo
 
+: allocate-memory
+  << size -- address >>
+  dup *current-free-address,un-initialized-memory* clear-memory
+  *current-free-address,un-initialized-memory* swap << address as return value >>
+  address *current-free-address,un-initialized-memory* add-save
+  end
+; define-function
+
+1024 *jo-size* mul
+: *size,rule-set,basic-REPL*
+; define-variable
+
+<< for cursor >>
+*jo-size* allocate-memory
+drop
+
+*size,rule-set,basic-REPL*
+allocate-memory
+: *rule-set,basic-REPL*
+; define-variable
+
+*rule-set,basic-REPL*
+*rule-set,basic-REPL* *jo-size* sub
+save
+
 : execute-word
   << word[address, length] -- unknown >>
-  dup2
-  integer-string? if
-    string->integer
-    end
-  then
   dup2
   find if
     dup exception-jo? if
@@ -117,11 +137,52 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: basic-REPL
+: word:bye?
+  << word[address, length] -- bool >>
+  "bye" string-equal?
+  end
+; define-function
+
+: !bye,basic-REPL
+  << -- >>
+  drop-syntax-stack
+  end
+; define-exception
+
+: syntax,bye,basic-REPL
+  << word:bye -- >>
+  drop2
+  !bye,basic-REPL
+; define-function
+
+: init,rule-set,basic-REPL
+  << -- >>
+  jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
+  jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
+  end
+; define-function
+
+init,rule-set,basic-REPL
+
+: basic-REPL,loop
   << unknown -- unknown >>
   read-word-for-REPL
-  execute-word
-  <> basic-REPL
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
+  <> basic-REPL,loop
+; define-function
+
+: basic-REPL
+  << unknown -- unknown >>
+  prepare-for
+    !bye,basic-REPL
+    end
+  *rule-set,basic-REPL* push-syntax-stack
+  basic-REPL,loop
+  end
 ; define-function
 
 basic-REPL
@@ -178,19 +239,25 @@ basic-REPL
   end
 ; define-function
 
-: stack-REPL
+: stack-REPL,loop
   << unknown -- unknown >>
   read-word-for-REPL
-  execute-word
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
   print-argument-stack,pretty
-  <> stack-REPL
+  <> stack-REPL,loop
 ; define-function
 
-: allocate-memory
-  << size -- address >>
-  dup *current-free-address,un-initialized-memory* clear-memory
-  *current-free-address,un-initialized-memory* swap << address as return value >>
-  address *current-free-address,un-initialized-memory* add-save
+: stack-REPL
+  << unknown -- unknown >>
+  prepare-for
+    !bye,basic-REPL
+    end
+  *rule-set,basic-REPL* push-syntax-stack
+  stack-REPL,loop
   end
 ; define-function
 

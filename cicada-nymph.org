@@ -1535,7 +1535,7 @@
       call __reset_return_stack
 
       pop_return_stack rax
-      mov rax, report_return_stack_is_empty_and_exit
+      mov rax, jojo_for__report_return_stack_is_empty_and_exit
       push_return_stack rax
 
       mov rax, address$local_data_vector
@@ -1589,6 +1589,9 @@
       push_argument_stack rcx
       call __print_string
       call __exit_with_zero
+
+   jojo_for__report_return_stack_is_empty_and_exit:
+      xx report_return_stack_is_empty_and_exit
    #+end_src
 ** reset-top-level-REPL
    * local_data_vector & local_data_heap
@@ -5568,6 +5571,16 @@
       xx V__pointer_syntax_stack, fetch
       xx end
    #+end_src
+** tos-syntax-stack
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "tos-syntax-stack", tos_syntax_stack
+      ;; << -- syntax-set[address] >>
+      xx V__pointer_syntax_stack
+      xx V__jo_size
+      xx subtraction
+      xx fetch
+      xx end
+   #+end_src
 ** drop-syntax-stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "drop-syntax-stack", drop_syntax_stack
@@ -5587,37 +5600,20 @@
       xx end
    #+end_src
 ** find-syntax
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "find-syntax", find_syntax
-      ;; << word[address, length]
-      ;;    -- function, true
-      ;;    -- false >>
-      xx syntax_stack_empty?, false?branch, 4
-      xx   drop2
-      xx   false
-      xx   end
-      xx V__pointer_syntax_stack
-      xx find_syntax__loop
-      xx end
-
-   define_function "find-syntax,loop", find_syntax__loop
-      ;; << word[address, length], cursor
-      ;;    -- function, true
-      ;;    -- false >>
-      xx dup
-      xx literal, address$syntax_stack
-      xx equal?, false?branch, 5
-      xx   drop, drop2
-      xx   false
-      xx   end
-      xx V__jo_size, subtraction
-      xx xxoverx, xoverxx, fetch
-      xx find_rule, false?branch, 7
-      xx   swap, drop
-      xx   xxswapx, drop2
-      xx   true
-      xx   end
-      xx taca, find_syntax__loop
+   * only search the first rule-set in syntax-stack
+     thus a switch of syntax will get you a clean syntax
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "find-syntax", find_syntax
+       ;; << word[address, length]
+       ;;    -- function, true
+       ;;    -- false >>
+       xx syntax_stack_empty?, false?branch, 4
+       xx   drop2
+       xx   false
+       xx   end
+       xx tos_syntax_stack
+       xx find_rule
+       xx end
    #+end_src
 * rule-set
 ** 記 接口
@@ -5809,7 +5805,7 @@
 
    define_function "find-rule", find_rule
       ;; << word[address, length], rule-set
-      ;;    -- jo, true
+      ;;    -- function, true
       ;;    -- false >>
       xx dup, rule_set__fetch_cursor
       xx literal, cursor$find_rule, save
@@ -5818,7 +5814,7 @@
 
    define_function "find-rule,loop", find_rule__loop
       ;; << word[address, length], rule-set
-      ;;    -- jo, true
+      ;;    -- function, true
       ;;    -- false >>
       xx literal, cursor$find_rule, fetch
       xx over, equal?, false?branch, 5
