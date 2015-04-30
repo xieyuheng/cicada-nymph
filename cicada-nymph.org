@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* protect on the overloading of a variety of memories
 * better naming of headings
 * 更多的中文筆記
 * todo
@@ -3028,7 +3029,7 @@
 
    define_function "positive?", positive?
       ;; << integer -- bool >>
-      xx negative?, false?
+      xx zero, greater_than?
       xx end
    #+end_src
 ** ----------------------------------
@@ -4332,7 +4333,7 @@
    }
    #+end_src
 * -----------------------------------
-* to expose syscall
+* syscall
 ** note
    * there are two ways to treat the syscall
      1. syscall is NOT expose to cicada-nymph
@@ -4368,7 +4369,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   define_primitive_function "syscall", __syscall
+   define_primitive_function "syscall", CICADA__syscall
       ;; << ..., argument2, argument1,
       ;;    syscall-number,
       ;;    number-of-arguments
@@ -4462,7 +4463,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   define_primitive_function "syscall", __syscall
+   define_primitive_function "syscall", CICADA__syscall
       ;; << ..., argument2, argument1,
       ;;    syscall-number,
       ;;    number-of-arguments
@@ -5012,7 +5013,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "write-integer", write_integer
       ;; << integer -- >>
-      xx dup, positive?, false?branch, 3
+      xx dup, negative?, false?, false?branch, 3
       xx   write_nature_number
       xx   end
       xx literal, '-', write_byte
@@ -6621,10 +6622,6 @@
      所以必須設計語法幫助編譯器作計算
      >:name :name 用以 分配 和 使用
      *jo-size* 倍數大小的內存
-     而
-     16 %>:address
-     將分配 16 byte 的內存
-     然後把內存首的地址存放到 :address 這個局部變量中
    * 語義方面
      >:name 的重複出現有兩種語義
      1. 更新這個局部變元的值
@@ -6658,14 +6655,18 @@
    current_free_address$local_data_vector:
       xx address$local_data_vector
    #+end_src
+** 記 注意結尾詞會初始化局部變量指針
+   * 下面的接口函數必須是 primitive-function
+     因爲 否則 遇到 end 和 taca 的時候
+     current_free_address$local_data_vector 就又被初始化了
 ** local_data_allocate__jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-data-allocate,jo", local_data_allocate__jo
+   define_primitive_function "local-data-allocate,jo", local_data_allocate__jo
       ;; << number -- >>
-      xx V__jo_size, multiple
-      xx literal, current_free_address$local_data_vector
-      xx add_save
-      xx end
+      pop_argument_stack rax
+      imul rax, jo_size
+      add [current_free_address$local_data_vector], rax
+      next
    #+end_src
 ** note many fetch & save
    * in memory
@@ -6817,6 +6818,23 @@
      end
    ; define-function
    1 2 4 local-variable,test,3 << 6 >> .
+   #+end_src
+** test nested
+   #+begin_src cicada-nymph
+   : k1
+     9 >:k
+     :k .
+     end
+   ; define-function
+   k1 << 9 >>
+
+   : k2
+     10 >:k
+     k1
+     :k .
+     end
+   ; define-function
+   k2 << 9 10 >>
    #+end_src
 * local-variable-table
 ** memory allocation

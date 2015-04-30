@@ -11,7 +11,6 @@ CICADADIR ?= $(HOME)/.cicada
 help:
 	@
 	echo -e "\e[33;1m"
-	echo ""
 	echo "* dependencies"
 	echo "  * fasm"
 	echo "    to compile source code"
@@ -31,10 +30,8 @@ help:
 	echo "  * install"
 	echo "  * uninstall"
 	echo "  * clean"
-	echo ""
 	echo "* I wish you happy making ^-^"
 	echo "  please read the makefile for more informations"
-	echo ""
 	echo -e "\e[0m"
 
 build: build-linux64 build-linux32

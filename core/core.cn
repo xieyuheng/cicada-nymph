@@ -58,16 +58,6 @@
   end
 ; define-function
 
-: more,rule-set,make-jojo
-  << -- >>
-  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-  end
-; define-function
-
-more,rule-set,make-jojo
-
 : word:prepare-for?
   << word[address, length] -- bool >>
   "prepare-for" string-equal?
@@ -85,6 +75,10 @@ more,rule-set,make-jojo
 
 : more,rule-set,make-jojo
   << -- >>
+  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+
   jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
   end
 ; define-function
@@ -104,8 +98,7 @@ more,rule-set,make-jojo
 ; define-variable
 
 << for cursor >>
-*jo-size* allocate-memory
-drop
+*jo-size* allocate-memory drop
 
 *size,rule-set,basic-REPL*
 allocate-memory
@@ -265,6 +258,7 @@ basic-REPL
 0 : :syscall-number,close: ; define-variable
 0 : :syscall-number,read:  ; define-variable
 0 : :syscall-number,write: ; define-variable
+0 : :syscall-number,stat:  ; define-variable
 0 : :syscall-number,exit:  ; define-variable
 0 : :syscall-number,times: ; define-variable
 
@@ -275,6 +269,7 @@ basic-REPL
     3   address :syscall-number,close: save
     0   address :syscall-number,read:  save
     1   address :syscall-number,write: save
+    4   address :syscall-number,stat:  save
     60  address :syscall-number,exit:  save
     100 address :syscall-number,times: save
     end
@@ -284,6 +279,7 @@ basic-REPL
     6   address :syscall-number,close: save
     3   address :syscall-number,read:  save
     4   address :syscall-number,write: save
+    106 address :syscall-number,stat:  save
     1   address :syscall-number,exit:  save
     43  address :syscall-number,times: save
     end
@@ -292,6 +288,47 @@ basic-REPL
 ; define-function
 
 init-syscall-number
+
+: error-code->string
+  << error-code -- string[address, length] >>
+  dup -1  equal? if drop "EPERM    Operation not permitted " end then
+  dup -2  equal? if drop "ENOENT   No such file or directory " end then
+  dup -3  equal? if drop "ESRCH    No such process " end then
+  dup -4  equal? if drop "EINTR    Interrupted system call " end then
+  dup -5  equal? if drop "EIO      I/O error " end then
+  dup -6  equal? if drop "ENXIO    No such device or address " end then
+  dup -7  equal? if drop "E2BIG    Argument list too long " end then
+  dup -8  equal? if drop "ENOEXEC  Exec format error " end then
+  dup -9  equal? if drop "EBADF    Bad file number " end then
+  dup -10 equal? if drop "ECHILD   No child processes " end then
+  dup -11 equal? if drop "EAGAIN   Try again " end then
+  dup -12 equal? if drop "ENOMEM   Out of memory " end then
+  dup -13 equal? if drop "EACCES   Permission denied " end then
+  dup -14 equal? if drop "EFAULT   Bad address " end then
+  dup -15 equal? if drop "ENOTBLK  Block device required " end then
+  dup -16 equal? if drop "EBUSY    Device or resource busy " end then
+  dup -17 equal? if drop "EEXIST   File exists " end then
+  dup -18 equal? if drop "EXDEV    Cross-device link " end then
+  dup -19 equal? if drop "ENODEV   No such device " end then
+  dup -20 equal? if drop "ENOTDIR  Not a directory " end then
+  dup -21 equal? if drop "EISDIR   Is a directory " end then
+  dup -22 equal? if drop "EINVAL   Invalid argument " end then
+  dup -23 equal? if drop "ENFILE   File table overflow " end then
+  dup -24 equal? if drop "EMFILE   Too many open files " end then
+  dup -25 equal? if drop "ENOTTY   Not a typewriter " end then
+  dup -26 equal? if drop "ETXTBSY  Text file busy " end then
+  dup -27 equal? if drop "EFBIG    File too large " end then
+  dup -28 equal? if drop "ENOSPC   No space left on device " end then
+  dup -29 equal? if drop "ESPIPE   Illegal seek " end then
+  dup -30 equal? if drop "EROFS    Read-only file system " end then
+  dup -31 equal? if drop "EMLINK   Too many links " end then
+  dup -32 equal? if drop "EPIPE    Broken pipe " end then
+  dup -33 equal? if drop "EDOM     Math argument out of domain of func " end then
+  dup -34 equal? if drop "ERANGE   Math result not representable " end then
+  "unknow error-code : " write-string
+  write-integer cr
+  end
+; define-function
 
 : welcome
   << -- >>
@@ -564,6 +601,148 @@ init-syscall-number
   << -- >>
   hi,random
   hi,say
+  end
+; define-function
+
+: open-input-port
+  << path[address, length]
+     -- port, true
+     -- error-code, false >>
+  string->syscall-string
+  >:syscall-path
+  0
+  0 <<
+  O_RDONLY      0000h
+  >>
+  :syscall-path
+  :syscall-number,open:
+  3 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  true
+  end
+; define-function
+
+: open-output-port,creat
+  << path[address, length]
+     -- port, true
+     -- error-code, false >>
+  string->syscall-string
+  >:syscall-path
+  420 <<
+  110100100b
+  644o
+  6 8 2 power mul
+  4 8 1 power mul add
+  4 8 0 power mul add
+  >>
+  578 <<
+  O_RDWR  0002h 0002o
+  O_CREAT 0100h 0100o
+  O_TRUNC 0800h 1000o
+  1102o
+  1 8 3 power mul
+  1 8 2 power mul add
+  0 8 1 power mul add
+  2 8 0 power mul add
+  >>
+  :syscall-path
+  :syscall-number,open:
+  3 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  true
+  end
+; define-function
+
+: open-output-port,update
+  << path[address, length]
+     -- port, true
+     -- error-code, false >>
+  string->syscall-string
+  >:syscall-path
+  420 <<
+  110100100b
+  644o
+  6 8 2 power mul
+  4 8 1 power mul add
+  4 8 0 power mul add
+  >>
+  514 <<
+  O_RDWR  0002h 0002o
+  O_TRUNC 0800h 1000o
+  1002o
+  1 8 3 power mul
+  0 8 2 power mul add
+  0 8 1 power mul add
+  2 8 0 power mul add
+  >>
+  :syscall-path
+  :syscall-number,open:
+  3 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  true
+  end
+; define-function
+
+: close-port
+  << port
+     -- true
+     -- error-code, false >>
+  :syscall-number,close:
+  1 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  drop true
+  end
+; define-function
+
+: read-input-port
+  << buffer, max-size, port
+     -- counter, true
+     -- error-code, false >>
+  >:port
+  swap
+  :port
+  :syscall-number,read:
+  3 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  true
+  end
+; define-function
+
+: write-input-port
+  << buffer, max-size, port
+     -- counter, true
+     -- error-code, false >>
+  >:port
+  swap
+  :port
+  :syscall-number,write:
+  3 syscall
+  dup
+  negative? if
+    false
+    end
+  then
+  true
   end
 ; define-function
 

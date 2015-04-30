@@ -2,27 +2,46 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* if else then and double-quote in REPL
+  * round-heap for string literal in REPL
+    * 使用新的語法擴展機制
+      這在於對 '"' 這個語關鍵詞的變更
+    * 也就是說
+      還是要實現這個語法兩次了
+    * 也就是說在編譯器開始執行的時候
+      會入棧一些編譯器所需要用到的語法
+      而運行結束之後
+      又把這些語法出棧
+* more and better report
+  * rule-sets in syntax-stack
+    and
+    rule-set useing (top of syntax-stack)
+* about load-file
+  * nested load-file
+    a stack of allocate buffers in another local-data-heap
+    the previous local-data-heap maybe should be called local-data-vector
+  * load-file should maintain a list of loaded files
+    what else meta data should be maintained ?
+    can them make up a well module system ?
+* 更好的錯誤處理機制
+  1. 當一個 exception 找不到自己在 return-stack 中的退出點時
+     應該有更好地處理方式 而不是不處理這種情況
+  2. 目前
+     當一個 exception 被執行的時候
+     調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
+     [除非爲這個 exception 中設置全局變量]
+     其原因在於
+     當 exception 被執行的時候 參數棧已經被重置了
+     所以其實解法很簡單
+     只要提供一個函數給 exception
+     讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
+     這樣當一個 exception 被執行的時候
+     它可以
+     1. 先以未被重置時的參數棧中的值爲參數
+        這些參數可以是調用這個 exception 的函傳遞給 exception 的
+     2. 之後再以重置之後的參數棧中的值爲參數
+        這些參數是等待 exception 的函爲 exception 所準備的
 * todo
-** more and better report
-   * syntax defined
-     and syntax useing
-** wrap more syscalls
-** about load-file
-   * nested load-file
-     a stack of allocate buffers in another local-data-heap
-     the previous local-data-heap maybe should be called local-data-vector
-   * load-file should maintain a list of loaded files
-     what else meta data should be maintained ?
-     can them make up a well module system ?
-** round-heap for string literal in REPL
-   * 使用新的語法擴展機制
-     這在於對 '"' 這個語關鍵詞的變更
-   * 也就是說
-     還是要實現這個語法兩次了
-   * 也就是說在編譯器開始執行的時候
-     會入棧一些編譯器所需要用到的語法
-     而運行結束之後
-     又把這些語法出棧
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
@@ -121,18 +140,6 @@
      end
    ; define-function
    #+end_src
-** more,rule-set,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : more,rule-set,make-jojo
-     << -- >>
-     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-     end
-   ; define-function
-
-   more,rule-set,make-jojo
-   #+end_src
 ** test if & else & then
    #+begin_src cicada-nymph
    : kkk
@@ -212,6 +219,12 @@
    factorial,test
    .12,test
    #+end_src
+** 記 exception handling
+   * 在語言中設計良好的錯誤處理
+     是鼓勵程序員寫出皮實的程序的關鍵
+   * 目前的
+     利用 prepare-for 來實現的錯誤處理機制
+     可能還遠遠不夠良好
 ** word:prepare-for?
    #+begin_src cicada-nymph :tangle core.cn
    : word:prepare-for?
@@ -230,12 +243,15 @@
      *exception-head* save-into,jo-heap
      end
    ; define-function
-
    #+end_src
 ** more,rule-set,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
      << -- >>
+     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+
      jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
      end
    ; define-function
@@ -279,8 +295,7 @@
    ; define-variable
 
    << for cursor >>
-   *jo-size* allocate-memory
-   drop
+   *jo-size* allocate-memory drop
 
    *size,rule-set,basic-REPL*
    allocate-memory
@@ -458,40 +473,87 @@
      end
    ; define-function
    #+end_src
-* init-syscall-number
-  #+begin_src cicada-nymph :tangle core.cn
-  0 : :syscall-number,open:  ; define-variable
-  0 : :syscall-number,close: ; define-variable
-  0 : :syscall-number,read:  ; define-variable
-  0 : :syscall-number,write: ; define-variable
-  0 : :syscall-number,exit:  ; define-variable
-  0 : :syscall-number,times: ; define-variable
+* constant for linux                  :linux:
+** init-syscall-number
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : :syscall-number,open:  ; define-variable
+   0 : :syscall-number,close: ; define-variable
+   0 : :syscall-number,read:  ; define-variable
+   0 : :syscall-number,write: ; define-variable
+   0 : :syscall-number,stat:  ; define-variable
+   0 : :syscall-number,exit:  ; define-variable
+   0 : :syscall-number,times: ; define-variable
 
-  : init-syscall-number
-    << -- >>
-    *jo-size* 8 equal? if
-      2   address :syscall-number,open:  save
-      3   address :syscall-number,close: save
-      0   address :syscall-number,read:  save
-      1   address :syscall-number,write: save
-      60  address :syscall-number,exit:  save
-      100 address :syscall-number,times: save
-      end
-    then
-    *jo-size* 4 equal? if
-      5   address :syscall-number,open:  save
-      6   address :syscall-number,close: save
-      3   address :syscall-number,read:  save
-      4   address :syscall-number,write: save
-      1   address :syscall-number,exit:  save
-      43  address :syscall-number,times: save
-      end
-    then
-    end
-  ; define-function
+   : init-syscall-number
+     << -- >>
+     *jo-size* 8 equal? if
+       2   address :syscall-number,open:  save
+       3   address :syscall-number,close: save
+       0   address :syscall-number,read:  save
+       1   address :syscall-number,write: save
+       4   address :syscall-number,stat:  save
+       60  address :syscall-number,exit:  save
+       100 address :syscall-number,times: save
+       end
+     then
+     *jo-size* 4 equal? if
+       5   address :syscall-number,open:  save
+       6   address :syscall-number,close: save
+       3   address :syscall-number,read:  save
+       4   address :syscall-number,write: save
+       106 address :syscall-number,stat:  save
+       1   address :syscall-number,exit:  save
+       43  address :syscall-number,times: save
+       end
+     then
+     end
+   ; define-function
 
-  init-syscall-number
-  #+end_src
+   init-syscall-number
+   #+end_src
+** error-code->string
+   #+begin_src cicada-nymph :tangle core.cn
+   : error-code->string
+     << error-code -- string[address, length] >>
+     dup -1  equal? if drop "EPERM    Operation not permitted " end then
+     dup -2  equal? if drop "ENOENT   No such file or directory " end then
+     dup -3  equal? if drop "ESRCH    No such process " end then
+     dup -4  equal? if drop "EINTR    Interrupted system call " end then
+     dup -5  equal? if drop "EIO      I/O error " end then
+     dup -6  equal? if drop "ENXIO    No such device or address " end then
+     dup -7  equal? if drop "E2BIG    Argument list too long " end then
+     dup -8  equal? if drop "ENOEXEC  Exec format error " end then
+     dup -9  equal? if drop "EBADF    Bad file number " end then
+     dup -10 equal? if drop "ECHILD   No child processes " end then
+     dup -11 equal? if drop "EAGAIN   Try again " end then
+     dup -12 equal? if drop "ENOMEM   Out of memory " end then
+     dup -13 equal? if drop "EACCES   Permission denied " end then
+     dup -14 equal? if drop "EFAULT   Bad address " end then
+     dup -15 equal? if drop "ENOTBLK  Block device required " end then
+     dup -16 equal? if drop "EBUSY    Device or resource busy " end then
+     dup -17 equal? if drop "EEXIST   File exists " end then
+     dup -18 equal? if drop "EXDEV    Cross-device link " end then
+     dup -19 equal? if drop "ENODEV   No such device " end then
+     dup -20 equal? if drop "ENOTDIR  Not a directory " end then
+     dup -21 equal? if drop "EISDIR   Is a directory " end then
+     dup -22 equal? if drop "EINVAL   Invalid argument " end then
+     dup -23 equal? if drop "ENFILE   File table overflow " end then
+     dup -24 equal? if drop "EMFILE   Too many open files " end then
+     dup -25 equal? if drop "ENOTTY   Not a typewriter " end then
+     dup -26 equal? if drop "ETXTBSY  Text file busy " end then
+     dup -27 equal? if drop "EFBIG    File too large " end then
+     dup -28 equal? if drop "ENOSPC   No space left on device " end then
+     dup -29 equal? if drop "ESPIPE   Illegal seek " end then
+     dup -30 equal? if drop "EROFS    Read-only file system " end then
+     dup -31 equal? if drop "EMLINK   Too many links " end then
+     dup -32 equal? if drop "EPIPE    Broken pipe " end then
+     dup -33 equal? if drop "EDOM     Math argument out of domain of func " end then
+     dup -34 equal? if drop "ERANGE   Math result not representable " end then
+     "unknow error-code : " write-string
+     write-integer cr
+     end
+   ; define-function
+   #+end_src
 * report
 ** welcome
    #+begin_src cicada-nymph :tangle core.cn
@@ -825,23 +887,212 @@
 * -----------------------------------
 * port
 ** 記 關於輸入輸出
-* file-tree
-** 記 關於接口
-   * 底層的 IO 函數我還不知道應該如何設計
-     但是相對高層的根文件的簡單讀寫有關的函數
-     已經基本確定了
-     其特點是
-     簡化掉 port 這個參數
-     所有的函數都以路徑爲參數
-** note
-   * file-tree is a database
-     the following interface is provided
-     1. add
-     2. sub
-     3. up
-     4. find
-     5. list
-   * a path is always one of the needed argument
+   * 接口設計分兩個層次
+     1. 底層的以 port 爲基礎的接口
+        這裏應該如何設計還不確定
+        可能會模仿操作系統所提供的接口
+     2. 高層的以 path 爲基礎的接口
+        這裏將抽象掉 port 這個概念
+        也就是每次簡單的讀寫都伴隨兩個對 port 的操作
+        這樣接口就很簡單 但是速度可能會非常慢
+** open-input-port
+   #+begin_src cicada-nymph :tangle core.cn
+   : open-input-port
+     << path[address, length]
+        -- port, true
+        -- error-code, false >>
+     string->syscall-string
+     >:syscall-path
+     0
+     0 <<
+     O_RDONLY      0000h
+     >>
+     :syscall-path
+     :syscall-number,open:
+     3 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+   #+end_src
+** open-output-port,[creat|update]
+   * interface
+     |--------+-----------------------|
+     | creat  | fail if already exist |
+     | update | fail if nor exist     |
+     |--------+-----------------------|
+   * one should always know if a file exist or not
+     when open it as output-port
+     predicates are provided to help you to do so
+   #+begin_src cicada-nymph :tangle core.cn
+   : open-output-port,creat
+     << path[address, length]
+        -- port, true
+        -- error-code, false >>
+     string->syscall-string
+     >:syscall-path
+     420 <<
+     110100100b
+     644o
+     6 8 2 power mul
+     4 8 1 power mul add
+     4 8 0 power mul add
+     >>
+     578 <<
+     O_RDWR  0002h 0002o
+     O_CREAT 0100h 0100o
+     O_TRUNC 0800h 1000o
+     1102o
+     1 8 3 power mul
+     1 8 2 power mul add
+     0 8 1 power mul add
+     2 8 0 power mul add
+     >>
+     :syscall-path
+     :syscall-number,open:
+     3 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+
+   : open-output-port,update
+     << path[address, length]
+        -- port, true
+        -- error-code, false >>
+     string->syscall-string
+     >:syscall-path
+     420 <<
+     110100100b
+     644o
+     6 8 2 power mul
+     4 8 1 power mul add
+     4 8 0 power mul add
+     >>
+     514 <<
+     O_RDWR  0002h 0002o
+     O_TRUNC 0800h 1000o
+     1002o
+     1 8 3 power mul
+     0 8 2 power mul add
+     0 8 1 power mul add
+     2 8 0 power mul add
+     >>
+     :syscall-path
+     :syscall-number,open:
+     3 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+   #+end_src
+** close-port
+   #+begin_src cicada-nymph :tangle core.cn
+   : close-port
+     << port
+        -- true
+        -- error-code, false >>
+     :syscall-number,close:
+     1 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     drop true
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,open-output-port,creat
+     << -- >>
+     "kkk~" open-output-port,creat if
+       close-port if
+         end
+       then error-code->string .s end
+     then error-code->string .s end
+   ; define-function
+   test,open-output-port,creat
+
+   : test,open-output-port,update
+     << -- >>
+     "kkk~" open-output-port,update if
+       close-port if
+         end
+       then error-code->string .s end
+     then error-code->string .s end
+   ; define-function
+   test,open-output-port,update
+   #+end_src
+** read-input-port
+   #+begin_src cicada-nymph :tangle core.cn
+   : read-input-port
+     << buffer, max-size, port
+        -- counter, true
+        -- error-code, false >>
+     >:port
+     swap
+     :port
+     :syscall-number,read:
+     3 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+   #+end_src
+** write-input-port
+   #+begin_src cicada-nymph :tangle core.cn
+   : write-input-port
+     << buffer, max-size, port
+        -- counter, true
+        -- error-code, false >>
+     >:port
+     swap
+     :port
+     :syscall-number,write:
+     3 syscall
+     dup
+     negative? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,read-input-port
+     << -- >>
+     64 allocate-local-memory
+     dup
+     "kkk~" open-input-port if
+       64 swap read-input-port if
+         .s
+         end
+       then 1 . error-code->string .s end
+     then 2 . error-code->string .s end
+   ; define-function
+   test,read-input-port
+   #+end_src
+* path
 ** note syntax about path
    #+begin_src cicada-nymph
    {path: home xyh cicada core.cn}
@@ -862,9 +1113,35 @@
    {path: +library+ kkk main.cn}
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
-* path
 ** relative-path?
 ** full-path?
+* file-tree
+** 記 接口
+   * file-tree is a database
+     the following interface is provided
+     1. add
+     2. sub
+     3. up
+     4. find
+     5. list
+   * a path is always one of the needed argument
+** 記 錯誤處理
+   * 兩種風格
+     IO 相關的函數在出錯時
+     1. 立即報錯
+     2. 返回出錯信息
+   * 第一種很簡單
+     但是它假設了所有的錯誤都是不可忽略的
+** 記 元數據
+   * 訪問管理
+     1. 誰有權訪問這個文件
+     2. 他的權利是什麼
+   * 文件類型
+     [linux 沒有]
+   * 文件大小
+   * 文件使用註釋
+     [linux 沒有]
+** add
 * poi
 ** note
    * poi denotes path-organizer

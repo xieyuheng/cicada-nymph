@@ -2071,7 +2071,7 @@ define_function "negative?", negative?
 
 define_function "positive?", positive?
    ;; << integer -- bool >>
-   xx negative?, false?
+   xx zero, greater_than?
    xx end
 
 match =64bit, machine {
@@ -3190,7 +3190,7 @@ define_function "string->syscall-string", string_to_syscall_string
 
 match =linux =64bit, platform machine {
 
-define_primitive_function "syscall", __syscall
+define_primitive_function "syscall", CICADA__syscall
    ;; << ..., argument2, argument1,
    ;;    syscall-number,
    ;;    number-of-arguments
@@ -3282,7 +3282,7 @@ __syscall_with_too_many:
 
 match =linux =32bit, platform machine {
 
-define_primitive_function "syscall", __syscall
+define_primitive_function "syscall", CICADA__syscall
    ;; << ..., argument2, argument1,
    ;;    syscall-number,
    ;;    number-of-arguments
@@ -3744,7 +3744,7 @@ define_function "write-nature-number,loop", write_nature_number__loop
 
 define_function "write-integer", write_integer
    ;; << integer -- >>
-   xx dup, positive?, false?branch, 3
+   xx dup, negative?, false?, false?branch, 3
    xx   write_nature_number
    xx   end
    xx literal, '-', write_byte
@@ -4878,12 +4878,12 @@ address$local_data_vector labeling
 current_free_address$local_data_vector:
    xx address$local_data_vector
 
-define_function "local-data-allocate,jo", local_data_allocate__jo
+define_primitive_function "local-data-allocate,jo", local_data_allocate__jo
    ;; << number -- >>
-   xx V__jo_size, multiple
-   xx literal, current_free_address$local_data_vector
-   xx add_save
-   xx end
+   pop_argument_stack rax
+   imul rax, jo_size
+   add [current_free_address$local_data_vector], rax
+   next
 
 match =64bit, machine {
 
