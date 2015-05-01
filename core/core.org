@@ -2,46 +2,48 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* if else then and double-quote in REPL
-  * round-heap for string literal in REPL
-    * 使用新的語法擴展機制
-      這在於對 '"' 這個語關鍵詞的變更
-    * 也就是說
-      還是要實現這個語法兩次了
-    * 也就是說在編譯器開始執行的時候
-      會入棧一些編譯器所需要用到的語法
-      而運行結束之後
-      又把這些語法出棧
-* more and better report
-  * rule-sets in syntax-stack
-    and
-    rule-set useing (top of syntax-stack)
-* about load-file
-  * nested load-file
-    a stack of allocate buffers in another local-data-heap
-    the previous local-data-heap maybe should be called local-data-vector
-  * load-file should maintain a list of loaded files
-    what else meta data should be maintained ?
-    can them make up a well module system ?
-* 更好的錯誤處理機制
-  1. 當一個 exception 找不到自己在 return-stack 中的退出點時
-     應該有更好地處理方式 而不是不處理這種情況
-  2. 目前
-     當一個 exception 被執行的時候
-     調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
-     [除非爲這個 exception 中設置全局變量]
-     其原因在於
-     當 exception 被執行的時候 參數棧已經被重置了
-     所以其實解法很簡單
-     只要提供一個函數給 exception
-     讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
-     這樣當一個 exception 被執行的時候
-     它可以
-     1. 先以未被重置時的參數棧中的值爲參數
-        這些參數可以是調用這個 exception 的函傳遞給 exception 的
-     2. 之後再以重置之後的參數棧中的值爲參數
-        這些參數是等待 exception 的函爲 exception 所準備的
 * todo
+** about load-file
+   * nested load-file
+     a stack of allocate buffers in another local-data-heap
+     the previous local-data-heap maybe should be called local-data-vector
+   * load-file should maintain a list of loaded files
+     what else meta data should be maintained ?
+     can them make up a well module system ?
+** if else then and double-quote in REPL
+   * round-heap for string literal in REPL
+     * 使用新的語法擴展機制
+       這在於對 '"' 這個語關鍵詞的變更
+     * 也就是說
+       還是要實現這個語法兩次了
+     * 也就是說在編譯器開始執行的時候
+       會入棧一些編譯器所需要用到的語法
+       而運行結束之後
+       又把這些語法出棧
+** more and better report
+   * rule-sets in syntax-stack
+     and
+     rule-set useing (top of syntax-stack)
+** 更好的錯誤處理機制
+   1. 當一個 exception 找不到自己在 return-stack 中的退出點時
+      應該有更好地處理方式 而不是不處理這種情況
+   2. 目前
+      當一個 exception 被執行的時候
+      調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
+      [除非爲這個 exception 中設置全局變量]
+      其原因在於
+      當 exception 被執行的時候 參數棧已經被重置了
+      所以其實解法很簡單
+      只要提供一個函數給 exception
+      讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
+      這樣當一個 exception 被執行的時候
+      它可以
+      1. 先以未被重置時的參數棧中的值爲參數
+         這些參數可以是調用這個 exception 的函傳遞給 exception 的
+      2. 之後再以重置之後的參數棧中的值爲參數
+         這些參數是等待 exception 的函爲 exception 所準備的
+** little-tester                      :needed:
+** fixnum in other base               :needed:
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
@@ -53,7 +55,6 @@
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
 ** more design about the command-line-interface
-** little tester
 ** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
 ** [how] variable must be able to store string
 ** name-hash-table
@@ -486,16 +487,6 @@
 
    : init-syscall-number
      << -- >>
-     *jo-size* 8 equal? if
-       2   address :syscall-number,open:  save
-       3   address :syscall-number,close: save
-       0   address :syscall-number,read:  save
-       1   address :syscall-number,write: save
-       4   address :syscall-number,stat:  save
-       60  address :syscall-number,exit:  save
-       100 address :syscall-number,times: save
-       end
-     then
      *jo-size* 4 equal? if
        5   address :syscall-number,open:  save
        6   address :syscall-number,close: save
@@ -504,6 +495,16 @@
        106 address :syscall-number,stat:  save
        1   address :syscall-number,exit:  save
        43  address :syscall-number,times: save
+       end
+     then
+     *jo-size* 8 equal? if
+       2   address :syscall-number,open:  save
+       3   address :syscall-number,close: save
+       0   address :syscall-number,read:  save
+       1   address :syscall-number,write: save
+       4   address :syscall-number,stat:  save
+       60  address :syscall-number,exit:  save
+       100 address :syscall-number,times: save
        end
      then
      end
@@ -1037,9 +1038,9 @@
    ; define-function
    test,open-output-port,update
    #+end_src
-** read-input-port
+** read-port
    #+begin_src cicada-nymph :tangle core.cn
-   : read-input-port
+   : read-port
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -1057,9 +1058,9 @@
      end
    ; define-function
    #+end_src
-** write-input-port
+** write-port
    #+begin_src cicada-nymph :tangle core.cn
-   : write-input-port
+   : write-port
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -1079,21 +1080,23 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,read-input-port
+   : test,read-port
      << -- >>
      64 allocate-local-memory
      dup
      "kkk~" open-input-port if
-       64 swap read-input-port if
+       64 swap read-port if
          .s
          end
-       then 1 . error-code->string .s end
-     then 2 . error-code->string .s end
+       then error-code->string .s end
+     then error-code->string .s end
    ; define-function
-   test,read-input-port
+   test,read-port
    #+end_src
 * path
-** note syntax about path
+** 記 syntax about path
+   * 利用了系統的路徑格式
+     同時又把系統的路徑格式抽象掉了
    #+begin_src cicada-nymph
    {path: home xyh cicada core.cn}
    "/home/xyh/cicada/core.cn"
@@ -1101,37 +1104,209 @@
    {path: home xyh cicada}
    "/home/xyh/cicada"
 
-   << +working+ "." >>
    {path: +working+ core.cn}
    "./core.cn"
 
-   << +parent+ ".." >>
    {path: +parent+ cicada core.cn}
    "../cicada/core.cn"
 
-   << +library+ "/home/xyh/.cicada/library" >>
    {path: +library+ kkk main.cn}
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
 ** relative-path?
 ** full-path?
+** stat structure
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : +stat,st_dev+        ; define-variable
+   0 : +stat,st_ino+        ; define-variable
+   0 : +stat,st_mode+       ; define-variable
+   0 : +stat,st_nlink+      ; define-variable
+   0 : +stat,st_uid+        ; define-variable
+   0 : +stat,st_gid+        ; define-variable
+   0 : +stat,st_rdev+       ; define-variable
+   0 : +stat,st_size+       ; define-variable
+   0 : +stat,st_blksize+    ; define-variable
+   0 : +stat,st_blocks+     ; define-variable
+   0 : +stat,st_atime+      ; define-variable
+   0 : +stat,st_atime_nsec+ ; define-variable
+   0 : +stat,st_mtime+      ; define-variable
+   0 : +stat,st_mtime_nsec+ ; define-variable
+   0 : +stat,st_ctime+      ; define-variable
+   0 : +stat,st_ctime_nsec+ ; define-variable
+   0 : +stat,__unused4+     ; define-variable
+   0 : +stat,__unused5+     ; define-variable
+   0 : +stat,end+           ; define-variable
+
+   : init,stat
+     << offset -- >>
+     *jo-size* 4 equal? if
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
+       dup address +stat,st_mode+       save 2 add
+       dup address +stat,st_nlink+      save 2 add
+       dup address +stat,st_uid+        save 2 add
+       dup address +stat,st_gid+        save 2 add
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
+       end
+     then
+     *jo-size* 8 equal? if
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
+       <<
+       note the following order changing
+       this is linux' bad
+       >>
+       dup address +stat,st_nlink+      save 8 add
+       dup address +stat,st_mode+       save 4 add
+
+       dup address +stat,st_uid+        save 4 add
+       dup address +stat,st_gid+        save 4 add
+                                             4 add << padding >>
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
+       end
+     then
+     end
+   ; define-function
+
+   0 init,stat
+   +stat,end+ : +stat,length+ ; define-variable
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,stat
+     << -- >>
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     dup
+     negative? if
+       dup .
+       error-code->string .s
+       end
+     then
+     drop
+     :stat-structure init,stat
+     +stat,st_dev+        fetch . "+stat,st_dev+" .s
+     +stat,st_ino+        fetch . "+stat,st_ino+" .s
+     *jo-size* 4 equal? if
+     +stat,st_mode+       fetch-two-bytes  . "+stat,st_mode+" .s
+     +stat,st_nlink+      fetch-two-bytes  . "+stat,st_nlink+" .s
+     +stat,st_uid+        fetch-two-bytes  . "+stat,st_uid+" .s
+     +stat,st_gid+        fetch-two-bytes  . "+stat,st_gid+" .s
+     then
+     *jo-size* 8 equal? if
+     +stat,st_nlink+      fetch  . "+stat,st_nlink+" .s
+     +stat,st_mode+       fetch-four-bytes  . "+stat,st_mode+" .s
+     +stat,st_uid+        fetch-four-bytes  . "+stat,st_uid+" .s
+     +stat,st_gid+        fetch-four-bytes  . "+stat,st_gid+" .s
+     then
+     +stat,st_rdev+       fetch . "+stat,st_rdev+" .s
+     +stat,st_size+       fetch . "+stat,st_size+" .s
+     +stat,st_blksize+    fetch . "+stat,st_blksize+" .s
+     +stat,st_blocks+     fetch . "+stat,st_blocks+" .s
+     +stat,st_atime+      fetch . "+stat,st_atime+" .s
+     +stat,st_atime_nsec+ fetch . "+stat,st_atime_nsec+" .s
+     +stat,st_mtime+      fetch . "+stat,st_mtime+" .s
+     +stat,st_mtime_nsec+ fetch . "+stat,st_mtime_nsec+" .s
+     +stat,st_ctime+      fetch . "+stat,st_ctime+" .s
+     +stat,st_ctime_nsec+ fetch . "+stat,st_ctime_nsec+" .s
+     +stat,__unused4+     fetch . "+stat,__unused4+" .s
+     +stat,__unused5+     fetch . "+stat,__unused5+" .s
+     end
+   ; define-function
+
+   : cn ;
+   test,stat
+
+   : no ;
+   test,stat
+   #+end_src
+** note predicate
+   * to use predicate to know more about the file-tree
+     before calling a function that makes action on the file-tree
+** path-to-nothing?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path-to-nothing?
+     << path[address, length] -- bool >>
+
+     end
+   ; define-function
+   #+end_src
+** path-to-file?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path-to-file?
+     << path[address, length] -- bool >>
+
+     end
+   ; define-function
+   #+end_src
+** path-to-directory?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path-to-directory?
+     << path[address, length] -- bool >>
+
+     end
+   ; define-function
+   #+end_src
 * file-tree
-** 記 接口
-   * file-tree is a database
-     the following interface is provided
-     1. add
-     2. sub
-     3. up
-     4. find
-     5. list
-   * a path is always one of the needed argument
+** note
+   * file-tree
+     two types of nodes
+     1. file
+     2. directory
+     a leaf must be a file
+   * the following interface is provided
+     * they use path as an argument
+     * they print error message on error
+       instead of return error info
+       or rise exception
+     * the concept of port is
+       completely removed from the interface
+     --------------------------------
+     1. creat-file
+        creat-directory
+        update-file
+        update-directory
+     2. remove-file
+        remove-directory
+     3. find-file-in-directory
+     4. list-file-in-directory
 ** 記 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
      1. 立即報錯
      2. 返回出錯信息
    * 第一種很簡單
-     但是它假設了所有的錯誤都是不可忽略的
+     它假設了所有的錯誤都是不可忽略的
 ** 記 元數據
    * 訪問管理
      1. 誰有權訪問這個文件
@@ -1141,7 +1316,6 @@
    * 文件大小
    * 文件使用註釋
      [linux 沒有]
-** add
 * poi
 ** note
    * poi denotes path-organizer
@@ -1242,15 +1416,6 @@
 
      end
    ; define-function
-   #+end_src
-* >< little-tester
-** note
-** ><
-* -----------------------------------
-* >< fixnum in other base
-** ><
-   #+begin_src cicada-nymph :tangle core.cn
-
    #+end_src
 * -----------------------------------
 * name-hash-table

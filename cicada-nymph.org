@@ -2,10 +2,10 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* protect on the overloading of a variety of memories
-* better naming of headings
-* 更多的中文筆記
 * todo
+** protect on the overloading of a variety of memories
+** better naming of headings
+** 更多的中文筆記
 ** add more notes about the limitations of the program
 ** add more notes about exception handling on io functions
 ** optimize local-variable by new instruction
