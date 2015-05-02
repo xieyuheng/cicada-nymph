@@ -58,6 +58,16 @@
   end
 ; define-function
 
+: more,rule-set,make-jojo
+  << -- >>
+  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+  end
+; define-function
+
+more,rule-set,make-jojo
+
 : word:prepare-for?
   << word[address, length] -- bool >>
   "prepare-for" string-equal?
@@ -75,11 +85,328 @@
 
 : more,rule-set,make-jojo
   << -- >>
-  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+  jo word:prepare-for?
+  jo syntax,prepare-for,make-jojo
+  *rule-set,make-jojo* add-rule
+  end
+; define-function
 
-  jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
+more,rule-set,make-jojo
+
+: remove-char!,loop
+  << cursor, length, char -- cursor >>
+  >:char
+  >:length
+  >:cursor
+  :length zero? if
+    :cursor
+    end
+  then
+  :cursor fetch-byte :char equal? if
+    :cursor add1 :length sub1
+    :cursor
+    string->buffer!
+    :cursor
+    :length sub1
+    :char
+  else
+    :cursor add1
+    :length sub1
+    :char
+  then
+  <> remove-char!,loop
+; define-function
+
+: remove-char!
+  << string[address, length], char -- string[address, length] >>
+  x|over|xx >:address
+  remove-char!,loop >:cursor
+  :address
+  :cursor :address sub
+  end
+; define-function
+
+: latin-char?
+  << char -- bool >>
+  dup "A" string-head,char less-than? false?branch 4
+    drop false
+    end
+  dup "Z" string-head,char less-or-equal? false?branch 4
+    drop true
+    end
+  dup "a" string-head,char less-than? false?branch 4
+    drop false
+    end
+  dup "z" string-head,char less-or-equal? false?branch 4
+    drop true
+    end
+  drop false
+  end
+; define-function
+
+: latin-char->number
+  << latin-char -- number >>
+  dup "A" string-head,char less-than? if
+    "* (latin-char->number) the argument must be a latin-char" .s
+    "  but the following char is less-than 'A' : " write-string
+    write-integer cr
+    end
+  then
+  dup "Z" string-head,char less-or-equal? if
+    "A" string-head,char
+    sub
+    10 add
+    end
+  then
+  dup "a" string-head,char less-than? if
+    "* (latin-char->number) the argument must be a latin-char" .s
+    "  but the following char is less-than 'a' but greater-then 'Z' : " write-string
+    write-integer cr
+    end
+  then
+  dup "z" string-head,char less-or-equal? if
+    "a" string-head,char
+    sub
+    10 add
+    end
+  then
+  "* (latin-char->number) the argument must be a latin-char" .s
+  "  but the following char is greater-then 'z' : " write-string
+  write-integer cr
+  end
+; define-function
+
+: wild-digit-string?
+  << string[address, length] -- bool >>
+  dup zero? if
+    drop2 true
+    end
+  then
+  over fetch-byte
+  dup digit-char?
+  swap latin-char?
+  or if
+    string-tail,char
+    <> wild-digit-string?
+  then
+  drop2
+  false
+  end
+; define-function
+
+: wild-integer-string?
+  << string[address, length] -- bool >>
+  dup zero? if
+    drop2 false
+    end
+  then
+  dup2 string-head,char
+  "-" string-head,char
+  equal? if
+    string-tail,char
+    wild-digit-string?
+    end
+  then
+  wild-digit-string?
+  end
+; define-function
+
+: empty-string?
+  << string[address, length] -- bool >>
+  swap drop
+  zero?
+  end
+; define-function
+
+: base#wild-integer-string?
+  << string[address, length] -- bool >>
+  128 allocate-local-memory
+  >:string-address
+  tuck
+  :string-address
+  string->buffer!
+  :string-address swap
+  "_" string-head,char
+  remove-char!
+  >:new-string-length
+  >:new-string-address
+  << dup2 .s 0 end >>
+  :new-string-address
+  :new-string-length
+  "#" string-head,char
+  find-char,string if
+  else
+    false
+    end
+  then
+  >:address-of-#
+  :new-string-address
+  :address-of-# :new-string-address sub
+  >::base-string
+  :address-of-# add1
+  :address-of-# :new-string-address sub add1
+  :new-string-length swap sub
+  >::wild-integer-string
+  ::base-string digit-string?
+  ::base-string empty-string? not
+  and if
+  else
+    false
+    end
+  then
+  ::wild-integer-string wild-integer-string?
+  ::wild-integer-string empty-string? not
+  and if
+    true
+  else
+    false
+  then
+  end
+; define-function
+
+: base#wild-integer-string->base-string
+  << string[address, length] -- string[address, length] >>
+  >:length
+  >:address
+  :address
+  :length
+  "#" string-head,char
+  find-char,string if
+  else
+    "* (base#wild-integer-string->base-string)" .s
+    "  the argument must be a base#wild-integer-string" .s
+    "  but the following string does not even have a '#' in it :" .s
+    "  " write-string
+    :address :length .s
+    << to balance the argument-stack or not ??? >>
+    << :address :length >>
+    end
+  then
+  >:address-of-#
+  :address
+  :address-of-# :address sub
+  end
+; define-function
+
+: base#wild-integer-string->wild-integer-string
+  << string[address, length] -- string[address, length] >>
+  >:length
+  >:address
+  :address
+  :length
+  "#" string-head,char
+  find-char,string if
+  else
+    "* (base#wild-integer-string->wild-integer-string)" .s
+    "  the argument must be a base#wild-integer-string" .s
+    "  but the following string does not even have a '#' in it :" .s
+    "  " write-string
+    :address :length .s
+    << to balance the argument-stack or not ??? >>
+    << :address :length >>
+    end
+  then
+  >:address-of-#
+  :address-of-# add1
+  :address-of-# :address sub add1
+  :length swap sub
+  end
+; define-function
+
+: wild-integer-string->integer,with-base,loop
+  << string[address, length], base, sum, counter -- integer >>
+  >:counter
+  >:sum
+  >:base
+  >:length
+  >:address
+  :length zero? if
+    :sum
+    end
+  then
+  :address fetch-byte >:char
+  :char digit-char? if
+    :char digit-char->number
+  then
+  :char latin-char? if
+    :char latin-char->number
+  then
+  :base :counter power
+  mul
+  :sum add
+  >:sum
+  :address add1
+  :length sub1
+  :base
+  :sum
+  :counter add1
+  <> wild-integer-string->integer,with-base,loop
+; define-function
+
+: wild-integer-string->integer,with-base
+  << string[address, length], base -- integer >>
+  >:base
+  dup zero? if
+    drop2
+    0
+    end
+  then
+  dup2 string-head,char
+  "-" string-head,char
+  equal? if
+    string-tail,char
+    -1 >:sign
+  else
+    1 >:sign
+  then
+  >::string
+  ::string string-reverse!
+  :base
+  0 0 wild-integer-string->integer,with-base,loop
+  :sign mul
+  ::string string-reverse!
+  drop2
+  end
+; define-function
+
+: base#wild-integer-string->integer
+  << string[address, length] -- integer >>
+  128 allocate-local-memory
+    >:address
+  tuck :address string->buffer!
+    >:length
+  :address :length
+  "_" string-head,char remove-char!
+    >::string
+  ::string
+  base#wild-integer-string->base-string
+    >::base-string
+  ::string
+  base#wild-integer-string->wild-integer-string
+    >::wild-integer-string
+  ::base-string
+  digit-string->nature-number
+    >:base
+  ::wild-integer-string
+  :base
+  wild-integer-string->integer,with-base
+  end
+; define-function
+
+: syntax,base#wild-integer-string,make-jojo
+  << string[address, length], word[address, length] --
+     string[address, length] >>
+  *literal* save-into,jo-heap
+  base#wild-integer-string->integer
+  save-into,jo-heap
+  end
+; define-function
+
+: more,rule-set,make-jojo
+  << -- >>
+  jo base#wild-integer-string?
+  jo syntax,base#wild-integer-string,make-jojo
+  *rule-set,make-jojo* add-rule
   end
 ; define-function
 
@@ -152,6 +479,8 @@ save
   << -- >>
   jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
   jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
+
+  jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
   end
 ; define-function
 
@@ -330,13 +659,7 @@ init-syscall-number
   end
 ; define-function
 
-: welcome
-  << -- >>
-  "* welcome to cicada-nymph ^-^" .s
-  end
-; define-function
-
-: loop,report-dictionary,primitive-function
+: report-dictionary,primitive-function,loop
   << counter, jo -- total >>
   dup zero? if
     drop
@@ -344,7 +667,7 @@ init-syscall-number
   then
   dup primitive-function-jo? false? if
     jo->pre-jo
-    <> loop,report-dictionary,primitive-function
+    <> report-dictionary,primitive-function,loop
   then
   swap
     "  " write-string
@@ -358,18 +681,18 @@ init-syscall-number
     write-string cr
   then
   jo->pre-jo
-  <> loop,report-dictionary,primitive-function
+  <> report-dictionary,primitive-function,loop
 ; define-function
 
 : report-dictionary,primitive-function
   << -- >>
   "* all primitive-function in dictionary :" write-string cr
   0 *first-jo-in-dictionary*
-  loop,report-dictionary,primitive-function
+  report-dictionary,primitive-function,loop
   end
 ; define-function
 
-: loop,report-dictionary,function
+: report-dictionary,function,loop
   << counter, jo -- total >>
   dup zero? if
     drop
@@ -377,7 +700,7 @@ init-syscall-number
   then
   dup function-jo? false? if
     jo->pre-jo
-    <> loop,report-dictionary,function
+    <> report-dictionary,function,loop
   then
   swap
     "  " write-string
@@ -391,18 +714,18 @@ init-syscall-number
     write-string cr
   then
   jo->pre-jo
-  <> loop,report-dictionary,function
+  <> report-dictionary,function,loop
 ; define-function
 
 : report-dictionary,function
   << -- >>
   "* all function in dictionary :" write-string cr
   0 *first-jo-in-dictionary*
-  loop,report-dictionary,function
+  report-dictionary,function,loop
   end
 ; define-function
 
-: loop,report-dictionary,exception
+: report-dictionary,exception,loop
   << counter, jo -- total >>
   dup zero? if
     drop
@@ -410,7 +733,7 @@ init-syscall-number
   then
   dup exception-jo? false? if
     jo->pre-jo
-    <> loop,report-dictionary,exception
+    <> report-dictionary,exception,loop
   then
   swap
     "  " write-string
@@ -424,18 +747,18 @@ init-syscall-number
     write-string cr
   then
   jo->pre-jo
-  <> loop,report-dictionary,exception
+  <> report-dictionary,exception,loop
 ; define-function
 
 : report-dictionary,exception
   << -- >>
   "* all exception in dictionary :" write-string cr
   0 *first-jo-in-dictionary*
-  loop,report-dictionary,exception
+  report-dictionary,exception,loop
   end
 ; define-function
 
-: loop,report-dictionary,variable
+: report-dictionary,variable,loop
   << counter, jo -- total >>
   dup zero? if
     drop
@@ -443,7 +766,7 @@ init-syscall-number
   then
   dup variable-jo? false? if
     jo->pre-jo
-    <> loop,report-dictionary,variable
+    <> report-dictionary,variable,loop
   then
   swap
     "  " write-string
@@ -457,14 +780,14 @@ init-syscall-number
     write-string cr
   then
   jo->pre-jo
-  <> loop,report-dictionary,variable
+  <> report-dictionary,variable,loop
 ; define-function
 
 : report-dictionary,variable
   << -- >>
   "* all variable in dictionary :" write-string cr
   0 *first-jo-in-dictionary*
-  loop,report-dictionary,variable
+  report-dictionary,variable,loop
   end
 ; define-function
 
@@ -555,7 +878,7 @@ init-syscall-number
     end
   then
   "  " write-string
-  add1 dup . 
+  add1 dup .
   swap
     dup cursor->predicate
     jo->name write-string
@@ -563,13 +886,13 @@ init-syscall-number
     dup cursor->function
     jo->name write-string cr
     *jo-size* sub *jo-size* sub
-  swap 
+  swap
   <> list-rule,loop
 ; define-function
 
 : list-rule
   << rule-set -- >>
-  dup rule-set,fetch-cursor 
+  dup rule-set,fetch-cursor
   0 list-rule,loop
   end
 ; define-function
@@ -585,20 +908,26 @@ init-syscall-number
   end
 ; define-function
 
+: report-loaded-core-file
+  << -- >>
+  "* loaded-core-file : " write-string
+  get-path,loaded-core-file .s
+  end
+; define-function
+
 : initial-report
   << -- >>
   "* initial-report : " write-string cr
+  "  " write-string report-loaded-core-file
   "  " write-string report-platform
   "  " write-string report-machine-word-size
   "  " write-string report-jo-size
   end
 ; define-function
 
-: report-loaded-core-file
+: welcome
   << -- >>
-  "* loaded-core-file : " .s
-  "    " write-string
-  get-path,loaded-core-file .s
+  "* welcome to cicada-nymph ^-^" .s
   end
 ; define-function
 
@@ -638,6 +967,13 @@ init-syscall-number
   << -- >>
   hi,random
   hi,say
+  end
+; define-function
+
+: help
+  << -- >>
+  "* helpful documentations will be written soon" .s
+  "  please wait ^-^" .s
   end
 ; define-function
 
@@ -1312,7 +1648,6 @@ allocate-memory
 : command-line,stack-REPL
   << -- >>
   welcome
-  report-loaded-core-file
   initial-report
   hi
   "* you are in the (stack-REPL)" .s
@@ -1326,7 +1661,6 @@ allocate-memory
 : command-line,basic-REPL
   << -- >>
   welcome
-  report-loaded-core-file
   initial-report
   hi
   "* you are in the (basic-REPL)" .s

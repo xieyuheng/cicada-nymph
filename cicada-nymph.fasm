@@ -826,7 +826,7 @@ first_jojo:
 }
 
 string$report_return_stack_is_empty_and_exit:
-   db "* the return-stack empty", 10
+   db "* the return-stack is empty now", 10
    db "* good bye ^-^/", 10
 .end:
 length$report_return_stack_is_empty_and_exit = (.end - string$report_return_stack_is_empty_and_exit)
@@ -1689,63 +1689,34 @@ define_function "true?", true?
    xx true, equal?
    xx end
 
-match =64bit, machine {
+define_function "not", CICADA__not
+   ;; << bool -- bool >>
+   xx false, equal?
+   xx end
 
-define_primitive_function "bitwise-and", bitwise_and
-   ;; << a, b -- a and b >>
-   pop_argument_stack rbx
-   and [pointer$argument_stack - (1 * jo_size)], rbx
-   next
+define_function "and", CICADA__and
+   ;; << bool, bool -- bool >>
+   xx false?, false?branch, 4
+   xx   drop
+   xx   false
+   xx   end
+   xx false?branch, 3
+   xx   true
+   xx   end
+   xx false
+   xx end
 
-define_primitive_function "bitwise-or", bitwise_or
-   ;; << a, b -- a or b >>
-   pop_argument_stack rbx
-   or  [pointer$argument_stack - (1 * jo_size)], rbx
-   next
-
-define_primitive_function "bitwise-xor", bitwise_xor
-   ;; << a, b -- a xor b >>
-   pop_argument_stack rbx
-   xor [pointer$argument_stack - (1 * jo_size)], rbx
-   next
-
-define_primitive_function "bitwise-invert", bitwise_invert
-   ;; << a -- invert a >>
-   not qword [pointer$argument_stack - (1 * jo_size)]
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "bitwise-and", bitwise_and
-   ;; << a, b -- a and b >>
-   pop_argument_stack rbx
-   mov rax, [pointer$argument_stack]
-   and [rax - (1 * jo_size)], rbx
-   next
-
-define_primitive_function "bitwise-or", bitwise_or
-   ;; << a, b -- a or b >>
-   pop_argument_stack rbx
-   mov rax, [pointer$argument_stack]
-   or  [rax - (1 * jo_size)], rbx
-   next
-
-define_primitive_function "bitwise-xor", bitwise_xor
-   ;; << a, b -- a xor b >>
-   pop_argument_stack rbx
-   mov rax, [pointer$argument_stack]
-   xor [rax - (1 * jo_size)], rbx
-   next
-
-define_primitive_function "bitwise-invert", bitwise_invert
-   ;; << a -- invert a >>
-   mov rax, [pointer$argument_stack]
-   not dword [rax - (1 * jo_size)]
-   next
-
-}
+define_function "or", CICADA__or
+   ;; << bool, bool -- bool >>
+   xx false?branch, 4
+   xx   drop
+   xx   true
+   xx   end
+   xx false?branch, 3
+   xx   true
+   xx   end
+   xx false
+   xx end
 
 define_primitive_function "zero", zero
    ;; << -- 0 >>
@@ -1962,11 +1933,19 @@ define_function "negate", negate
 define_function "power", power
    ;; n must be nature number for now
    ;; << a, n -- a^n >>
+   ;; 1. when a = 0, n =/= 0
+   ;;    the power__loop returns 0
+   ;; 2. when a = 0, n = 0
+   ;;    the power__loop returns 1
+   ;;    but I need it to return 0
+   xx over, zero?, false?branch, 3
+   xx   drop
+   xx   end
    xx literal, 1, swap ;; leave product
-   xx help__power
+   xx power__loop
    xx end
 
-define_function "help,power", help__power
+define_function "power,loop", power__loop
    ;; << a, product, n -- a^n >>
    xx dup, zero?, false?branch, 5
    xx   drop, swap, drop
@@ -1975,7 +1954,7 @@ define_function "help,power", help__power
    xx swap
    xx   xoverxx, multiple
    xx swap
-   xx taca, help__power
+   xx taca, power__loop
 
 define_primitive_function "moddiv", moddiv
    ;; << a, b -- a mod b, quotient >>
@@ -2411,6 +2390,64 @@ define_primitive_function "clear-memory", clear_memory
    dec rcx
    loop .loop
    next
+
+match =64bit, machine {
+
+define_primitive_function "bitwise-and", bitwise_and
+   ;; << a, b -- a and b >>
+   pop_argument_stack rbx
+   and [pointer$argument_stack - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-or", bitwise_or
+   ;; << a, b -- a or b >>
+   pop_argument_stack rbx
+   or  [pointer$argument_stack - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-xor", bitwise_xor
+   ;; << a, b -- a xor b >>
+   pop_argument_stack rbx
+   xor [pointer$argument_stack - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-invert", bitwise_invert
+   ;; << a -- invert a >>
+   not qword [pointer$argument_stack - (1 * jo_size)]
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "bitwise-and", bitwise_and
+   ;; << a, b -- a and b >>
+   pop_argument_stack rbx
+   mov rax, [pointer$argument_stack]
+   and [rax - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-or", bitwise_or
+   ;; << a, b -- a or b >>
+   pop_argument_stack rbx
+   mov rax, [pointer$argument_stack]
+   or  [rax - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-xor", bitwise_xor
+   ;; << a, b -- a xor b >>
+   pop_argument_stack rbx
+   mov rax, [pointer$argument_stack]
+   xor [rax - (1 * jo_size)], rbx
+   next
+
+define_primitive_function "bitwise-invert", bitwise_invert
+   ;; << a -- invert a >>
+   mov rax, [pointer$argument_stack]
+   not dword [rax - (1 * jo_size)]
+   next
+
+}
 
 match =linux =64bit, platform machine {
 
@@ -3408,7 +3445,7 @@ define_function "bar-ket-char?", bar_ket_char?
    xx drop, false
    xx end
 
-define_function "digital-char?", decimal_digital_char?
+define_function "digit-char?", digit_char?
    ;; << char -- bool >>
    xx dup, literal, '0', less_than?, false?branch, 4
    xx   drop, false
@@ -3419,31 +3456,14 @@ define_function "digital-char?", decimal_digital_char?
    xx drop, false
    xx end
 
-define_function "latin-char?", latin_char?
-   ;; << char -- bool >>
-   xx dup, literal, 'A', less_than?, false?branch, 4
-   xx   drop, false
-   xx   end
-   xx dup, literal, 'Z', less_or_equal?, false?branch, 4
-   xx   drop, true
-   xx   end
-   xx dup, literal, 'a', less_than?, false?branch, 4
-   xx   drop, false
-   xx   end
-   xx dup, literal, 'z', less_or_equal?, false?branch, 4
-   xx   drop, true
-   xx   end
-   xx drop, false
-   xx end
-
-define_function "char->decimal-digital", char_to_decimal_digital
-   ;; << char -- decimal-digital >>
+define_function "digit-char->number", digit_char_to_number
+   ;; << char -- decimal-digit >>
    xx literal, '0'
    xx subtraction
    xx end
 
-define_function "decimal-digital->char", decimal_digital_to_char
-   ;; << decimal-digital -- char >>
+define_function "number->char-digit", number_to_digit_char
+   ;; << decimal-digit -- char >>
    xx literal, '0'
    xx addition
    xx end
@@ -3572,17 +3592,6 @@ define_primitive_function "string-reverse!", string_reverse!
 
 }
 
-define_function "digital-string?", digital_string?
-   ;; << string[address, length] -- bool >>
-   xx dup, zero?, false?branch, 4
-   xx   drop2, true
-   xx   end
-   xx over, fetch_byte, decimal_digital_char?, false?branch, 4
-   xx   string_tail__char
-   xx   taca, digital_string?
-   xx drop2, false
-   xx end
-
 define_function "char-string?", char_string?
    ;; << string[address, length], char -- bool >>
    xx xxswapx
@@ -3608,6 +3617,17 @@ define_function "zero-string?", zero_string?
    xx string_tail__char, literal, '0', char_string?
    xx end
 
+define_function "digit-string?", digit_string?
+   ;; << string[address, length] -- bool >>
+   xx dup, zero?, false?branch, 4
+   xx   drop2, true
+   xx   end
+   xx over, fetch_byte, digit_char?, false?branch, 4
+   xx   string_tail__char
+   xx   taca, digit_string?
+   xx drop2, false
+   xx end
+
 define_function "integer-string?", integer_string?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
@@ -3618,67 +3638,65 @@ define_function "integer-string?", integer_string?
    xx   end
    xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
    xx   string_tail__char
-   xx   digital_string?
+   xx   digit_string?
    xx   end
-   xx digital_string?
+   xx digit_string?
    xx end
 
-define_function "string->integer", string_to_integer
-   ;; << string[address, length] -- integer >>
-   xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
-   xx   digital_string_to_integer
-   xx   end
-   xx string_tail__char
-   xx digital_string_to_integer
-   xx negate
-   xx end
-
-
-sum$digital_string_to_integer:
+sum$digit_string_to_nature_number:
    xx 0
 
-counter$digital_string_to_integer:
+counter$digit_string_to_nature_number:
    xx 0
 
-define_function "digital-string->integer", digital_string_to_integer
+define_function "digit-string->nature-number", digit_string_to_nature_number
    ;; << string[address, length] -- integer >>
-   xx zero, literal, sum$digital_string_to_integer, save
-   xx zero, literal, counter$digital_string_to_integer, save
+   xx zero, literal, sum$digit_string_to_nature_number, save
+   xx zero, literal, counter$digit_string_to_nature_number, save
 
    xx dup2, string_reverse!
-   xx   help__digital_string_to_integer
+   xx   help__digit_string_to_nature_number
    xx string_reverse!, drop2
 
-   xx literal, sum$digital_string_to_integer
+   xx literal, sum$digit_string_to_nature_number
    xx fetch
    xx end
 
-define_function "help,digital-string->integer", help__digital_string_to_integer
+define_function "help,digit-string->nature-number", help__digit_string_to_nature_number
    ;; << reversed-string[address, length] -- >>
    xx dup, zero?, false?branch, 3
    xx   drop2
    xx   end
 
-   xx dup2, string_head__char, char_to_decimal_digital
+   xx dup2, string_head__char, digit_char_to_number
    xx   literal, 10
-   xx   literal, counter$digital_string_to_integer, fetch
+   xx   literal, counter$digit_string_to_nature_number, fetch
    xx     one
-   xx     literal, counter$digital_string_to_integer
+   xx     literal, counter$digit_string_to_nature_number
    xx     add_save
    xx   power
    xx multiple
 
-   xx literal, sum$digital_string_to_integer
+   xx literal, sum$digit_string_to_nature_number
    xx add_save
 
    xx string_tail__char
-   xx taca, help__digital_string_to_integer
+   xx taca, help__digit_string_to_nature_number
+
+define_function "string->integer", string_to_integer
+   ;; << string[address, length] -- integer >>
+   xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
+   xx   digit_string_to_nature_number
+   xx   end
+   xx string_tail__char
+   xx digit_string_to_nature_number
+   xx negate
+   xx end
 
 define_function "find-char,string", find_char__string
-  ;; << found:
-  ;;      string[address, length], char -- address, true >>
-  ;; << not found:
-  ;;      string[address, length], char -- false >>
+  ;; << string[address, length], char
+  ;;    -- address, true
+  ;;    -- false >>
   xx over, zero?, false?branch, 5
   xx   drop, drop2
   xx   false
@@ -3727,7 +3745,7 @@ define_function "write-nature-number,loop", write_nature_number__loop
    ;; << rest-number -- >>
    xx literal, 10, divmod
 
-   xx decimal_digital_to_char
+   xx number_to_digit_char
    xx literal, buffer$write_nature_number
    xx literal, counter$write_nature_number, fetch
    xx addition

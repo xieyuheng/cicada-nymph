@@ -2,10 +2,14 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* syntax for fixnum in other base
-  * in REPL and make-jojo rule-set
 * syntax about bit-wise operations
+  * I need this syntax
+    to implement syscalls well
 * todo
+** 分析局部變元的良好性               :question:
+   * 對 包含 >:name 的函數體的純線性處理
+     當遇到 if 所形成的分支的時候
+     會不會有問題 ???
 ** about load-file
    * nested load-file
      a stack of allocate buffers in another local-data-heap
@@ -76,7 +80,12 @@
     end
   ; define-function
   #+end_src
-* more syntax for make-jojo
+* *rule-set,make-jojo* : if & else & then
+** 記 條件轉跳
+   * one predicate can make two branchs
+     three predicates can make four branchs
+     three predicates may only make three branchs
+     but indeed there must be an invisible branch
 ** word:[if|else|then]?
    #+begin_src cicada-nymph :tangle core.cn
    : word:if?
@@ -98,10 +107,6 @@
    ; define-function
    #+end_src
 ** syntax,[if|else|then],make-jojo
-   * one predicate can make two branchs
-     three predicates can make four branchs
-     three predicates may only make three branchs
-     but indeed there must be an invisible branch
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,if,make-jojo
      << string[address, length], word:if --
@@ -218,11 +223,24 @@
    factorial,test
    .12,test
    #+end_src
-** 記 exception handling
-   * 在語言中設計良好的錯誤處理
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+* *rule-set,make-jojo* : prepare-for
+** 記 異常處理
+   * 在語言中設計良好的異常處理
      是鼓勵程序員寫出皮實的程序的關鍵
    * 目前的
-     利用 prepare-for 來實現的錯誤處理機制
+     利用 prepare-for 來實現的異常處理機制
      可能還遠遠不夠良好
 ** word:prepare-for?
    #+begin_src cicada-nymph :tangle core.cn
@@ -247,15 +265,611 @@
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
      << -- >>
-     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-
-     jo word:prepare-for? jo syntax,prepare-for,make-jojo *rule-set,make-jojo* add-rule
+     jo word:prepare-for?
+     jo syntax,prepare-for,make-jojo
+     *rule-set,make-jojo* add-rule
      end
    ; define-function
 
    more,rule-set,make-jojo
+   #+end_src
+* number with base
+** 記 原理
+   * 現在 的 number 就只是 "integer" 而已
+     更多的跟數學有關的東西將在 cicada 中設計新的語法來實現
+   * 在 "integer" 這個函數中 我將只支持 對四種進位制的 字符串的 閱讀
+     * 十進制
+       10#1231
+       10#-1231
+       1231
+       -1231
+     * 二進制
+       2#101001
+       2#-101001
+       2#-1011_1001
+       "-" 和 "_" 的同時存在有點難讀
+       此時可以用 2#1011_1001 negate
+       也就是說雖然允許用 "-" 來表示負數
+       但是不鼓勵這樣做
+       之所以允許這樣做
+       是因爲在打印負數的時候需要這種表示方式
+       不能把 "-123" 打印成 "123 negate"
+     * 八進制
+       8#712537
+       8#-712537
+     * 十六進制
+       16#f123acb3
+       16#-F123ACB3
+       大寫小寫字母都可以
+   * one can use "_" to separate the number
+     to make it more readable
+     for example
+     2#1111_0101_0001
+   * actually, the base can be any 10 based number
+     even greater then 36
+     but when the base is greater then 36
+     not all integer can be represented under this base
+     for we only have 36 chars
+** remove-char!
+   #+begin_src cicada-nymph :tangle core.cn
+   : remove-char!,loop
+     << cursor, length, char -- cursor >>
+     >:char
+     >:length
+     >:cursor
+     :length zero? if
+       :cursor
+       end
+     then
+     :cursor fetch-byte :char equal? if
+       :cursor add1 :length sub1
+       :cursor
+       string->buffer!
+       :cursor
+       :length sub1
+       :char
+     else
+       :cursor add1
+       :length sub1
+       :char
+     then
+     <> remove-char!,loop
+   ; define-function
+
+   : remove-char!
+     << string[address, length], char -- string[address, length] >>
+     x|over|xx >:address
+     remove-char!,loop >:cursor
+     :address
+     :cursor :address sub
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,remove-char!
+     << -- >>
+     "2#1001_1001"
+     "_" string-head,char
+     remove-char! write-string << 2#1001_1001 >>
+     cr
+     "___2#1001___1001___"
+     "_" string-head,char
+     remove-char! write-string << 2#1001_1001 >>
+     cr
+     end
+   ; define-function
+   test,remove-char!
+   #+end_src
+** latin-char?
+   #+begin_src cicada-nymph :tangle core.cn
+   : latin-char?
+     << char -- bool >>
+     dup "A" string-head,char less-than? false?branch 4
+       drop false
+       end
+     dup "Z" string-head,char less-or-equal? false?branch 4
+       drop true
+       end
+     dup "a" string-head,char less-than? false?branch 4
+       drop false
+       end
+     dup "z" string-head,char less-or-equal? false?branch 4
+       drop true
+       end
+     drop false
+     end
+   ; define-function
+   #+end_src
+** latin-char->number
+   #+begin_src cicada-nymph :tangle core.cn
+   : latin-char->number
+     << latin-char -- number >>
+     dup "A" string-head,char less-than? if
+       "* (latin-char->number) the argument must be a latin-char" .s
+       "  but the following char is less-than 'A' : " write-string
+       write-integer cr
+       end
+     then
+     dup "Z" string-head,char less-or-equal? if
+       "A" string-head,char
+       sub
+       10 add
+       end
+     then
+     dup "a" string-head,char less-than? if
+       "* (latin-char->number) the argument must be a latin-char" .s
+       "  but the following char is less-than 'a' but greater-then 'Z' : " write-string
+       write-integer cr
+       end
+     then
+     dup "z" string-head,char less-or-equal? if
+       "a" string-head,char
+       sub
+       10 add
+       end
+     then
+     "* (latin-char->number) the argument must be a latin-char" .s
+     "  but the following char is greater-then 'z' : " write-string
+     write-integer cr
+     end
+   ; define-function
+   #+end_src
+** wild-digit-string?
+   #+begin_src cicada-nymph :tangle core.cn
+   : wild-digit-string?
+     << string[address, length] -- bool >>
+     dup zero? if
+       drop2 true
+       end
+     then
+     over fetch-byte
+     dup digit-char?
+     swap latin-char?
+     or if
+       string-tail,char
+       <> wild-digit-string?
+     then
+     drop2
+     false
+     end
+   ; define-function
+   #+end_src
+** wild-integer-string?
+   #+begin_src cicada-nymph :tangle core.cn
+   : wild-integer-string?
+     << string[address, length] -- bool >>
+     dup zero? if
+       drop2 false
+       end
+     then
+     dup2 string-head,char
+     "-" string-head,char
+     equal? if
+       string-tail,char
+       wild-digit-string?
+       end
+     then
+     wild-digit-string?
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,wild-integer-string?
+     << -- >>
+     "" wild-integer-string? . << 1 >>
+     cr
+     " " wild-integer-string? . << 0 >>
+     "_asd" wild-integer-string? . << 0 >>
+     " asd" wild-integer-string? . << 0 >>
+     cr
+     "asd" wild-integer-string? . << 1 >>
+     "123" wild-integer-string? . << 1 >>
+     "123asd" wild-integer-string? . << 1 >>
+     cr
+     end
+   ; define-function
+   test,wild-integer-string?
+   #+end_src
+** empty-string?
+   #+begin_src cicada-nymph :tangle core.cn
+   : empty-string?
+     << string[address, length] -- bool >>
+     swap drop
+     zero?
+     end
+   ; define-function
+   #+end_src
+** base#wild-integer-string?
+   * a string for the following format
+     is viewed as a base#digit-string
+     <digit-string>#[-]<wild-integer-string-string>
+     any "_" in the anywhere of the above string
+     will be ignored
+   #+begin_src cicada-nymph :tangle core.cn
+   : base#wild-integer-string?
+     << string[address, length] -- bool >>
+     128 allocate-local-memory
+     >:string-address
+     tuck
+     :string-address
+     string->buffer!
+     :string-address swap
+     "_" string-head,char
+     remove-char!
+     >:new-string-length
+     >:new-string-address
+     << dup2 .s 0 end >>
+     :new-string-address
+     :new-string-length
+     "#" string-head,char
+     find-char,string if
+     else
+       false
+       end
+     then
+     >:address-of-#
+     :new-string-address
+     :address-of-# :new-string-address sub
+     >::base-string
+     :address-of-# add1
+     :address-of-# :new-string-address sub add1
+     :new-string-length swap sub
+     >::wild-integer-string
+     ::base-string digit-string?
+     ::base-string empty-string? not
+     and if
+     else
+       false
+       end
+     then
+     ::wild-integer-string wild-integer-string?
+     ::wild-integer-string empty-string? not
+     and if
+       true
+     else
+       false
+     then
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,base#wild-integer-string?
+     << -- >>
+     "#" base#wild-integer-string? . << 0 >>
+     "##" base#wild-integer-string? . << 0 >>
+     "#___#" base#wild-integer-string? . << 0 >>
+     "   " base#wild-integer-string? . << 0 >>
+     "______#__1______" base#wild-integer-string? . << 0 >>
+     "___2___#__1___c29bf210019___漢字" base#wild-integer-string? . << 0 >>
+     cr
+     "1#1" base#wild-integer-string? . << 1 >>
+     "123#1c29bf219g42" base#wild-integer-string? . << 1 >>
+     "___2___#__1___c29bf210019___g42" base#wild-integer-string? . << 1 >>
+     cr
+     end
+   ; define-function
+   test,base#wild-integer-string?
+   #+end_src
+** base#wild-integer-string->base-string
+   #+begin_src cicada-nymph :tangle core.cn
+   : base#wild-integer-string->base-string
+     << string[address, length] -- string[address, length] >>
+     >:length
+     >:address
+     :address
+     :length
+     "#" string-head,char
+     find-char,string if
+     else
+       "* (base#wild-integer-string->base-string)" .s
+       "  the argument must be a base#wild-integer-string" .s
+       "  but the following string does not even have a '#' in it :" .s
+       "  " write-string
+       :address :length .s
+       << to balance the argument-stack or not ??? >>
+       << :address :length >>
+       end
+     then
+     >:address-of-#
+     :address
+     :address-of-# :address sub
+     end
+   ; define-function
+   #+end_src
+** base#wild-integer-string->wild-integer-string
+   #+begin_src cicada-nymph :tangle core.cn
+   : base#wild-integer-string->wild-integer-string
+     << string[address, length] -- string[address, length] >>
+     >:length
+     >:address
+     :address
+     :length
+     "#" string-head,char
+     find-char,string if
+     else
+       "* (base#wild-integer-string->wild-integer-string)" .s
+       "  the argument must be a base#wild-integer-string" .s
+       "  but the following string does not even have a '#' in it :" .s
+       "  " write-string
+       :address :length .s
+       << to balance the argument-stack or not ??? >>
+       << :address :length >>
+       end
+     then
+     >:address-of-#
+     :address-of-# add1
+     :address-of-# :address sub add1
+     :length swap sub
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,base#wild-integer-string->base-string
+     << -- >>
+     "___2___ __1___c29bf210019___漢字" base#wild-integer-string->base-string
+     cr
+     "1#1" base#wild-integer-string->base-string .s << 1 >>
+     "123#1c29bf219g42" base#wild-integer-string->base-string .s << 123 >>
+     "___2___#__1___c29bf210019___g42" base#wild-integer-string->base-string .s << ___2___ >>
+     cr
+     end
+   ; define-function
+   test,base#wild-integer-string->base-string
+
+   : test,base#wild-integer-string->wild-integer-string
+     << -- >>
+     "___2___ __1___c29bf210019___漢字" base#wild-integer-string->wild-integer-string
+     cr
+     "1#1" base#wild-integer-string->wild-integer-string .s << 1 >>
+     "123#1c29bf219g42" base#wild-integer-string->wild-integer-string .s << 1c29bf219g42 >>
+     "___2___#__1___c29bf210019___g42" base#wild-integer-string->wild-integer-string .s << __1___c29bf210019___g42 >>
+     cr
+     end
+   ; define-function
+   test,base#wild-integer-string->wild-integer-string
+   #+end_src
+** wild-integer-string->integer,with-base
+   #+begin_src cicada-nymph :tangle core.cn
+   : wild-integer-string->integer,with-base,loop
+     << string[address, length], base, sum, counter -- integer >>
+     >:counter
+     >:sum
+     >:base
+     >:length
+     >:address
+     :length zero? if
+       :sum
+       end
+     then
+     :address fetch-byte >:char
+     :char digit-char? if
+       :char digit-char->number
+     then
+     :char latin-char? if
+       :char latin-char->number
+     then
+     :base :counter power
+     mul
+     :sum add
+     >:sum
+     :address add1
+     :length sub1
+     :base
+     :sum
+     :counter add1
+     <> wild-integer-string->integer,with-base,loop
+   ; define-function
+
+   : wild-integer-string->integer,with-base
+     << string[address, length], base -- integer >>
+     >:base
+     dup zero? if
+       drop2
+       0
+       end
+     then
+     dup2 string-head,char
+     "-" string-head,char
+     equal? if
+       string-tail,char
+       -1 >:sign
+     else
+       1 >:sign
+     then
+     >::string
+     ::string string-reverse!
+     :base
+     0 0 wild-integer-string->integer,with-base,loop
+     :sign mul
+     ::string string-reverse!
+     drop2
+     end
+   ; define-function
+   #+end_src
+** base#wild-integer-string->integer
+   #+begin_src cicada-nymph :tangle core.cn
+   : base#wild-integer-string->integer
+     << string[address, length] -- integer >>
+     128 allocate-local-memory
+       >:address
+     tuck :address string->buffer!
+       >:length
+     :address :length
+     "_" string-head,char remove-char!
+       >::string
+     ::string
+     base#wild-integer-string->base-string
+       >::base-string
+     ::string
+     base#wild-integer-string->wild-integer-string
+       >::wild-integer-string
+     ::base-string
+     digit-string->nature-number
+       >:base
+     ::wild-integer-string
+     :base
+     wild-integer-string->integer,with-base
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,base#wild-integer-string->integer
+     << -- >>
+     "0#111" base#wild-integer-string->integer .
+     0 0 power 1 mul
+     0 1 power 1 mul add
+     0 2 power 1 mul add .
+     cr
+     "1#111" base#wild-integer-string->integer .
+     1 0 power 1 mul
+     1 1 power 1 mul add
+     1 2 power 1 mul add .
+     cr
+     "10#123" base#wild-integer-string->integer .
+     "_1_0__#_1__2_3_" base#wild-integer-string->integer .
+     10 0 power 3 mul
+     10 1 power 2 mul add
+     10 2 power 1 mul add .
+     cr
+     "2#1000" base#wild-integer-string->integer .
+     "2#_1000_" base#wild-integer-string->integer .
+     2 0 power 0 mul
+     2 1 power 0 mul add
+     2 2 power 0 mul add
+     2 3 power 1 mul add .
+     cr
+     "2#1111_1111" base#wild-integer-string->integer .
+     2 0 power 1 mul
+     2 1 power 1 mul add
+     2 2 power 1 mul add
+     2 3 power 1 mul add
+     2 4 power 1 mul add
+     2 5 power 1 mul add
+     2 6 power 1 mul add
+     2 7 power 1 mul add .
+     "16#f_f" base#wild-integer-string->integer .
+     16 0 power 15 mul
+     16 1 power 15 mul add .
+     cr
+     "100#111" base#wild-integer-string->integer .
+     100 0 power 1 mul
+     100 1 power 1 mul add
+     100 2 power 1 mul add .
+     cr
+     "64#zzz" base#wild-integer-string->integer .
+     64 0 power 35 mul
+     64 1 power 35 mul add
+     64 2 power 35 mul add .
+     cr
+     "36#zzzz" base#wild-integer-string->integer .
+     36 0 power 35 mul
+     36 1 power 35 mul add
+     36 2 power 35 mul add
+     36 3 power 35 mul add .
+     cr
+     end
+   ; define-function
+   test,base#wild-integer-string->integer
+   #+end_src
+* *rule-set,make-jojo* : number with base
+** syntax,base#wild-integer-string,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,base#wild-integer-string,make-jojo
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     *literal* save-into,jo-heap
+     base#wild-integer-string->integer
+     save-into,jo-heap
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo base#wild-integer-string?
+     jo syntax,base#wild-integer-string,make-jojo
+     *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,syntax,base#wild-integer-string,make-jojo
+     << -- >>
+     0#111
+     0 0 power 1 mul
+     0 1 power 1 mul add
+     0 2 power 1 mul add
+     . . cr
+
+     1#111
+     1 0 power 1 mul
+     1 1 power 1 mul add
+     1 2 power 1 mul add
+     . . cr
+
+     10#123
+     _1_0__#_1__2_3_
+     10 0 power 3 mul
+     10 1 power 2 mul add
+     10 2 power 1 mul add
+     . . cr .
+
+     2#1000
+     2#_1000_
+     2 0 power 0 mul
+     2 1 power 0 mul add
+     2 2 power 0 mul add
+     2 3 power 1 mul add
+     . . cr .
+
+     2#1111_1111
+     2 0 power 1 mul
+     2 1 power 1 mul add
+     2 2 power 1 mul add
+     2 3 power 1 mul add
+     2 4 power 1 mul add
+     2 5 power 1 mul add
+     2 6 power 1 mul add
+     2 7 power 1 mul add
+     . . cr
+
+     16#f_f
+     16 0 power 15 mul
+     16 1 power 15 mul add
+     . . cr
+
+     100#111
+     100 0 power 1 mul
+     100 1 power 1 mul add
+     100 2 power 1 mul add
+     . . cr
+
+     64#zzz
+     64 0 power 35 mul
+     64 1 power 35 mul add
+     64 2 power 35 mul add
+     . . cr
+
+     36#zzzz
+     36 0 power 35 mul
+     36 1 power 35 mul add
+     36 2 power 35 mul add
+     36 3 power 35 mul add
+     . . cr
+
+     end
+   ; define-function
+
+   test,syntax,base#wild-integer-string,make-jojo
    #+end_src
 * allocate
 ** note
@@ -359,6 +973,8 @@
      << -- >>
      jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
      jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
+
+     jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
      end
    ; define-function
 
@@ -388,6 +1004,70 @@
    ; define-function
 
    basic-REPL
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   0#111
+   0 0 power 1 mul
+   0 1 power 1 mul add
+   0 2 power 1 mul add
+   . .
+
+   1#111
+   1 0 power 1 mul
+   1 1 power 1 mul add
+   1 2 power 1 mul add
+   . .
+
+   10#123
+   _1_0__#_1__2_3_
+   10 0 power 3 mul
+   10 1 power 2 mul add
+   10 2 power 1 mul add
+   . . .
+
+   2#1000
+   2#_1000_
+   2 0 power 0 mul
+   2 1 power 0 mul add
+   2 2 power 0 mul add
+   2 3 power 1 mul add
+   . . .
+
+   2#1111_1111
+   2 0 power 1 mul
+   2 1 power 1 mul add
+   2 2 power 1 mul add
+   2 3 power 1 mul add
+   2 4 power 1 mul add
+   2 5 power 1 mul add
+   2 6 power 1 mul add
+   2 7 power 1 mul add
+   . .
+
+   16#f_f
+   16 0 power 15 mul
+   16 1 power 15 mul add
+   . .
+
+   100#111
+   100 0 power 1 mul
+   100 1 power 1 mul add
+   100 2 power 1 mul add
+   . .
+
+   64#zzz
+   64 0 power 35 mul
+   64 1 power 35 mul add
+   64 2 power 35 mul add
+   . .
+
+   36#zzzz
+   36 0 power 35 mul
+   36 1 power 35 mul add
+   36 2 power 35 mul add
+   36 3 power 35 mul add
+   . .
    #+end_src
 * stack-REPL
 ** note
@@ -554,21 +1234,13 @@
    ; define-function
    #+end_src
 * report
-** welcome
-   #+begin_src cicada-nymph :tangle core.cn
-   : welcome
-     << -- >>
-     "* welcome to cicada-nymph ^-^" .s
-     end
-   ; define-function
-   #+end_src
 ** report-dictionary
 *** 記
     * 最後寫到珠典裏的
       被最先打印出來
 *** report-dictionary,primitive-function
     #+begin_src cicada-nymph :tangle core.cn
-    : loop,report-dictionary,primitive-function
+    : report-dictionary,primitive-function,loop
       << counter, jo -- total >>
       dup zero? if
         drop
@@ -576,7 +1248,7 @@
       then
       dup primitive-function-jo? false? if
         jo->pre-jo
-        <> loop,report-dictionary,primitive-function
+        <> report-dictionary,primitive-function,loop
       then
       swap
         "  " write-string
@@ -590,20 +1262,20 @@
         write-string cr
       then
       jo->pre-jo
-      <> loop,report-dictionary,primitive-function
+      <> report-dictionary,primitive-function,loop
     ; define-function
 
     : report-dictionary,primitive-function
       << -- >>
       "* all primitive-function in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
-      loop,report-dictionary,primitive-function
+      report-dictionary,primitive-function,loop
       end
     ; define-function
     #+end_src
 *** report-dictionary,function
     #+begin_src cicada-nymph :tangle core.cn
-    : loop,report-dictionary,function
+    : report-dictionary,function,loop
       << counter, jo -- total >>
       dup zero? if
         drop
@@ -611,7 +1283,7 @@
       then
       dup function-jo? false? if
         jo->pre-jo
-        <> loop,report-dictionary,function
+        <> report-dictionary,function,loop
       then
       swap
         "  " write-string
@@ -625,20 +1297,20 @@
         write-string cr
       then
       jo->pre-jo
-      <> loop,report-dictionary,function
+      <> report-dictionary,function,loop
     ; define-function
 
     : report-dictionary,function
       << -- >>
       "* all function in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
-      loop,report-dictionary,function
+      report-dictionary,function,loop
       end
     ; define-function
     #+end_src
 *** report-dictionary,exception
     #+begin_src cicada-nymph :tangle core.cn
-    : loop,report-dictionary,exception
+    : report-dictionary,exception,loop
       << counter, jo -- total >>
       dup zero? if
         drop
@@ -646,7 +1318,7 @@
       then
       dup exception-jo? false? if
         jo->pre-jo
-        <> loop,report-dictionary,exception
+        <> report-dictionary,exception,loop
       then
       swap
         "  " write-string
@@ -660,20 +1332,20 @@
         write-string cr
       then
       jo->pre-jo
-      <> loop,report-dictionary,exception
+      <> report-dictionary,exception,loop
     ; define-function
 
     : report-dictionary,exception
       << -- >>
       "* all exception in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
-      loop,report-dictionary,exception
+      report-dictionary,exception,loop
       end
     ; define-function
     #+end_src
 *** report-dictionary,variable
     #+begin_src cicada-nymph :tangle core.cn
-    : loop,report-dictionary,variable
+    : report-dictionary,variable,loop
       << counter, jo -- total >>
       dup zero? if
         drop
@@ -681,7 +1353,7 @@
       then
       dup variable-jo? false? if
         jo->pre-jo
-        <> loop,report-dictionary,variable
+        <> report-dictionary,variable,loop
       then
       swap
         "  " write-string
@@ -695,14 +1367,14 @@
         write-string cr
       then
       jo->pre-jo
-      <> loop,report-dictionary,variable
+      <> report-dictionary,variable,loop
     ; define-function
 
     : report-dictionary,variable
       << -- >>
       "* all variable in dictionary :" write-string cr
       0 *first-jo-in-dictionary*
-      loop,report-dictionary,variable
+      report-dictionary,variable,loop
       end
     ; define-function
     #+end_src
@@ -841,24 +1513,33 @@
      end
    ; define-function
    #+end_src
+** report-loaded-core-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-loaded-core-file
+     << -- >>
+     "* loaded-core-file : " write-string
+     get-path,loaded-core-file .s
+     end
+   ; define-function
+   #+end_src
 ** initial-report
    #+begin_src cicada-nymph :tangle core.cn
    : initial-report
      << -- >>
      "* initial-report : " write-string cr
+     "  " write-string report-loaded-core-file
      "  " write-string report-platform
      "  " write-string report-machine-word-size
      "  " write-string report-jo-size
      end
    ; define-function
    #+end_src
-** report-loaded-core-file
+* hi
+** welcome
    #+begin_src cicada-nymph :tangle core.cn
-   : report-loaded-core-file
+   : welcome
      << -- >>
-     "* loaded-core-file : " .s
-     "    " write-string
-     get-path,loaded-core-file .s
+     "* welcome to cicada-nymph ^-^" .s
      end
    ; define-function
    #+end_src
@@ -900,6 +1581,15 @@
      << -- >>
      hi,random
      hi,say
+     end
+   ; define-function
+   #+end_src
+** help
+   #+begin_src cicada-nymph :tangle core.cn
+   : help
+     << -- >>
+     "* helpful documentations will be written soon" .s
+     "  please wait ^-^" .s
      end
    ; define-function
    #+end_src
@@ -1943,7 +2633,6 @@
    : command-line,stack-REPL
      << -- >>
      welcome
-     report-loaded-core-file
      initial-report
      hi
      "* you are in the (stack-REPL)" .s
@@ -1959,7 +2648,6 @@
    : command-line,basic-REPL
      << -- >>
      welcome
-     report-loaded-core-file
      initial-report
      hi
      "* you are in the (basic-REPL)" .s
@@ -2023,7 +2711,11 @@
   name-hash-table,test
   name-hash-table,report
 
+
   report-memory
+
   report-dictionary
+
+  report-syntax
   #+end_src
 * ===================================
