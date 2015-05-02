@@ -434,6 +434,10 @@ more,rule-set,make-jojo
 
 : .#
   << integer, base -- >>
+  over zero? if
+    drop .i
+    end
+  then
   dup 36 greater-than?
   over 2 less-than?
   or if

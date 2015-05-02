@@ -2449,52 +2449,32 @@ define_primitive_function "bit-invert", bit_invert
 
 }
 
-match =64bit, machine {
-
 define_primitive_function "bit-left", bit_left
    ;; ( fixnum, step -- fixnum * 2^step )
    pop_argument_stack rcx
-   shl qword[pointer$argument_stack], cl
+   pop_argument_stack rax
+   shl rax, cl
+   push_argument_stack rax
    next
 
 define_primitive_function "bit-right", bit_right
    ;; ( fixnum, step -- fixnum / 2^step )
    pop_argument_stack rcx
-   shr qword[pointer$argument_stack], cl
+   pop_argument_stack rax
+   shr rax, cl
+   push_argument_stack rax
    next
 
 define_primitive_function "bit-right,sign", bit_right__sign
    ;; ( fixnum, step -- new fixnum )
    pop_argument_stack rcx
-   sar qword[pointer$argument_stack], cl
+   pop_argument_stack rax
+   sar rax, cl
+   push_argument_stack rax
    next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "bit-left", bit_left
-   ;; ( fixnum, step -- fixnum * 2^step )
-   pop_argument_stack rcx
-   shl dword[pointer$argument_stack], cl
-   next
-
-define_primitive_function "bit-right", bit_right
-   ;; ( fixnum, step -- fixnum / 2^step )
-   pop_argument_stack rcx
-   shr dword[pointer$argument_stack], cl
-   next
-
-define_primitive_function "bit-right,sign", bit_right__sign
-   ;; ( fixnum, step -- new fixnum )
-   pop_argument_stack rcx
-   sar dword[pointer$argument_stack], cl
-   next
-
-}
 
 ;; BT copies a bit from a given register to the carry flag
-define_primitive_function "fetch-bit", fetch_bit
+define_primitive_function "get-bit", get_bit
    ;; ( fixnum, offset -- bit )
    pop_argument_stack rbx
    pop_argument_stack rax

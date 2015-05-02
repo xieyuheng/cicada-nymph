@@ -250,6 +250,7 @@
    * there are 64 positions below the all those stacks
      when you are belowing-stack so much
      bad things happen
+** string-reverse! can not apply on empty-string :bug:
 * ===================================
 * prolog
 ** ----------------------------------
@@ -3364,6 +3365,8 @@
       next
    #+end_src
 * bit
+** note
+   * xor a.k.a. diff
 ** or & and & xor & invert            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -3426,7 +3429,7 @@
 
    }
    #+end_src
-** left & right                       :64bit:
+** left & right[,sign]
    * "shl"
      shifts the destination operand left
      by the number of bits specified in the second operand
@@ -3436,68 +3439,38 @@
      The last bit that exited is stored in CF
      "sal" is a synonym for "shl"
    #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
    define_primitive_function "bit-left", bit_left
       ;; ( fixnum, step -- fixnum * 2^step )
       pop_argument_stack rcx
-      shl qword[pointer$argument_stack], cl
+      pop_argument_stack rax
+      shl rax, cl
+      push_argument_stack rax
       next
 
    define_primitive_function "bit-right", bit_right
       ;; ( fixnum, step -- fixnum / 2^step )
       pop_argument_stack rcx
-      shr qword[pointer$argument_stack], cl
+      pop_argument_stack rax
+      shr rax, cl
+      push_argument_stack rax
       next
 
    define_primitive_function "bit-right,sign", bit_right__sign
       ;; ( fixnum, step -- new fixnum )
       pop_argument_stack rcx
-      sar qword[pointer$argument_stack], cl
+      pop_argument_stack rax
+      sar rax, cl
+      push_argument_stack rax
       next
-
-   }
    #+end_src
-** left & right                       :32bit:
-   * "shl"
-     shifts the destination operand left
-     by the number of bits specified in the second operand
-     The destination operand can be general register or memory
-     The second operand can be an immediate value or the CL register
-     as bits exit from the left, zeros in from the right
-     The last bit that exited is stored in CF
-     "sal" is a synonym for "shl"
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "bit-left", bit_left
-      ;; ( fixnum, step -- fixnum * 2^step )
-      pop_argument_stack rcx
-      shl dword[pointer$argument_stack], cl
-      next
-
-   define_primitive_function "bit-right", bit_right
-      ;; ( fixnum, step -- fixnum / 2^step )
-      pop_argument_stack rcx
-      shr dword[pointer$argument_stack], cl
-      next
-
-   define_primitive_function "bit-right,sign", bit_right__sign
-      ;; ( fixnum, step -- new fixnum )
-      pop_argument_stack rcx
-      sar dword[pointer$argument_stack], cl
-      next
-
-   }
-   #+end_src
-** fetch & set & clear & invert
+** get & set & clear & invert
    1. offset is of LSB
    2. offset in [0, ..., 63]
    3. step   in [1, ..., 64]
    4. >< need error handling on them
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; BT copies a bit from a given register to the carry flag
-   define_primitive_function "fetch-bit", fetch_bit
+   define_primitive_function "get-bit", get_bit
       ;; ( fixnum, offset -- bit )
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -3576,12 +3549,35 @@
    * test is written in cicada-nymph
      for these primitive-functions are added lately
    #+begin_src cicada-nymph
-   : test,bit
-     << -- >>
+   2#10011001 2#01100110 bit-or  .#2
+   2#10011001 2#01100110 bit-and .#2
+   2#10011001 2#11111111 bit-xor .#2
+   2#10011001 2#10011001 bit-xor .#2
 
-     end
-   ; define-function
-   test,bit
+   2#10011001 4 bit-left  .#2
+   2#10011001 4 bit-right .#2
+   2#-10011001 4 bit-right,sign .#2
+
+   2#10011001 0 get-bit .
+   2#10011001 1 get-bit .
+   2#10011001 2 get-bit .
+   2#10011001 3 get-bit .
+
+   2#10011001 0 clear-bit .#2
+   2#10011001 1 set-bit   .#2
+   2#10011001 2 set-bit   .#2
+   2#10011001 3 clear-bit .#2
+
+   2#10011001 0 invert-bit .#2
+   2#10011001 1 invert-bit .#2
+   2#10011001 2 invert-bit .#2
+   2#10011001 3 invert-bit .#2
+
+   2#10011000 find-lowest-set-bit
+   2#10011000 find-highest-set-bit
+
+   2#00000000 find-lowest-set-bit
+   2#00000000 find-highest-set-bit
    #+end_src
 * -----------------------------------
 * basic io

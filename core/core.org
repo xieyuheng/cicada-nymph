@@ -2,9 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* syntax about bit-wise operations
-  * I need this syntax
-    to implement syscalls well
 * todo
 ** 分析局部變元的良好性               :question:
    * 對 包含 >:name 的函數體的純線性處理
@@ -835,6 +832,10 @@
 
    : .#
      << integer, base -- >>
+     over zero? if
+       drop .i
+       end
+     then
      dup 36 greater-than?
      over 2 less-than?
      or if
@@ -869,6 +870,7 @@
    0#111        0  .#
    1#111        1  .#
    10#123       10 .#
+   10#0         10 .#
    2#1000       2  .#
    2#1111_1111  2  .#
    16#f_f       16 .#
