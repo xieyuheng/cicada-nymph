@@ -692,40 +692,40 @@ init-syscall-number
 
 : error-code->string
   << error-code -- string[address, length] >>
-  dup -1  equal? if drop "EPERM    Operation not permitted " end then
-  dup -2  equal? if drop "ENOENT   No such file or directory " end then
-  dup -3  equal? if drop "ESRCH    No such process " end then
-  dup -4  equal? if drop "EINTR    Interrupted system call " end then
-  dup -5  equal? if drop "EIO      I/O error " end then
-  dup -6  equal? if drop "ENXIO    No such device or address " end then
-  dup -7  equal? if drop "E2BIG    Argument list too long " end then
-  dup -8  equal? if drop "ENOEXEC  Exec format error " end then
-  dup -9  equal? if drop "EBADF    Bad file number " end then
-  dup -10 equal? if drop "ECHILD   No child processes " end then
-  dup -11 equal? if drop "EAGAIN   Try again " end then
-  dup -12 equal? if drop "ENOMEM   Out of memory " end then
-  dup -13 equal? if drop "EACCES   Permission denied " end then
-  dup -14 equal? if drop "EFAULT   Bad address " end then
-  dup -15 equal? if drop "ENOTBLK  Block device required " end then
-  dup -16 equal? if drop "EBUSY    Device or resource busy " end then
-  dup -17 equal? if drop "EEXIST   File exists " end then
-  dup -18 equal? if drop "EXDEV    Cross-device link " end then
-  dup -19 equal? if drop "ENODEV   No such device " end then
-  dup -20 equal? if drop "ENOTDIR  Not a directory " end then
-  dup -21 equal? if drop "EISDIR   Is a directory " end then
-  dup -22 equal? if drop "EINVAL   Invalid argument " end then
-  dup -23 equal? if drop "ENFILE   File table overflow " end then
-  dup -24 equal? if drop "EMFILE   Too many open files " end then
-  dup -25 equal? if drop "ENOTTY   Not a typewriter " end then
-  dup -26 equal? if drop "ETXTBSY  Text file busy " end then
-  dup -27 equal? if drop "EFBIG    File too large " end then
-  dup -28 equal? if drop "ENOSPC   No space left on device " end then
-  dup -29 equal? if drop "ESPIPE   Illegal seek " end then
-  dup -30 equal? if drop "EROFS    Read-only file system " end then
-  dup -31 equal? if drop "EMLINK   Too many links " end then
-  dup -32 equal? if drop "EPIPE    Broken pipe " end then
-  dup -33 equal? if drop "EDOM     Math argument out of domain of func " end then
-  dup -34 equal? if drop "ERANGE   Math result not representable " end then
+  dup -1  equal? if drop  << EPERM   >>   "Operation not permitted " end then
+  dup -2  equal? if drop  << ENOENT  >>   "No such file or directory " end then
+  dup -3  equal? if drop  << ESRCH   >>   "No such process " end then
+  dup -4  equal? if drop  << EINTR   >>   "Interrupted system call " end then
+  dup -5  equal? if drop  << EIO     >>   "I/O error " end then
+  dup -6  equal? if drop  << ENXIO   >>   "No such device or address " end then
+  dup -7  equal? if drop  << E2BIG   >>   "Argument list too long " end then
+  dup -8  equal? if drop  << ENOEXEC >>   "Exec format error " end then
+  dup -9  equal? if drop  << EBADF   >>   "Bad file number " end then
+  dup -10 equal? if drop  << ECHILD  >>   "No child processes " end then
+  dup -11 equal? if drop  << EAGAIN  >>   "Try again " end then
+  dup -12 equal? if drop  << ENOMEM  >>   "Out of memory " end then
+  dup -13 equal? if drop  << EACCES  >>   "Permission denied " end then
+  dup -14 equal? if drop  << EFAULT  >>   "Bad address " end then
+  dup -15 equal? if drop  << ENOTBLK >>   "Block device required " end then
+  dup -16 equal? if drop  << EBUSY   >>   "Device or resource busy " end then
+  dup -17 equal? if drop  << EEXIST  >>   "File exists " end then
+  dup -18 equal? if drop  << EXDEV   >>   "Cross-device link " end then
+  dup -19 equal? if drop  << ENODEV  >>   "No such device " end then
+  dup -20 equal? if drop  << ENOTDIR >>   "Not a directory " end then
+  dup -21 equal? if drop  << EISDIR  >>   "Is a directory " end then
+  dup -22 equal? if drop  << EINVAL  >>   "Invalid argument " end then
+  dup -23 equal? if drop  << ENFILE  >>   "File table overflow " end then
+  dup -24 equal? if drop  << EMFILE  >>   "Too many open files " end then
+  dup -25 equal? if drop  << ENOTTY  >>   "Not a typewriter " end then
+  dup -26 equal? if drop  << ETXTBSY >>   "Text file busy " end then
+  dup -27 equal? if drop  << EFBIG   >>   "File too large " end then
+  dup -28 equal? if drop  << ENOSPC  >>   "No space left on device " end then
+  dup -29 equal? if drop  << ESPIPE  >>   "Illegal seek " end then
+  dup -30 equal? if drop  << EROFS   >>   "Read-only file system " end then
+  dup -31 equal? if drop  << EMLINK  >>   "Too many links " end then
+  dup -32 equal? if drop  << EPIPE   >>   "Broken pipe " end then
+  dup -33 equal? if drop  << EDOM    >>   "Math argument out of domain of func " end then
+  dup -34 equal? if drop  << ERANGE  >>   "Math result not representable " end then
   "unknow error-code : " .s
   .i .l
   end
@@ -1081,9 +1081,9 @@ init-syscall-number
   2#110100100
   >>
   8#1102 <<
-  O_RDWR  0002h 0002o
-  O_CREAT 0100h 0100o
-  O_TRUNC 0800h 1000o
+  O_RDWR   0002
+  O_CREAT  0100
+  O_TRUNC  1000
   >>
   :syscall-path
   :syscall-number,open:
@@ -1107,8 +1107,8 @@ init-syscall-number
   110100100b
   >>
   8#1002 <<
-  O_RDWR  0002h 0002o
-  O_TRUNC 0800h 1000o
+  O_RDWR   0002
+  O_TRUNC  1000
   >>
   :syscall-path
   :syscall-number,open:
@@ -1291,21 +1291,97 @@ init-syscall-number
     +stat,st_mode+
     fetch-four-bytes
   then
+  12 bit-right
+  8#0010
+  equal?
   <<
   0170000
-__S_IFDIR       0040000 /* Directory.  */
-__S_IFCHR       0020000 /* Character device.  */
-__S_IFBLK       0060000 /* Block device.  */
-__S_IFREG       0100000 /* Regular file.  */
-__S_IFIFO       0010000 /* FIFO.  */
-__S_IFLNK       0120000 /* Symbolic link.  */
-__S_IFSOCK      0140000 /* Socket.  */
->>
+  S_IFDIR       0040000 /* Directory.  */
+  S_IFCHR       0020000 /* Character device.  */
+  S_IFBLK       0060000 /* Block device.  */
+  S_IFREG       0100000 /* Regular file.  */
+  S_IFIFO       0010000 /* FIFO.  */
+  S_IFLNK       0120000 /* Symbolic link.  */
+  S_IFSOCK      0140000 /* Socket.  */
+  >>
   end
 ; define-function
 
 : path-to-directory?
   << path[address, length] -- bool >>
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  dup
+  negative? if
+    drop
+    false
+    end
+  then
+  drop
+  :stat-structure init,stat
+  *jo-size* 4 equal? if
+    +stat,st_mode+
+    fetch-two-bytes
+  then
+  *jo-size* 8 equal? if
+    +stat,st_mode+
+    fetch-four-bytes
+  then
+  12 bit-right
+  8#0004
+  equal?
+  <<
+  0170000
+  S_IFDIR       00040000 /* Directory.  */
+  S_IFCHR       00020000 /* Character device.  */
+  S_IFBLK       00060000 /* Block device.  */
+  S_IFREG       00100000 /* Regular file.  */
+  S_IFIFO       00010000 /* FIFO.  */
+  S_IFLNK       00120000 /* Symbolic link.  */
+  S_IFSOCK      00140000 /* Socket.  */
+  >>
+  end
+; define-function
+
+: creat-file
+  << path[address, length] -- >>
+  >::path
+  ::path
+  string->syscall-string
+  >:syscall-path
+  8#644 <<
+  2#110100100
+  >>
+  8#0200
+  8#0100 bit-or <<
+  O_EXCL   0200
+  O_CREAT  0100
+  >>
+  :syscall-path
+  :syscall-number,open:
+  3 syscall
+  dup
+  negative? if
+    "* (creat-file) fail to open-port for : " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  close-port if
+    end
+  then
+  "* (creat-file) fail to close-port for : " .s ::path .s .l
+  "  " .s error-code->string .s .l
+  end
+; define-function
+
+: update-file
+  << string[address, length], path[address, length] -- >>
 
   end
 ; define-function

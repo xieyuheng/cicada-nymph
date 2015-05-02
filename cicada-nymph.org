@@ -310,8 +310,6 @@
    #+end_src
 ** ----------------------------------
 ** header                             :64bit:linux:
-   * /usr/include/asm/unistd_64.h (on archlinux)
-   * http://blog.rchapman.org/post/36801038863/linux-system-call-table-for-x86-64
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
@@ -352,7 +350,6 @@
    #+end_src
 ** ----------------------------------
 ** header                             :32bit:linux:
-   * /usr/include/asm/unistd_32.h (on archlinux)
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
