@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* primitive-function about bit-wise operations
 * todo
 ** protect on the overloading of a variety of memories
 ** better naming of headings
@@ -3385,6 +3386,8 @@
       loop .loop
       next
    #+end_src
+* bit
+** note
 * -----------------------------------
 * basic io
 ** ----------------------------------
@@ -5663,8 +5666,10 @@
         once a time
         if can not find the rule in the rule-set
         do nothing
-     4. (find-rule)
+     3. (find-rule)
         find a function from a word
+     4. (list-rule)
+        
 ** 記 使用
    * rule-set,make-jojo 是
      語法謂詞 還有 語法函數 這種對子

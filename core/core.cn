@@ -548,6 +548,43 @@ init-syscall-number
   end
 ; define-function
 
+: list-rule,loop
+  << rule-set, cursor, counter -- >>
+  xx|over|x equal? if
+    drop drop2
+    end
+  then
+  "  " write-string
+  add1 dup . 
+  swap
+    dup cursor->predicate
+    jo->name write-string
+    "  " write-string
+    dup cursor->function
+    jo->name write-string cr
+    *jo-size* sub *jo-size* sub
+  swap 
+  <> list-rule,loop
+; define-function
+
+: list-rule
+  << rule-set -- >>
+  dup rule-set,fetch-cursor 
+  0 list-rule,loop
+  end
+; define-function
+
+: report-syntax
+  << -- >>
+  "* *rule-set,make-jojo* :" .s
+   *rule-set,make-jojo* list-rule
+  "* *rule-set,basic-REPL* :" .s
+   *rule-set,basic-REPL* list-rule
+  "* tos-syntax-stack :" .s
+   tos-syntax-stack list-rule
+  end
+; define-function
+
 : initial-report
   << -- >>
   "* initial-report : " write-string cr
@@ -826,13 +863,54 @@ init-syscall-number
 
 : path-to-nothing?
   << path[address, length] -- bool >>
-
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  -2 equal?
   end
 ; define-function
 
 : path-to-file?
   << path[address, length] -- bool >>
-
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  dup
+  negative? if
+    drop
+    false
+    end
+  then
+  drop
+  :stat-structure init,stat
+  *jo-size* 4 equal? if
+    +stat,st_mode+
+    fetch-two-bytes
+  then
+  *jo-size* 8 equal? if
+    +stat,st_mode+
+    fetch-four-bytes
+  then
+  <<
+  0170000
+__S_IFDIR       0040000 /* Directory.  */
+__S_IFCHR       0020000 /* Character device.  */
+__S_IFBLK       0060000 /* Block device.  */
+__S_IFREG       0100000 /* Regular file.  */
+__S_IFIFO       0010000 /* FIFO.  */
+__S_IFLNK       0120000 /* Symbolic link.  */
+__S_IFSOCK      0140000 /* Socket.  */
+>>
   end
 ; define-function
 
@@ -883,8 +961,6 @@ init-syscall-number
 
   end
 ; define-function
-
-
 
 100333 drop
 13

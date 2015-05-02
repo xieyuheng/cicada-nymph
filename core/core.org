@@ -2,6 +2,9 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* syntax for fixnum in other base
+  * in REPL and make-jojo rule-set
+* syntax about bit-wise operations
 * todo
 ** about load-file
    * nested load-file
@@ -20,10 +23,6 @@
        會入棧一些編譯器所需要用到的語法
        而運行結束之後
        又把這些語法出棧
-** more and better report
-   * rule-sets in syntax-stack
-     and
-     rule-set useing (top of syntax-stack)
 ** 更好的錯誤處理機制
    1. 當一個 exception 找不到自己在 return-stack 中的退出點時
       應該有更好地處理方式 而不是不處理這種情況
@@ -43,7 +42,6 @@
       2. 之後再以重置之後的參數棧中的值爲參數
          這些參數是等待 exception 的函爲 exception 所準備的
 ** little-tester                      :needed:
-** fixnum in other base               :needed:
 ** home-path & search-path to load files
    * poi denotes path-organizer
    * 實現 條件性的被解釋的代碼
@@ -565,6 +563,9 @@
    ; define-function
    #+end_src
 ** report-dictionary
+*** 記
+    * 最後寫到珠典裏的
+      被最先打印出來
 *** report-dictionary,primitive-function
     #+begin_src cicada-nymph :tangle core.cn
     : loop,report-dictionary,primitive-function
@@ -797,29 +798,46 @@
      end
    ; define-function
    #+end_src
-** report-syntax-set                  :not_using:
-   #+begin_src cicada-nymph
-   : report-syntax-set,loop
-     << counter, cursor -- >>
-     dup *syntax-set* equal? if
-       drop2
+** list-rule
+   * 最後寫到規則集合裏的
+     被最先打印出來
+   #+begin_src cicada-nymph :tangle core.cn
+   : list-rule,loop
+     << rule-set, cursor, counter -- >>
+     xx|over|x equal? if
+       drop drop2
        end
      then
      "  " write-string
-     swap add1 dup . swap
-     dup *jo-size* sub fetch
-     jo->name write-string " " write-string
-     dup *jo-size* sub *jo-size* sub fetch
-     jo->name write-string cr
-     *jo-size* sub *jo-size* sub
-     <> report-syntax-set,loop
+     add1 dup .
+     swap
+       dup cursor->predicate
+       jo->name write-string
+       "  " write-string
+       dup cursor->function
+       jo->name write-string cr
+       *jo-size* sub *jo-size* sub
+     swap
+     <> list-rule,loop
    ; define-function
 
-   : report-syntax-set
+   : list-rule
+     << rule-set -- >>
+     dup rule-set,fetch-cursor
+     0 list-rule,loop
+     end
+   ; define-function
+   #+end_src
+** report-syntax
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-syntax
      << -- >>
-     "* syntax-set : " .s
-     0 *current-free-address,syntax-set*
-     report-syntax-set,loop
+     "* *rule-set,make-jojo* :" .s
+      *rule-set,make-jojo* list-rule
+     "* *rule-set,basic-REPL* :" .s
+      *rule-set,basic-REPL* list-rule
+     "* tos-syntax-stack :" .s
+      tos-syntax-stack list-rule
      end
    ; define-function
    #+end_src
@@ -1113,8 +1131,8 @@
    {path: +library+ kkk main.cn}
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
-** relative-path?
-** full-path?
+** >< relative-path?
+** >< full-path?
 ** stat structure
    #+begin_src cicada-nymph :tangle core.cn
    0 : +stat,st_dev+        ; define-variable
@@ -1257,7 +1275,15 @@
    #+begin_src cicada-nymph :tangle core.cn
    : path-to-nothing?
      << path[address, length] -- bool >>
-
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     -2 equal?
      end
    ; define-function
    #+end_src
@@ -1265,9 +1291,43 @@
    #+begin_src cicada-nymph :tangle core.cn
    : path-to-file?
      << path[address, length] -- bool >>
-
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     dup
+     negative? if
+       drop
+       false
+       end
+     then
+     drop
+     :stat-structure init,stat
+     *jo-size* 4 equal? if
+       +stat,st_mode+
+       fetch-two-bytes
+     then
+     *jo-size* 8 equal? if
+       +stat,st_mode+
+       fetch-four-bytes
+     then
+     <<
+     0170000
+   __S_IFDIR       0040000 /* Directory.  */
+   __S_IFCHR       0020000 /* Character device.  */
+   __S_IFBLK       0060000 /* Block device.  */
+   __S_IFREG       0100000 /* Regular file.  */
+   __S_IFIFO       0010000 /* FIFO.  */
+   __S_IFLNK       0120000 /* Symbolic link.  */
+   __S_IFSOCK      0140000 /* Socket.  */
+   >>
      end
    ; define-function
+
    #+end_src
 ** path-to-directory?
    #+begin_src cicada-nymph :tangle core.cn
@@ -1276,6 +1336,11 @@
 
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : cn ; path-to-nothing? . << 0 >>
+   : ai ; path-to-nothing? . << 1 >>
    #+end_src
 * file-tree
 ** note
@@ -1299,7 +1364,8 @@
      2. remove-file
         remove-directory
      3. find-file-in-directory
-     4. list-file-in-directory
+        list-file-in-directory
+        directory-empty?
 ** 記 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
