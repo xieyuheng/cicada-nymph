@@ -1,6 +1,12 @@
-: cr << cr denotes carriage return >>
+: .l
   << -- >>
   10 write-byte
+  end
+; define-function
+
+: .i
+  << -- >>
+  write-integer
   end
 ; define-function
 
@@ -147,9 +153,9 @@ more,rule-set,make-jojo
 : latin-char->number
   << latin-char -- number >>
   dup "A" string-head,char less-than? if
-    "* (latin-char->number) the argument must be a latin-char" .s
-    "  but the following char is less-than 'A' : " write-string
-    write-integer cr
+    "* (latin-char->number) the argument must be a latin-char" .s .l
+    "  but the following char is less-than 'A' : " .s
+    .i .l
     end
   then
   dup "Z" string-head,char less-or-equal? if
@@ -159,9 +165,9 @@ more,rule-set,make-jojo
     end
   then
   dup "a" string-head,char less-than? if
-    "* (latin-char->number) the argument must be a latin-char" .s
-    "  but the following char is less-than 'a' but greater-then 'Z' : " write-string
-    write-integer cr
+    "* (latin-char->number) the argument must be a latin-char" .s .l
+    "  but the following char is less-than 'a' but greater-then 'Z' : " .s
+    .i .l
     end
   then
   dup "z" string-head,char less-or-equal? if
@@ -170,9 +176,9 @@ more,rule-set,make-jojo
     10 add
     end
   then
-  "* (latin-char->number) the argument must be a latin-char" .s
-  "  but the following char is greater-then 'z' : " write-string
-  write-integer cr
+  "* (latin-char->number) the argument must be a latin-char" .s .l
+  "  but the following char is greater-then 'z' : " .s
+  .i .l
   end
 ; define-function
 
@@ -230,7 +236,7 @@ more,rule-set,make-jojo
   remove-char!
   >:new-string-length
   >:new-string-address
-  << dup2 .s 0 end >>
+  << dup2 .s .l 0 end >>
   :new-string-address
   :new-string-length
   "#" string-head,char
@@ -273,11 +279,11 @@ more,rule-set,make-jojo
   "#" string-head,char
   find-char,string if
   else
-    "* (base#wild-integer-string->base-string)" .s
-    "  the argument must be a base#wild-integer-string" .s
-    "  but the following string does not even have a '#' in it :" .s
-    "  " write-string
-    :address :length .s
+    "* (base#wild-integer-string->base-string)" .s .l
+    "  the argument must be a base#wild-integer-string" .s .l
+    "  but the following string does not even have a '#' in it :" .s .l
+    "  " .s
+    :address :length .s .l
     << to balance the argument-stack or not ??? >>
     << :address :length >>
     end
@@ -297,11 +303,11 @@ more,rule-set,make-jojo
   "#" string-head,char
   find-char,string if
   else
-    "* (base#wild-integer-string->wild-integer-string)" .s
-    "  the argument must be a base#wild-integer-string" .s
-    "  but the following string does not even have a '#' in it :" .s
-    "  " write-string
-    :address :length .s
+    "* (base#wild-integer-string->wild-integer-string)" .s .l
+    "  the argument must be a base#wild-integer-string" .s .l
+    "  but the following string does not even have a '#' in it :" .s .l
+    "  " .s
+    :address :length .s .l
     << to balance the argument-stack or not ??? >>
     << :address :length >>
     end
@@ -442,8 +448,8 @@ save
   find if
     dup exception-jo? if
       drop
-      "* (execute-word) can not execute exception directly : " write-string
-      write-string cr
+      "* (execute-word) can not execute exception directly : " .s
+      .s .l
       end
     then
     << function & primitive-function & variable >>
@@ -451,8 +457,8 @@ save
     execute-jo
     end
   else
-  "* (execute-word) meets undefined word : " write-string
-  write-string cr
+  "* (execute-word) meets undefined word : " .s
+  .s .l
   then
   end
 ; define-function
@@ -533,15 +539,15 @@ basic-REPL
     print-argument-stack,loop
     end
   then
-  "below the stack " write-string
+  "below the stack " .s
   end
 ; define-function
 
 : print-argument-stack,pretty
   << -- >>
   snapshot-the-stack-pointer
-  cr
-  " * " write-string
+  .l
+  " * " .s
      *the-stack-pointer-snapshot*
      *the-stack* sub
      << ad hoc for the BUG of div >>
@@ -552,12 +558,12 @@ basic-REPL
      else
        *jo-size* div
      then
-     write-integer
-  " * " write-string
-  " -- " write-string
+     .i
+  " * " .s
+  " -- " .s
     print-argument-stack
-  "--" write-string
-  cr
+  "--" .s
+  .l
   end
 ; define-function
 
@@ -654,8 +660,8 @@ init-syscall-number
   dup -32 equal? if drop "EPIPE    Broken pipe " end then
   dup -33 equal? if drop "EDOM     Math argument out of domain of func " end then
   dup -34 equal? if drop "ERANGE   Math result not representable " end then
-  "unknow error-code : " write-string
-  write-integer cr
+  "unknow error-code : " .s
+  .i .l
   end
 ; define-function
 
@@ -670,15 +676,15 @@ init-syscall-number
     <> report-dictionary,primitive-function,loop
   then
   swap
-    "  " write-string
+    "  " .s
     add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
     drop2
-    " un-named " write-string cr
+    " un-named " .s .l
   else
-    write-string cr
+    .s .l
   then
   jo->pre-jo
   <> report-dictionary,primitive-function,loop
@@ -686,7 +692,7 @@ init-syscall-number
 
 : report-dictionary,primitive-function
   << -- >>
-  "* all primitive-function in dictionary :" write-string cr
+  "* all primitive-function in dictionary :" .s .l
   0 *first-jo-in-dictionary*
   report-dictionary,primitive-function,loop
   end
@@ -703,15 +709,15 @@ init-syscall-number
     <> report-dictionary,function,loop
   then
   swap
-    "  " write-string
+    "  " .s
     add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
     drop2
-    " un-named " write-string cr
+    " un-named " .s .l
   else
-    write-string cr
+    .s .l
   then
   jo->pre-jo
   <> report-dictionary,function,loop
@@ -719,7 +725,7 @@ init-syscall-number
 
 : report-dictionary,function
   << -- >>
-  "* all function in dictionary :" write-string cr
+  "* all function in dictionary :" .s .l
   0 *first-jo-in-dictionary*
   report-dictionary,function,loop
   end
@@ -736,15 +742,15 @@ init-syscall-number
     <> report-dictionary,exception,loop
   then
   swap
-    "  " write-string
+    "  " .s
     add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
     drop2
-    " un-named " write-string cr
+    " un-named " .s .l
   else
-    write-string cr
+    .s .l
   then
   jo->pre-jo
   <> report-dictionary,exception,loop
@@ -752,7 +758,7 @@ init-syscall-number
 
 : report-dictionary,exception
   << -- >>
-  "* all exception in dictionary :" write-string cr
+  "* all exception in dictionary :" .s .l
   0 *first-jo-in-dictionary*
   report-dictionary,exception,loop
   end
@@ -769,15 +775,15 @@ init-syscall-number
     <> report-dictionary,variable,loop
   then
   swap
-    "  " write-string
+    "  " .s
     add1 dup .
   swap
   dup jo->name
   dup2 space-string? if
     drop2
-    " un-named " write-string cr
+    " un-named " .s .l
   else
-    write-string cr
+    .s .l
   then
   jo->pre-jo
   <> report-dictionary,variable,loop
@@ -785,7 +791,7 @@ init-syscall-number
 
 : report-dictionary,variable
   << -- >>
-  "* all variable in dictionary :" write-string cr
+  "* all variable in dictionary :" .s .l
   0 *first-jo-in-dictionary*
   report-dictionary,variable,loop
   end
@@ -797,77 +803,77 @@ init-syscall-number
   report-dictionary,function add
   report-dictionary,exception add
   report-dictionary,variable add
-  "* totally : " write-string
-  write-integer cr
+  "* totally : " .s
+  .i .l
   end
 ; define-function
 
 : report-memory
   << -- >>
-  "* *un-initialized-memory*" write-string cr
-  "  * size : " write-string
+  "* *un-initialized-memory*" .s .l
+  "  * size : " .s
        *size,un-initialized-memory*
-       . cr
-  "  * used : " write-string
+       . .l
+  "  * used : " .s
        *current-free-address,un-initialized-memory*
        *un-initialized-memory*
-       sub . cr
-  "  * free : " write-string
+       sub . .l
+  "  * free : " .s
        *size,un-initialized-memory*
        *current-free-address,un-initialized-memory*
        *un-initialized-memory*
-       sub sub . cr
-  "* *primitive-string-heap*" write-string cr
-  "  * size : " write-string
+       sub sub . .l
+  "* *primitive-string-heap*" .s .l
+  "  * size : " .s
        *size,primitive-string-heap*
-       . cr
-  "  * used : " write-string
+       . .l
+  "  * used : " .s
        *current-free-address,primitive-string-heap*
        *primitive-string-heap*
-       sub . cr
-  "  * free : " write-string
+       sub . .l
+  "  * free : " .s
        *size,primitive-string-heap*
        *current-free-address,primitive-string-heap*
        *primitive-string-heap*
-       sub sub . cr
-  "* *jo-heap*" write-string cr
-  "  * size : " write-string
-       *size,jo-heap* . cr
-  "  * used : " write-string
+       sub sub . .l
+  "* *jo-heap*" .s .l
+  "  * size : " .s
+       *size,jo-heap* . .l
+  "  * used : " .s
        *current-free-address,jo-heap*
        *jo-heap*
-       sub . cr
-  "  * free : " write-string
+       sub . .l
+  "  * free : " .s
        *size,jo-heap*
        *current-free-address,jo-heap*
        *jo-heap*
-       sub sub . cr
+       sub sub . .l
   end
 ; define-function
 
 : report-platform
   << -- >>
-  "* platform : " write-string
-  platform write-string
-  cr
+  "* platform : " .s
+  platform .s
+  .l
   end
 ; define-function
 
 : report-jo-size
   << -- >>
-  "* jo-size : " write-string
+  "* jo-size : " .s
   *jo-size* write-nature-number
-  " bytes" write-string
-  cr
+  " bytes" .s
+  .l
   end
 ; define-function
 
 : report-machine-word-size
   << -- >>
-  "* machine-word-size : " write-string
+  "* machine-word-size : " .s
   *jo-size* 8 mul write-nature-number
-  " bits" write-string
-  cr
+  " bits" .s
+  .l
   end
 ; define-function
 
@@ -877,14 +883,14 @@ init-syscall-number
     drop drop2
     end
   then
-  "  " write-string
+  "  " .s
   add1 dup .
   swap
     dup cursor->predicate
-    jo->name write-string
-    "  " write-string
+    jo->name .s
+    "  " .s
     dup cursor->function
-    jo->name write-string cr
+    jo->name .s .l
     *jo-size* sub *jo-size* sub
   swap
   <> list-rule,loop
@@ -899,35 +905,35 @@ init-syscall-number
 
 : report-syntax
   << -- >>
-  "* *rule-set,make-jojo* :" .s
+  "* *rule-set,make-jojo* :" .s .l
    *rule-set,make-jojo* list-rule
-  "* *rule-set,basic-REPL* :" .s
+  "* *rule-set,basic-REPL* :" .s .l
    *rule-set,basic-REPL* list-rule
-  "* tos-syntax-stack :" .s
+  "* tos-syntax-stack :" .s .l
    tos-syntax-stack list-rule
   end
 ; define-function
 
 : report-loaded-core-file
   << -- >>
-  "* loaded-core-file : " write-string
-  get-path,loaded-core-file .s
+  "* loaded-core-file : " .s
+  get-path,loaded-core-file .s .l
   end
 ; define-function
 
 : initial-report
   << -- >>
-  "* initial-report : " write-string cr
-  "  " write-string report-loaded-core-file
-  "  " write-string report-platform
-  "  " write-string report-machine-word-size
-  "  " write-string report-jo-size
+  "* initial-report : " .s .l
+  "  " .s report-loaded-core-file
+  "  " .s report-platform
+  "  " .s report-machine-word-size
+  "  " .s report-jo-size
   end
 ; define-function
 
 : welcome
   << -- >>
-  "* welcome to cicada-nymph ^-^" .s
+  "* welcome to cicada-nymph ^-^" .s .l
   end
 ; define-function
 
@@ -950,17 +956,17 @@ init-syscall-number
 
 : hi,say
   << number -- >>
-  dup 0 equal? if drop "* do not forget to eat good good coder !" .s end then
-  dup 1 equal? if drop "* me wile moku e pona moku ^-^" .s end then
-  dup 2 equal? if drop "* cica cica da yaya !!!" .s end then
-  dup 3 equal? if drop "* hi ^-^" .s end then
-  dup 4 equal? if drop "* hello :)" .s end then
-  dup 5 equal? if drop "* hey *^-^*" .s end then
-  dup 6 equal? if drop "* hiya \^o^/" .s end then
-  dup 7 equal? if drop "* I wish you a lovely day" .s end then
-  dup 8 equal? if drop "* I wish you a lovely day { or night :P }" .s end then
-  dup 9 equal? if drop "* o.o" .s end then
-  drop "* lovely ^3^" .s end
+  dup 0 equal? if drop "* do not forget to eat good good coder !" .s .l end then
+  dup 1 equal? if drop "* me wile moku e pona moku ^-^" .s .l end then
+  dup 2 equal? if drop "* cica cica da yaya !!!" .s .l end then
+  dup 3 equal? if drop "* hi ^-^" .s .l end then
+  dup 4 equal? if drop "* hello :)" .s .l end then
+  dup 5 equal? if drop "* hey *^-^*" .s .l end then
+  dup 6 equal? if drop "* hiya \^o^/" .s .l end then
+  dup 7 equal? if drop "* I wish you a lovely day" .s .l end then
+  dup 8 equal? if drop "* I wish you a lovely day { or night :P }" .s .l end then
+  dup 9 equal? if drop "* o.o" .s .l end then
+  drop "* lovely ^3^" .s .l end
 ; define-function
 
 : hi
@@ -972,8 +978,8 @@ init-syscall-number
 
 : help
   << -- >>
-  "* helpful documentations will be written soon" .s
-  "  please wait ^-^" .s
+  "* helpful documentations will be written soon" .s .l
+  "  please wait ^-^" .s .l
   end
 ; define-function
 
@@ -1540,7 +1546,7 @@ allocate-memory
   << string[address, length] -- name >>
   name-hash-table,insert
   false? if
-    "* (string->name) *name-hash-table* is full!" .s
+    "* (string->name) *name-hash-table* is full!" .s .l
     end
   then
   end
@@ -1554,26 +1560,26 @@ allocate-memory
 
 : name-hash-table,test
   << -- >>
-  "a-000" string->name . cr
-  "a-111" string->name . cr
-  "a-222" string->name . cr
-  "a-333" string->name . cr
-  "a-444" string->name . cr
-  "a-555" string->name . cr
-  "a-666" string->name . cr
-  "a-777" string->name . cr
-  "a-888" string->name . cr
-  "a-999" string->name . cr
-  "b-000" string->name . cr
-  "b-111" string->name . cr
-  "b-222" string->name . cr
-  "b-333" string->name . cr
-  "b-444" string->name . cr
-  "b-555" string->name . cr
-  "b-666" string->name . cr
-  "b-777" string->name . cr
-  "b-888" string->name . cr
-  "b-999" string->name . cr
+  "a-000" string->name . .l
+  "a-111" string->name . .l
+  "a-222" string->name . .l
+  "a-333" string->name . .l
+  "a-444" string->name . .l
+  "a-555" string->name . .l
+  "a-666" string->name . .l
+  "a-777" string->name . .l
+  "a-888" string->name . .l
+  "a-999" string->name . .l
+  "b-000" string->name . .l
+  "b-111" string->name . .l
+  "b-222" string->name . .l
+  "b-333" string->name . .l
+  "b-444" string->name . .l
+  "b-555" string->name . .l
+  "b-666" string->name . .l
+  "b-777" string->name . .l
+  "b-888" string->name . .l
+  "b-999" string->name . .l
   end
 ; define-function
 
@@ -1591,11 +1597,11 @@ allocate-memory
   x|over|xxx name,fetch-string string->finite-carry-sum
   0 name-hash-table,hash
   equal? if
-    "  {" write-string
+    "  {" .s
     dup write-nature-number
-    "} " write-string
-    name,fetch-string write-string
-    cr
+    "} " .s
+    name,fetch-string .s
+    .l
   else
     drop
   then
@@ -1611,14 +1617,14 @@ allocate-memory
   dup name,used? if
   dup name,no-collision? if
     << * {index} string # orbit-lenght >>
-    "* {" write-string
+    "* {" .s
     dup write-nature-number
-    "} " write-string
-    dup name,fetch-string write-string
-    " # " write-string
+    "} " .s
+    dup name,fetch-string .s
+    " # " .s
     dup name,fetch-orbit-length
     write-nature-number
-    cr
+    .l
     dup 1 name-hash-table,report,orbit
   then
   then
@@ -1628,19 +1634,19 @@ allocate-memory
 : name-hash-table,report
   << -- >>
   0 name-hash-table,report,loop
-  "* totally : " write-string
+  "* totally : " .s
   *name-hash-table,counter* write-nature-number
-  cr
+  .l
   end
 ; define-function
 
 : command-line,unknow-function
   << -- >>
-  "* (cicada-nymph) unknow command-line-function : " write-string
+  "* (cicada-nymph) unknow command-line-function : " .s
   get-command-line
   string-tail,word
-  string-head,word .s
-  "* good bye ^-^/" .s
+  string-head,word .s .l
+  "* good bye ^-^/" .s .l
   bye
   end
 ; define-function
@@ -1650,9 +1656,9 @@ allocate-memory
   welcome
   initial-report
   hi
-  "* you are in the (stack-REPL)" .s
-  "  every time after a word is executed" .s
-  "  the argument-stack get printed" .s
+  "* you are in the (stack-REPL)" .s .l
+  "  every time after a word is executed" .s .l
+  "  the argument-stack get printed" .s .l
   print-argument-stack,pretty
   jo stack-REPL
   reset-top-level-REPL
@@ -1663,15 +1669,15 @@ allocate-memory
   welcome
   initial-report
   hi
-  "* you are in the (basic-REPL)" .s
-  "  this REPL does not print any thing automaticly" .s
+  "* you are in the (basic-REPL)" .s .l
+  "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL
   reset-top-level-REPL
 ; define-function
 
 : command-line,poi
   << -- >>
-  "* poi byebye" .s
+  "* poi byebye" .s .l
   bye
   end
 ; define-function

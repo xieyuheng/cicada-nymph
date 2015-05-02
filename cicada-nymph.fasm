@@ -3500,7 +3500,12 @@ define_function "write-string", write_string
    xx add1, swap
    xx taca, write_string
 
-define_function ".s", pretty_write_string
+define_function ".s", ALIAS__write_string
+   ;; << integer -- >>
+   xx write_string
+   xx end
+
+define_function "pretty-write-string", pretty_write_string
    ;; << integer -- >>
    xx write_string
    xx literal, 10
@@ -3770,11 +3775,16 @@ define_function "write-integer", write_integer
    xx write_nature_number
    xx end
 
-define_function ".", pretty_write_integer
+define_function "pretty-write-integer", pretty_write_integer
    ;; << integer -- >>
    xx write_integer
    xx literal, 32
    xx write_byte
+   xx end
+
+define_function ".", ALIAS__pretty_write_integer
+   ;; << integer -- >>
+   xx pretty_write_integer
    xx end
 
 max_word_length = 1024

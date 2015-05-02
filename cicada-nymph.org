@@ -2,9 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* renamings                           :maybe:
-  1. .s to .n
-  1. write-string to .s
 * 整理中文筆記 並寫更多中文筆記
 * change some names
 * primitive-function about bit-wise operations
@@ -4734,10 +4731,15 @@
       xx dup, fetch_byte, write_byte
       xx add1, swap
       xx taca, write_string
+
+   define_function ".s", ALIAS__write_string
+      ;; << integer -- >>
+      xx write_string
+      xx end
    #+end_src
 ** pretty_write_string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function ".s", pretty_write_string
+   define_function "pretty-write-string", pretty_write_string
       ;; << integer -- >>
       xx write_string
       xx literal, 10
@@ -5050,11 +5052,16 @@
    #+end_src
 ** pretty_write_integer
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function ".", pretty_write_integer
+   define_function "pretty-write-integer", pretty_write_integer
       ;; << integer -- >>
       xx write_integer
       xx literal, 32
       xx write_byte
+      xx end
+
+   define_function ".", ALIAS__pretty_write_integer
+      ;; << integer -- >>
+      xx pretty_write_integer
       xx end
    #+end_src
 * word
