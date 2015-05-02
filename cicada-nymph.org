@@ -3572,6 +3572,17 @@
       push_argument_stack rax
       next
    #+end_src
+** test
+   * test is written in cicada-nymph
+     for these primitive-functions are added lately
+   #+begin_src cicada-nymph
+   : test,bit
+     << -- >>
+
+     end
+   ; define-function
+   test,bit
+   #+end_src
 * -----------------------------------
 * basic io
 ** ----------------------------------
@@ -4812,7 +4823,7 @@
       xx drop, false
       xx end
    #+end_src
-** digit-char->number & number->char-digit
+** digit-char->number & number->digit-char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "digit-char->number", digit_char_to_number
       ;; << char -- decimal-digit >>
@@ -4820,7 +4831,7 @@
       xx subtraction
       xx end
 
-   define_function "number->char-digit", number_to_digit_char
+   define_function "number->digit-char", number_to_digit_char
       ;; << decimal-digit -- char >>
       xx literal, '0'
       xx addition

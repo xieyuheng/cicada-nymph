@@ -430,6 +430,16 @@
      end
    ; define-function
    #+end_src
+** number->latin-char
+   #+begin_src cicada-nymph :tangle core.cn
+   : number->latin-char
+     << number -- latin-char >>
+     10 sub
+     "a" string-head,char
+     add
+     end
+   ; define-function
+   #+end_src
 ** wild-digit-string?
    #+begin_src cicada-nymph :tangle core.cn
    : wild-digit-string?
@@ -790,6 +800,83 @@
      end
    ; define-function
    test,base#wild-integer-string->integer
+   #+end_src
+** note writers
+   * a general function
+     and three special ones
+   * they all writer integer
+   * I will implemented them by syntax when needed
+** .#
+   #+begin_src cicada-nymph :tangle core.cn
+   : .#,loop
+     << nature-number, base, cursor -- cursor >>
+     >:cursor
+     >:base
+     >:nature-number
+     :nature-number zero? if
+       :cursor
+       end
+     then
+     :nature-number
+     :base
+     divmod >:mod >:div
+     :mod 10 less-than? if
+       :mod number->digit-char
+     else
+       :mod number->latin-char
+     then
+     :cursor
+     save-byte
+     :div
+     :base
+     :cursor add1
+     <> .#,loop
+   ; define-function
+
+   : .#
+     << integer, base -- >>
+     dup 36 greater-than?
+     over 2 less-than?
+     or if
+       "* (.#) the base " .s .i " is not valid to write a number" .s .l
+       "  a base should in between 2 and 36 includingly" .s .l
+       "  the integer to be written is " .s .i .l
+       end
+     then
+     dup .i
+     "#" .s
+     over negative? if
+       swap negate swap
+       "-" .s
+     then
+     128 allocate-local-memory >:buffer
+     :buffer
+     .#,loop >:cursor
+     :buffer
+     :cursor :buffer sub
+     string-reverse! .s
+     end
+   ; define-function
+   #+end_src
+** .#2 .#8 .#16
+   #+begin_src cicada-nymph :tangle core.cn
+   : .#2  2  .# " " .s end ; define-function
+   : .#8  8  .# " " .s end ; define-function
+   : .#16 16 .# " " .s end ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   0#111        0  .#
+   1#111        1  .#
+   10#123       10 .#
+   2#1000       2  .#
+   2#1111_1111  2  .#
+   16#f_f       16 .#
+   36#zzzz      36 .#
+
+   2#1111_1111  .#2
+   8#123        .#8
+   16#fff       .#16
    #+end_src
 * *rule-set,make-jojo* : number with base
 ** syntax,base#wild-integer-string,make-jojo
@@ -2704,10 +2791,6 @@
   #+end_src
 * ===================================
 * test
-** bit
-   #+begin_src cicada-nymph
-
-   #+end_src
 ** name-hash-table
    #+begin_src cicada-nymph
    name-hash-table,test

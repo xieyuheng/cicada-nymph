@@ -182,6 +182,14 @@ more,rule-set,make-jojo
   end
 ; define-function
 
+: number->latin-char
+  << number -- latin-char >>
+  10 sub
+  "a" string-head,char
+  add
+  end
+; define-function
+
 : wild-digit-string?
   << string[address, length] -- bool >>
   dup zero? if
@@ -398,6 +406,60 @@ more,rule-set,make-jojo
   wild-integer-string->integer,with-base
   end
 ; define-function
+
+: .#,loop
+  << nature-number, base, cursor -- cursor >>
+  >:cursor
+  >:base
+  >:nature-number
+  :nature-number zero? if
+    :cursor
+    end
+  then
+  :nature-number
+  :base
+  divmod >:mod >:div
+  :mod 10 less-than? if
+    :mod number->digit-char
+  else
+    :mod number->latin-char
+  then
+  :cursor
+  save-byte
+  :div
+  :base
+  :cursor add1
+  <> .#,loop
+; define-function
+
+: .#
+  << integer, base -- >>
+  dup 36 greater-than?
+  over 2 less-than?
+  or if
+    "* (.#) the base " .s .i " is not valid to write a number" .s .l
+    "  a base should in between 2 and 36 includingly" .s .l
+    "  the integer to be written is " .s .i .l
+    end
+  then
+  dup .i
+  "#" .s
+  over negative? if
+    swap negate swap
+    "-" .s
+  then
+  128 allocate-local-memory >:buffer
+  :buffer
+  .#,loop >:cursor
+  :buffer
+  :cursor :buffer sub
+  string-reverse! .s
+  end
+; define-function
+
+: .#2  2  .# " " .s end ; define-function
+: .#8  8  .# " " .s end ; define-function
+: .#16 16 .# " " .s end ; define-function
 
 : syntax,base#wild-integer-string,make-jojo
   << string[address, length], word[address, length] --

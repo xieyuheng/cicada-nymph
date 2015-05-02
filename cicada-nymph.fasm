@@ -3565,7 +3565,7 @@ define_function "digit-char->number", digit_char_to_number
    xx subtraction
    xx end
 
-define_function "number->char-digit", number_to_digit_char
+define_function "number->digit-char", number_to_digit_char
    ;; << decimal-digit -- char >>
    xx literal, '0'
    xx addition
