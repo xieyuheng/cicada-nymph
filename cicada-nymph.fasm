@@ -2393,25 +2393,25 @@ define_primitive_function "clear-memory", clear_memory
 
 match =64bit, machine {
 
-define_primitive_function "bitwise-and", bitwise_and
+define_primitive_function "bit-and", bit_and
    ;; << a, b -- a and b >>
    pop_argument_stack rbx
    and [pointer$argument_stack - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-or", bitwise_or
+define_primitive_function "bit-or", bit_or
    ;; << a, b -- a or b >>
    pop_argument_stack rbx
    or  [pointer$argument_stack - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-xor", bitwise_xor
+define_primitive_function "bit-xor", bit_xor
    ;; << a, b -- a xor b >>
    pop_argument_stack rbx
    xor [pointer$argument_stack - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-invert", bitwise_invert
+define_primitive_function "bit-invert", bit_invert
    ;; << a -- invert a >>
    not qword [pointer$argument_stack - (1 * jo_size)]
    next
@@ -2420,34 +2420,137 @@ define_primitive_function "bitwise-invert", bitwise_invert
 
 match =32bit, machine {
 
-define_primitive_function "bitwise-and", bitwise_and
+define_primitive_function "bit-and", bit_and
    ;; << a, b -- a and b >>
    pop_argument_stack rbx
    mov rax, [pointer$argument_stack]
    and [rax - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-or", bitwise_or
+define_primitive_function "bit-or", bit_or
    ;; << a, b -- a or b >>
    pop_argument_stack rbx
    mov rax, [pointer$argument_stack]
    or  [rax - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-xor", bitwise_xor
+define_primitive_function "bit-xor", bit_xor
    ;; << a, b -- a xor b >>
    pop_argument_stack rbx
    mov rax, [pointer$argument_stack]
    xor [rax - (1 * jo_size)], rbx
    next
 
-define_primitive_function "bitwise-invert", bitwise_invert
+define_primitive_function "bit-invert", bit_invert
    ;; << a -- invert a >>
    mov rax, [pointer$argument_stack]
    not dword [rax - (1 * jo_size)]
    next
 
 }
+
+match =64bit, machine {
+
+define_primitive_function "bit-left", bit_left
+   ;; ( fixnum, step -- fixnum * 2^step )
+   pop_argument_stack rcx
+   shl qword[pointer$argument_stack], cl
+   next
+
+define_primitive_function "bit-right", bit_right
+   ;; ( fixnum, step -- fixnum / 2^step )
+   pop_argument_stack rcx
+   shr qword[pointer$argument_stack], cl
+   next
+
+define_primitive_function "bit-right,sign", bit_right__sign
+   ;; ( fixnum, step -- new fixnum )
+   pop_argument_stack rcx
+   sar qword[pointer$argument_stack], cl
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "bit-left", bit_left
+   ;; ( fixnum, step -- fixnum * 2^step )
+   pop_argument_stack rcx
+   shl dword[pointer$argument_stack], cl
+   next
+
+define_primitive_function "bit-right", bit_right
+   ;; ( fixnum, step -- fixnum / 2^step )
+   pop_argument_stack rcx
+   shr dword[pointer$argument_stack], cl
+   next
+
+define_primitive_function "bit-right,sign", bit_right__sign
+   ;; ( fixnum, step -- new fixnum )
+   pop_argument_stack rcx
+   sar dword[pointer$argument_stack], cl
+   next
+
+}
+
+;; BT copies a bit from a given register to the carry flag
+define_primitive_function "fetch-bit", fetch_bit
+   ;; ( fixnum, offset -- bit )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   bt rax, rbx
+   setc al
+   movzx rax, al
+   push_argument_stack rax
+   next
+
+define_primitive_function "set-bit", set_bit
+   ;; ( fixnum, offset -- fixnum )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   bts rax, rbx
+   push_argument_stack rax
+   next
+
+define_primitive_function "clear-bit", clear_bit
+   ;; ( fixnum, offset -- fixnum )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   btr rax, rbx
+   push_argument_stack rax
+   next
+
+define_primitive_function "invert-bit", invert_bit
+   ;; ( fixnum, offset -- fixnum )
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   btc rax, rbx
+   push_argument_stack rax
+   next
+
+define_primitive_function "find-lowest-set-bit", find_lowest_set_bit
+   ;; ( fixnum -- offset )
+   pop_argument_stack rax
+   bsf rax, rax
+   jz @f
+   push_argument_stack rax
+   next
+@@:
+   mov rax, -1
+   push_argument_stack rax
+   next
+
+define_primitive_function "find-highest-set-bit", find_highest_set_bit
+   ;; ( fixnum -- offset )
+   pop_argument_stack rax
+   bsr rax, rax
+   jz @f
+   push_argument_stack rax
+   next
+@@:
+   mov rax, -1
+   push_argument_stack rax
+   next
 
 match =linux =64bit, platform machine {
 

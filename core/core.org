@@ -1629,7 +1629,7 @@
      >:syscall-path
      0
      0 <<
-     O_RDONLY      0000h
+     O_RDONLY
      >>
      :syscall-path
      :syscall-number,open:
@@ -1659,22 +1659,13 @@
         -- error-code, false >>
      string->syscall-string
      >:syscall-path
-     420 <<
-     110100100b
-     644o
-     6 8 2 power mul
-     4 8 1 power mul add
-     4 8 0 power mul add
+     8#644 <<
+     2#110100100
      >>
-     578 <<
+     8#1102 <<
      O_RDWR  0002h 0002o
      O_CREAT 0100h 0100o
      O_TRUNC 0800h 1000o
-     1102o
-     1 8 3 power mul
-     1 8 2 power mul add
-     0 8 1 power mul add
-     2 8 0 power mul add
      >>
      :syscall-path
      :syscall-number,open:
@@ -1694,21 +1685,12 @@
         -- error-code, false >>
      string->syscall-string
      >:syscall-path
-     420 <<
+     8#644 <<
      110100100b
-     644o
-     6 8 2 power mul
-     4 8 1 power mul add
-     4 8 0 power mul add
      >>
-     514 <<
+     8#1002 <<
      O_RDWR  0002h 0002o
      O_TRUNC 0800h 1000o
-     1002o
-     1 8 3 power mul
-     0 8 2 power mul add
-     0 8 1 power mul add
-     2 8 0 power mul add
      >>
      :syscall-path
      :syscall-number,open:
@@ -2722,15 +2704,19 @@
   #+end_src
 * ===================================
 * test
-  #+begin_src cicada-nymph
-  name-hash-table,test
-  name-hash-table,report
+** bit
+   #+begin_src cicada-nymph
 
-
-  report-memory
-
-  report-dictionary
-
-  report-syntax
-  #+end_src
+   #+end_src
+** name-hash-table
+   #+begin_src cicada-nymph
+   name-hash-table,test
+   name-hash-table,report
+   #+end_src
+** report
+   #+begin_src cicada-nymph
+   report-memory
+   report-dictionary
+   report-syntax
+   #+end_src
 * ===================================

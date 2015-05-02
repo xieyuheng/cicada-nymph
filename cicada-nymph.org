@@ -2,12 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* 整理中文筆記 並寫更多中文筆記
-* change some names
-* primitive-function about bit-wise operations
-  * I need these primitive-functions
-    to implement syscalls well
 * todo
+** 整理中文筆記 並寫更多中文筆記
 ** protect on the overloading of a variety of memories
 ** better naming of headings
 ** add more notes about the limitations of the program
@@ -3368,30 +3364,29 @@
       next
    #+end_src
 * bit
-** note
 ** or & and & xor & invert            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "bitwise-and", bitwise_and
+   define_primitive_function "bit-and", bit_and
       ;; << a, b -- a and b >>
       pop_argument_stack rbx
       and [pointer$argument_stack - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-or", bitwise_or
+   define_primitive_function "bit-or", bit_or
       ;; << a, b -- a or b >>
       pop_argument_stack rbx
       or  [pointer$argument_stack - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-xor", bitwise_xor
+   define_primitive_function "bit-xor", bit_xor
       ;; << a, b -- a xor b >>
       pop_argument_stack rbx
       xor [pointer$argument_stack - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-invert", bitwise_invert
+   define_primitive_function "bit-invert", bit_invert
       ;; << a -- invert a >>
       not qword [pointer$argument_stack - (1 * jo_size)]
       next
@@ -3402,34 +3397,180 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "bitwise-and", bitwise_and
+   define_primitive_function "bit-and", bit_and
       ;; << a, b -- a and b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
       and [rax - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-or", bitwise_or
+   define_primitive_function "bit-or", bit_or
       ;; << a, b -- a or b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
       or  [rax - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-xor", bitwise_xor
+   define_primitive_function "bit-xor", bit_xor
       ;; << a, b -- a xor b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
       xor [rax - (1 * jo_size)], rbx
       next
 
-   define_primitive_function "bitwise-invert", bitwise_invert
+   define_primitive_function "bit-invert", bit_invert
       ;; << a -- invert a >>
       mov rax, [pointer$argument_stack]
       not dword [rax - (1 * jo_size)]
       next
 
    }
+   #+end_src
+** left & right                       :64bit:
+   * "shl"
+     shifts the destination operand left
+     by the number of bits specified in the second operand
+     The destination operand can be general register or memory
+     The second operand can be an immediate value or the CL register
+     as bits exit from the left, zeros in from the right
+     The last bit that exited is stored in CF
+     "sal" is a synonym for "shl"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "bit-left", bit_left
+      ;; ( fixnum, step -- fixnum * 2^step )
+      pop_argument_stack rcx
+      shl qword[pointer$argument_stack], cl
+      next
+
+   define_primitive_function "bit-right", bit_right
+      ;; ( fixnum, step -- fixnum / 2^step )
+      pop_argument_stack rcx
+      shr qword[pointer$argument_stack], cl
+      next
+
+   define_primitive_function "bit-right,sign", bit_right__sign
+      ;; ( fixnum, step -- new fixnum )
+      pop_argument_stack rcx
+      sar qword[pointer$argument_stack], cl
+      next
+
+   }
+   #+end_src
+** left & right                       :32bit:
+   * "shl"
+     shifts the destination operand left
+     by the number of bits specified in the second operand
+     The destination operand can be general register or memory
+     The second operand can be an immediate value or the CL register
+     as bits exit from the left, zeros in from the right
+     The last bit that exited is stored in CF
+     "sal" is a synonym for "shl"
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "bit-left", bit_left
+      ;; ( fixnum, step -- fixnum * 2^step )
+      pop_argument_stack rcx
+      shl dword[pointer$argument_stack], cl
+      next
+
+   define_primitive_function "bit-right", bit_right
+      ;; ( fixnum, step -- fixnum / 2^step )
+      pop_argument_stack rcx
+      shr dword[pointer$argument_stack], cl
+      next
+
+   define_primitive_function "bit-right,sign", bit_right__sign
+      ;; ( fixnum, step -- new fixnum )
+      pop_argument_stack rcx
+      sar dword[pointer$argument_stack], cl
+      next
+
+   }
+   #+end_src
+** fetch & set & clear & invert
+   1. offset is of LSB
+   2. offset in [0, ..., 63]
+   3. step   in [1, ..., 64]
+   4. >< need error handling on them
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; BT copies a bit from a given register to the carry flag
+   define_primitive_function "fetch-bit", fetch_bit
+      ;; ( fixnum, offset -- bit )
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      bt rax, rbx
+      setc al
+      movzx rax, al
+      push_argument_stack rax
+      next
+
+   define_primitive_function "set-bit", set_bit
+      ;; ( fixnum, offset -- fixnum )
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      bts rax, rbx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "clear-bit", clear_bit
+      ;; ( fixnum, offset -- fixnum )
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      btr rax, rbx
+      push_argument_stack rax
+      next
+
+   define_primitive_function "invert-bit", invert_bit
+      ;; ( fixnum, offset -- fixnum )
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      btc rax, rbx
+      push_argument_stack rax
+      next
+   #+end_src
+** find
+   * "bsf" "bsr"
+     instructions scan a word or double word for first set bit
+     and store the index of this bit into destination operand
+     which must be general register
+     The bit string being scanned is specified by source operand
+     it may be either general register or memory
+     The ZF flag is set if the entire string is zero (no set bits are found)
+     otherwise it is cleared
+   * If no set bit is found
+     the value of the destination register is undefined
+     "bsf" scans from low order to high order (starting from bit index zero)
+     "bsr" scans from high order to low order
+   * note that
+     if can not find set-bit
+     the following functions will return -1
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "find-lowest-set-bit", find_lowest_set_bit
+      ;; ( fixnum -- offset )
+      pop_argument_stack rax
+      bsf rax, rax
+      jz @f
+      push_argument_stack rax
+      next
+   @@:
+      mov rax, -1
+      push_argument_stack rax
+      next
+
+   define_primitive_function "find-highest-set-bit", find_highest_set_bit
+      ;; ( fixnum -- offset )
+      pop_argument_stack rax
+      bsr rax, rax
+      jz @f
+      push_argument_stack rax
+      next
+   @@:
+      mov rax, -1
+      push_argument_stack rax
+      next
    #+end_src
 * -----------------------------------
 * basic io
