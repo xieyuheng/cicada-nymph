@@ -15,6 +15,8 @@
    this is needed when doing report of the dictionary
 * ===================================
 * note
+** notation
+   * "nature number" is just called "number"
 ** jo & jojo
    * use "jo" to denote bead
      and use "jojo" to denote a thread of beads
@@ -2613,7 +2615,7 @@
       xx true, equal?
       xx end
    #+end_src
-** and & or & not
+** and & or & not & xor
    * the following two functions are for bool value
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "not", CICADA__not
@@ -2623,10 +2625,11 @@
 
    define_function "and", CICADA__and
       ;; << bool, bool -- bool >>
-      xx false?, false?branch, 4
+      xx false?, false?branch, (.true-$)/jo_size
       xx   drop
       xx   false
       xx   end
+   .true:
       xx false?branch, 3
       xx   true
       xx   end
@@ -2635,14 +2638,23 @@
 
    define_function "or", CICADA__or
       ;; << bool, bool -- bool >>
-      xx false?branch, 4
+      xx false?branch, (.false-$)/jo_size
       xx   drop
       xx   true
       xx   end
+   .false:
       xx false?branch, 3
       xx   true
       xx   end
       xx false
+      xx end
+
+   define_function "xor", CICADA__xor
+      ;; << bool, bool -- bool >>
+      xx false?branch, (.false-$)/jo_size
+      xx   CICADA__not
+      xx   end
+   .false:
       xx end
    #+end_src
 * fixnum
@@ -4109,7 +4121,7 @@
    define_function "init-command-line", init_command_line
       ;; << -- >>
       xx get_pid
-      xx write_nature_number__fill_buffer
+      xx write_number__fill_buffer
       xx tuck
       xx literal, pid$init_command_line
       xx string_to_buffer!
@@ -4159,7 +4171,7 @@
    define_function "init-environment-string-variable-list", init_environment_string_variable_list
       ;; << -- >>
       xx get_pid
-      xx write_nature_number__fill_buffer
+      xx write_number__fill_buffer
       xx tuck
       xx literal, pid$init_environment_string_variable_list
       xx string_to_buffer!
@@ -4554,6 +4566,23 @@
       xx literal, string$string_to_syscall_string
       xx string_to_buffer!
       xx literal, string$string_to_syscall_string
+      xx end
+   #+end_src
+** string->syscall-string-2
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$string_to_syscall_string_2:
+      times 256 db 0
+
+   define_function "string->syscall-string-2", string_to_syscall_string_2
+      ;; << string[address, length] -- syscall-string[address] >>
+      xx dup
+      xx   literal, string$string_to_syscall_string_2
+      xx   addition
+      xx   literal, 0
+      xx   swap, save_byte
+      xx literal, string$string_to_syscall_string_2
+      xx string_to_buffer!
+      xx literal, string$string_to_syscall_string_2
       xx end
    #+end_src
 ** syscall                            :64bit:linux:
@@ -5049,28 +5078,28 @@
       xx digit_string?
       xx end
    #+end_src
-** digit-string->nature-number
+** digit-string->number
    #+begin_src fasm :tangle cicada-nymph.fasm
-   sum$digit_string_to_nature_number:
+   sum$digit_string_to_number:
       xx 0
 
-   counter$digit_string_to_nature_number:
+   counter$digit_string_to_number:
       xx 0
 
-   define_function "digit-string->nature-number", digit_string_to_nature_number
+   define_function "digit-string->number", digit_string_to_number
       ;; << string[address, length] -- integer >>
-      xx zero, literal, sum$digit_string_to_nature_number, save
-      xx zero, literal, counter$digit_string_to_nature_number, save
+      xx zero, literal, sum$digit_string_to_number, save
+      xx zero, literal, counter$digit_string_to_number, save
 
       xx dup2, string_reverse!
-      xx   help__digit_string_to_nature_number
+      xx   help__digit_string_to_number
       xx string_reverse!, drop2
 
-      xx literal, sum$digit_string_to_nature_number
+      xx literal, sum$digit_string_to_number
       xx fetch
       xx end
 
-   define_function "help,digit-string->nature-number", help__digit_string_to_nature_number
+   define_function "help,digit-string->number", help__digit_string_to_number
       ;; << reversed-string[address, length] -- >>
       xx dup, zero?, false?branch, 3
       xx   drop2
@@ -5078,28 +5107,28 @@
 
       xx dup2, string_head__char, digit_char_to_number
       xx   literal, 10
-      xx   literal, counter$digit_string_to_nature_number, fetch
+      xx   literal, counter$digit_string_to_number, fetch
       xx     one
-      xx     literal, counter$digit_string_to_nature_number
+      xx     literal, counter$digit_string_to_number
       xx     add_save
       xx   power
       xx multiple
 
-      xx literal, sum$digit_string_to_nature_number
+      xx literal, sum$digit_string_to_number
       xx add_save
 
       xx string_tail__char
-      xx taca, help__digit_string_to_nature_number
+      xx taca, help__digit_string_to_number
    #+end_src
 ** string->integer
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string->integer", string_to_integer
       ;; << string[address, length] -- integer >>
       xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
-      xx   digit_string_to_nature_number
+      xx   digit_string_to_number
       xx   end
       xx string_tail__char
-      xx digit_string_to_nature_number
+      xx digit_string_to_number
       xx negate
       xx end
    #+end_src
@@ -5132,67 +5161,67 @@
    #+end_src
 ** ----------------------------------
 * io about number
-** write-nature-number
+** write-number
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; 2 ^ 64 = 18446744073709551616
    ;; which is of length 20
    ;; so
    ;; I use 32 to align to 16
 
-   buffer$write_nature_number labeling
+   buffer$write_number labeling
       preserve 32
 
-   counter$write_nature_number:
+   counter$write_number:
       xx 0
 
-   define_function "write-nature-number", write_nature_number
-      ;; << nature-number -- >>
-      xx write_nature_number__fill_buffer
+   define_function "write-number", write_number
+      ;; << number -- >>
+      xx write_number__fill_buffer
       xx write_string
       xx end
 
-   define_function "write-nature-number,fill-buffer", write_nature_number__fill_buffer
-      ;; << nature-number -- >>
+   define_function "write-number,fill-buffer", write_number__fill_buffer
+      ;; << number -- >>
       xx zero
-      xx literal, counter$write_nature_number, save
+      xx literal, counter$write_number, save
 
-      xx write_nature_number__loop
+      xx write_number__loop
 
-      xx literal, buffer$write_nature_number
-      xx literal, counter$write_nature_number, fetch
+      xx literal, buffer$write_number
+      xx literal, counter$write_number, fetch
       xx string_reverse!
       xx end
 
 
-   define_function "write-nature-number,loop", write_nature_number__loop
+   define_function "write-number,loop", write_number__loop
       ;; << rest-number -- >>
       xx literal, 10, divmod
 
       xx number_to_digit_char
-      xx literal, buffer$write_nature_number
-      xx literal, counter$write_nature_number, fetch
+      xx literal, buffer$write_number
+      xx literal, counter$write_number, fetch
       xx addition
       xx save_byte
 
       xx one
-      xx literal, counter$write_nature_number
+      xx literal, counter$write_number
       xx add_save
 
       xx dup, zero?, false?branch, 3
       xx   drop
       xx   end
-      xx taca, write_nature_number__loop
+      xx taca, write_number__loop
    #+end_src
 ** write-integer
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "write-integer", write_integer
       ;; << integer -- >>
       xx dup, negative?, false?, false?branch, 3
-      xx   write_nature_number
+      xx   write_number
       xx   end
       xx literal, '-', write_byte
       xx negate
-      xx write_nature_number
+      xx write_number
       xx end
    #+end_src
 ** pretty_write_integer

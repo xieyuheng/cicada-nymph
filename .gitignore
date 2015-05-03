@@ -4,5 +4,7 @@
 *.exe
 *.ccd
 
+/play
+
 cn
 cn32

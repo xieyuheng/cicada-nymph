@@ -3,6 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** only one error-code->string is not enough
 ** 分析局部變元的良好性               :question:
    * 對 包含 >:name 的函數體的純線性處理
      當遇到 if 所形成的分支的時候
@@ -730,7 +731,7 @@
      base#wild-integer-string->wild-integer-string
        >::wild-integer-string
      ::base-string
-     digit-string->nature-number
+     digit-string->number
        >:base
      ::wild-integer-string
      :base
@@ -806,15 +807,15 @@
 ** .#
    #+begin_src cicada-nymph :tangle core.cn
    : .#,loop
-     << nature-number, base, cursor -- cursor >>
+     << number, base, cursor -- cursor >>
      >:cursor
      >:base
-     >:nature-number
-     :nature-number zero? if
+     >:number
+     :number zero? if
        :cursor
        end
      then
-     :nature-number
+     :number
      :base
      divmod >:mod >:div
      :mod 10 less-than? if
@@ -879,6 +880,139 @@
    2#1111_1111  .#2
    8#123        .#8
    16#fff       .#16
+   #+end_src
+** 記 bit-xor
+   * 對 bit-xor 的解釋
+     1. 對稱地看
+        diff
+     2. 非對稱地看
+        後者是 1 則 求 invert
+     結構上 對於同樣的抽象函數
+     認識上 可以有不同的理解方式
+** 記 gamber
+   * gray code 很有趣
+     尤其是其生成方式
+     即 先取對稱 再加前綴
+     是利用 對稱性 和 不變量[不變性] 的典型例子
+   * 同樣的一個 0 1 字符串
+     比如 "100"
+     把它做爲自然編碼的二進制數 其值爲 4 這個是 number
+     把它做爲 gray code 編碼的二進制數 其值爲 7 這個我稱之爲 gamber
+   * 這樣 我們就有如下兩個函數
+     string->number
+     string->gamber
+     同時這兩個函數還引出了下面兩個函數
+     number->gamber
+     gamber->number
+   * 下面的的算法是通過把數字列表之後
+     逐 bit 觀察每列的接連 bit 值的規則而得來的
+     比如
+     以生成規則爲定義
+     然後總結一下所發現的每一列的規律
+     就可以得到對下面的算法的有效性的嚴格證明
+   * 注意
+     兩個方向的運算迥然不同
+     還是要以生成方式爲核心來理解這一點
+     只要把生成過程中
+     每次在做完對稱後
+     所添加的 一串前綴 1 看成是一個整體
+     就能理解了
+     可以把每次的 一串前綴 1 看成是一根棍子
+     一根棍子 一根棍子 地 來觀察所生成的列表 就行了
+     可以發現
+     棍子 其實就是 自然編碼時
+     逐 bit 觀察列表時的 接連 bit 值
+     那麼就能理解到
+     爲什麼 number->gamber 比 gamber->number 容易計算了
+   * 另外還要注意
+     從最高位向最低位去計算
+     是爲了逐步確定數在序關係中的位置
+** number->gamber
+   #+begin_src cicada-nymph :tangle core.cn
+   : number->gamber
+     << number -- gamber >>
+     dup 1 bit-right
+     bit-xor
+     end
+   ; define-function
+   #+end_src
+** gamber->number
+   #+begin_src cicada-nymph :tangle core.cn
+   : gamber->number,loop
+     << gamber, number, cursor -- number >>
+     dup negative? if
+       drop
+       swap drop
+       end
+     then
+     >:cursor
+     >:number
+     >:gamber
+     :gamber :cursor get-bit
+     :number :cursor add1 get-bit
+     xor if
+       :number :cursor set-bit >:number
+     then
+     :gamber
+     :number
+     :cursor sub1
+     <> gamber->number,loop
+   ; define-function
+
+   : gamber->number
+     << gamber -- number >>
+     dup find-highest-set-bit
+     dup negative? if
+       drop
+       end
+     then
+     0 over set-bit
+     swap sub1
+     gamber->number,loop
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,gamber
+     << -- >>
+     2#0000 number->gamber .#2 .l
+     2#0001 number->gamber .#2 .l
+     2#0010 number->gamber .#2 .l
+     2#0011 number->gamber .#2 .l
+     2#0100 number->gamber .#2 .l
+     2#0101 number->gamber .#2 .l
+     2#0110 number->gamber .#2 .l
+     2#0111 number->gamber .#2 .l
+     2#1000 number->gamber .#2 .l
+     2#1001 number->gamber .#2 .l
+     2#1010 number->gamber .#2 .l
+     2#1011 number->gamber .#2 .l
+     2#1100 number->gamber .#2 .l
+     2#1101 number->gamber .#2 .l
+     2#1110 number->gamber .#2 .l
+     2#1111 number->gamber .#2 .l
+     .l
+     2#0000 number->gamber gamber->number .#2 .l
+     2#0001 number->gamber gamber->number .#2 .l
+     2#0010 number->gamber gamber->number .#2 .l
+     2#0011 number->gamber gamber->number .#2 .l
+     2#0100 number->gamber gamber->number .#2 .l
+     2#0101 number->gamber gamber->number .#2 .l
+     2#0110 number->gamber gamber->number .#2 .l
+     2#0111 number->gamber gamber->number .#2 .l
+     2#1000 number->gamber gamber->number .#2 .l
+     2#1001 number->gamber gamber->number .#2 .l
+     2#1010 number->gamber gamber->number .#2 .l
+     2#1011 number->gamber gamber->number .#2 .l
+     2#1100 number->gamber gamber->number .#2 .l
+     2#1101 number->gamber gamber->number .#2 .l
+     2#1110 number->gamber gamber->number .#2 .l
+     2#1111 number->gamber gamber->number .#2 .l
+     .l
+     end
+   ; define-function
+   test,gamber
    #+end_src
 * *rule-set,make-jojo* : number with base
 ** syntax,base#wild-integer-string,make-jojo
@@ -1259,34 +1393,52 @@
 * constant for linux                  :linux:
 ** init-syscall-number
    #+begin_src cicada-nymph :tangle core.cn
-   0 : :syscall-number,open:  ; define-variable
-   0 : :syscall-number,close: ; define-variable
-   0 : :syscall-number,read:  ; define-variable
-   0 : :syscall-number,write: ; define-variable
-   0 : :syscall-number,stat:  ; define-variable
-   0 : :syscall-number,exit:  ; define-variable
-   0 : :syscall-number,times: ; define-variable
+   0 : :syscall-number,open:       ; define-variable
+   0 : :syscall-number,close:      ; define-variable
+   0 : :syscall-number,read:       ; define-variable
+   0 : :syscall-number,write:      ; define-variable
+   0 : :syscall-number,link:       ; define-variable
+   0 : :syscall-number,unlink:     ; define-variable
+   0 : :syscall-number,mkdir:      ; define-variable
+   0 : :syscall-number,rmdir:      ; define-variable
+   0 : :syscall-number,getdents:   ; define-variable
+   0 : :syscall-number,getdents64: ; define-variable
+   0 : :syscall-number,stat:       ; define-variable
+   0 : :syscall-number,exit:       ; define-variable
+   0 : :syscall-number,times:      ; define-variable
 
    : init-syscall-number
      << -- >>
      *jo-size* 4 equal? if
-       5   address :syscall-number,open:  save
-       6   address :syscall-number,close: save
-       3   address :syscall-number,read:  save
-       4   address :syscall-number,write: save
-       106 address :syscall-number,stat:  save
-       1   address :syscall-number,exit:  save
-       43  address :syscall-number,times: save
+       5   address :syscall-number,open:       save
+       6   address :syscall-number,close:      save
+       3   address :syscall-number,read:       save
+       4   address :syscall-number,write:      save
+       9   address :syscall-number,link:       save
+       10  address :syscall-number,unlink:     save
+       39  address :syscall-number,mkdir:      save
+       40  address :syscall-number,rmdir:      save
+       141 address :syscall-number,getdents:   save
+       220 address :syscall-number,getdents64: save
+       106 address :syscall-number,stat:       save
+       1   address :syscall-number,exit:       save
+       43  address :syscall-number,times:      save
        end
      then
      *jo-size* 8 equal? if
-       2   address :syscall-number,open:  save
-       3   address :syscall-number,close: save
-       0   address :syscall-number,read:  save
-       1   address :syscall-number,write: save
-       4   address :syscall-number,stat:  save
-       60  address :syscall-number,exit:  save
-       100 address :syscall-number,times: save
+       2   address :syscall-number,open:       save
+       3   address :syscall-number,close:      save
+       0   address :syscall-number,read:       save
+       1   address :syscall-number,write:      save
+       86  address :syscall-number,link:       save
+       87  address :syscall-number,unlink:     save
+       83  address :syscall-number,mkdir:      save
+       84  address :syscall-number,rmdir:      save
+       78  address :syscall-number,getdents:   save
+       217 address :syscall-number,getdents64: save
+       4   address :syscall-number,stat:       save
+       60  address :syscall-number,exit:       save
+       100 address :syscall-number,times:      save
        end
      then
      end
@@ -1332,8 +1484,8 @@
      dup -32 equal? if drop  << EPIPE   >>   "Broken pipe " end then
      dup -33 equal? if drop  << EDOM    >>   "Math argument out of domain of func " end then
      dup -34 equal? if drop  << ERANGE  >>   "Math result not representable " end then
-     "unknow error-code : " .s
-     .i .l
+     "unknow error-code : " .s .i .l
+     "* (error-code->string) fail" << to balance the argument-stack >>
      end
    ; define-function
    #+end_src
@@ -1466,7 +1618,7 @@
    : report-jo-size
      << -- >>
      "* jo-size : " .s
-     *jo-size* write-nature-number
+     *jo-size* write-number
      " bytes" .s
      .l
      end
@@ -1477,7 +1629,7 @@
    : report-machine-word-size
      << -- >>
      "* machine-word-size : " .s
-     *jo-size* 8 mul write-nature-number
+     *jo-size* 8 mul write-number
      " bits" .s
      .l
      end
@@ -2103,7 +2255,7 @@
    : ai ; path-to-directory? . << 0 >>
    #+end_src
 * file-tree
-** note
+** note interface
    * file-tree
      two types of nodes
      1. file
@@ -2120,17 +2272,13 @@
      * for file
        1. creat-file
        2. update-file
-       3. rename-file
-       4. move-file
-       5. remove-file
+       3. remove-file
      * for dictionary
        1. creat-directory
-       2. rename-directory
-       3. move-directory
-       4. remove-directory
-       5. find-file-in-directory
-       6. list-file-in-directory
-       7. directory-empty?
+       2. remove-directory
+       3. find-file-in-directory
+       4. list-file-in-directory
+       5. directory-empty?
 ** 記 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
@@ -2182,16 +2330,6 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test,creat-file
-     << -- >>
-     "kkk~" creat-file
-     "core" creat-file
-     end
-   ; define-function
-   test,creat-file
-   #+end_src
 ** update-file
    #+begin_src cicada-nymph :tangle core.cn
    : update-file
@@ -2241,8 +2379,38 @@
      end
    ; define-function
    #+end_src
+** remove-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : remove-file
+     << path[address, length] -- >>
+     >::path
+     ::path
+     string->syscall-string
+     >:syscall-path
+     :syscall-path
+     :syscall-number,unlink:
+     1 syscall
+     dup
+     negative? if
+       "* (remove-file) fail for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     drop
+     end
+   ; define-function
+   #+end_src
 ** test
    #+begin_src cicada-nymph
+   : test,creat-file
+     << -- >>
+     "kkk~" creat-file
+     "core" creat-file
+     end
+   ; define-function
+   test,creat-file
+
    : test,update-file
      << -- >>
      "kkk~" creat-file
@@ -2250,11 +2418,88 @@
      end
    ; define-function
    test,update-file
-   #+end_src
-** rename-file
-   #+begin_src cicada-nymph :tangle core.cn
 
+   : test,remove-file
+     << -- >>
+     "kkk~" remove-file
+     "play" remove-file
+     end
+   ; define-function
+   test,remove-file
    #+end_src
+** creat-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : creat-directory
+     << path[address, length] -- >>
+     >::path
+     ::path
+     string->syscall-string
+     >:syscall-path
+     8#755 <<
+     2#111101101
+     >>
+     :syscall-path
+     :syscall-number,mkdir:
+     2 syscall
+     dup
+     negative? if
+       "* (creat-directory) fail for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     drop
+     end
+   ; define-function
+   #+end_src
+** remove-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : remove-directory
+     << path[address, length] -- >>
+     >::path
+     ::path
+     string->syscall-string
+     >:syscall-path
+     :syscall-path
+     :syscall-number,rmdir:
+     1 syscall
+     dup
+     negative? if
+       "* (remove-directory) fail for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     drop
+     end
+   ; define-function
+   #+end_src
+** >< directory-empty?
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory-empty?
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,creat-directory
+     << -- >>
+     "play" creat-directory
+     end
+   ; define-function
+   test,creat-directory
+
+   : test,remove-directory
+     << -- >>
+     "play" remove-directory
+     end
+   ; define-function
+   test,remove-directory
+   #+end_src
+** >< find-file-in-directory
+** >< list-file-in-directory
 * poi
 ** note
    * poi denotes path-organizer
@@ -2753,7 +2998,7 @@
      0 name-hash-table,hash
      equal? if
        "  {" .s
-       dup write-nature-number
+       dup write-number
        "} " .s
        name,fetch-string .s
        .l
@@ -2773,12 +3018,12 @@
      dup name,no-collision? if
        << * {index} string # orbit-lenght >>
        "* {" .s
-       dup write-nature-number
+       dup write-number
        "} " .s
        dup name,fetch-string .s
        " # " .s
        dup name,fetch-orbit-length
-       write-nature-number
+       write-number
        .l
        dup 1 name-hash-table,report,orbit
      then
@@ -2790,7 +3035,7 @@
      << -- >>
      0 name-hash-table,report,loop
      "* totally : " .s
-     *name-hash-table,counter* write-nature-number
+     *name-hash-table,counter* write-number
      .l
      end
    ; define-function
