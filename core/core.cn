@@ -1461,8 +1461,41 @@ init-syscall-number
   end
 ; define-function
 
+0 : +getdents64,d_ino+        ; define-variable
+0 : +getdents64,d_off+        ; define-variable
+0 : +getdents64,d_reclen+     ; define-variable
+0 : +getdents64,d_type+       ; define-variable
+0 : +getdents64,d_name+       ; define-variable
+0 : +getdents64,end+          ; define-variable
+
+: init,getdents64
+  << offset -- >>
+  *jo-size* 4 equal? if
+    dup address +getdents64,d_ino+       save 8 add
+    dup address +getdents64,d_off+       save 8 add
+    dup address +getdents64,d_reclen+    save 2 add
+    dup address +getdents64,d_type+      save 1 add
+    dup address +getdents64,d_name+      save 256 add
+        address +getdents64,end+           save
+    end
+  then
+  *jo-size* 8 equal? if
+    dup address +getdents64,d_ino+       save 8 add
+    dup address +getdents64,d_off+       save 8 add
+    dup address +getdents64,d_reclen+    save 2 add
+    dup address +getdents64,d_type+      save 1 add
+    dup address +getdents64,d_name+      save 256 add
+        address +getdents64,end+           save
+    end
+  then
+  end
+; define-function
+
+0 init,getdents64
++getdents64,end+ : +getdents64,length+ ; define-variable
+
 : directory-empty?
-  << -- >>
+  << path[address, length] -- bool >>
 
   end
 ; define-function
