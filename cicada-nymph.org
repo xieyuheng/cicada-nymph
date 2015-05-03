@@ -7364,7 +7364,6 @@
    #+end_src
 * -----------------------------------
 * epilog
-** ----------------------------------
 ** platform
    * this word is implemented as a function
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -7382,7 +7381,6 @@
    .end:
    length$platform = (.end - string$platform)
    #+end_src
-** ----------------------------------
 ** *un-initialized-memory*
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*un-initialized-memory*", V__un_initialized_memory
@@ -7394,7 +7392,6 @@
    define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
      xx current_free_address$un_initialized_memory
    #+end_src
-** ----------------------------------
 ** *current-free-address,primitive-string-heap*
    * the last_primitive_string_in_assembly
      is just "*current-free-address,primitive-string-heap*"
@@ -7402,13 +7399,11 @@
    define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
       xx current_free_address$primitive_string_heap
    #+end_src
-** ----------------------------------
 ** last_link
    * this word helps to initialize V__first_jo_in_dictionary
    #+begin_src fasm :tangle cicada-nymph.fasm
    last_link = link
    #+end_src
-** ----------------------------------
 ** un_initialized_memory              :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
@@ -7421,5 +7416,4 @@
 
    }
    #+end_src
-** ----------------------------------
 * ===================================

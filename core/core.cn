@@ -731,144 +731,53 @@ init-syscall-number
   end
 ; define-function
 
-: report-dictionary,primitive-function,loop
-  << counter, jo -- total >>
+: list-dictionary,by-jo-predicate,loop
+  << jo-predicate, counter, jo -- total >>
   dup zero? if
     drop
+    swap drop
     end
   then
-  dup primitive-function-jo? false? if
+  dup x|over|xxx execute-jo false? if
     jo->pre-jo
-    <> report-dictionary,primitive-function,loop
+    <> list-dictionary,by-jo-predicate,loop
   then
   swap
     "  " .s
-    add1 dup .
+    add1 dup .i ". " .s
   swap
   dup jo->name
   dup2 space-string? if
     drop2
-    " un-named " .s .l
+    "  unnamed" .s .l
   else
     .s .l
   then
   jo->pre-jo
-  <> report-dictionary,primitive-function,loop
+  <> list-dictionary,by-jo-predicate,loop
 ; define-function
 
-: report-dictionary,primitive-function
-  << -- >>
-  "* all primitive-function in dictionary :" .s .l
+: list-dictionary,by-jo-predicate
+  << jo-predicate -- total >>
   0 *first-jo-in-dictionary*
-  report-dictionary,primitive-function,loop
-  end
-; define-function
-
-: report-dictionary,function,loop
-  << counter, jo -- total >>
-  dup zero? if
-    drop
-    end
-  then
-  dup function-jo? false? if
-    jo->pre-jo
-    <> report-dictionary,function,loop
-  then
-  swap
-    "  " .s
-    add1 dup .
-  swap
-  dup jo->name
-  dup2 space-string? if
-    drop2
-    " un-named " .s .l
-  else
-    .s .l
-  then
-  jo->pre-jo
-  <> report-dictionary,function,loop
-; define-function
-
-: report-dictionary,function
-  << -- >>
-  "* all function in dictionary :" .s .l
-  0 *first-jo-in-dictionary*
-  report-dictionary,function,loop
-  end
-; define-function
-
-: report-dictionary,exception,loop
-  << counter, jo -- total >>
-  dup zero? if
-    drop
-    end
-  then
-  dup exception-jo? false? if
-    jo->pre-jo
-    <> report-dictionary,exception,loop
-  then
-  swap
-    "  " .s
-    add1 dup .
-  swap
-  dup jo->name
-  dup2 space-string? if
-    drop2
-    " un-named " .s .l
-  else
-    .s .l
-  then
-  jo->pre-jo
-  <> report-dictionary,exception,loop
-; define-function
-
-: report-dictionary,exception
-  << -- >>
-  "* all exception in dictionary :" .s .l
-  0 *first-jo-in-dictionary*
-  report-dictionary,exception,loop
-  end
-; define-function
-
-: report-dictionary,variable,loop
-  << counter, jo -- total >>
-  dup zero? if
-    drop
-    end
-  then
-  dup variable-jo? false? if
-    jo->pre-jo
-    <> report-dictionary,variable,loop
-  then
-  swap
-    "  " .s
-    add1 dup .
-  swap
-  dup jo->name
-  dup2 space-string? if
-    drop2
-    " un-named " .s .l
-  else
-    .s .l
-  then
-  jo->pre-jo
-  <> report-dictionary,variable,loop
-; define-function
-
-: report-dictionary,variable
-  << -- >>
-  "* all variable in dictionary :" .s .l
-  0 *first-jo-in-dictionary*
-  report-dictionary,variable,loop
+  list-dictionary,by-jo-predicate,loop
   end
 ; define-function
 
 : report-dictionary
   << -- >>
-  report-dictionary,primitive-function
-  report-dictionary,function add
-  report-dictionary,exception add
-  report-dictionary,variable add
+  "* all primitive-function in dictionary :" .s .l
+  jo primitive-function-jo?
+  list-dictionary,by-jo-predicate
+  "* all function in dictionary :" .s .l
+  jo function-jo?
+  list-dictionary,by-jo-predicate add
+  "* all exception in dictionary :" .s .l
+  jo exception-jo?
+  list-dictionary,by-jo-predicate add
+  "* all variable in dictionary :" .s .l
+  jo variable-jo?
+  list-dictionary,by-jo-predicate add
   "* totally : " .s
   .i .l
   end
@@ -949,14 +858,15 @@ init-syscall-number
     drop drop2
     end
   then
-  "  " .s
-  add1 dup .
+  "  * " .s
+  "(" .s
+  add1 dup .i
+  ")" .s .l
   swap
     dup cursor->predicate
-    jo->name .s
-    "  " .s
+    "    " .s jo->name .s .l
     dup cursor->function
-    jo->name .s .l
+    "    " .s jo->name .s .l
     *jo-size* sub *jo-size* sub
   swap
   <> list-rule,loop
@@ -1368,23 +1278,68 @@ init-syscall-number
   3 syscall
   dup
   negative? if
-    "* (creat-file) fail to open-port for : " .s ::path .s .l
+    "* (creat-file) fail to open port for the following path :" .s .l
+    "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
   close-port if
     end
   then
-  "* (creat-file) fail to close-port for : " .s ::path .s .l
+  "* (creat-file) fail to close port for the following path :" .s .l
+  "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
 : update-file
   << string[address, length], path[address, length] -- >>
-
+  >::path
+  >::string
+  ::path
+  string->syscall-string
+  >:syscall-path
+  8#644 <<
+  2#110100100
+  >>
+  8#1002 <<
+  O_RDWR   0002
+  O_TRUNC  1000
+  >>
+  :syscall-path
+  :syscall-number,open:
+  3 syscall
+  dup
+  negative? if
+    "* (update-file) fail to open port for the following path :" .s .l
+    "  " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  >:port
+  ::string swap
+  :port
+  :syscall-number,write:
+  3 syscall
+  dup
+  negative? if
+    "* (update-file) fail to write port for the following path :" .s .l
+    "  " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  >:counter << bytes been written >>
+  :port
+  close-port if
+    end
+  then
+  "* (update-file) fail to close port for the following path : " .s .l
+  "  " .s ::path .s .l
+  "  " .s error-code->string .s .l
   end
 ; define-function
+
+
 
 : poi,help
   << -- >>

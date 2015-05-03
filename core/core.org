@@ -1338,165 +1338,74 @@
    ; define-function
    #+end_src
 * report
+** list-dictionary,by-jo-predicate
+   * 最後寫到珠典裏的 被最先打印出來
+   #+begin_src cicada-nymph :tangle core.cn
+   : list-dictionary,by-jo-predicate,loop
+     << jo-predicate, counter, jo -- total >>
+     dup zero? if
+       drop
+       swap drop
+       end
+     then
+     dup x|over|xxx execute-jo false? if
+       jo->pre-jo
+       <> list-dictionary,by-jo-predicate,loop
+     then
+     swap
+       "  " .s
+       add1 dup .i ". " .s
+     swap
+     dup jo->name
+     dup2 space-string? if
+       drop2
+       "  unnamed" .s .l
+     else
+       .s .l
+     then
+     jo->pre-jo
+     <> list-dictionary,by-jo-predicate,loop
+   ; define-function
+
+   : list-dictionary,by-jo-predicate
+     << jo-predicate -- total >>
+     0 *first-jo-in-dictionary*
+     list-dictionary,by-jo-predicate,loop
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,list-dictionary,by-jo-predicate
+     << -- >>
+     jo primitive-function-jo? list-dictionary,by-jo-predicate
+     end
+   ; define-function
+   test,list-dictionary,by-jo-predicate
+   #+end_src
 ** report-dictionary
-*** 記
-    * 最後寫到珠典裏的
-      被最先打印出來
-*** report-dictionary,primitive-function
-    #+begin_src cicada-nymph :tangle core.cn
-    : report-dictionary,primitive-function,loop
-      << counter, jo -- total >>
-      dup zero? if
-        drop
-        end
-      then
-      dup primitive-function-jo? false? if
-        jo->pre-jo
-        <> report-dictionary,primitive-function,loop
-      then
-      swap
-        "  " .s
-        add1 dup .
-      swap
-      dup jo->name
-      dup2 space-string? if
-        drop2
-        " un-named " .s .l
-      else
-        .s .l
-      then
-      jo->pre-jo
-      <> report-dictionary,primitive-function,loop
-    ; define-function
-
-    : report-dictionary,primitive-function
-      << -- >>
-      "* all primitive-function in dictionary :" .s .l
-      0 *first-jo-in-dictionary*
-      report-dictionary,primitive-function,loop
-      end
-    ; define-function
-    #+end_src
-*** report-dictionary,function
-    #+begin_src cicada-nymph :tangle core.cn
-    : report-dictionary,function,loop
-      << counter, jo -- total >>
-      dup zero? if
-        drop
-        end
-      then
-      dup function-jo? false? if
-        jo->pre-jo
-        <> report-dictionary,function,loop
-      then
-      swap
-        "  " .s
-        add1 dup .
-      swap
-      dup jo->name
-      dup2 space-string? if
-        drop2
-        " un-named " .s .l
-      else
-        .s .l
-      then
-      jo->pre-jo
-      <> report-dictionary,function,loop
-    ; define-function
-
-    : report-dictionary,function
-      << -- >>
-      "* all function in dictionary :" .s .l
-      0 *first-jo-in-dictionary*
-      report-dictionary,function,loop
-      end
-    ; define-function
-    #+end_src
-*** report-dictionary,exception
-    #+begin_src cicada-nymph :tangle core.cn
-    : report-dictionary,exception,loop
-      << counter, jo -- total >>
-      dup zero? if
-        drop
-        end
-      then
-      dup exception-jo? false? if
-        jo->pre-jo
-        <> report-dictionary,exception,loop
-      then
-      swap
-        "  " .s
-        add1 dup .
-      swap
-      dup jo->name
-      dup2 space-string? if
-        drop2
-        " un-named " .s .l
-      else
-        .s .l
-      then
-      jo->pre-jo
-      <> report-dictionary,exception,loop
-    ; define-function
-
-    : report-dictionary,exception
-      << -- >>
-      "* all exception in dictionary :" .s .l
-      0 *first-jo-in-dictionary*
-      report-dictionary,exception,loop
-      end
-    ; define-function
-    #+end_src
-*** report-dictionary,variable
-    #+begin_src cicada-nymph :tangle core.cn
-    : report-dictionary,variable,loop
-      << counter, jo -- total >>
-      dup zero? if
-        drop
-        end
-      then
-      dup variable-jo? false? if
-        jo->pre-jo
-        <> report-dictionary,variable,loop
-      then
-      swap
-        "  " .s
-        add1 dup .
-      swap
-      dup jo->name
-      dup2 space-string? if
-        drop2
-        " un-named " .s .l
-      else
-        .s .l
-      then
-      jo->pre-jo
-      <> report-dictionary,variable,loop
-    ; define-function
-
-    : report-dictionary,variable
-      << -- >>
-      "* all variable in dictionary :" .s .l
-      0 *first-jo-in-dictionary*
-      report-dictionary,variable,loop
-      end
-    ; define-function
-    #+end_src
-*** report-dictionary
-    * different types of words in dictionary
-      are showed separately
-    #+begin_src cicada-nymph :tangle core.cn
-    : report-dictionary
-      << -- >>
-      report-dictionary,primitive-function
-      report-dictionary,function add
-      report-dictionary,exception add
-      report-dictionary,variable add
-      "* totally : " .s
-      .i .l
-      end
-    ; define-function
-    #+end_src
+   * different types of words in dictionary
+     are showed separately
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-dictionary
+     << -- >>
+     "* all primitive-function in dictionary :" .s .l
+     jo primitive-function-jo?
+     list-dictionary,by-jo-predicate
+     "* all function in dictionary :" .s .l
+     jo function-jo?
+     list-dictionary,by-jo-predicate add
+     "* all exception in dictionary :" .s .l
+     jo exception-jo?
+     list-dictionary,by-jo-predicate add
+     "* all variable in dictionary :" .s .l
+     jo variable-jo?
+     list-dictionary,by-jo-predicate add
+     "* totally : " .s
+     .i .l
+     end
+   ; define-function
+   #+end_src
 ** report-memory
    #+begin_src cicada-nymph :tangle core.cn
    : report-memory
@@ -1575,8 +1484,10 @@
    ; define-function
    #+end_src
 ** list-rule
-   * 最後寫到規則集合裏的
-     被最先打印出來
+   * 最後寫到規則集合裏的 被最先打印出來
+   * 下面的打印方式 看似有些不簡潔
+     是因爲 我還沒有 integer->string 這樣的函數
+     [因爲 沒有對字符串的動態內存管理]
    #+begin_src cicada-nymph :tangle core.cn
    : list-rule,loop
      << rule-set, cursor, counter -- >>
@@ -1584,14 +1495,15 @@
        drop drop2
        end
      then
-     "  " .s
-     add1 dup .
+     "  * " .s
+     "(" .s
+     add1 dup .i
+     ")" .s .l
      swap
        dup cursor->predicate
-       jo->name .s
-       "  " .s
+       "    " .s jo->name .s .l
        dup cursor->function
-       jo->name .s .l
+       "    " .s jo->name .s .l
        *jo-size* sub *jo-size* sub
      swap
      <> list-rule,loop
@@ -2205,15 +2117,20 @@
      * the concept of port is
        completely removed from the interface
      --------------------------------
-     1. creat-file
-        update-file
-     2. creat-directory
-        rename-directory
-     3. remove-file
-        remove-directory
-     4. find-file-in-directory
-        list-file-in-directory
-        directory-empty?
+     * for file
+       1. creat-file
+       2. update-file
+       3. rename-file
+       4. move-file
+       5. remove-file
+     * for dictionary
+       1. creat-directory
+       2. rename-directory
+       3. move-directory
+       4. remove-directory
+       5. find-file-in-directory
+       6. list-file-in-directory
+       7. directory-empty?
 ** 記 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
@@ -2251,23 +2168,17 @@
      3 syscall
      dup
      negative? if
-       "* (creat-file) fail to open-port for : " .s ::path .s .l
+       "* (creat-file) fail to open port for the following path :" .s .l
+       "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
      close-port if
        end
      then
-     "* (creat-file) fail to close-port for : " .s ::path .s .l
+     "* (creat-file) fail to close port for the following path :" .s .l
+     "  " .s ::path .s .l
      "  " .s error-code->string .s .l
-     end
-   ; define-function
-   #+end_src
-** update-file
-   #+begin_src cicada-nymph :tangle core.cn
-   : update-file
-     << string[address, length], path[address, length] -- >>
-
      end
    ; define-function
    #+end_src
@@ -2280,6 +2191,69 @@
      end
    ; define-function
    test,creat-file
+   #+end_src
+** update-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : update-file
+     << string[address, length], path[address, length] -- >>
+     >::path
+     >::string
+     ::path
+     string->syscall-string
+     >:syscall-path
+     8#644 <<
+     2#110100100
+     >>
+     8#1002 <<
+     O_RDWR   0002
+     O_TRUNC  1000
+     >>
+     :syscall-path
+     :syscall-number,open:
+     3 syscall
+     dup
+     negative? if
+       "* (update-file) fail to open port for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     >:port
+     ::string swap
+     :port
+     :syscall-number,write:
+     3 syscall
+     dup
+     negative? if
+       "* (update-file) fail to write port for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     >:counter << bytes been written >>
+     :port
+     close-port if
+       end
+     then
+     "* (update-file) fail to close port for the following path : " .s .l
+     "  " .s ::path .s .l
+     "  " .s error-code->string .s .l
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,update-file
+     << -- >>
+     "kkk~" creat-file
+     "kkk took my baby away !!!" "kkk~" update-file
+     end
+   ; define-function
+   test,update-file
+   #+end_src
+** rename-file
+   #+begin_src cicada-nymph :tangle core.cn
+
    #+end_src
 * poi
 ** note
