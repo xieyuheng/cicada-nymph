@@ -1346,7 +1346,7 @@
      << -- >>
      snapshot-the-stack-pointer
      .l
-     "  # " .s
+     "  * " .s
         *the-stack-pointer-snapshot*
         *the-stack* sub
         << ad hoc for the BUG of div >>
@@ -1358,7 +1358,7 @@
           *jo-size* div
         then
         .i
-     " # " .s
+     " * " .s
      " -- " .s
        print-argument-stack
      "--" .s
@@ -1994,284 +1994,6 @@
    ; define-function
    test,port,read
    #+end_src
-* path
-** 記 syntax about path
-   * 利用了系統的路徑格式
-     同時又把系統的路徑格式抽象掉了
-   #+begin_src cicada-nymph
-   {path: home xyh cicada core.cn}
-   "/home/xyh/cicada/core.cn"
-
-   {path: home xyh cicada}
-   "/home/xyh/cicada"
-
-   {path: +working+ core.cn}
-   "./core.cn"
-
-   {path: +parent+ cicada core.cn}
-   "../cicada/core.cn"
-
-   {path: +library+ kkk main.cn}
-   "/home/xyh/.cicada/library/kkk/main.cn"
-   #+end_src
-** relative-path?
-** full-path?
-** stat structure
-   #+begin_src cicada-nymph :tangle core.cn
-   0 : +stat,st_dev+        ; define-variable
-   0 : +stat,st_ino+        ; define-variable
-   0 : +stat,st_mode+       ; define-variable
-   0 : +stat,st_nlink+      ; define-variable
-   0 : +stat,st_uid+        ; define-variable
-   0 : +stat,st_gid+        ; define-variable
-   0 : +stat,st_rdev+       ; define-variable
-   0 : +stat,st_size+       ; define-variable
-   0 : +stat,st_blksize+    ; define-variable
-   0 : +stat,st_blocks+     ; define-variable
-   0 : +stat,st_atime+      ; define-variable
-   0 : +stat,st_atime_nsec+ ; define-variable
-   0 : +stat,st_mtime+      ; define-variable
-   0 : +stat,st_mtime_nsec+ ; define-variable
-   0 : +stat,st_ctime+      ; define-variable
-   0 : +stat,st_ctime_nsec+ ; define-variable
-   0 : +stat,__unused4+     ; define-variable
-   0 : +stat,__unused5+     ; define-variable
-   0 : +stat,end+           ; define-variable
-
-   : init,stat
-     << offset -- >>
-     *jo-size* 4 equal? if
-       dup address +stat,st_dev+        save *jo-size* add
-       dup address +stat,st_ino+        save *jo-size* add
-       dup address +stat,st_mode+       save 2 add
-       dup address +stat,st_nlink+      save 2 add
-       dup address +stat,st_uid+        save 2 add
-       dup address +stat,st_gid+        save 2 add
-       dup address +stat,st_rdev+       save *jo-size* add
-       dup address +stat,st_size+       save *jo-size* add
-       dup address +stat,st_blksize+    save *jo-size* add
-       dup address +stat,st_blocks+     save *jo-size* add
-       dup address +stat,st_atime+      save *jo-size* add
-       dup address +stat,st_atime_nsec+ save *jo-size* add
-       dup address +stat,st_mtime+      save *jo-size* add
-       dup address +stat,st_mtime_nsec+ save *jo-size* add
-       dup address +stat,st_ctime+      save *jo-size* add
-       dup address +stat,st_ctime_nsec+ save *jo-size* add
-       dup address +stat,__unused4+     save *jo-size* add
-       dup address +stat,__unused5+     save *jo-size* add
-           address +stat,end+           save
-       end
-     then
-     *jo-size* 8 equal? if
-       dup address +stat,st_dev+        save *jo-size* add
-       dup address +stat,st_ino+        save *jo-size* add
-       <<
-       note the following order changing
-       this is linux' bad
-       >>
-       dup address +stat,st_nlink+      save 8 add
-       dup address +stat,st_mode+       save 4 add
-
-       dup address +stat,st_uid+        save 4 add
-       dup address +stat,st_gid+        save 4 add
-                                             4 add << padding >>
-       dup address +stat,st_rdev+       save *jo-size* add
-       dup address +stat,st_size+       save *jo-size* add
-       dup address +stat,st_blksize+    save *jo-size* add
-       dup address +stat,st_blocks+     save *jo-size* add
-       dup address +stat,st_atime+      save *jo-size* add
-       dup address +stat,st_atime_nsec+ save *jo-size* add
-       dup address +stat,st_mtime+      save *jo-size* add
-       dup address +stat,st_mtime_nsec+ save *jo-size* add
-       dup address +stat,st_ctime+      save *jo-size* add
-       dup address +stat,st_ctime_nsec+ save *jo-size* add
-       dup address +stat,__unused4+     save *jo-size* add
-       dup address +stat,__unused5+     save *jo-size* add
-           address +stat,end+           save
-       end
-     then
-     end
-   ; define-function
-
-   0 init,stat
-   +stat,end+ : +stat,length+ ; define-variable
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test,stat
-     << path[address, length] -- >>
-     string->syscall-string
-     >:syscall-path
-     +stat,length+ allocate-local-memory
-     >:stat-structure
-     :stat-structure
-     :syscall-path
-     :syscall-number,stat:
-     2 syscall
-     dup
-     negative? if
-       dup .
-       error-code->string .s .l
-       end
-     then
-     drop
-     :stat-structure init,stat
-     "+stat,st_dev+ : " .s +stat,st_dev+        fetch . .l
-     "+stat,st_ino+ : " .s +stat,st_ino+        fetch . .l
-     *jo-size* 4 equal? if
-     "+stat,st_mode+ : " .s +stat,st_mode+       fetch-two-bytes  . .l
-     "+stat,st_nlink+ : " .s +stat,st_nlink+      fetch-two-bytes  . .l
-     "+stat,st_uid+ : " .s +stat,st_uid+        fetch-two-bytes  . .l
-     "+stat,st_gid+ : " .s +stat,st_gid+        fetch-two-bytes  . .l
-     then
-     *jo-size* 8 equal? if
-     "+stat,st_nlink+ : " .s +stat,st_nlink+      fetch  . .l
-     "+stat,st_mode+ : " .s +stat,st_mode+       fetch-four-bytes  . .l
-     "+stat,st_uid+ : " .s +stat,st_uid+        fetch-four-bytes  . .l
-     "+stat,st_gid+ : " .s +stat,st_gid+        fetch-four-bytes  . .l
-     then
-     "+stat,st_rdev+ : " .s +stat,st_rdev+       fetch . .l
-     "+stat,st_size+ : " .s +stat,st_size+       fetch . .l
-     "+stat,st_blksize+ : " .s +stat,st_blksize+    fetch . .l
-     "+stat,st_blocks+ : " .s +stat,st_blocks+     fetch . .l
-     "+stat,st_atime+ : " .s +stat,st_atime+      fetch . .l
-     "+stat,st_atime_nsec+ : " .s +stat,st_atime_nsec+ fetch . .l
-     "+stat,st_mtime+ : " .s +stat,st_mtime+      fetch . .l
-     "+stat,st_mtime_nsec+ : " .s +stat,st_mtime_nsec+ fetch . .l
-     "+stat,st_ctime+ : " .s +stat,st_ctime+      fetch . .l
-     "+stat,st_ctime_nsec+ : " .s +stat,st_ctime_nsec+ fetch . .l
-     "+stat,__unused4+ : " .s +stat,__unused4+     fetch . .l
-     "+stat,__unused5+ : " .s +stat,__unused5+     fetch . .l
-     end
-   ; define-function
-
-   : cn ;
-   test,stat
-
-   : no ;
-   test,stat
-   #+end_src
-** note predicate
-   * to use predicate to know more about the file-tree
-     before calling a function that makes action on the file-tree
-** path,nothing?
-   #+begin_src cicada-nymph :tangle core.cn
-   : path,nothing?
-     << path[address, length] -- bool >>
-     string->syscall-string
-     >:syscall-path
-     +stat,length+ allocate-local-memory
-     >:stat-structure
-     :stat-structure
-     :syscall-path
-     :syscall-number,stat:
-     2 syscall
-     -2 equal?
-     end
-   ; define-function
-   #+end_src
-** path,file?
-   #+begin_src cicada-nymph :tangle core.cn
-   : path,file?
-     << path[address, length] -- bool >>
-     string->syscall-string
-     >:syscall-path
-     +stat,length+ allocate-local-memory
-     >:stat-structure
-     :stat-structure
-     :syscall-path
-     :syscall-number,stat:
-     2 syscall
-     dup
-     negative? if
-       drop
-       false
-       end
-     then
-     drop
-     :stat-structure init,stat
-     *jo-size* 4 equal? if
-       +stat,st_mode+
-       fetch-two-bytes
-     then
-     *jo-size* 8 equal? if
-       +stat,st_mode+
-       fetch-four-bytes
-     then
-     12 bit-right
-     8#0010
-     equal?
-     <<
-     0170000
-     S_IFDIR       0040000 /* Directory.  */
-     S_IFCHR       0020000 /* Character device.  */
-     S_IFBLK       0060000 /* Block device.  */
-     S_IFREG       0100000 /* Regular file.  */
-     S_IFIFO       0010000 /* FIFO.  */
-     S_IFLNK       0120000 /* Symbolic link.  */
-     S_IFSOCK      0140000 /* Socket.  */
-     >>
-     end
-   ; define-function
-   #+end_src
-** path,directory?
-   #+begin_src cicada-nymph :tangle core.cn
-   : path,directory?
-     << path[address, length] -- bool >>
-     string->syscall-string
-     >:syscall-path
-     +stat,length+ allocate-local-memory
-     >:stat-structure
-     :stat-structure
-     :syscall-path
-     :syscall-number,stat:
-     2 syscall
-     dup
-     negative? if
-       drop
-       false
-       end
-     then
-     drop
-     :stat-structure init,stat
-     *jo-size* 4 equal? if
-       +stat,st_mode+
-       fetch-two-bytes
-     then
-     *jo-size* 8 equal? if
-       +stat,st_mode+
-       fetch-four-bytes
-     then
-     12 bit-right
-     8#0004
-     equal?
-     <<
-     0170000
-     S_IFDIR       00040000 /* Directory.  */
-     S_IFCHR       00020000 /* Character device.  */
-     S_IFBLK       00060000 /* Block device.  */
-     S_IFREG       00100000 /* Regular file.  */
-     S_IFIFO       00010000 /* FIFO.  */
-     S_IFLNK       00120000 /* Symbolic link.  */
-     S_IFSOCK      00140000 /* Socket.  */
-     >>
-     end
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : cn ; path,nothing? . << 0 >>
-   : core ; path,nothing? . << 0 >>
-   : ai ; path,nothing? . << 1 >>
-
-   : cn ; path,file? . << 1 >>
-   : core ; path,file? . << 0 >>
-   : ai ; path,file? . << 0 >>
-
-   : cn ; path,directory? . << 0 >>
-   : core ; path,directory? . << 1 >>
-   : ai ; path,directory? . << 0 >>
-   #+end_src
 * file-tree
 ** note interface
    * file-tree
@@ -2576,9 +2298,7 @@
      >:cursor
      :cursor init,getdents64
      test,getdents64,print
-     :cursor
-     +getdents64,d_reclen+ fetch-two-bytes
-     add
+     :cursor +getdents64,d_reclen+ fetch-two-bytes add
      <> test,getdents64,loop,structure
    ; define-function
 
@@ -2593,7 +2313,6 @@
      3 syscall
      "* syscall returns : " .s dup .i .l
      dup negative? if
-       dup .
        error-code->string .s .l
        end
      then
@@ -2622,8 +2341,7 @@
      :port port,close if
        end
      then
-     "* (test,getdents64) fail to close : " .s .i .l
-     "  path : " .s ::path .s .l
+     "* (test,getdents64) fail to close : " .s ::path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
@@ -2663,8 +2381,7 @@
      :port port,close if
        end
      then
-     "* (empty-directory?) fail to close : " .s .i .l
-     "  path : " .s ::path .s .l
+     "* (empty-directory?) fail to close : " .s ::path .s .l
      "  " .s error-code->string .s .l
      false
      end
@@ -2687,40 +2404,36 @@
    : / ;
    empty-directory? . .l
    #+end_src
-** directory,list-file
+** directory,list-by-file-type-code
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,list-file,print
-     << -- >>
-     +getdents64,d_type+ fetch-byte
-     8 equal? not if
-       end
-     then
-     "  " .s
-     +getdents64,d_name+
-     dup 256
-     0 string,find-char
-     drop  << drop 0 >>
-     over sub .s .l
-     end
-   ; define-function
-
-   : directory,list-file,loop,structure
-     << end, cursor -- >>
+   : directory,list-by-file-type-code,loop,print
+     << end, cursor, file-type-code -- >>
+     >:file-type-code
      dup2 less-or-equal? if
        drop2
        end
      then
      >:cursor
      :cursor init,getdents64
-     directory,list-file,print
+     +getdents64,d_type+ fetch-byte
+     :file-type-code equal? if
+       "  " .s
+       +getdents64,d_name+
+       dup 256
+       0 string,find-char
+       drop  << drop 0 >>
+       over sub .s .l
+     then
      :cursor
      +getdents64,d_reclen+ fetch-two-bytes
      add
-     <> directory,list-file,loop,structure
+     :file-type-code
+     <> directory,list-by-file-type-code,loop,print
    ; define-function
 
-   : directory,list-file,loop
-     << port -- >>
+   : directory,list-by-file-type-code,loop
+     << port, file-type-code -- >>
+     >:file-type-code
      >:port
      1024 allocate-local-memory >:getdents64-structure-list
      1024
@@ -2729,7 +2442,6 @@
      :syscall-number,getdents64:
      3 syscall
      dup negative? if
-       dup .
        error-code->string .s .l
        end
      then
@@ -2739,105 +2451,46 @@
      then
      :getdents64-structure-list add
      :getdents64-structure-list
-     directory,list-file,loop,structure
+     :file-type-code
+     directory,list-by-file-type-code,loop,print
      :port
-     <> directory,list-file,loop
+     :file-type-code
+     <> directory,list-by-file-type-code,loop
    ; define-function
 
-   : directory,list-file
-     << directory-path[address, length] -- >>
+   : directory,list-by-file-type-code
+     << directory-path[address, length], file-type-code -- >>
+     >:file-type-code
      >::path
      ::path input-port,open if
      else
-       "* (directory,list-file) fail to open : " .s ::path .s .l
+       "* (directory,list-by-file-type-code) fail to open : " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
      >:port
-     :port directory,list-file,loop
+     :port :file-type-code directory,list-by-file-type-code,loop
      :port port,close if
        end
      then
-     "* (directory,list-file) fail to close : " .s .i .l
-     "  path : " .s ::path .s .l
+     "* (directory,list-by-file-type-code) fail to close : " .s ::path .s .l
      "  " .s error-code->string .s .l
+     end
+   ; define-function
+   #+end_src
+** directory,list-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,list-file
+     << directory-path[address, length] -- >>
+     8 directory,list-by-file-type-code
      end
    ; define-function
    #+end_src
 ** directory,list-directory
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,list-directory,print
-     << -- >>
-     +getdents64,d_type+ fetch-byte
-     4 equal? not if
-       end
-     then
-     "  " .s
-     +getdents64,d_name+
-     dup 256
-     0 string,find-char
-     drop  << drop 0 >>
-     over sub .s .l
-     end
-   ; define-function
-
-   : directory,list-directory,loop,structure
-     << end, cursor -- >>
-     dup2 less-or-equal? if
-       drop2
-       end
-     then
-     >:cursor
-     :cursor init,getdents64
-     directory,list-directory,print
-     :cursor
-     +getdents64,d_reclen+ fetch-two-bytes
-     add
-     <> directory,list-directory,loop,structure
-   ; define-function
-
-   : directory,list-directory,loop
-     << port -- >>
-     >:port
-     1024 allocate-local-memory >:getdents64-structure-list
-     1024
-     :getdents64-structure-list
-     :port
-     :syscall-number,getdents64:
-     3 syscall
-     dup negative? if
-       dup .
-       error-code->string .s .l
-       end
-     then
-     dup zero? if
-       drop
-       end
-     then
-     :getdents64-structure-list add
-     :getdents64-structure-list
-     directory,list-directory,loop,structure
-     :port
-     <> directory,list-directory,loop
-   ; define-function
-
    : directory,list-directory
      << directory-path[address, length] -- >>
-     >::path
-     ::path input-port,open if
-     else
-       "* (directory,list-directory) fail to open : " .s ::path .s .l
-       "  " .s error-code->string .s .l
-       end
-     then
-     >:port
-     :port directory,list-directory,loop
-     :port port,close if
-       end
-     then
-     "* (directory,list-directory) fail to close : " .s .i .l
-     "  path : " .s ::path .s .l
-     "  " .s error-code->string .s .l
+     4 directory,list-by-file-type-code
      end
    ; define-function
    #+end_src
@@ -2859,15 +2512,425 @@
    dup2 directory,list-file
    directory,list-directory
    #+end_src
-** >< directory,find-file
+** directory,find-by-file-type-code
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,find-file
-     << directory-path[address, length], file-path[address, length] -- >>
+   : directory,find-by-file-type-code,loop,find
+     << end, cursor, file-name[address, length], file-type-code -- bool >>
+     >:file-type-code
+     >::file-name
+     dup2 less-or-equal? if
+       drop2
+       false
+       end
+     then
+     >:cursor
+     >:end
+     :cursor init,getdents64
+     +getdents64,d_type+ fetch-byte :file-type-code equal? if
+       ::file-name +getdents64,d_name+
+       dup2 add fetch-byte zero? if
+         over string-equal? if
+           true
+           end
+         then
+       else
+         drop drop2
+       then
+     then
+     :end
+     :cursor +getdents64,d_reclen+ fetch-two-bytes add
+     ::file-name
+     :file-type-code
+     <> directory,find-by-file-type-code,loop,find
+   ; define-function
 
+   : directory,find-by-file-type-code,loop
+     << port, file-name[address, length], file-type-code -- bool >>
+     >:file-type-code
+     >::file-name
+     >:port
+     1024 allocate-local-memory >:getdents64-structure-list
+     1024
+     :getdents64-structure-list
+     :port
+     :syscall-number,getdents64:
+     3 syscall
+     dup negative? if
+       "* (directory,find-by-file-type-code,loop) syscall fail" .s .l
+       "  " .s error-code->string .s .l
+       false
+       end
+     then
+     dup zero? if
+       << zero as false >>
+       end
+     then
+     :getdents64-structure-list add
+     :getdents64-structure-list
+     ::file-name
+     :file-type-code
+     directory,find-by-file-type-code,loop,find if
+       true
+       end
+     then
+     :port
+     ::file-name
+     :file-type-code
+     <> directory,find-by-file-type-code,loop
+   ; define-function
+
+   : directory,find-by-file-type-code
+     << directory-path[address, length],
+        file-name[address, length],
+        file-type-code
+        -- true
+        -- false >>
+     >:file-type-code
+     >::file-name
+     >::directory-path
+     ::directory-path input-port,open if
+     else
+       "* (directory,find-by-file-type-code) fail to open : " .s ::directory-path .s .l
+       "  " .s error-code->string .s .l
+       false
+       end
+     then
+     >:port
+     :port ::file-name :file-type-code directory,find-by-file-type-code,loop
+     :port port,close if
+       end
+     then
+     "* (directory,find-by-file-type-code) fail to close : " .s ::directory-path .s .l
+     "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
-** >< directory,find-directory
+** directory,find-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,find-file
+     << directory-path[address, length],
+        file-name[address, length]
+        -- true
+        -- false >>
+     8 directory,find-by-file-type-code
+     end
+   ; define-function
+   #+end_src
+** directory,find-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,find-directory
+     << directory-path[address, length],
+        file-name[address, length]
+        -- true
+        -- false >>
+     4 directory,find-by-file-type-code
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,directory,find-file
+     << -- >>
+     "play" "cn" directory,find-file .
+     "play" "kkk" directory,find-file .
+     "play" "no" directory,find-file .
+     .l
+     "playlay" "no" directory,find-file .
+     .l
+     end
+   ; define-function
+   test,directory,find-file
+
+   : test,directory,find-directory
+     << -- >>
+     "play" "cn" directory,find-directory .
+     "play" "kkk" directory,find-directory .
+     "play" "no" directory,find-directory .
+     .l
+     "playlay" "no" directory,find-directory .
+     .l
+     end
+   ; define-function
+   test,directory,find-directory
+   #+end_src
+* path
+** 記 syntax about path
+   * 利用了系統的路徑格式
+     同時又把系統的路徑格式抽象掉了
+   #+begin_src cicada-nymph
+   {path: home xyh cicada core.cn}
+   "/home/xyh/cicada/core.cn"
+
+   {path: home xyh cicada}
+   "/home/xyh/cicada"
+
+   {path: +working+ core.cn}
+   "./core.cn"
+
+   {path: +parent+ cicada core.cn}
+   "../cicada/core.cn"
+
+   {path: +library+ kkk main.cn}
+   "/home/xyh/.cicada/library/kkk/main.cn"
+   #+end_src
+** relative-path?
+** full-path?
+** stat structure
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : +stat,st_dev+        ; define-variable
+   0 : +stat,st_ino+        ; define-variable
+   0 : +stat,st_mode+       ; define-variable
+   0 : +stat,st_nlink+      ; define-variable
+   0 : +stat,st_uid+        ; define-variable
+   0 : +stat,st_gid+        ; define-variable
+   0 : +stat,st_rdev+       ; define-variable
+   0 : +stat,st_size+       ; define-variable
+   0 : +stat,st_blksize+    ; define-variable
+   0 : +stat,st_blocks+     ; define-variable
+   0 : +stat,st_atime+      ; define-variable
+   0 : +stat,st_atime_nsec+ ; define-variable
+   0 : +stat,st_mtime+      ; define-variable
+   0 : +stat,st_mtime_nsec+ ; define-variable
+   0 : +stat,st_ctime+      ; define-variable
+   0 : +stat,st_ctime_nsec+ ; define-variable
+   0 : +stat,__unused4+     ; define-variable
+   0 : +stat,__unused5+     ; define-variable
+   0 : +stat,end+           ; define-variable
+
+   : init,stat
+     << offset -- >>
+     *jo-size* 4 equal? if
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
+       dup address +stat,st_mode+       save 2 add
+       dup address +stat,st_nlink+      save 2 add
+       dup address +stat,st_uid+        save 2 add
+       dup address +stat,st_gid+        save 2 add
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
+       end
+     then
+     *jo-size* 8 equal? if
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
+       <<
+       note the following order changing
+       this is linux' bad
+       >>
+       dup address +stat,st_nlink+      save 8 add
+       dup address +stat,st_mode+       save 4 add
+
+       dup address +stat,st_uid+        save 4 add
+       dup address +stat,st_gid+        save 4 add
+                                             4 add << padding >>
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
+       end
+     then
+     end
+   ; define-function
+
+   0 init,stat
+   +stat,end+ : +stat,length+ ; define-variable
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,stat
+     << path[address, length] -- >>
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     dup
+     negative? if
+       dup .
+       error-code->string .s .l
+       end
+     then
+     drop
+     :stat-structure init,stat
+     "+stat,st_dev+ : " .s +stat,st_dev+        fetch . .l
+     "+stat,st_ino+ : " .s +stat,st_ino+        fetch . .l
+     *jo-size* 4 equal? if
+     "+stat,st_mode+ : " .s +stat,st_mode+       fetch-two-bytes  . .l
+     "+stat,st_nlink+ : " .s +stat,st_nlink+      fetch-two-bytes  . .l
+     "+stat,st_uid+ : " .s +stat,st_uid+        fetch-two-bytes  . .l
+     "+stat,st_gid+ : " .s +stat,st_gid+        fetch-two-bytes  . .l
+     then
+     *jo-size* 8 equal? if
+     "+stat,st_nlink+ : " .s +stat,st_nlink+      fetch  . .l
+     "+stat,st_mode+ : " .s +stat,st_mode+       fetch-four-bytes  . .l
+     "+stat,st_uid+ : " .s +stat,st_uid+        fetch-four-bytes  . .l
+     "+stat,st_gid+ : " .s +stat,st_gid+        fetch-four-bytes  . .l
+     then
+     "+stat,st_rdev+ : " .s +stat,st_rdev+       fetch . .l
+     "+stat,st_size+ : " .s +stat,st_size+       fetch . .l
+     "+stat,st_blksize+ : " .s +stat,st_blksize+    fetch . .l
+     "+stat,st_blocks+ : " .s +stat,st_blocks+     fetch . .l
+     "+stat,st_atime+ : " .s +stat,st_atime+      fetch . .l
+     "+stat,st_atime_nsec+ : " .s +stat,st_atime_nsec+ fetch . .l
+     "+stat,st_mtime+ : " .s +stat,st_mtime+      fetch . .l
+     "+stat,st_mtime_nsec+ : " .s +stat,st_mtime_nsec+ fetch . .l
+     "+stat,st_ctime+ : " .s +stat,st_ctime+      fetch . .l
+     "+stat,st_ctime_nsec+ : " .s +stat,st_ctime_nsec+ fetch . .l
+     "+stat,__unused4+ : " .s +stat,__unused4+     fetch . .l
+     "+stat,__unused5+ : " .s +stat,__unused5+     fetch . .l
+     end
+   ; define-function
+
+   : cn ;
+   test,stat
+
+   : no ;
+   test,stat
+   #+end_src
+** note predicate
+   * to use predicate to know more about the file-tree
+     before calling a function that makes action on the file-tree
+** path,nothing?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path,nothing?
+     << path[address, length] -- bool >>
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     -2 equal?
+     end
+   ; define-function
+   #+end_src
+** path,file?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path,file?
+     << path[address, length] -- bool >>
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     dup
+     negative? if
+       drop
+       false
+       end
+     then
+     drop
+     :stat-structure init,stat
+     *jo-size* 4 equal? if
+       +stat,st_mode+
+       fetch-two-bytes
+     then
+     *jo-size* 8 equal? if
+       +stat,st_mode+
+       fetch-four-bytes
+     then
+     12 bit-right
+     8#0010
+     equal?
+     <<
+     0170000
+     S_IFDIR       0040000 /* Directory.  */
+     S_IFCHR       0020000 /* Character device.  */
+     S_IFBLK       0060000 /* Block device.  */
+     S_IFREG       0100000 /* Regular file.  */
+     S_IFIFO       0010000 /* FIFO.  */
+     S_IFLNK       0120000 /* Symbolic link.  */
+     S_IFSOCK      0140000 /* Socket.  */
+     >>
+     end
+   ; define-function
+   #+end_src
+** path,directory?
+   #+begin_src cicada-nymph :tangle core.cn
+   : path,directory?
+     << path[address, length] -- bool >>
+     string->syscall-string
+     >:syscall-path
+     +stat,length+ allocate-local-memory
+     >:stat-structure
+     :stat-structure
+     :syscall-path
+     :syscall-number,stat:
+     2 syscall
+     dup
+     negative? if
+       drop
+       false
+       end
+     then
+     drop
+     :stat-structure init,stat
+     *jo-size* 4 equal? if
+       +stat,st_mode+
+       fetch-two-bytes
+     then
+     *jo-size* 8 equal? if
+       +stat,st_mode+
+       fetch-four-bytes
+     then
+     12 bit-right
+     8#0004
+     equal?
+     <<
+     0170000
+     S_IFDIR       00040000 /* Directory.  */
+     S_IFCHR       00020000 /* Character device.  */
+     S_IFBLK       00060000 /* Block device.  */
+     S_IFREG       00100000 /* Regular file.  */
+     S_IFIFO       00010000 /* FIFO.  */
+     S_IFLNK       00120000 /* Symbolic link.  */
+     S_IFSOCK      00140000 /* Socket.  */
+     >>
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : cn ; path,nothing? . << 0 >>
+   : core ; path,nothing? . << 0 >>
+   : ai ; path,nothing? . << 1 >>
+
+   : cn ; path,file? . << 1 >>
+   : core ; path,file? . << 0 >>
+   : ai ; path,file? . << 0 >>
+
+   : cn ; path,directory? . << 0 >>
+   : core ; path,directory? . << 1 >>
+   : ai ; path,directory? . << 0 >>
+   #+end_src
 * poi
 ** note
    * poi denotes path-organizer
@@ -2956,15 +3019,6 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,show
      << name[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-* load-file
-** ><
-   #+begin_src cicada-nymph :tangle core.cn
-   : load-file
-     << ??? -- >>
 
      end
    ; define-function

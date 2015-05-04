@@ -654,7 +654,7 @@ basic-REPL
   << -- >>
   snapshot-the-stack-pointer
   .l
-  "  # " .s
+  "  * " .s
      *the-stack-pointer-snapshot*
      *the-stack* sub
      << ad hoc for the BUG of div >>
@@ -666,7 +666,7 @@ basic-REPL
        *jo-size* div
      then
      .i
-  " # " .s
+  " * " .s
   " -- " .s
     print-argument-stack
   "--" .s
@@ -1154,182 +1154,6 @@ init-syscall-number
   end
 ; define-function
 
-0 : +stat,st_dev+        ; define-variable
-0 : +stat,st_ino+        ; define-variable
-0 : +stat,st_mode+       ; define-variable
-0 : +stat,st_nlink+      ; define-variable
-0 : +stat,st_uid+        ; define-variable
-0 : +stat,st_gid+        ; define-variable
-0 : +stat,st_rdev+       ; define-variable
-0 : +stat,st_size+       ; define-variable
-0 : +stat,st_blksize+    ; define-variable
-0 : +stat,st_blocks+     ; define-variable
-0 : +stat,st_atime+      ; define-variable
-0 : +stat,st_atime_nsec+ ; define-variable
-0 : +stat,st_mtime+      ; define-variable
-0 : +stat,st_mtime_nsec+ ; define-variable
-0 : +stat,st_ctime+      ; define-variable
-0 : +stat,st_ctime_nsec+ ; define-variable
-0 : +stat,__unused4+     ; define-variable
-0 : +stat,__unused5+     ; define-variable
-0 : +stat,end+           ; define-variable
-
-: init,stat
-  << offset -- >>
-  *jo-size* 4 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
-    dup address +stat,st_mode+       save 2 add
-    dup address +stat,st_nlink+      save 2 add
-    dup address +stat,st_uid+        save 2 add
-    dup address +stat,st_gid+        save 2 add
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
-    end
-  then
-  *jo-size* 8 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
-    <<
-    note the following order changing
-    this is linux' bad
-    >>
-    dup address +stat,st_nlink+      save 8 add
-    dup address +stat,st_mode+       save 4 add
-
-    dup address +stat,st_uid+        save 4 add
-    dup address +stat,st_gid+        save 4 add
-                                          4 add << padding >>
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
-    end
-  then
-  end
-; define-function
-
-0 init,stat
-+stat,end+ : +stat,length+ ; define-variable
-
-: path,nothing?
-  << path[address, length] -- bool >>
-  string->syscall-string
-  >:syscall-path
-  +stat,length+ allocate-local-memory
-  >:stat-structure
-  :stat-structure
-  :syscall-path
-  :syscall-number,stat:
-  2 syscall
-  -2 equal?
-  end
-; define-function
-
-: path,file?
-  << path[address, length] -- bool >>
-  string->syscall-string
-  >:syscall-path
-  +stat,length+ allocate-local-memory
-  >:stat-structure
-  :stat-structure
-  :syscall-path
-  :syscall-number,stat:
-  2 syscall
-  dup
-  negative? if
-    drop
-    false
-    end
-  then
-  drop
-  :stat-structure init,stat
-  *jo-size* 4 equal? if
-    +stat,st_mode+
-    fetch-two-bytes
-  then
-  *jo-size* 8 equal? if
-    +stat,st_mode+
-    fetch-four-bytes
-  then
-  12 bit-right
-  8#0010
-  equal?
-  <<
-  0170000
-  S_IFDIR       0040000 /* Directory.  */
-  S_IFCHR       0020000 /* Character device.  */
-  S_IFBLK       0060000 /* Block device.  */
-  S_IFREG       0100000 /* Regular file.  */
-  S_IFIFO       0010000 /* FIFO.  */
-  S_IFLNK       0120000 /* Symbolic link.  */
-  S_IFSOCK      0140000 /* Socket.  */
-  >>
-  end
-; define-function
-
-: path,directory?
-  << path[address, length] -- bool >>
-  string->syscall-string
-  >:syscall-path
-  +stat,length+ allocate-local-memory
-  >:stat-structure
-  :stat-structure
-  :syscall-path
-  :syscall-number,stat:
-  2 syscall
-  dup
-  negative? if
-    drop
-    false
-    end
-  then
-  drop
-  :stat-structure init,stat
-  *jo-size* 4 equal? if
-    +stat,st_mode+
-    fetch-two-bytes
-  then
-  *jo-size* 8 equal? if
-    +stat,st_mode+
-    fetch-four-bytes
-  then
-  12 bit-right
-  8#0004
-  equal?
-  <<
-  0170000
-  S_IFDIR       00040000 /* Directory.  */
-  S_IFCHR       00020000 /* Character device.  */
-  S_IFBLK       00060000 /* Block device.  */
-  S_IFREG       00100000 /* Regular file.  */
-  S_IFIFO       00010000 /* FIFO.  */
-  S_IFLNK       00120000 /* Symbolic link.  */
-  S_IFSOCK      00140000 /* Socket.  */
-  >>
-  end
-; define-function
-
 : file,creat
   << path[address, length] -- >>
   >::path
@@ -1527,45 +1351,40 @@ init-syscall-number
   :port port,close if
     end
   then
-  "* (empty-directory?) fail to close : " .s .i .l
-  "  path : " .s ::path .s .l
+  "* (empty-directory?) fail to close : " .s ::path .s .l
   "  " .s error-code->string .s .l
   false
   end
 ; define-function
 
-: directory,list-file,print
-  << -- >>
-  +getdents64,d_type+ fetch-byte
-  8 equal? not if
-    end
-  then
-  "  " .s
-  +getdents64,d_name+
-  dup 256
-  0 string,find-char
-  drop  << drop 0 >>
-  over sub .s .l
-  end
-; define-function
-
-: directory,list-file,loop,structure
-  << end, cursor -- >>
+: directory,list-by-file-type-code,loop,print
+  << end, cursor, file-type-code -- >>
+  >:file-type-code
   dup2 less-or-equal? if
     drop2
     end
   then
   >:cursor
   :cursor init,getdents64
-  directory,list-file,print
+  +getdents64,d_type+ fetch-byte
+  :file-type-code equal? if
+    "  " .s
+    +getdents64,d_name+
+    dup 256
+    0 string,find-char
+    drop  << drop 0 >>
+    over sub .s .l
+  then
   :cursor
   +getdents64,d_reclen+ fetch-two-bytes
   add
-  <> directory,list-file,loop,structure
+  :file-type-code
+  <> directory,list-by-file-type-code,loop,print
 ; define-function
 
-: directory,list-file,loop
-  << port -- >>
+: directory,list-by-file-type-code,loop
+  << port, file-type-code -- >>
+  >:file-type-code
   >:port
   1024 allocate-local-memory >:getdents64-structure-list
   1024
@@ -1574,7 +1393,6 @@ init-syscall-number
   :syscall-number,getdents64:
   3 syscall
   dup negative? if
-    dup .
     error-code->string .s .l
     end
   then
@@ -1584,63 +1402,79 @@ init-syscall-number
   then
   :getdents64-structure-list add
   :getdents64-structure-list
-  directory,list-file,loop,structure
+  :file-type-code
+  directory,list-by-file-type-code,loop,print
   :port
-  <> directory,list-file,loop
+  :file-type-code
+  <> directory,list-by-file-type-code,loop
 ; define-function
 
-: directory,list-file
-  << directory-path[address, length] -- >>
+: directory,list-by-file-type-code
+  << directory-path[address, length], file-type-code -- >>
+  >:file-type-code
   >::path
   ::path input-port,open if
   else
-    "* (directory,list-file) fail to open : " .s ::path .s .l
+    "* (directory,list-by-file-type-code) fail to open : " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
   >:port
-  :port directory,list-file,loop
+  :port :file-type-code directory,list-by-file-type-code,loop
   :port port,close if
     end
   then
-  "* (directory,list-file) fail to close : " .s .i .l
-  "  path : " .s ::path .s .l
+  "* (directory,list-by-file-type-code) fail to close : " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: directory,list-directory,print
-  << -- >>
-  +getdents64,d_type+ fetch-byte
-  4 equal? not if
-    end
-  then
-  "  " .s
-  +getdents64,d_name+
-  dup 256
-  0 string,find-char
-  drop  << drop 0 >>
-  over sub .s .l
+: directory,list-file
+  << directory-path[address, length] -- >>
+  8 directory,list-by-file-type-code
   end
 ; define-function
 
-: directory,list-directory,loop,structure
-  << end, cursor -- >>
+: directory,list-directory
+  << directory-path[address, length] -- >>
+  4 directory,list-by-file-type-code
+  end
+; define-function
+
+: directory,find-by-file-type-code,loop,find
+  << end, cursor, file-name[address, length], file-type-code -- bool >>
+  >:file-type-code
+  >::file-name
   dup2 less-or-equal? if
     drop2
+    false
     end
   then
   >:cursor
+  >:end
   :cursor init,getdents64
-  directory,list-directory,print
-  :cursor
-  +getdents64,d_reclen+ fetch-two-bytes
-  add
-  <> directory,list-directory,loop,structure
+  +getdents64,d_type+ fetch-byte :file-type-code equal? if
+    ::file-name +getdents64,d_name+
+    dup2 add fetch-byte zero? if
+      over string-equal? if
+        true
+        end
+      then
+    else
+      drop drop2
+    then
+  then
+  :end
+  :cursor +getdents64,d_reclen+ fetch-two-bytes add
+  ::file-name
+  :file-type-code
+  <> directory,find-by-file-type-code,loop,find
 ; define-function
 
-: directory,list-directory,loop
-  << port -- >>
+: directory,find-by-file-type-code,loop
+  << port, file-name[address, length], file-type-code -- bool >>
+  >:file-type-code
+  >::file-name
   >:port
   1024 allocate-local-memory >:getdents64-structure-list
   1024
@@ -1649,44 +1483,246 @@ init-syscall-number
   :syscall-number,getdents64:
   3 syscall
   dup negative? if
-    dup .
-    error-code->string .s .l
+    "* (directory,find-by-file-type-code,loop) syscall fail" .s .l
+    "  " .s error-code->string .s .l
+    false
     end
   then
   dup zero? if
-    drop
+    << zero as false >>
     end
   then
   :getdents64-structure-list add
   :getdents64-structure-list
-  directory,list-directory,loop,structure
+  ::file-name
+  :file-type-code
+  directory,find-by-file-type-code,loop,find if
+    true
+    end
+  then
   :port
-  <> directory,list-directory,loop
+  ::file-name
+  :file-type-code
+  <> directory,find-by-file-type-code,loop
 ; define-function
 
-: directory,list-directory
-  << directory-path[address, length] -- >>
-  >::path
-  ::path input-port,open if
+: directory,find-by-file-type-code
+  << directory-path[address, length],
+     file-name[address, length],
+     file-type-code
+     -- true
+     -- false >>
+  >:file-type-code
+  >::file-name
+  >::directory-path
+  ::directory-path input-port,open if
   else
-    "* (directory,list-directory) fail to open : " .s ::path .s .l
+    "* (directory,find-by-file-type-code) fail to open : " .s ::directory-path .s .l
     "  " .s error-code->string .s .l
+    false
     end
   then
   >:port
-  :port directory,list-directory,loop
+  :port ::file-name :file-type-code directory,find-by-file-type-code,loop
   :port port,close if
     end
   then
-  "* (directory,list-directory) fail to close : " .s .i .l
-  "  path : " .s ::path .s .l
+  "* (directory,find-by-file-type-code) fail to close : " .s ::directory-path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
 : directory,find-file
-  << directory-path[address, length], file-path[address, length] -- >>
+  << directory-path[address, length],
+     file-name[address, length]
+     -- true
+     -- false >>
+  8 directory,find-by-file-type-code
+  end
+; define-function
 
+: directory,find-directory
+  << directory-path[address, length],
+     file-name[address, length]
+     -- true
+     -- false >>
+  4 directory,find-by-file-type-code
+  end
+; define-function
+
+0 : +stat,st_dev+        ; define-variable
+0 : +stat,st_ino+        ; define-variable
+0 : +stat,st_mode+       ; define-variable
+0 : +stat,st_nlink+      ; define-variable
+0 : +stat,st_uid+        ; define-variable
+0 : +stat,st_gid+        ; define-variable
+0 : +stat,st_rdev+       ; define-variable
+0 : +stat,st_size+       ; define-variable
+0 : +stat,st_blksize+    ; define-variable
+0 : +stat,st_blocks+     ; define-variable
+0 : +stat,st_atime+      ; define-variable
+0 : +stat,st_atime_nsec+ ; define-variable
+0 : +stat,st_mtime+      ; define-variable
+0 : +stat,st_mtime_nsec+ ; define-variable
+0 : +stat,st_ctime+      ; define-variable
+0 : +stat,st_ctime_nsec+ ; define-variable
+0 : +stat,__unused4+     ; define-variable
+0 : +stat,__unused5+     ; define-variable
+0 : +stat,end+           ; define-variable
+
+: init,stat
+  << offset -- >>
+  *jo-size* 4 equal? if
+    dup address +stat,st_dev+        save *jo-size* add
+    dup address +stat,st_ino+        save *jo-size* add
+    dup address +stat,st_mode+       save 2 add
+    dup address +stat,st_nlink+      save 2 add
+    dup address +stat,st_uid+        save 2 add
+    dup address +stat,st_gid+        save 2 add
+    dup address +stat,st_rdev+       save *jo-size* add
+    dup address +stat,st_size+       save *jo-size* add
+    dup address +stat,st_blksize+    save *jo-size* add
+    dup address +stat,st_blocks+     save *jo-size* add
+    dup address +stat,st_atime+      save *jo-size* add
+    dup address +stat,st_atime_nsec+ save *jo-size* add
+    dup address +stat,st_mtime+      save *jo-size* add
+    dup address +stat,st_mtime_nsec+ save *jo-size* add
+    dup address +stat,st_ctime+      save *jo-size* add
+    dup address +stat,st_ctime_nsec+ save *jo-size* add
+    dup address +stat,__unused4+     save *jo-size* add
+    dup address +stat,__unused5+     save *jo-size* add
+        address +stat,end+           save
+    end
+  then
+  *jo-size* 8 equal? if
+    dup address +stat,st_dev+        save *jo-size* add
+    dup address +stat,st_ino+        save *jo-size* add
+    <<
+    note the following order changing
+    this is linux' bad
+    >>
+    dup address +stat,st_nlink+      save 8 add
+    dup address +stat,st_mode+       save 4 add
+
+    dup address +stat,st_uid+        save 4 add
+    dup address +stat,st_gid+        save 4 add
+                                          4 add << padding >>
+    dup address +stat,st_rdev+       save *jo-size* add
+    dup address +stat,st_size+       save *jo-size* add
+    dup address +stat,st_blksize+    save *jo-size* add
+    dup address +stat,st_blocks+     save *jo-size* add
+    dup address +stat,st_atime+      save *jo-size* add
+    dup address +stat,st_atime_nsec+ save *jo-size* add
+    dup address +stat,st_mtime+      save *jo-size* add
+    dup address +stat,st_mtime_nsec+ save *jo-size* add
+    dup address +stat,st_ctime+      save *jo-size* add
+    dup address +stat,st_ctime_nsec+ save *jo-size* add
+    dup address +stat,__unused4+     save *jo-size* add
+    dup address +stat,__unused5+     save *jo-size* add
+        address +stat,end+           save
+    end
+  then
+  end
+; define-function
+
+0 init,stat
++stat,end+ : +stat,length+ ; define-variable
+
+: path,nothing?
+  << path[address, length] -- bool >>
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  -2 equal?
+  end
+; define-function
+
+: path,file?
+  << path[address, length] -- bool >>
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  dup
+  negative? if
+    drop
+    false
+    end
+  then
+  drop
+  :stat-structure init,stat
+  *jo-size* 4 equal? if
+    +stat,st_mode+
+    fetch-two-bytes
+  then
+  *jo-size* 8 equal? if
+    +stat,st_mode+
+    fetch-four-bytes
+  then
+  12 bit-right
+  8#0010
+  equal?
+  <<
+  0170000
+  S_IFDIR       0040000 /* Directory.  */
+  S_IFCHR       0020000 /* Character device.  */
+  S_IFBLK       0060000 /* Block device.  */
+  S_IFREG       0100000 /* Regular file.  */
+  S_IFIFO       0010000 /* FIFO.  */
+  S_IFLNK       0120000 /* Symbolic link.  */
+  S_IFSOCK      0140000 /* Socket.  */
+  >>
+  end
+; define-function
+
+: path,directory?
+  << path[address, length] -- bool >>
+  string->syscall-string
+  >:syscall-path
+  +stat,length+ allocate-local-memory
+  >:stat-structure
+  :stat-structure
+  :syscall-path
+  :syscall-number,stat:
+  2 syscall
+  dup
+  negative? if
+    drop
+    false
+    end
+  then
+  drop
+  :stat-structure init,stat
+  *jo-size* 4 equal? if
+    +stat,st_mode+
+    fetch-two-bytes
+  then
+  *jo-size* 8 equal? if
+    +stat,st_mode+
+    fetch-four-bytes
+  then
+  12 bit-right
+  8#0004
+  equal?
+  <<
+  0170000
+  S_IFDIR       00040000 /* Directory.  */
+  S_IFCHR       00020000 /* Character device.  */
+  S_IFBLK       00060000 /* Block device.  */
+  S_IFREG       00100000 /* Regular file.  */
+  S_IFIFO       00010000 /* FIFO.  */
+  S_IFLNK       00120000 /* Symbolic link.  */
+  S_IFSOCK      00140000 /* Socket.  */
+  >>
   end
 ; define-function
 
@@ -1722,12 +1758,6 @@ init-syscall-number
 
 : poi,show
   << name[address, length] -- >>
-
-  end
-; define-function
-
-: load-file
-  << ??? -- >>
 
   end
 ; define-function
