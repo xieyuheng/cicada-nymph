@@ -1,8 +1,5 @@
-#+TITLE:  快理我 / README
-#+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
-
 * ===================================
+
 * 題解
   * 蟬語 是 謝宇恆 設計的程序語言
     它的名字 來源與曹植的 蟬賦
@@ -36,7 +33,9 @@
   * 修復錯誤 或 貢獻新的性狀
     你可以在這裏要求我把你的貢獻狀融合到主要文庫中
     https://github.com/the-little-language-designer/cicada/pulls
+
 * ===================================
+
 * to explain the title
   * the name cicada-language comes from
     the cicada rhapsody of
@@ -69,4 +68,5 @@
   * to send patch and fix bug
     you can do pull request here
     https://github.com/the-little-language-designer/cicada/pulls
+
 * ===================================
