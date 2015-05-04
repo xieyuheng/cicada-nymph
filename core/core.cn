@@ -248,7 +248,7 @@ more,rule-set,make-jojo
   :new-string-address
   :new-string-length
   "#" string-head,char
-  find-char,string if
+  string,find-char if
   else
     false
     end
@@ -285,7 +285,7 @@ more,rule-set,make-jojo
   :address
   :length
   "#" string-head,char
-  find-char,string if
+  string,find-char if
   else
     "* (base#wild-integer-string->base-string)" .s .l
     "  the argument must be a base#wild-integer-string" .s .l
@@ -309,7 +309,7 @@ more,rule-set,make-jojo
   :address
   :length
   "#" string-head,char
-  find-char,string if
+  string,find-char if
   else
     "* (base#wild-integer-string->wild-integer-string)" .s .l
     "  the argument must be a base#wild-integer-string" .s .l
@@ -654,7 +654,7 @@ basic-REPL
   << -- >>
   snapshot-the-stack-pointer
   .l
-  " * " .s
+  "  # " .s
      *the-stack-pointer-snapshot*
      *the-stack* sub
      << ad hoc for the BUG of div >>
@@ -666,7 +666,7 @@ basic-REPL
        *jo-size* div
      then
      .i
-  " * " .s
+  " # " .s
   " -- " .s
     print-argument-stack
   "--" .s
@@ -790,7 +790,21 @@ init-syscall-number
   end
 ; define-function
 
-: list-dictionary,by-jo-predicate,loop
+: file-type-code->string
+  << file-type-code -- string[address, length] >>
+  dup 1  equal?  << DT_FIFO  >>  if drop "named pipe i.e. FIFO"  end then
+  dup 2  equal?  << DT_CHR   >>  if drop "character device"      end then
+  dup 4  equal?  << DT_DIR   >>  if drop "directory"             end then
+  dup 6  equal?  << DT_BLK   >>  if drop "block device"          end then
+  dup 8  equal?  << DT_REG   >>  if drop "regular file"          end then
+  dup 10 equal?  << DT_LNK   >>  if drop "symbolic link"         end then
+  dup 12 equal?  << DT_SOCK  >>  if drop "UNIX domain socket"    end then
+  drop
+  "unknow file type"
+  end
+; define-function
+
+: jotionary,list-by-jo-predicate,loop
   << jo-predicate, counter, jo -- total >>
   dup zero? if
     drop
@@ -799,7 +813,7 @@ init-syscall-number
   then
   dup x|over|xxx execute-jo false? if
     jo->pre-jo
-    <> list-dictionary,by-jo-predicate,loop
+    <> jotionary,list-by-jo-predicate,loop
   then
   swap
     "  " .s
@@ -813,32 +827,59 @@ init-syscall-number
     .s .l
   then
   jo->pre-jo
-  <> list-dictionary,by-jo-predicate,loop
+  <> jotionary,list-by-jo-predicate,loop
 ; define-function
 
-: list-dictionary,by-jo-predicate
+: jotionary,list-by-jo-predicate
   << jo-predicate -- total >>
-  0 *first-jo-in-dictionary*
-  list-dictionary,by-jo-predicate,loop
+  0 *first-jo-in-jotionary*
+  jotionary,list-by-jo-predicate,loop
   end
 ; define-function
 
-: report-dictionary
+: jotionary,report
   << -- >>
-  "* all primitive-function in dictionary :" .s .l
+  "* all primitive-function in jotionary :" .s .l
   jo primitive-function-jo?
-  list-dictionary,by-jo-predicate
-  "* all function in dictionary :" .s .l
+  jotionary,list-by-jo-predicate
+  "* all function in jotionary :" .s .l
   jo function-jo?
-  list-dictionary,by-jo-predicate add
-  "* all exception in dictionary :" .s .l
+  jotionary,list-by-jo-predicate add
+  "* all exception in jotionary :" .s .l
   jo exception-jo?
-  list-dictionary,by-jo-predicate add
-  "* all variable in dictionary :" .s .l
+  jotionary,list-by-jo-predicate add
+  "* all variable in jotionary :" .s .l
   jo variable-jo?
-  list-dictionary,by-jo-predicate add
+  jotionary,list-by-jo-predicate add
   "* totally : " .s
   .i .l
+  end
+; define-function
+
+: rule-set,list,loop
+  << rule-set, cursor, counter -- >>
+  xx|over|x equal? if
+    drop drop2
+    end
+  then
+  "  * " .s
+  "(" .s
+  add1 dup .i
+  ")" .s .l
+  swap
+    dup cursor->predicate
+    "    " .s jo->name .s .l
+    dup cursor->function
+    "    " .s jo->name .s .l
+    *jo-size* sub *jo-size* sub
+  swap
+  <> rule-set,list,loop
+; define-function
+
+: rule-set,list
+  << rule-set -- >>
+  dup rule-set,fetch-cursor
+  0 rule-set,list,loop
   end
 ; define-function
 
@@ -911,41 +952,14 @@ init-syscall-number
   end
 ; define-function
 
-: list-rule,loop
-  << rule-set, cursor, counter -- >>
-  xx|over|x equal? if
-    drop drop2
-    end
-  then
-  "  * " .s
-  "(" .s
-  add1 dup .i
-  ")" .s .l
-  swap
-    dup cursor->predicate
-    "    " .s jo->name .s .l
-    dup cursor->function
-    "    " .s jo->name .s .l
-    *jo-size* sub *jo-size* sub
-  swap
-  <> list-rule,loop
-; define-function
-
-: list-rule
-  << rule-set -- >>
-  dup rule-set,fetch-cursor
-  0 list-rule,loop
-  end
-; define-function
-
 : report-syntax
   << -- >>
   "* *rule-set,make-jojo* :" .s .l
-   *rule-set,make-jojo* list-rule
+   *rule-set,make-jojo* rule-set,list
   "* *rule-set,basic-REPL* :" .s .l
-   *rule-set,basic-REPL* list-rule
+   *rule-set,basic-REPL* rule-set,list
   "* tos-syntax-stack :" .s .l
-   tos-syntax-stack list-rule
+   tos-syntax-stack rule-set,list
   end
 ; define-function
 
@@ -968,7 +982,7 @@ init-syscall-number
 
 : welcome
   << -- >>
-  "* welcome to cicada-nymph ^-^" .s .l
+  "* welcome to cicada-nymph" .s .l
   end
 ; define-function
 
@@ -980,7 +994,7 @@ init-syscall-number
   << -- random-number >>
   0 :syscall-number,times:
   1 syscall
-  13 mod
+  9 mod
   <<
    *hi,random-base*
    *hi,random-base* add1 13 mod
@@ -991,17 +1005,15 @@ init-syscall-number
 
 : hi,say
   << number -- >>
-  dup 0 equal? if drop "* do not forget to eat good good coder !" .s .l end then
-  dup 1 equal? if drop "* me wile moku e pona moku ^-^" .s .l end then
-  dup 2 equal? if drop "* cica cica da yaya !!!" .s .l end then
-  dup 3 equal? if drop "* hi ^-^" .s .l end then
-  dup 4 equal? if drop "* hello :)" .s .l end then
-  dup 5 equal? if drop "* hey *^-^*" .s .l end then
-  dup 6 equal? if drop "* hiya \^o^/" .s .l end then
-  dup 7 equal? if drop "* I wish you a lovely day" .s .l end then
-  dup 8 equal? if drop "* I wish you a lovely day { or night :P }" .s .l end then
-  dup 9 equal? if drop "* o.o" .s .l end then
-  drop "* lovely ^3^" .s .l end
+  dup 0 equal? if drop "  cica cica da yaya !!!" .s .l end then
+  dup 1 equal? if drop "  hi ^-^" .s .l end then
+  dup 2 equal? if drop "  hello :)" .s .l end then
+  dup 3 equal? if drop "  hey *^-^*" .s .l end then
+  dup 4 equal? if drop "  hiya \^o^/" .s .l end then
+  dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
+  dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
+  dup 7 equal? if drop "  o.o" .s .l end then
+                  drop "  lovely ^3^" .s .l end
 ; define-function
 
 : hi
@@ -1018,7 +1030,7 @@ init-syscall-number
   end
 ; define-function
 
-: open-input-port
+: input-port,open
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -1040,7 +1052,7 @@ init-syscall-number
   end
 ; define-function
 
-: open-output-port,creat
+: output-port,creat
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -1066,7 +1078,7 @@ init-syscall-number
   end
 ; define-function
 
-: open-output-port,update
+: output-port,update
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -1091,7 +1103,7 @@ init-syscall-number
   end
 ; define-function
 
-: close-port
+: port,close
   << port
      -- true
      -- error-code, false >>
@@ -1106,7 +1118,7 @@ init-syscall-number
   end
 ; define-function
 
-: read-port
+: port,read
   << buffer, max-size, port
      -- counter, true
      -- error-code, false >>
@@ -1124,7 +1136,7 @@ init-syscall-number
   end
 ; define-function
 
-: write-port
+: port,write
   << buffer, max-size, port
      -- counter, true
      -- error-code, false >>
@@ -1220,7 +1232,7 @@ init-syscall-number
 0 init,stat
 +stat,end+ : +stat,length+ ; define-variable
 
-: path-to-nothing?
+: path,nothing?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -1234,7 +1246,7 @@ init-syscall-number
   end
 ; define-function
 
-: path-to-file?
+: path,file?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -1276,7 +1288,7 @@ init-syscall-number
   end
 ; define-function
 
-: path-to-directory?
+: path,directory?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -1318,7 +1330,7 @@ init-syscall-number
   end
 ; define-function
 
-: creat-file
+: file,creat
   << path[address, length] -- >>
   >::path
   ::path
@@ -1337,21 +1349,21 @@ init-syscall-number
   3 syscall
   dup
   negative? if
-    "* (creat-file) fail to open port for the following path :" .s .l
+    "* (file,creat) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
-  close-port if
+  port,close if
     end
   then
-  "* (creat-file) fail to close port for the following path :" .s .l
+  "* (file,creat) fail to close port for the following path :" .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: update-file
+: file,update
   << string[address, length], path[address, length] -- >>
   >::path
   >::string
@@ -1370,7 +1382,7 @@ init-syscall-number
   3 syscall
   dup
   negative? if
-    "* (update-file) fail to open port for the following path :" .s .l
+    "* (file,update) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1382,23 +1394,23 @@ init-syscall-number
   3 syscall
   dup
   negative? if
-    "* (update-file) fail to write port for the following path :" .s .l
+    "* (file,update) fail to write port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
   >:counter << bytes been written >>
   :port
-  close-port if
+  port,close if
     end
   then
-  "* (update-file) fail to close port for the following path : " .s .l
+  "* (file,update) fail to close port for the following path : " .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: remove-file
+: file,remove
   << path[address, length] -- >>
   >::path
   ::path
@@ -1409,7 +1421,7 @@ init-syscall-number
   1 syscall
   dup
   negative? if
-    "* (remove-file) fail for the following path :" .s .l
+    "* (file,remove) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1418,7 +1430,7 @@ init-syscall-number
   end
 ; define-function
 
-: creat-directory
+: directory,creat
   << path[address, length] -- >>
   >::path
   ::path
@@ -1432,7 +1444,7 @@ init-syscall-number
   2 syscall
   dup
   negative? if
-    "* (creat-directory) fail for the following path :" .s .l
+    "* (directory,creat) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1441,7 +1453,7 @@ init-syscall-number
   end
 ; define-function
 
-: remove-directory
+: directory,remove
   << path[address, length] -- >>
   >::path
   ::path
@@ -1452,7 +1464,7 @@ init-syscall-number
   1 syscall
   dup
   negative? if
-    "* (remove-directory) fail for the following path :" .s .l
+    "* (directory,remove) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1494,8 +1506,186 @@ init-syscall-number
 0 init,getdents64
 +getdents64,end+ : +getdents64,length+ ; define-variable
 
-: directory-empty?
+: empty-directory?
   << path[address, length] -- bool >>
+  >::path
+  ::path input-port,open if
+  else
+    "* (empty-directory?) fail to open : " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    false
+    end
+  then
+  >:port
+  128 allocate-local-memory >:getdents64-structure-list
+  128
+  :getdents64-structure-list
+  :port
+  :syscall-number,getdents64:
+  3 syscall
+  48 equal? << this call to equal? returns the needed bool >>
+  :port port,close if
+    end
+  then
+  "* (empty-directory?) fail to close : " .s .i .l
+  "  path : " .s ::path .s .l
+  "  " .s error-code->string .s .l
+  false
+  end
+; define-function
+
+: directory,list-file,print
+  << -- >>
+  +getdents64,d_type+ fetch-byte
+  8 equal? not if
+    end
+  then
+  "  " .s
+  +getdents64,d_name+
+  dup 256
+  0 string,find-char
+  drop  << drop 0 >>
+  over sub .s .l
+  end
+; define-function
+
+: directory,list-file,loop,structure
+  << end, cursor -- >>
+  dup2 less-or-equal? if
+    drop2
+    end
+  then
+  >:cursor
+  :cursor init,getdents64
+  directory,list-file,print
+  :cursor
+  +getdents64,d_reclen+ fetch-two-bytes
+  add
+  <> directory,list-file,loop,structure
+; define-function
+
+: directory,list-file,loop
+  << port -- >>
+  >:port
+  1024 allocate-local-memory >:getdents64-structure-list
+  1024
+  :getdents64-structure-list
+  :port
+  :syscall-number,getdents64:
+  3 syscall
+  dup negative? if
+    dup .
+    error-code->string .s .l
+    end
+  then
+  dup zero? if
+    drop
+    end
+  then
+  :getdents64-structure-list add
+  :getdents64-structure-list
+  directory,list-file,loop,structure
+  :port
+  <> directory,list-file,loop
+; define-function
+
+: directory,list-file
+  << directory-path[address, length] -- >>
+  >::path
+  ::path input-port,open if
+  else
+    "* (directory,list-file) fail to open : " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  >:port
+  :port directory,list-file,loop
+  :port port,close if
+    end
+  then
+  "* (directory,list-file) fail to close : " .s .i .l
+  "  path : " .s ::path .s .l
+  "  " .s error-code->string .s .l
+  end
+; define-function
+
+: directory,list-directory,print
+  << -- >>
+  +getdents64,d_type+ fetch-byte
+  4 equal? not if
+    end
+  then
+  "  " .s
+  +getdents64,d_name+
+  dup 256
+  0 string,find-char
+  drop  << drop 0 >>
+  over sub .s .l
+  end
+; define-function
+
+: directory,list-directory,loop,structure
+  << end, cursor -- >>
+  dup2 less-or-equal? if
+    drop2
+    end
+  then
+  >:cursor
+  :cursor init,getdents64
+  directory,list-directory,print
+  :cursor
+  +getdents64,d_reclen+ fetch-two-bytes
+  add
+  <> directory,list-directory,loop,structure
+; define-function
+
+: directory,list-directory,loop
+  << port -- >>
+  >:port
+  1024 allocate-local-memory >:getdents64-structure-list
+  1024
+  :getdents64-structure-list
+  :port
+  :syscall-number,getdents64:
+  3 syscall
+  dup negative? if
+    dup .
+    error-code->string .s .l
+    end
+  then
+  dup zero? if
+    drop
+    end
+  then
+  :getdents64-structure-list add
+  :getdents64-structure-list
+  directory,list-directory,loop,structure
+  :port
+  <> directory,list-directory,loop
+; define-function
+
+: directory,list-directory
+  << directory-path[address, length] -- >>
+  >::path
+  ::path input-port,open if
+  else
+    "* (directory,list-directory) fail to open : " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  >:port
+  :port directory,list-directory,loop
+  :port port,close if
+    end
+  then
+  "* (directory,list-directory) fail to close : " .s .i .l
+  "  path : " .s ::path .s .l
+  "  " .s error-code->string .s .l
+  end
+; define-function
+
+: directory,find-file
+  << directory-path[address, length], file-path[address, length] -- >>
 
   end
 ; define-function
@@ -1892,8 +2082,8 @@ allocate-memory
 : command-line,stack-REPL
   << -- >>
   welcome
-  initial-report
   hi
+  initial-report
   "* you are in the (stack-REPL)" .s .l
   "  every time after a word is executed" .s .l
   "  the argument-stack get printed" .s .l
@@ -1905,8 +2095,8 @@ allocate-memory
 : command-line,basic-REPL
   << -- >>
   welcome
-  initial-report
   hi
+  initial-report
   "* you are in the (basic-REPL)" .s .l
   "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL

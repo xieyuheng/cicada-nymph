@@ -549,7 +549,7 @@ define_function "jo->link", jo_to_link
    xx subtraction
    xx end
 
-define_function "last-jo,dictionary?", last_jo__dictionary?
+define_function "last-jo,jotionary?", last_jo__jotionary?
    ;; << jo -- bool >>
    xx jo_to_link
    xx fetch
@@ -2762,21 +2762,21 @@ define_function "eval-string,ready", eval_string__ready
 
 match =linux =64bit, platform machine {
 
-name_buffer$open_input_port labeling
+name_buffer$input_port__open labeling
    preserve 512
 
-define_primitive_function "open-input-port", open_input_port
+define_primitive_function "input-port,open", input_port__open
    ;; << file-name-string[address, length] --
    ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_input_port
+   mov rdi, name_buffer$input_port__open
    rep movsb
    xor rax, rax
    mov byte [rdi], al
    mov linux64_sys_2_rsi, 0 ;; OPEN__read_only
-   mov linux64_sys_1_rdi, name_buffer$open_input_port
+   mov linux64_sys_1_rdi, name_buffer$input_port__open
    mov linux64_sys_n_rax, linux64_syscall_open
    syscall
    push_argument_stack rax
@@ -2786,7 +2786,7 @@ define_primitive_function "open-input-port", open_input_port
 
 match =linux =64bit, platform machine {
 
-define_primitive_function "close-port", close_port
+define_primitive_function "port,close", port__close
    ;; << file-handle -- >>
    pop_argument_stack linux64_sys_1_rdi
    mov linux64_sys_n_rax, linux64_syscall_close
@@ -2797,7 +2797,7 @@ define_primitive_function "close-port", close_port
 
 match =linux =64bit, platform machine {
 
-define_primitive_function "read-port", read_port
+define_primitive_function "port,read", port__read
    ;; << [file handle], buffer[address, length] --
    ;;    [number of char] or [error code] >>
    pop_argument_stack linux64_sys_3_rdx
@@ -2812,21 +2812,21 @@ define_primitive_function "read-port", read_port
 
 match =linux =32bit, platform machine {
 
-name_buffer$open_input_port labeling
+name_buffer$input_port__open labeling
    preserve 512
 
-define_primitive_function "open-input-port", open_input_port
+define_primitive_function "input-port,open", input_port__open
    ;; << file-name-string[address, length] --
    ;;    [file handle] or [error code] >>
    pop_argument_stack rcx
    pop_argument_stack rsi
    ;; copy file-name as a null-terminal string
-   mov rdi, name_buffer$open_input_port
+   mov rdi, name_buffer$input_port__open
    rep movsb
    xor rax, rax
    mov byte [rdi], al
    mov linux32_sys_2_ecx, 0 ;; OPEN__read_only
-   mov linux32_sys_1_ebx, name_buffer$open_input_port
+   mov linux32_sys_1_ebx, name_buffer$input_port__open
    mov linux32_sys_n_eax, linux32_syscall_open
    syscall
    push_argument_stack rax
@@ -2836,7 +2836,7 @@ define_primitive_function "open-input-port", open_input_port
 
 match =linux =32bit, platform machine {
 
-define_primitive_function "close-port", close_port
+define_primitive_function "port,close", port__close
    ;; << file-handle -- >>
    pop_argument_stack linux32_sys_1_ebx
    mov linux32_sys_n_eax, linux32_syscall_close
@@ -2847,7 +2847,7 @@ define_primitive_function "close-port", close_port
 
 match =linux =32bit, platform machine {
 
-define_primitive_function "read-port", read_port
+define_primitive_function "port,read", port__read
    ;; << [file handle], buffer[address, length] --
    ;;    [number of char] or [error code] >>
    pop_argument_stack linux32_sys_3_edx
@@ -2936,10 +2936,10 @@ define_function "init-command-line", init_command_line
    xx swap
    xx literal, 8, addition
    xx literal, 6, addition
-   xx open_input_port
+   xx input_port__open
    xx literal, address$init_command_line
    xx literal, 512
-   xx read_port
+   xx port__read
    xx literal, length$init_command_line
    xx save
    xx end
@@ -2983,10 +2983,10 @@ define_function "init-environment-string-variable-list", init_environment_string
    xx swap
    xx literal, 8, addition
    xx literal, 6, addition
-   xx open_input_port
+   xx input_port__open
    xx literal, address$init_environment_string_variable_list
    xx literal, (4 * 1024)
-   xx read_port
+   xx port__read
    xx literal, length$init_environment_string_variable_list
    xx save
    xx end
@@ -3184,7 +3184,7 @@ address$path_file?:
 
 define_function "path-file?", path_file?
    ;; << path[address, length] -- bool >>
-   xx open_input_port
+   xx input_port__open
    xx dup, negative?, false?branch, 4
    xx   drop
    xx   false
@@ -3192,8 +3192,8 @@ define_function "path-file?", path_file?
    xx dup
    xx literal, address$path_file?
    xx literal, 1
-   xx read_port
-   xx swap, close_port
+   xx port__read
+   xx swap, port__close
    xx positive?, false?branch, 3
    xx   true
    xx   end
@@ -3205,12 +3205,12 @@ buffer$load_first_file labeling
 
 define_function "load-first-file", load_first_file
    ;; << name-string[address, length] -- unknown >>
-   xx open_input_port
+   xx input_port__open
    xx dup
    xx   literal, buffer$load_first_file ;; buffer
    xx   literal, 1024 * 1024      ;; length
-   xx   read_port
-   xx swap, close_port
+   xx   port__read
+   xx swap, port__close
    xx dup, positive?, false?branch, (.error-$)/jo_size
    xx   literal, buffer$load_first_file
    xx   swap
@@ -3230,7 +3230,7 @@ define_function "error-report,load-file", error_report__load_first_file
    xx end
 
 string$error_report__load_first_file:
-   db "* (load-file) meets error  (read-port) error code : "
+   db "* (load-file) meets error  (port,read) error code : "
 .end:
 length$error_report__load_first_file = (.end - string$error_report__load_first_file)
 
@@ -3806,7 +3806,7 @@ define_function "string->integer", string_to_integer
    xx negate
    xx end
 
-define_function "find-char,string", find_char__string
+define_function "string,find-char", string__find_char
   ;; << string[address, length], char
   ;;    -- address, true
   ;;    -- false >>
@@ -3822,7 +3822,7 @@ define_function "find-char,string", find_char__string
   xx xxswapx
   xx string_tail__char
   xx xswapxx
-  xx taca, find_char__string
+  xx taca, string__find_char
 
 ;; 2 ^ 64 = 18446744073709551616
 ;; which is of length 20
@@ -4027,14 +4027,14 @@ define_function "string-tail,word", string_tail__word
    xx string_to_word_end
    xx end
 
-define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
+define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
    xx (last_link + jo_size)
 
 define_function "find", find
    ;; << word[address, length]
    ;;    -- jo, true
    ;;    -- false >>
-   xx V__first_jo_in_dictionary
+   xx V__first_jo_in_jotionary
    xx help__find
    xx end
 
@@ -4062,7 +4062,7 @@ define_function "help,find", help__find
    xx   drop2, true
    xx   end
    xx xswapxx
-   xx dup, last_jo__dictionary?, false?branch, 5
+   xx dup, last_jo__jotionary?, false?branch, 5
    xx   drop, drop2
    xx   false
    xx   end
@@ -4780,7 +4780,7 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    xx drop2
 
    xx dup2
-   xx literal, '"', find_char__string
+   xx literal, '"', string__find_char
    xx false?branch, (.not_found-$)/jo_size
    xx   xoverxx, subtraction
    ;;   << string[address, length], length >>
@@ -4878,7 +4878,7 @@ length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_repo
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__primitive_string
    ;;    old V__current_free_address__jo_heap
-   ;;    old V__first_jo_in_dictionary
+   ;;    old V__first_jo_in_jotionary
    ;;    string[address, length]
    ;;    -- >>
    xx drop_syntax_stack
@@ -4892,7 +4892,7 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx literal, ';', write_byte
    xx literal, 10, write_byte
 
-   xx address, V__first_jo_in_dictionary, save
+   xx address, V__first_jo_in_jotionary, save
    xx address, V__current_free_address__jo_heap, save
    xx address, V__current_free_address__primitive_string
    xx save
@@ -4909,10 +4909,10 @@ define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
+   xx V__first_jo_in_jotionary, xxswapx
    ;; << old V__current_free_address__primitive_string
    ;;    old V__current_free_address__jo_heap
-   ;;    old V__first_jo_in_dictionary
+   ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4925,12 +4925,12 @@ define_function "define-function", CICADA__define_function
    xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
-   xx V__first_jo_in_dictionary
+   xx V__first_jo_in_jotionary
    xx jo_to_link
    xx   save_into__jo_heap
 
    xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
+   xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$function
@@ -4947,10 +4947,10 @@ define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
    xx V__current_free_address__primitive_string, xxswapx
    xx V__current_free_address__jo_heap, xxswapx
-   xx V__first_jo_in_dictionary, xxswapx
+   xx V__first_jo_in_jotionary, xxswapx
    ;; << old V__current_free_address__primitive_string
    ;;    old V__current_free_address__jo_heap
-   ;;    old V__first_jo_in_dictionary
+   ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4963,12 +4963,12 @@ define_function "define-exception", CICADA__define_exception
    xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
-   xx V__first_jo_in_dictionary
+   xx V__first_jo_in_jotionary
    xx jo_to_link
    xx   save_into__jo_heap
 
    xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
+   xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$exception
@@ -4988,12 +4988,12 @@ define_function "define-variable", CICADA__define_variable
    xx dup2, string_head__word
    xx   save_into__primitive_string_heap
 
-   xx V__first_jo_in_dictionary
+   xx V__first_jo_in_jotionary
    xx jo_to_link
    xx   save_into__jo_heap
 
    xx V__current_free_address__jo_heap
-   xx address, V__first_jo_in_dictionary
+   xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$variable

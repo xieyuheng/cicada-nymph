@@ -527,7 +527,7 @@
      :new-string-address
      :new-string-length
      "#" string-head,char
-     find-char,string if
+     string,find-char if
      else
        false
        end
@@ -585,7 +585,7 @@
      :address
      :length
      "#" string-head,char
-     find-char,string if
+     string,find-char if
      else
        "* (base#wild-integer-string->base-string)" .s .l
        "  the argument must be a base#wild-integer-string" .s .l
@@ -611,7 +611,7 @@
      :address
      :length
      "#" string-head,char
-     find-char,string if
+     string,find-char if
      else
        "* (base#wild-integer-string->wild-integer-string)" .s .l
        "  the argument must be a base#wild-integer-string" .s .l
@@ -1346,7 +1346,7 @@
      << -- >>
      snapshot-the-stack-pointer
      .l
-     " * " .s
+     "  # " .s
         *the-stack-pointer-snapshot*
         *the-stack* sub
         << ad hoc for the BUG of div >>
@@ -1358,7 +1358,7 @@
           *jo-size* div
         then
         .i
-     " * " .s
+     " # " .s
      " -- " .s
        print-argument-stack
      "--" .s
@@ -1390,6 +1390,7 @@
      end
    ; define-function
    #+end_src
+* -----------------------------------
 * constant for linux                  :linux:
 ** init-syscall-number
    #+begin_src cicada-nymph :tangle core.cn
@@ -1489,11 +1490,28 @@
      end
    ; define-function
    #+end_src
-* report
-** list-dictionary,by-jo-predicate
+** file-type-code->string
+   #+begin_src cicada-nymph :tangle core.cn
+   : file-type-code->string
+     << file-type-code -- string[address, length] >>
+     dup 1  equal?  << DT_FIFO  >>  if drop "named pipe i.e. FIFO"  end then
+     dup 2  equal?  << DT_CHR   >>  if drop "character device"      end then
+     dup 4  equal?  << DT_DIR   >>  if drop "directory"             end then
+     dup 6  equal?  << DT_BLK   >>  if drop "block device"          end then
+     dup 8  equal?  << DT_REG   >>  if drop "regular file"          end then
+     dup 10 equal?  << DT_LNK   >>  if drop "symbolic link"         end then
+     dup 12 equal?  << DT_SOCK  >>  if drop "UNIX domain socket"    end then
+     drop
+     "unknow file type"
+     end
+   ; define-function
+   #+end_src
+* -----------------------------------
+* jotionary
+** jotionary,list-by-jo-predicate
    * 最後寫到珠典裏的 被最先打印出來
    #+begin_src cicada-nymph :tangle core.cn
-   : list-dictionary,by-jo-predicate,loop
+   : jotionary,list-by-jo-predicate,loop
      << jo-predicate, counter, jo -- total >>
      dup zero? if
        drop
@@ -1502,7 +1520,7 @@
      then
      dup x|over|xxx execute-jo false? if
        jo->pre-jo
-       <> list-dictionary,by-jo-predicate,loop
+       <> jotionary,list-by-jo-predicate,loop
      then
      swap
        "  " .s
@@ -1516,48 +1534,83 @@
        .s .l
      then
      jo->pre-jo
-     <> list-dictionary,by-jo-predicate,loop
+     <> jotionary,list-by-jo-predicate,loop
    ; define-function
 
-   : list-dictionary,by-jo-predicate
+   : jotionary,list-by-jo-predicate
      << jo-predicate -- total >>
-     0 *first-jo-in-dictionary*
-     list-dictionary,by-jo-predicate,loop
+     0 *first-jo-in-jotionary*
+     jotionary,list-by-jo-predicate,loop
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,list-dictionary,by-jo-predicate
+   : test,jotionary,list-by-jo-predicate
      << -- >>
-     jo primitive-function-jo? list-dictionary,by-jo-predicate
+     jo primitive-function-jo? jotionary,list-by-jo-predicate
      end
    ; define-function
-   test,list-dictionary,by-jo-predicate
+   test,jotionary,list-by-jo-predicate
    #+end_src
-** report-dictionary
-   * different types of words in dictionary
+** jotionary,report
+   * different types of words in jotionary
      are showed separately
    #+begin_src cicada-nymph :tangle core.cn
-   : report-dictionary
+   : jotionary,report
      << -- >>
-     "* all primitive-function in dictionary :" .s .l
+     "* all primitive-function in jotionary :" .s .l
      jo primitive-function-jo?
-     list-dictionary,by-jo-predicate
-     "* all function in dictionary :" .s .l
+     jotionary,list-by-jo-predicate
+     "* all function in jotionary :" .s .l
      jo function-jo?
-     list-dictionary,by-jo-predicate add
-     "* all exception in dictionary :" .s .l
+     jotionary,list-by-jo-predicate add
+     "* all exception in jotionary :" .s .l
      jo exception-jo?
-     list-dictionary,by-jo-predicate add
-     "* all variable in dictionary :" .s .l
+     jotionary,list-by-jo-predicate add
+     "* all variable in jotionary :" .s .l
      jo variable-jo?
-     list-dictionary,by-jo-predicate add
+     jotionary,list-by-jo-predicate add
      "* totally : " .s
      .i .l
      end
    ; define-function
    #+end_src
+* rule-set
+** rule-set,list
+   * 最後寫到規則集合裏的 被最先打印出來
+   * 下面的打印方式 看似有些不簡潔
+     是因爲 我還沒有 integer->string 這樣的函數
+     [因爲 沒有對字符串的動態內存管理]
+   #+begin_src cicada-nymph :tangle core.cn
+   : rule-set,list,loop
+     << rule-set, cursor, counter -- >>
+     xx|over|x equal? if
+       drop drop2
+       end
+     then
+     "  * " .s
+     "(" .s
+     add1 dup .i
+     ")" .s .l
+     swap
+       dup cursor->predicate
+       "    " .s jo->name .s .l
+       dup cursor->function
+       "    " .s jo->name .s .l
+       *jo-size* sub *jo-size* sub
+     swap
+     <> rule-set,list,loop
+   ; define-function
+
+   : rule-set,list
+     << rule-set -- >>
+     dup rule-set,fetch-cursor
+     0 rule-set,list,loop
+     end
+   ; define-function
+   #+end_src
+* report
 ** report-memory
    #+begin_src cicada-nymph :tangle core.cn
    : report-memory
@@ -1635,49 +1688,16 @@
      end
    ; define-function
    #+end_src
-** list-rule
-   * 最後寫到規則集合裏的 被最先打印出來
-   * 下面的打印方式 看似有些不簡潔
-     是因爲 我還沒有 integer->string 這樣的函數
-     [因爲 沒有對字符串的動態內存管理]
-   #+begin_src cicada-nymph :tangle core.cn
-   : list-rule,loop
-     << rule-set, cursor, counter -- >>
-     xx|over|x equal? if
-       drop drop2
-       end
-     then
-     "  * " .s
-     "(" .s
-     add1 dup .i
-     ")" .s .l
-     swap
-       dup cursor->predicate
-       "    " .s jo->name .s .l
-       dup cursor->function
-       "    " .s jo->name .s .l
-       *jo-size* sub *jo-size* sub
-     swap
-     <> list-rule,loop
-   ; define-function
-
-   : list-rule
-     << rule-set -- >>
-     dup rule-set,fetch-cursor
-     0 list-rule,loop
-     end
-   ; define-function
-   #+end_src
 ** report-syntax
    #+begin_src cicada-nymph :tangle core.cn
    : report-syntax
      << -- >>
      "* *rule-set,make-jojo* :" .s .l
-      *rule-set,make-jojo* list-rule
+      *rule-set,make-jojo* rule-set,list
      "* *rule-set,basic-REPL* :" .s .l
-      *rule-set,basic-REPL* list-rule
+      *rule-set,basic-REPL* rule-set,list
      "* tos-syntax-stack :" .s .l
-      tos-syntax-stack list-rule
+      tos-syntax-stack rule-set,list
      end
    ; define-function
    #+end_src
@@ -1707,7 +1727,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : welcome
      << -- >>
-     "* welcome to cicada-nymph ^-^" .s .l
+     "* welcome to cicada-nymph" .s .l
      end
    ; define-function
    #+end_src
@@ -1721,7 +1741,7 @@
      << -- random-number >>
      0 :syscall-number,times:
      1 syscall
-     13 mod
+     9 mod
      <<
       *hi,random-base*
       *hi,random-base* add1 13 mod
@@ -1732,17 +1752,15 @@
 
    : hi,say
      << number -- >>
-     dup 0 equal? if drop "* do not forget to eat good good coder !" .s .l end then
-     dup 1 equal? if drop "* me wile moku e pona moku ^-^" .s .l end then
-     dup 2 equal? if drop "* cica cica da yaya !!!" .s .l end then
-     dup 3 equal? if drop "* hi ^-^" .s .l end then
-     dup 4 equal? if drop "* hello :)" .s .l end then
-     dup 5 equal? if drop "* hey *^-^*" .s .l end then
-     dup 6 equal? if drop "* hiya \^o^/" .s .l end then
-     dup 7 equal? if drop "* I wish you a lovely day" .s .l end then
-     dup 8 equal? if drop "* I wish you a lovely day { or night :P }" .s .l end then
-     dup 9 equal? if drop "* o.o" .s .l end then
-     drop "* lovely ^3^" .s .l end
+     dup 0 equal? if drop "  cica cica da yaya !!!" .s .l end then
+     dup 1 equal? if drop "  hi ^-^" .s .l end then
+     dup 2 equal? if drop "  hello :)" .s .l end then
+     dup 3 equal? if drop "  hey *^-^*" .s .l end then
+     dup 4 equal? if drop "  hiya \^o^/" .s .l end then
+     dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
+     dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
+     dup 7 equal? if drop "  o.o" .s .l end then
+                     drop "  lovely ^3^" .s .l end
    ; define-function
 
    : hi
@@ -1797,9 +1815,9 @@
         這裏將抽象掉 port 這個概念
         也就是每次簡單的讀寫都伴隨兩個對 port 的操作
         這樣接口就很簡單 但是速度可能會非常慢
-** open-input-port
+** input-port,open                    :redefine:
    #+begin_src cicada-nymph :tangle core.cn
-   : open-input-port
+   : input-port,open
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -1821,7 +1839,7 @@
      end
    ; define-function
    #+end_src
-** open-output-port,[creat|update]
+** output-port,[creat|update]
    * interface
      |--------+-----------------------|
      | creat  | fail if already exist |
@@ -1831,7 +1849,7 @@
      when open it as output-port
      predicates are provided to help you to do so
    #+begin_src cicada-nymph :tangle core.cn
-   : open-output-port,creat
+   : output-port,creat
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -1857,7 +1875,7 @@
      end
    ; define-function
 
-   : open-output-port,update
+   : output-port,update
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -1882,9 +1900,9 @@
      end
    ; define-function
    #+end_src
-** close-port
+** port,close                         :redefine:
    #+begin_src cicada-nymph :tangle core.cn
-   : close-port
+   : port,close
      << port
         -- true
         -- error-code, false >>
@@ -1901,29 +1919,29 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,open-output-port,creat
+   : test,output-port,creat
      << -- >>
-     "kkk~" open-output-port,creat if
-       close-port if
+     "kkk~" output-port,creat if
+       port,close if
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,open-output-port,creat
+   test,output-port,creat
 
-   : test,open-output-port,update
+   : test,output-port,update
      << -- >>
-     "kkk~" open-output-port,update if
-       close-port if
+     "kkk~" output-port,update if
+       port,close if
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,open-output-port,update
+   test,output-port,update
    #+end_src
-** read-port
+** port,read                          :redefine:
    #+begin_src cicada-nymph :tangle core.cn
-   : read-port
+   : port,read
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -1941,9 +1959,9 @@
      end
    ; define-function
    #+end_src
-** write-port
+** port,write
    #+begin_src cicada-nymph :tangle core.cn
-   : write-port
+   : port,write
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -1963,18 +1981,18 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,read-port
+   : test,port,read
      << -- >>
      64 allocate-local-memory
      dup
-     "kkk~" open-input-port if
-       64 swap read-port if
+     "kkk~" input-port,open if
+       64 swap port,read if
          .s .l
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,read-port
+   test,port,read
    #+end_src
 * path
 ** 記 syntax about path
@@ -2136,9 +2154,9 @@
 ** note predicate
    * to use predicate to know more about the file-tree
      before calling a function that makes action on the file-tree
-** path-to-nothing?
+** path,nothing?
    #+begin_src cicada-nymph :tangle core.cn
-   : path-to-nothing?
+   : path,nothing?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -2152,9 +2170,9 @@
      end
    ; define-function
    #+end_src
-** path-to-file?
+** path,file?
    #+begin_src cicada-nymph :tangle core.cn
-   : path-to-file?
+   : path,file?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -2196,9 +2214,9 @@
      end
    ; define-function
    #+end_src
-** path-to-directory?
+** path,directory?
    #+begin_src cicada-nymph :tangle core.cn
-   : path-to-directory?
+   : path,directory?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -2242,17 +2260,17 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : cn ; path-to-nothing? . << 0 >>
-   : core ; path-to-nothing? . << 0 >>
-   : ai ; path-to-nothing? . << 1 >>
+   : cn ; path,nothing? . << 0 >>
+   : core ; path,nothing? . << 0 >>
+   : ai ; path,nothing? . << 1 >>
 
-   : cn ; path-to-file? . << 1 >>
-   : core ; path-to-file? . << 0 >>
-   : ai ; path-to-file? . << 0 >>
+   : cn ; path,file? . << 1 >>
+   : core ; path,file? . << 0 >>
+   : ai ; path,file? . << 0 >>
 
-   : cn ; path-to-directory? . << 0 >>
-   : core ; path-to-directory? . << 1 >>
-   : ai ; path-to-directory? . << 0 >>
+   : cn ; path,directory? . << 0 >>
+   : core ; path,directory? . << 1 >>
+   : ai ; path,directory? . << 0 >>
    #+end_src
 * file-tree
 ** note interface
@@ -2269,16 +2287,20 @@
      * the concept of port is
        completely removed from the interface
      --------------------------------
-     * for file
-       1. creat-file
-       2. update-file
-       3. remove-file
-     * for dictionary
-       1. creat-directory
-       2. remove-directory
-       3. find-file-in-directory
-       4. list-file-in-directory
-       5. directory-empty?
+     * file
+       1. file,creat
+       2. file,update
+       3. file,remove
+     * jotionary
+       1. directory,creat
+       2. directory,remove
+       3. empty-directory?
+     * list
+       1. directory,list-file
+       2. directory,list-directory
+     * find
+       1. directory,find-file
+       2. directory,find-directory
 ** 記 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
@@ -2295,9 +2317,9 @@
    * 文件大小
    * 文件使用註釋
      [linux 沒有]
-** creat-file
+** file,creat
    #+begin_src cicada-nymph :tangle core.cn
-   : creat-file
+   : file,creat
      << path[address, length] -- >>
      >::path
      ::path
@@ -2316,23 +2338,23 @@
      3 syscall
      dup
      negative? if
-       "* (creat-file) fail to open port for the following path :" .s .l
+       "* (file,creat) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
-     close-port if
+     port,close if
        end
      then
-     "* (creat-file) fail to close port for the following path :" .s .l
+     "* (file,creat) fail to close port for the following path :" .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
-** update-file
+** file,update
    #+begin_src cicada-nymph :tangle core.cn
-   : update-file
+   : file,update
      << string[address, length], path[address, length] -- >>
      >::path
      >::string
@@ -2351,7 +2373,7 @@
      3 syscall
      dup
      negative? if
-       "* (update-file) fail to open port for the following path :" .s .l
+       "* (file,update) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -2363,25 +2385,25 @@
      3 syscall
      dup
      negative? if
-       "* (update-file) fail to write port for the following path :" .s .l
+       "* (file,update) fail to write port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
      >:counter << bytes been written >>
      :port
-     close-port if
+     port,close if
        end
      then
-     "* (update-file) fail to close port for the following path : " .s .l
+     "* (file,update) fail to close port for the following path : " .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
-** remove-file
+** file,remove
    #+begin_src cicada-nymph :tangle core.cn
-   : remove-file
+   : file,remove
      << path[address, length] -- >>
      >::path
      ::path
@@ -2392,7 +2414,7 @@
      1 syscall
      dup
      negative? if
-       "* (remove-file) fail for the following path :" .s .l
+       "* (file,remove) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -2403,33 +2425,33 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,creat-file
+   : test,file,creat
      << -- >>
-     "kkk~" creat-file
-     "core" creat-file
+     "kkk~" file,creat
+     "core" file,creat
      end
    ; define-function
-   test,creat-file
+   test,file,creat
 
-   : test,update-file
+   : test,file,update
      << -- >>
-     "kkk~" creat-file
-     "kkk took my baby away !!!" "kkk~" update-file
+     "kkk~" file,creat
+     "kkk took my baby away !!!" "kkk~" file,update
      end
    ; define-function
-   test,update-file
+   test,file,update
 
-   : test,remove-file
+   : test,file,remove
      << -- >>
-     "kkk~" remove-file
-     "play" remove-file
+     "kkk~" file,remove
+     "play" file,remove
      end
    ; define-function
-   test,remove-file
+   test,file,remove
    #+end_src
-** creat-directory
+** directory,creat
    #+begin_src cicada-nymph :tangle core.cn
-   : creat-directory
+   : directory,creat
      << path[address, length] -- >>
      >::path
      ::path
@@ -2443,7 +2465,7 @@
      2 syscall
      dup
      negative? if
-       "* (creat-directory) fail for the following path :" .s .l
+       "* (directory,creat) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -2452,9 +2474,9 @@
      end
    ; define-function
    #+end_src
-** remove-directory
+** directory,remove
    #+begin_src cicada-nymph :tangle core.cn
-   : remove-directory
+   : directory,remove
      << path[address, length] -- >>
      >::path
      ::path
@@ -2465,7 +2487,7 @@
      1 syscall
      dup
      negative? if
-       "* (remove-directory) fail for the following path :" .s .l
+       "* (directory,remove) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -2476,19 +2498,19 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,creat-directory
+   : test,directory,creat
      << -- >>
-     "play" creat-directory
+     "play" directory,creat
      end
    ; define-function
-   test,creat-directory
+   test,directory,creat
 
-   : test,remove-directory
+   : test,directory,remove
      << -- >>
-     "play" remove-directory
+     "play" directory,remove
      end
    ; define-function
-   test,remove-directory
+   test,directory,remove
    #+end_src
 ** getdents64 structure
    #+begin_src cicada-nymph :tangle core.cn
@@ -2532,14 +2554,16 @@
      "+getdents64,d_ino+ : "    .s +getdents64,d_ino+     fetch . .l
      "+getdents64,d_off+ : "    .s +getdents64,d_off+     fetch . .l
      "+getdents64,d_reclen+ : " .s +getdents64,d_reclen+  fetch-two-bytes . .l
-     "+getdents64,d_type+ : "   .s +getdents64,d_type+    fetch-byte . .l
+     "+getdents64,d_type+ : "   .s
+     +getdents64,d_type+
+     fetch-byte file-type-code->string .s .l
      "+getdents64,d_name+ : "   .s
      +getdents64,d_name+
-     dup 256 0 find-char,string
+     dup 256
+     0 string,find-char
      drop  << drop 0 >>
-     over sub
-     .s .l
-     .l  
+     over sub .s .l
+     .l
      end
    ; define-function
 
@@ -2554,19 +2578,12 @@
      test,getdents64,print
      :cursor
      +getdents64,d_reclen+ fetch-two-bytes
-     add  
+     add
      <> test,getdents64,loop,structure
    ; define-function
 
-   : test,getdents64
-     << path[address, length] -- >>
-     >::path
-     ::path open-input-port if
-     else
-       "* (test,getdents64) fail to open : " .s ::path .s .l
-       "  " .s error-code->string .s .l
-       end
-     then
+   : test,getdents64,loop
+     << port -- >>
      >:port
      1024 allocate-local-memory >:getdents64-structure-list
      1024
@@ -2574,19 +2591,47 @@
      :port
      :syscall-number,getdents64:
      3 syscall
-     dup
-     negative? if
+     "* syscall returns : " .s dup .i .l
+     dup negative? if
        dup .
        error-code->string .s .l
+       end
+     then
+     dup zero? if
+       drop
        end
      then
      :getdents64-structure-list add
      :getdents64-structure-list
      test,getdents64,loop,structure
+     :port
+     <> test,getdents64,loop
+   ; define-function
+
+   : test,getdents64
+     << path[address, length] -- >>
+     >::path
+     ::path input-port,open if
+     else
+       "* (test,getdents64) fail to open : " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     >:port
+     :port test,getdents64,loop
+     :port port,close if
+       end
+     then
+     "* (test,getdents64) fail to close : " .s .i .l
+     "  path : " .s ::path .s .l
+     "  " .s error-code->string .s .l
      end
    ; define-function
 
    : play ;
+   test,getdents64
+
+   : play/kkk ;
    test,getdents64
 
    : . ;
@@ -2595,16 +2640,234 @@
    : / ;
    test,getdents64
    #+end_src
-** directory-empty?
+** empty-directory?
    #+begin_src cicada-nymph :tangle core.cn
-   : directory-empty?
+   : empty-directory?
      << path[address, length] -- bool >>
+     >::path
+     ::path input-port,open if
+     else
+       "* (empty-directory?) fail to open : " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       false
+       end
+     then
+     >:port
+     128 allocate-local-memory >:getdents64-structure-list
+     128
+     :getdents64-structure-list
+     :port
+     :syscall-number,getdents64:
+     3 syscall
+     48 equal? << this call to equal? returns the needed bool >>
+     :port port,close if
+       end
+     then
+     "* (empty-directory?) fail to close : " .s .i .l
+     "  path : " .s ::path .s .l
+     "  " .s error-code->string .s .l
+     false
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : play ;
+   empty-directory? . .l
+
+   : play/kkk ;
+   empty-directory? . .l
+
+   : play/aaa ;
+   empty-directory? . .l
+
+   : . ;
+   empty-directory? . .l
+
+   : / ;
+   empty-directory? . .l
+   #+end_src
+** directory,list-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,list-file,print
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     8 equal? not if
+       end
+     then
+     "  " .s
+     +getdents64,d_name+
+     dup 256
+     0 string,find-char
+     drop  << drop 0 >>
+     over sub .s .l
+     end
+   ; define-function
+
+   : directory,list-file,loop,structure
+     << end, cursor -- >>
+     dup2 less-or-equal? if
+       drop2
+       end
+     then
+     >:cursor
+     :cursor init,getdents64
+     directory,list-file,print
+     :cursor
+     +getdents64,d_reclen+ fetch-two-bytes
+     add
+     <> directory,list-file,loop,structure
+   ; define-function
+
+   : directory,list-file,loop
+     << port -- >>
+     >:port
+     1024 allocate-local-memory >:getdents64-structure-list
+     1024
+     :getdents64-structure-list
+     :port
+     :syscall-number,getdents64:
+     3 syscall
+     dup negative? if
+       dup .
+       error-code->string .s .l
+       end
+     then
+     dup zero? if
+       drop
+       end
+     then
+     :getdents64-structure-list add
+     :getdents64-structure-list
+     directory,list-file,loop,structure
+     :port
+     <> directory,list-file,loop
+   ; define-function
+
+   : directory,list-file
+     << directory-path[address, length] -- >>
+     >::path
+     ::path input-port,open if
+     else
+       "* (directory,list-file) fail to open : " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     >:port
+     :port directory,list-file,loop
+     :port port,close if
+       end
+     then
+     "* (directory,list-file) fail to close : " .s .i .l
+     "  path : " .s ::path .s .l
+     "  " .s error-code->string .s .l
+     end
+   ; define-function
+   #+end_src
+** directory,list-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,list-directory,print
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     4 equal? not if
+       end
+     then
+     "  " .s
+     +getdents64,d_name+
+     dup 256
+     0 string,find-char
+     drop  << drop 0 >>
+     over sub .s .l
+     end
+   ; define-function
+
+   : directory,list-directory,loop,structure
+     << end, cursor -- >>
+     dup2 less-or-equal? if
+       drop2
+       end
+     then
+     >:cursor
+     :cursor init,getdents64
+     directory,list-directory,print
+     :cursor
+     +getdents64,d_reclen+ fetch-two-bytes
+     add
+     <> directory,list-directory,loop,structure
+   ; define-function
+
+   : directory,list-directory,loop
+     << port -- >>
+     >:port
+     1024 allocate-local-memory >:getdents64-structure-list
+     1024
+     :getdents64-structure-list
+     :port
+     :syscall-number,getdents64:
+     3 syscall
+     dup negative? if
+       dup .
+       error-code->string .s .l
+       end
+     then
+     dup zero? if
+       drop
+       end
+     then
+     :getdents64-structure-list add
+     :getdents64-structure-list
+     directory,list-directory,loop,structure
+     :port
+     <> directory,list-directory,loop
+   ; define-function
+
+   : directory,list-directory
+     << directory-path[address, length] -- >>
+     >::path
+     ::path input-port,open if
+     else
+       "* (directory,list-directory) fail to open : " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     >:port
+     :port directory,list-directory,loop
+     :port port,close if
+       end
+     then
+     "* (directory,list-directory) fail to close : " .s .i .l
+     "  path : " .s ::path .s .l
+     "  " .s error-code->string .s .l
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : play ;
+   dup2 directory,list-file
+   directory,list-directory
+
+   : play/kkk ;
+   dup2 directory,list-file
+   directory,list-directory
+
+   : . ;
+   dup2 directory,list-file
+   directory,list-directory
+
+   : / ;
+   dup2 directory,list-file
+   directory,list-directory
+   #+end_src
+** >< directory,find-file
+   #+begin_src cicada-nymph :tangle core.cn
+   : directory,find-file
+     << directory-path[address, length], file-path[address, length] -- >>
 
      end
    ; define-function
    #+end_src
-** find-file-in-directory
-** list-file-in-directory
+** >< directory,find-directory
 * poi
 ** note
    * poi denotes path-organizer
@@ -2632,10 +2895,10 @@
    * <relative-path> is converted to <full-path>
      with the help of working-directory
    * <relative-path> is in the format of
-     "./dictionary/file"
-     "./dictionary/dictionary"
+     "./directory/file"
+     "./directory/directory"
      note that
-     for a <relative-path> of dictionary
+     for a <relative-path> of directory
      not tailing "/" should be added
 ** note interface for load-file
    * a path can be a file or a directory
@@ -2750,7 +3013,7 @@
    : *name-hash-table,counter*
    ; define-variable
    #+end_src
-** hash
+** name-hash-table,hash
    * prime table size
    * linear probing
    #+begin_src cicada-nymph :tangle core.cn
@@ -2943,7 +3206,7 @@
       end
     ; define-function
     #+end_src
-** search
+** name-hash-table,search
    #+begin_src cicada-nymph :tangle core.cn
    : name-hash-table,search,loop
      << string[address, length], number, counter
@@ -2982,7 +3245,7 @@
      end
    ; define-function
    #+end_src
-** insert
+** name-hash-table,insert
    * I found that (insert) can not re-use (search)
    #+begin_src cicada-nymph :tangle core.cn
    : name-hash-table,insert,loop
@@ -3086,7 +3349,7 @@
      * {index} string
    * if used as title
      add a (AS TITLE) as postfix
-** report
+** name-hash-table,report
    #+begin_src cicada-nymph :tangle core.cn
    : name-hash-table,report,orbit
      << name, counter -- >>
@@ -3166,8 +3429,8 @@
    : command-line,stack-REPL
      << -- >>
      welcome
-     initial-report
      hi
+     initial-report
      "* you are in the (stack-REPL)" .s .l
      "  every time after a word is executed" .s .l
      "  the argument-stack get printed" .s .l
@@ -3181,8 +3444,8 @@
    : command-line,basic-REPL
      << -- >>
      welcome
-     initial-report
      hi
+     initial-report
      "* you are in the (basic-REPL)" .s .l
      "  this REPL does not print any thing automaticly" .s .l
      jo basic-REPL
@@ -3248,7 +3511,7 @@
 ** report
    #+begin_src cicada-nymph
    report-memory
-   report-dictionary
    report-syntax
+   jotionary,report
    #+end_src
 * ===================================

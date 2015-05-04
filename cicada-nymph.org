@@ -12,7 +12,7 @@
    * too many literal is too waste of memory
 ** bare-metal version of cicada-nymph for x86 :maybe:
 ** make instruction a type of jo      :maybe:
-   this is needed when doing report of the dictionary
+   this is needed when doing report of the jotionary
 * ===================================
 * note
 ** notation
@@ -110,7 +110,7 @@
       * not hash-table
       * by the way
         in classical forth
-        the linked-list of jo is called dictionary
+        the linked-list of jo is called jotionary
     * no dynamic-memory-management
       * no garbage-collector
     * about comment
@@ -151,7 +151,7 @@
      3. buffer
    * more in epilog
      1. last_link
-   * function about dictionary
+   * function about jotionary
      1. find
      2. execute-word
    * basic-REPL as postfix-notation function executer
@@ -178,7 +178,7 @@
 ** jojo
    * jo 的數組
      每個數組外加一些元數據
-** dictionary of jojo
+** jotionary of jojo
    * 單項鏈接的鏈表
 ** primitive-string
 ** argument-stack
@@ -1112,11 +1112,11 @@
       xx subtraction
       xx end
    #+end_src
-** last-jo,dictionary?
+** last-jo,jotionary?
    * first jo in assembly code
-     is the last jo in dictionary
+     is the last jo in jotionary
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "last-jo,dictionary?", last_jo__dictionary?
+   define_function "last-jo,jotionary?", last_jo__jotionary?
       ;; << jo -- bool >>
       xx jo_to_link
       xx fetch
@@ -1124,7 +1124,7 @@
       xx end
    #+end_src
 ** jo->pre-jo
-   * treat last-jo,dictionary specially
+   * treat last-jo,jotionary specially
      i.e. return zero on that case
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jo->pre-jo", jo_to_pre_jo
@@ -3911,25 +3911,25 @@
 * -----------------------------------
 * port
 ** ----------------------------------
-** open-input-port                    :64bit:linux:
+** input-port,open                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   name_buffer$open_input_port labeling
+   name_buffer$input_port__open labeling
       preserve 512
 
-   define_primitive_function "open-input-port", open_input_port
+   define_primitive_function "input-port,open", input_port__open
       ;; << file-name-string[address, length] --
       ;;    [file handle] or [error code] >>
       pop_argument_stack rcx
       pop_argument_stack rsi
       ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_input_port
+      mov rdi, name_buffer$input_port__open
       rep movsb
       xor rax, rax
       mov byte [rdi], al
       mov linux64_sys_2_rsi, 0 ;; OPEN__read_only
-      mov linux64_sys_1_rdi, name_buffer$open_input_port
+      mov linux64_sys_1_rdi, name_buffer$input_port__open
       mov linux64_sys_n_rax, linux64_syscall_open
       syscall
       push_argument_stack rax
@@ -3937,11 +3937,11 @@
 
    }
    #+end_src
-** close-port                         :64bit:linux:
+** port,close                         :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   define_primitive_function "close-port", close_port
+   define_primitive_function "port,close", port__close
       ;; << file-handle -- >>
       pop_argument_stack linux64_sys_1_rdi
       mov linux64_sys_n_rax, linux64_syscall_close
@@ -3950,12 +3950,12 @@
 
    }
    #+end_src
-** read-port                          :64bit:linux:
+** port,read                          :64bit:linux:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   define_primitive_function "read-port", read_port
+   define_primitive_function "port,read", port__read
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
       pop_argument_stack linux64_sys_3_rdx
@@ -3969,25 +3969,25 @@
    }
    #+end_src
 ** ----------------------------------
-** open-input-port                    :32bit:linux:
+** input-port,open                    :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   name_buffer$open_input_port labeling
+   name_buffer$input_port__open labeling
       preserve 512
 
-   define_primitive_function "open-input-port", open_input_port
+   define_primitive_function "input-port,open", input_port__open
       ;; << file-name-string[address, length] --
       ;;    [file handle] or [error code] >>
       pop_argument_stack rcx
       pop_argument_stack rsi
       ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$open_input_port
+      mov rdi, name_buffer$input_port__open
       rep movsb
       xor rax, rax
       mov byte [rdi], al
       mov linux32_sys_2_ecx, 0 ;; OPEN__read_only
-      mov linux32_sys_1_ebx, name_buffer$open_input_port
+      mov linux32_sys_1_ebx, name_buffer$input_port__open
       mov linux32_sys_n_eax, linux32_syscall_open
       syscall
       push_argument_stack rax
@@ -3995,11 +3995,11 @@
 
    }
    #+end_src
-** close-port                         :32bit:linux:
+** port,close                         :32bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   define_primitive_function "close-port", close_port
+   define_primitive_function "port,close", port__close
       ;; << file-handle -- >>
       pop_argument_stack linux32_sys_1_ebx
       mov linux32_sys_n_eax, linux32_syscall_close
@@ -4008,12 +4008,12 @@
 
    }
    #+end_src
-** read-port                          :32bit:linux:
+** port,read                          :32bit:linux:
    * from disk to memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   define_primitive_function "read-port", read_port
+   define_primitive_function "port,read", port__read
       ;; << [file handle], buffer[address, length] --
       ;;    [number of char] or [error code] >>
       pop_argument_stack linux32_sys_3_edx
@@ -4134,10 +4134,10 @@
       xx swap
       xx literal, 8, addition
       xx literal, 6, addition
-      xx open_input_port
+      xx input_port__open
       xx literal, address$init_command_line
       xx literal, 512
-      xx read_port
+      xx port__read
       xx literal, length$init_command_line
       xx save
       xx end
@@ -4184,10 +4184,10 @@
       xx swap
       xx literal, 8, addition
       xx literal, 6, addition
-      xx open_input_port
+      xx input_port__open
       xx literal, address$init_environment_string_variable_list
       xx literal, (4 * 1024)
-      xx read_port
+      xx port__read
       xx literal, length$init_environment_string_variable_list
       xx save
       xx end
@@ -4408,7 +4408,7 @@
 
    define_function "path-file?", path_file?
       ;; << path[address, length] -- bool >>
-      xx open_input_port
+      xx input_port__open
       xx dup, negative?, false?branch, 4
       xx   drop
       xx   false
@@ -4416,8 +4416,8 @@
       xx dup
       xx literal, address$path_file?
       xx literal, 1
-      xx read_port
-      xx swap, close_port
+      xx port__read
+      xx swap, port__close
       xx positive?, false?branch, 3
       xx   true
       xx   end
@@ -4435,12 +4435,12 @@
 
    define_function "load-first-file", load_first_file
       ;; << name-string[address, length] -- unknown >>
-      xx open_input_port
+      xx input_port__open
       xx dup
       xx   literal, buffer$load_first_file ;; buffer
       xx   literal, 1024 * 1024      ;; length
-      xx   read_port
-      xx swap, close_port
+      xx   port__read
+      xx swap, port__close
       xx dup, positive?, false?branch, (.error-$)/jo_size
       xx   literal, buffer$load_first_file
       xx   swap
@@ -4460,7 +4460,7 @@
       xx end
 
    string$error_report__load_first_file:
-      db "* (load-file) meets error  (read-port) error code : "
+      db "* (load-file) meets error  (port,read) error code : "
    .end:
    length$error_report__load_first_file = (.end - string$error_report__load_first_file)
    #+end_src
@@ -5133,9 +5133,9 @@
       xx end
    #+end_src
 ** ----------------------------------
-** find-char,string
+** string,find-char
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "find-char,string", find_char__string
+   define_function "string,find-char", string__find_char
      ;; << string[address, length], char
      ;;    -- address, true
      ;;    -- false >>
@@ -5151,12 +5151,12 @@
      xx xxswapx
      xx string_tail__char
      xx xswapxx
-     xx taca, find_char__string
+     xx taca, string__find_char
    #+end_src
 ** test
    #+begin_src cicada-nymph
    : XIE Yuheng ;
-   32 find-char,string . << 1 >>
+   32 string,find-char . << 1 >>
    fetch-byte . << 32 >>
    #+end_src
 ** ----------------------------------
@@ -5410,9 +5410,9 @@
       xx end
    #+end_src
 ** ----------------------------------
-* dictionary
+* jotionary
 ** note
-   * the dictionary is a single-linked-list
+   * the jotionary is a single-linked-list
      of word-jo-jojo
    * a jojo is an vector of jo
    * from a jo one can find a jojo
@@ -5424,25 +5424,25 @@
      for example
      this is what the "define-function" will do
      from source code
-     it defines new function into dictionary
+     it defines new function into jotionary
      by creating new structured data into memory
 ** find
    * as find
-   * find jo in dictionary by word
+   * find jo in jotionary by word
      but I simply call it "find"
    * a function whoes name is prefixed by "find"
      maybe fail to find
      and maybe returns a signal
      to inform the function who calls it
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*first-jo-in-dictionary*", V__first_jo_in_dictionary
+   define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
       xx (last_link + jo_size)
 
    define_function "find", find
       ;; << word[address, length]
       ;;    -- jo, true
       ;;    -- false >>
-      xx V__first_jo_in_dictionary
+      xx V__first_jo_in_jotionary
       xx help__find
       xx end
 
@@ -5470,7 +5470,7 @@
       xx   drop2, true
       xx   end
       xx xswapxx
-      xx dup, last_jo__dictionary?, false?branch, 5
+      xx dup, last_jo__jotionary?, false?branch, 5
       xx   drop, drop2
       xx   false
       xx   end
@@ -5873,8 +5873,6 @@
         do nothing
      3. (find-rule)
         find a function from a word
-     4. (list-rule)
-        [implemented in cicada-nymph]
 ** 記 使用
    * rule-set,make-jojo 是
      語法謂詞 還有 語法函數 這種對子
@@ -6380,7 +6378,7 @@
       xx drop2
 
       xx dup2
-      xx literal, '"', find_char__string
+      xx literal, '"', string__find_char
       xx false?branch, (.not_found-$)/jo_size
       xx   xoverxx, subtraction
       ;;   << string[address, length], length >>
@@ -6503,7 +6501,7 @@
    define_exception "!undo-make-jojo", !undo_make_jojo
       ;; << old V__current_free_address__primitive_string
       ;;    old V__current_free_address__jo_heap
-      ;;    old V__first_jo_in_dictionary
+      ;;    old V__first_jo_in_jotionary
       ;;    string[address, length]
       ;;    -- >>
       xx drop_syntax_stack
@@ -6517,7 +6515,7 @@
       xx literal, ';', write_byte
       xx literal, 10, write_byte
 
-      xx address, V__first_jo_in_dictionary, save
+      xx address, V__first_jo_in_jotionary, save
       xx address, V__current_free_address__jo_heap, save
       xx address, V__current_free_address__primitive_string
       xx save
@@ -6536,10 +6534,10 @@
       ;; << string[address, length] -- >>
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
-      xx V__first_jo_in_dictionary, xxswapx
+      xx V__first_jo_in_jotionary, xxswapx
       ;; << old V__current_free_address__primitive_string
       ;;    old V__current_free_address__jo_heap
-      ;;    old V__first_jo_in_dictionary
+      ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
       xx prepare_for
@@ -6552,12 +6550,12 @@
       xx dup2, string_head__word
       xx   save_into__primitive_string_heap
 
-      xx V__first_jo_in_dictionary
+      xx V__first_jo_in_jotionary
       xx jo_to_link
       xx   save_into__jo_heap
 
       xx V__current_free_address__jo_heap
-      xx address, V__first_jo_in_dictionary
+      xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$function
@@ -6576,10 +6574,10 @@
       ;; << string[address, length] -- >>
       xx V__current_free_address__primitive_string, xxswapx
       xx V__current_free_address__jo_heap, xxswapx
-      xx V__first_jo_in_dictionary, xxswapx
+      xx V__first_jo_in_jotionary, xxswapx
       ;; << old V__current_free_address__primitive_string
       ;;    old V__current_free_address__jo_heap
-      ;;    old V__first_jo_in_dictionary
+      ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
       xx prepare_for
@@ -6592,12 +6590,12 @@
       xx dup2, string_head__word
       xx   save_into__primitive_string_heap
 
-      xx V__first_jo_in_dictionary
+      xx V__first_jo_in_jotionary
       xx jo_to_link
       xx   save_into__jo_heap
 
       xx V__current_free_address__jo_heap
-      xx address, V__first_jo_in_dictionary
+      xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$exception
@@ -6620,12 +6618,12 @@
       xx dup2, string_head__word
       xx   save_into__primitive_string_heap
 
-      xx V__first_jo_in_dictionary
+      xx V__first_jo_in_jotionary
       xx jo_to_link
       xx   save_into__jo_heap
 
       xx V__current_free_address__jo_heap
-      xx address, V__first_jo_in_dictionary
+      xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$variable
@@ -7429,7 +7427,7 @@
       xx current_free_address$primitive_string_heap
    #+end_src
 ** last_link
-   * this word helps to initialize V__first_jo_in_dictionary
+   * this word helps to initialize V__first_jo_in_jotionary
    #+begin_src fasm :tangle cicada-nymph.fasm
    last_link = link
    #+end_src
