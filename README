@@ -1,3 +1,4 @@
+
 * ===================================
 
 * 題解
@@ -6,9 +7,11 @@
       實淡泊而寡欲兮 獨咍樂而長吟
       聲噭噭而彌厲兮 似貞士之介心
   * 蟬語 以 小蟬語 爲基礎 而寫成
+
 * 瞭解更多
   * 你可以在這裏找到更多的文檔
     http://the-little-language-designer.github.io/cicada/intro/contents.html
+
 * 最新版本
   * 這個程序的源代碼可以在這裏下載
     https://github.com/the-little-language-designer/cicada
@@ -16,6 +19,7 @@
     https://aur.archlinux.org/packages/cicada-git/
     或者可以直接使用如下命令 (如果你也安裝了 yaourt 的話)
       yaourt -S cicada-git
+
 * 貢獻
   * 聊天
     用 IRC
@@ -41,9 +45,11 @@
     the cicada rhapsody of
     the ancient Chinese prince CAO Zhi
   * cicada-language is based on cicada-nymph
+
 * to learn more
   * you can find documentations here
     http://the-little-language-designer.github.io/cicada/intro/contents.html
+
 * to get the newest version of the program
   * the source code of this program can be downloaded from
     https://github.com/the-little-language-designer/cicada
@@ -51,6 +57,7 @@
     https://aur.archlinux.org/packages/cicada-git/
     or by the following command (if you have yaourt installed)
       yaourt -S cicada-git
+
 * to contribute
   * to chat
     we use IRC
