@@ -11,12 +11,13 @@
 (defun org/tangle (.file-name)
   (cond
     ((equal (shell-command (concat "ls " .file-name)) 0)
-     (color-message 94 (concat " (org/tangle) " .file-name))
+     (color-message 94 (concat "* org/tangle : " .file-name))
      (find-file .file-name)
      (org-babel-tangle))
     (:else
      (color-message
       96
-      (concat "(org/tangle) [not find] " .file-name)))))
+      (concat "* org/tangle fail\n"
+              "  can not found : " .file-name)))))
 
 (org/tangle "core.org")
