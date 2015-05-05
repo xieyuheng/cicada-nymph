@@ -119,3 +119,4 @@ clean:
 	rm -f *~ */*~ */*/*~ */*/*/*~ */*/*/*/*~  */*/*/*/*/*~
 	rm cn
 	rm cn32
+	rm cicada-nymph
