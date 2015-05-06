@@ -5525,25 +5525,25 @@
    * from the aesthetics point of view
      I do NOT think which of the following is better then the other
      but I choose the second one
-   * first:
+   * first
      #+begin_src
      define-function factorial
        << n -- n! >>
        dup one? if
          end
        then
-       dup sub1 factorial *
+       dup sub1 factorial mul
        end
      end
      #+end_src
-   * second:
+   * second
      #+begin_src cicada-nymph
      : factorial
        << n -- n! >>
        dup one? if
          end
        then
-       dup sub1 factorial *
+       dup sub1 factorial mul
        end
      ; define-function
      #+end_src

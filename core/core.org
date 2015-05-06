@@ -15,16 +15,6 @@
    * load-file should maintain a list of loaded files
      what else meta data should be maintained ?
      can them make up a well module system ?
-** if else then and double-quote in REPL
-   * circular-buffer for string literal in REPL
-     * 使用新的語法擴展機制
-       這在於對 '"' 這個語關鍵詞的變更
-     * 也就是說
-       還是要實現這個語法兩次了
-     * 也就是說在編譯器開始執行的時候
-       會入棧一些編譯器所需要用到的語法
-       而運行結束之後
-       又把這些語法出棧
 ** 更好的錯誤處理機制
    1. 當一個 exception 找不到自己在 return-stack 中的退出點時
       應該有更好地處理方式 而不是不處理這種情況
@@ -1205,13 +1195,35 @@
      !bye,basic-REPL
    ; define-function
    #+end_src
+** word:jo?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:jo?
+     << word[address, length] -- bool >>
+     "jo" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,jo,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,jo,basic-REPL
+     << word:jo -- >>
+     drop2
+     read-word-for-REPL
+     >::word
+     ::word find if
+       end
+     then
+     "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
+     end
+   ; define-function
+   #+end_src
 ** init,rule-set,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : init,rule-set,basic-REPL
      << -- >>
      jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
      jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
-
+     jo word:jo?        jo syntax,jo,basic-REPL  *rule-set,basic-REPL* add-rule
      jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
      end
    ; define-function
@@ -1306,6 +1318,197 @@
    36 2 power 35 mul add
    36 3 power 35 mul add
    . .
+   #+end_src
+* *rule-set,basic-REPL* : if & else & then
+** note ending jo
+   * you do not need to use ending jo
+     in code blocks formed by if else then
+     because in a REPL
+     things are different from function body
+     and there is no such thing as
+     the end of a function body in the REPL
+** syntax,if,basic-REPL,meet-true
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,if,basic-REPL,meet-true,else
+     << -- >>
+     read-word-for-REPL
+     "then" string-equal? if
+       end
+     then
+     <> syntax,if,basic-REPL,meet-true,else
+   ; define-function
+
+   : syntax,if,basic-REPL,meet-true
+     << -- >>
+     read-word-for-REPL
+     dup2 "then" string-equal? if
+       drop2
+       end
+     then
+     dup2 "else" string-equal? if
+       drop2
+       syntax,if,basic-REPL,meet-true,else
+       end
+     then
+     dup2 find-syntax if
+       execute-jo
+     else
+       execute-word
+     then
+     <> syntax,if,basic-REPL,meet-true
+   ; define-function
+   #+end_src
+** syntax,if,basic-REPL,meet-false
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,if,basic-REPL,meet-false,else
+     << -- >>
+     read-word-for-REPL
+     dup2 "then" string-equal? if
+       drop2
+       end
+     then
+     dup2 find-syntax if
+       execute-jo
+     else
+       execute-word
+     then
+     <> syntax,if,basic-REPL,meet-false,else
+   ; define-function
+
+   : syntax,if,basic-REPL,meet-false
+     << -- >>
+     read-word-for-REPL
+     dup2 "then" string-equal? if
+       drop2
+       end
+     then
+     dup2 "else" string-equal? if
+       drop2
+       syntax,if,basic-REPL,meet-false,else
+       end
+     then
+     drop2
+     <> syntax,if,basic-REPL,meet-false
+   ; define-function
+   #+end_src
+** syntax,if,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,if,basic-REPL
+     << bool, word:if -- >>
+     drop2 if
+       syntax,if,basic-REPL,meet-true
+     else
+       syntax,if,basic-REPL,meet-false
+     then
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   one? if
+     111 . .l
+   then
+
+   one? if
+     111 . .l
+   else
+     666 . .l
+   then
+   #+end_src
+* *rule-set,basic-REPL* : double-quote
+** *circular-string-area*
+   * no length in the area anymore
+     [not like the primitive-string-area]
+   * and ending each string here with a 0
+   #+begin_src cicada-nymph :tangle core.cn
+   1024 1024 mul
+   : *circular-string-area,size*
+   ; define-variable
+
+
+   *circular-string-area,size* allocate-memory
+   : *circular-string-area*
+   ; define-variable
+
+   *circular-string-area*
+   : *current-free-address,circular-string-area*
+   ; define-variable
+   #+end_src
+** save-into,circular-string-area
+   #+begin_src cicada-nymph :tangle core.cn
+   : save-into,circular-string-area
+     << string[address, length] -- >>
+     dup
+     *current-free-address,circular-string-area* add
+     *circular-string-area,size*
+     *current-free-address,circular-string-area* add
+     greater-or-equal? if
+       *circular-string-area*
+       address *current-free-address,circular-string-area*
+       save
+     then
+     tuck
+     *current-free-address,circular-string-area*
+     string->buffer!
+     address *current-free-address,circular-string-area*
+     add-save
+     0 *current-free-address,circular-string-area*
+     save-byte
+     1 address *current-free-address,circular-string-area*
+     add-save
+     end
+   ; define-function
+   #+end_src
+** syntax,double-quote,basic-REPL
+   * in ASCII encode double-quote is 34
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,double-quote,basic-REPL,loop
+     << cursor -- cursor >>
+     read-byte
+     dup 34 equal? if
+       drop
+       end
+     then
+     over save-byte
+     add1
+     <> syntax,double-quote,basic-REPL,loop
+   ; define-function
+
+   : syntax,double-quote,basic-REPL
+     << word:double-quote -- string[address, length] >>
+     drop2
+     1024 2 mul allocate-local-memory >:buffer
+     :buffer
+     syntax,double-quote,basic-REPL,loop
+     >:cursor
+     *current-free-address,circular-string-area* >:address
+     :buffer
+     :cursor :buffer sub dup >:length
+     save-into,circular-string-area
+     :address
+     :length
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* add-rule
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   one? if
+     "111" .s .l
+   then
+
+   one? if
+     "111" .s .l
+   else
+     "___" .s .l
+   then
    #+end_src
 * stack-REPL
 ** note
@@ -3037,7 +3240,7 @@
    * function
      * map
      * reverse
-** memory allocation
+** *name-hash-table*
    * the following are some prime number
      ready to be used
      * 1000003   about 976 k

@@ -588,11 +588,29 @@ save
   !bye,basic-REPL
 ; define-function
 
+: word:jo?
+  << word[address, length] -- bool >>
+  "jo" string-equal?
+  end
+; define-function
+
+: syntax,jo,basic-REPL
+  << word:jo -- >>
+  drop2
+  read-word-for-REPL
+  >::word
+  ::word find if
+    end
+  then
+  "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
+  end
+; define-function
+
 : init,rule-set,basic-REPL
   << -- >>
   jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
   jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
-
+  jo word:jo?        jo syntax,jo,basic-REPL  *rule-set,basic-REPL* add-rule
   jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
   end
 ; define-function
@@ -621,6 +639,144 @@ init,rule-set,basic-REPL
 ; define-function
 
 basic-REPL
+
+: syntax,if,basic-REPL,meet-true,else
+  << -- >>
+  read-word-for-REPL
+  "then" string-equal? if
+    end
+  then
+  <> syntax,if,basic-REPL,meet-true,else
+; define-function
+
+: syntax,if,basic-REPL,meet-true
+  << -- >>
+  read-word-for-REPL
+  dup2 "then" string-equal? if
+    drop2
+    end
+  then
+  dup2 "else" string-equal? if
+    drop2
+    syntax,if,basic-REPL,meet-true,else
+    end
+  then
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
+  <> syntax,if,basic-REPL,meet-true
+; define-function
+
+: syntax,if,basic-REPL,meet-false,else
+  << -- >>
+  read-word-for-REPL
+  dup2 "then" string-equal? if
+    drop2
+    end
+  then
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
+  <> syntax,if,basic-REPL,meet-false,else
+; define-function
+
+: syntax,if,basic-REPL,meet-false
+  << -- >>
+  read-word-for-REPL
+  dup2 "then" string-equal? if
+    drop2
+    end
+  then
+  dup2 "else" string-equal? if
+    drop2
+    syntax,if,basic-REPL,meet-false,else
+    end
+  then
+  drop2
+  <> syntax,if,basic-REPL,meet-false
+; define-function
+
+: syntax,if,basic-REPL
+  << bool, word:if -- >>
+  drop2 if
+    syntax,if,basic-REPL,meet-true
+  else
+    syntax,if,basic-REPL,meet-false
+  then
+  end
+; define-function
+
+jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
+
+1024 1024 mul
+: *circular-string-area,size*
+; define-variable
+
+
+*circular-string-area,size* allocate-memory
+: *circular-string-area*
+; define-variable
+
+*circular-string-area*
+: *current-free-address,circular-string-area*
+; define-variable
+
+: save-into,circular-string-area
+  << string[address, length] -- >>
+  dup
+  *current-free-address,circular-string-area* add
+  *circular-string-area,size*
+  *current-free-address,circular-string-area* add
+  greater-or-equal? if
+    *circular-string-area*
+    address *current-free-address,circular-string-area*
+    save
+  then
+  tuck
+  *current-free-address,circular-string-area*
+  string->buffer!
+  address *current-free-address,circular-string-area*
+  add-save
+  0 *current-free-address,circular-string-area*
+  save-byte
+  1 address *current-free-address,circular-string-area*
+  add-save
+  end
+; define-function
+
+: syntax,double-quote,basic-REPL,loop
+  << cursor -- cursor >>
+  read-byte
+  dup 34 equal? if
+    drop
+    end
+  then
+  over save-byte
+  add1
+  <> syntax,double-quote,basic-REPL,loop
+; define-function
+
+: syntax,double-quote,basic-REPL
+  << word:double-quote -- string[address, length] >>
+  drop2
+  1024 2 mul allocate-local-memory >:buffer
+  :buffer
+  syntax,double-quote,basic-REPL,loop
+  >:cursor
+  *current-free-address,circular-string-area* >:address
+  :buffer
+  :cursor :buffer sub dup >:length
+  save-into,circular-string-area
+  :address
+  :length
+  end
+; define-function
+
+jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* add-rule
 
 : print-argument-stack,loop
   << address, counter -- >>
