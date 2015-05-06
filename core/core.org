@@ -3,6 +3,12 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** 我有點不滿意 address 做爲給變元賦值的語法
+   * 也許應該換一個詞
+     因爲 address 這個詞 對於 variable-jo 而言 太一般了
+   * 也許整個 全局 variable 的機制都應該改變
+     比如允許 variable 中存儲 string
+** what happens when executing (end) in REPL ? :question:
 ** only one error-code->string is not enough
 ** 分析局部變元的良好性               :question:
    * 對 包含 >:name 的函數體的純線性處理
@@ -1442,10 +1448,8 @@
    #+begin_src cicada-nymph :tangle core.cn
    : save-into,circular-string-area
      << string[address, length] -- >>
-     dup
-     *current-free-address,circular-string-area* add
-     *circular-string-area,size*
-     *current-free-address,circular-string-area* add
+     dup *current-free-address,circular-string-area* add
+     *circular-string-area,size* *circular-string-area* add
      greater-or-equal? if
        *circular-string-area*
        address *current-free-address,circular-string-area*
@@ -1509,6 +1513,47 @@
    else
      "___" .s .l
    then
+   #+end_src
+* *rule-set,basic-REPL* : address
+** syntax,address,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   0
+   : *syntax,address,basic-REPL,stack-balancer*
+   ; define-variable
+
+   : syntax,address,basic-REPL
+     << word:address -- address >>
+     drop2
+     read-word-for-REPL
+     >::word
+     ::word find if
+     else
+       "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
+       address *syntax,address,basic-REPL,stack-balancer*
+       end
+     then
+     >:jo
+     :jo variable-jo? if
+     else
+       "* (syntax,address,basic-REPL) meet a not variable-jo : " .s ::word .s .l
+       address *syntax,address,basic-REPL,stack-balancer*
+       end
+     then
+     :jo *jo-size* add
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   666
+   address *syntax,address,basic-REPL,stack-balancer* save
+   *syntax,address,basic-REPL,stack-balancer*
+
+   address kkk
    #+end_src
 * stack-REPL
 ** note
@@ -1597,58 +1642,36 @@
 * constant for linux                  :linux:
 ** init-syscall-number
    #+begin_src cicada-nymph :tangle core.cn
-   0 : :syscall-number,open:       ; define-variable
-   0 : :syscall-number,close:      ; define-variable
-   0 : :syscall-number,read:       ; define-variable
-   0 : :syscall-number,write:      ; define-variable
-   0 : :syscall-number,link:       ; define-variable
-   0 : :syscall-number,unlink:     ; define-variable
-   0 : :syscall-number,mkdir:      ; define-variable
-   0 : :syscall-number,rmdir:      ; define-variable
-   0 : :syscall-number,getdents:   ; define-variable
-   0 : :syscall-number,getdents64: ; define-variable
-   0 : :syscall-number,stat:       ; define-variable
-   0 : :syscall-number,exit:       ; define-variable
-   0 : :syscall-number,times:      ; define-variable
-
-   : init-syscall-number
-     << -- >>
-     *jo-size* 4 equal? if
-       5   address :syscall-number,open:       save
-       6   address :syscall-number,close:      save
-       3   address :syscall-number,read:       save
-       4   address :syscall-number,write:      save
-       9   address :syscall-number,link:       save
-       10  address :syscall-number,unlink:     save
-       39  address :syscall-number,mkdir:      save
-       40  address :syscall-number,rmdir:      save
-       141 address :syscall-number,getdents:   save
-       220 address :syscall-number,getdents64: save
-       106 address :syscall-number,stat:       save
-       1   address :syscall-number,exit:       save
-       43  address :syscall-number,times:      save
-       end
-     then
-     *jo-size* 8 equal? if
-       2   address :syscall-number,open:       save
-       3   address :syscall-number,close:      save
-       0   address :syscall-number,read:       save
-       1   address :syscall-number,write:      save
-       86  address :syscall-number,link:       save
-       87  address :syscall-number,unlink:     save
-       83  address :syscall-number,mkdir:      save
-       84  address :syscall-number,rmdir:      save
-       78  address :syscall-number,getdents:   save
-       217 address :syscall-number,getdents64: save
-       4   address :syscall-number,stat:       save
-       60  address :syscall-number,exit:       save
-       100 address :syscall-number,times:      save
-       end
-     then
-     end
-   ; define-function
-
-   init-syscall-number
+   *jo-size* 4 equal? if
+     5   : :syscall-number,open:       ; define-variable
+     6   : :syscall-number,close:      ; define-variable
+     3   : :syscall-number,read:       ; define-variable
+     4   : :syscall-number,write:      ; define-variable
+     9   : :syscall-number,link:       ; define-variable
+     10  : :syscall-number,unlink:     ; define-variable
+     39  : :syscall-number,mkdir:      ; define-variable
+     40  : :syscall-number,rmdir:      ; define-variable
+     141 : :syscall-number,getdents:   ; define-variable
+     220 : :syscall-number,getdents64: ; define-variable
+     106 : :syscall-number,stat:       ; define-variable
+     1   : :syscall-number,exit:       ; define-variable
+     43  : :syscall-number,times:      ; define-variable
+   then
+   *jo-size* 8 equal? if
+     2   : :syscall-number,open:       ; define-variable
+     3   : :syscall-number,close:      ; define-variable
+     0   : :syscall-number,read:       ; define-variable
+     1   : :syscall-number,write:      ; define-variable
+     86  : :syscall-number,link:       ; define-variable
+     87  : :syscall-number,unlink:     ; define-variable
+     83  : :syscall-number,mkdir:      ; define-variable
+     84  : :syscall-number,rmdir:      ; define-variable
+     78  : :syscall-number,getdents:   ; define-variable
+     217 : :syscall-number,getdents64: ; define-variable
+     4   : :syscall-number,stat:       ; define-variable
+     60  : :syscall-number,exit:       ; define-variable
+     100 : :syscall-number,times:      ; define-variable
+   then
    #+end_src
 ** error-code->string
    #+begin_src cicada-nymph :tangle core.cn

@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** 整理中文筆記 並寫更多中文筆記
 ** protect on the overloading of a variety of memories
 ** better naming of headings
 ** add more notes about the limitations of the program
