@@ -32,9 +32,9 @@
   << string[address, length], word:if --
      address, string[address, length] >>
   drop2
-  *false?branch* save-into,jo-heap
-  *current-free-address,jo-heap* xx|swap|x
-  0 save-into,jo-heap
+  *false?branch* save-into,jo-area
+  *current-free-address,jo-area* xx|swap|x
+  0 save-into,jo-area
   end
 ; define-function
 
@@ -42,12 +42,12 @@
   << address, string[address, length], word:else --
      address, string[address, length] >>
   drop2
-  *branch* save-into,jo-heap
+  *branch* save-into,jo-area
   x|swap|xx
-  *current-free-address,jo-heap* xxx|swap|x
-  0 save-into,jo-heap
+  *current-free-address,jo-area* xxx|swap|x
+  0 save-into,jo-area
   << address, string[address, length], address >>
-  *current-free-address,jo-heap*
+  *current-free-address,jo-area*
   over sub *jo-size* div
   swap save
   end
@@ -58,7 +58,7 @@
      string[address, length] >>
   drop2
   x|swap|xx
-  *current-free-address,jo-heap*
+  *current-free-address,jo-area*
   over sub *jo-size* div
   swap save
   end
@@ -84,8 +84,8 @@ more,rule-set,make-jojo
   << string[address, length], word:prepare-for --
      string[address, length] >>
   drop2
-  *prepare-for*    save-into,jo-heap
-  *exception-head* save-into,jo-heap
+  *prepare-for*    save-into,jo-area
+  *exception-head* save-into,jo-area
   end
 ; define-function
 
@@ -509,9 +509,9 @@ more,rule-set,make-jojo
 : syntax,base#wild-integer-string,make-jojo
   << string[address, length], word[address, length] --
      string[address, length] >>
-  *literal* save-into,jo-heap
+  *literal* save-into,jo-area
   base#wild-integer-string->integer
-  save-into,jo-heap
+  save-into,jo-area
   end
 ; define-function
 
@@ -898,30 +898,30 @@ init-syscall-number
        *current-free-address,un-initialized-memory*
        *un-initialized-memory*
        sub sub . .l
-  "* *primitive-string-heap*" .s .l
+  "* *primitive-string-area*" .s .l
   "  * size : " .s
-       *size,primitive-string-heap*
+       *size,primitive-string-area*
        . .l
   "  * used : " .s
-       *current-free-address,primitive-string-heap*
-       *primitive-string-heap*
+       *current-free-address,primitive-string-area*
+       *primitive-string-area*
        sub . .l
   "  * free : " .s
-       *size,primitive-string-heap*
-       *current-free-address,primitive-string-heap*
-       *primitive-string-heap*
+       *size,primitive-string-area*
+       *current-free-address,primitive-string-area*
+       *primitive-string-area*
        sub sub . .l
-  "* *jo-heap*" .s .l
+  "* *jo-area*" .s .l
   "  * size : " .s
-       *size,jo-heap* . .l
+       *size,jo-area* . .l
   "  * used : " .s
-       *current-free-address,jo-heap*
-       *jo-heap*
+       *current-free-address,jo-area*
+       *jo-area*
        sub . .l
   "  * free : " .s
-       *size,jo-heap*
-       *current-free-address,jo-heap*
-       *jo-heap*
+       *size,jo-area*
+       *current-free-address,jo-area*
+       *jo-area*
        sub sub . .l
   end
 ; define-function
@@ -1877,9 +1877,9 @@ allocate-memory
 
 : name,save-string
   << string[address, length], name -- >>
-  *current-free-address,primitive-string-heap*
+  *current-free-address,primitive-string-area*
   xx|swap|xx
-  save-into,primitive-string-heap
+  save-into,primitive-string-area
   swap
   name->address
   save

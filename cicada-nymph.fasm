@@ -282,12 +282,12 @@ macro next \{
 ;; initial link to point to 0 (as null)
 link = 0
 
-size$primitive_string_heap = 64 * 1024 ;; (byte)
+size$primitive_string_area = 64 * 1024 ;; (byte)
 
-address$primitive_string_heap:
-   times size$primitive_string_heap db 0
+address$primitive_string_area:
+   times size$primitive_string_area db 0
 
-current_free_address$primitive_string_heap = address$primitive_string_heap
+current_free_address$primitive_string_area = address$primitive_string_area
 
 macro make_primitive_string string {
 
@@ -298,17 +298,17 @@ virtual at 0
    dw (.end$string - .start$string)
    load .length word from (.end$string)
 finish virtual
-store word .length at (current_free_address$primitive_string_heap)
+store word .length at (current_free_address$primitive_string_area)
 
-current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 2
+current_free_address$primitive_string_area = current_free_address$primitive_string_area + 2
 
 repeat .length
    virtual at 0
       db string
       load .char byte from (% - 1)
    finish virtual
-   store byte .char at (current_free_address$primitive_string_heap)
-   current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 1
+   store byte .char at (current_free_address$primitive_string_area)
+   current_free_address$primitive_string_area = current_free_address$primitive_string_area + 1
 finish repeat
 
 }
@@ -318,7 +318,7 @@ macro define_function string, jo {
 define_function__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_heap
+   xx current_free_address$primitive_string_area
 
    make_primitive_string string
 
@@ -334,9 +334,9 @@ jo:
 }
 
 explain$function:
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_byte]
    push_return_stack rbx
-   mov rbx, [current_free_address$local_data_vector]
+   mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
    add rax, jo_size
    push_return_stack rax
@@ -347,7 +347,7 @@ macro define_primitive_function string, jo {
 define_primitive_function__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_heap
+   xx current_free_address$primitive_string_area
 
    make_primitive_string string
 
@@ -370,7 +370,7 @@ macro define_variable string, jo {
 define_variable__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_heap
+   xx current_free_address$primitive_string_area
 
    make_primitive_string string
 
@@ -397,7 +397,7 @@ macro define_exception string, jo {
 define_exception__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_heap
+   xx current_free_address$primitive_string_area
 
    make_primitive_string string
 
@@ -447,10 +447,10 @@ explain$exception:
    pop_return_stack rax
    mov pointer$argument_stack, rax
 
-   mov rbx, [current_free_address$local_data_vector]
+   mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
 
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_byte]
    push_return_stack rbx
 
    add rsi, jo_size
@@ -498,10 +498,10 @@ explain$exception:
    pop_return_stack rax
    mov [pointer$argument_stack], rax
 
-   mov rbx, [current_free_address$local_data_vector]
+   mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
 
-   mov rbx, [current_free_address$local_data_heap]
+   mov rbx, [current_free_address$local_byte]
    push_return_stack rbx
 
    add rsi, jo_size
@@ -578,13 +578,13 @@ define_function "jo->type", jo_to_type
    xx fetch
    xx end
 
-define_variable "*primitive-string-heap*", V__primitive_string_heap
-   xx address$primitive_string_heap
+define_variable "*primitive-string-area*", V__primitive_string_area
+   xx address$primitive_string_area
 
-define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
-   xx size$primitive_string_heap
+define_variable "*size,primitive-string-area*", V__size__primitive_string_area
+   xx size$primitive_string_area
 
-;; *current-free-address,primitive-string-heap*
+;; *current-free-address,primitive-string-area*
 ;; is at epilog
 
 define_function "address->primitive-string", address_to_primitive_string
@@ -624,9 +624,9 @@ define_function "variable-jo?", variable_jo?
 define_primitive_function "end", end
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_data_vector], rax
+   mov [current_free_address$local_jo], rax
    pop_return_stack rax
-   mov [current_free_address$local_data_heap], rax
+   mov [current_free_address$local_byte], rax
    next
 
 match =64bit, machine {
@@ -634,9 +634,9 @@ match =64bit, machine {
 define_primitive_function "<>", taca
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_data_vector], rax
+   mov [current_free_address$local_jo], rax
    pop_return_stack rax
-   mov [current_free_address$local_data_heap], rax
+   mov [current_free_address$local_byte], rax
    mov rax, [rbx]
    jmp qword [rax]
 }
@@ -647,9 +647,9 @@ match =32bit, machine {
 define_primitive_function "<>", taca
    pop_return_stack rbx
    pop_return_stack rcx
-   mov [current_free_address$local_data_vector], rcx
+   mov [current_free_address$local_jo], rcx
    pop_return_stack rcx
-   mov [current_free_address$local_data_heap], rcx
+   mov [current_free_address$local_byte], rcx
    mov rax, [rbx]
    jmp dword [rax]
 
@@ -660,7 +660,7 @@ define_primitive_function "<>", taca
 ;; define_primitive_function "<>", taca
 ;;    pop_return_stack ebx
 ;;    pop_return_stack eax
-;;    mov [current_free_address$local_data_vector], eax
+;;    mov [current_free_address$local_jo], eax
 ;;    mov eax, [ebx]
 ;;    jmp dword [eax]
 
@@ -784,14 +784,14 @@ __reset_return_stack:
 
 }
 
-__reset_local_data_vector:
-   mov rax, address$local_data_vector
-   mov [current_free_address$local_data_vector], rax
+__reset_local_jo:
+   mov rax, address$local_jo
+   mov [current_free_address$local_jo], rax
    ret
 
-__reset_local_data_heap:
-   mov rax, address$local_data_heap
-   mov [current_free_address$local_data_heap], rax
+__reset_local_byte:
+   mov rax, address$local_byte
+   mov [current_free_address$local_byte], rax
    ret
 
 match =linux, platform {
@@ -807,10 +807,10 @@ begin_to_interpret_threaded_code:
    mov rax, jojo_for__report_return_stack_is_empty_and_exit
    push_return_stack rax
 
-   mov rax, address$local_data_heap
+   mov rax, address$local_byte
    push_return_stack rax
 
-   mov rax, address$local_data_vector
+   mov rax, address$local_jo
    push_return_stack rax
 
    mov rax, first_jojo
@@ -848,8 +848,8 @@ match =64bit, machine {
 define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    ;; << top_level_REPL [jo] -- >>
    call __reset_return_stack
-   call __reset_local_data_vector
-   call __reset_local_data_heap
+   call __reset_local_jo
+   call __reset_local_byte
    pop_argument_stack rax
    jmp qword [rax]
 
@@ -860,8 +860,8 @@ match =32bit, machine {
 define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    ;; << top_level_REPL [jo] -- >>
    call __reset_return_stack
-   call __reset_local_data_vector
-   call __reset_local_data_heap
+   call __reset_local_jo
+   call __reset_local_byte
    pop_argument_stack rax
    jmp dword [rax]
 
@@ -4255,45 +4255,45 @@ define_function "<<", ignore_comment
    xx drop2
    xx taca, ignore_comment
 
-size$jo_heap = 1024 * 1024 * jo_size
+size$jo_area = 1024 * 1024 * jo_size
 
-define_variable "*jo-heap*", V__jo_heap
-  xx address$jo_heap
+define_variable "*jo-area*", V__jo_area
+  xx address$jo_area
 
-define_variable "*size,jo-heap*", V__size__jo_heap
-  xx size$jo_heap
+define_variable "*size,jo-area*", V__size__jo_area
+  xx size$jo_area
 
 
-address$jo_heap labeling
-   preserve size$jo_heap
+address$jo_area labeling
+   preserve size$jo_area
 
-define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
-   xx address$jo_heap
+define_variable "*current-free-address,jo-area*", V__current_free_address__jo_area
+   xx address$jo_area
 
-define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+define_function "save-into,primitive-string-area", save_into__primitive_string_area
    ;; << string[address, length] -- >>
-   xx dup, V__current_free_address__primitive_string
+   xx dup, V__current_free_address__primitive_string_area
    xx save_two_bytes
 
    xx literal, 2
-   xx address, V__current_free_address__primitive_string
+   xx address, V__current_free_address__primitive_string_area
    xx add_save
 
    xx tuck
-   xx V__current_free_address__primitive_string
+   xx V__current_free_address__primitive_string_area
    xx string_to_buffer!
 
-   xx address, V__current_free_address__primitive_string
+   xx address, V__current_free_address__primitive_string_area
    xx add_save
    xx end
 
-define_function "save-into,jo-heap", save_into__jo_heap
+define_function "save-into,jo-area", save_into__jo_area
    ;; << number -- >>
-   xx V__current_free_address__jo_heap
+   xx V__current_free_address__jo_area
    xx save
 
    xx literal, jo_size
-   xx address, V__current_free_address__jo_heap
+   xx address, V__current_free_address__jo_area
    xx add_save
    xx end
 
@@ -4575,9 +4575,9 @@ define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx literal, literal
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx string_to_integer
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx end
 
 string$word_is_address?:
@@ -4598,12 +4598,12 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
    xx drop2
 
    xx literal, address
-   xx save_into__jo_heap
+   xx save_into__jo_area
 
    xx dup2
    xx string_head__word
    xx find, false?branch, 4
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx   string_tail__word
    xx   end
 
@@ -4643,12 +4643,12 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
    xx drop2
 
    xx literal, literal
-   xx save_into__jo_heap
+   xx save_into__jo_area
 
    xx dup2
    xx string_head__word
    xx find, false?branch, 4
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx   string_tail__word
    xx   end
 
@@ -4688,13 +4688,13 @@ define_function "syntax,branch,make-jojo", syntax__branch__make_jojo
    xx drop2
 
    xx literal, branch
-   xx save_into__jo_heap
+   xx save_into__jo_area
 
    xx dup2
    xx string_head__word
    xx dup2, integer_string?, false?branch, 5
    xx   string_to_integer
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx   string_tail__word
    xx   end
 
@@ -4734,13 +4734,13 @@ define_function "syntax,false?branch,make-jojo", syntax__false?branch__make_jojo
    xx drop2
 
    xx literal, false?branch
-   xx save_into__jo_heap
+   xx save_into__jo_area
 
    xx dup2
    xx string_head__word
    xx dup2, integer_string?, false?branch, 5
    xx   string_to_integer
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx   string_tail__word
    xx   end
 
@@ -4787,17 +4787,17 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
 
    ;; address
    xx   literal, literal
-   xx     save_into__jo_heap
-   xx   V__current_free_address__primitive_string, add2
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
+   xx   V__current_free_address__primitive_string_area, add2
+   xx     save_into__jo_area
    xx   xoverxx, over
-   xx     save_into__primitive_string_heap
+   xx     save_into__primitive_string_area
 
    ;; length
    xx   literal, literal
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    xx   dup
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
 
    xx   tuck, subtraction
    xx   xxswapx
@@ -4856,7 +4856,7 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx dup2
    xx find, false?branch, 5
    xx   xxswapx, drop2 ;; drop word
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
    xx   end
    xx write_undefined_word_report__for_make_jojo
    xx write_string
@@ -4876,8 +4876,8 @@ string$undefined_word_report__for_make_jojo:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
 
 define_exception "!undo-make-jojo", !undo_make_jojo
-   ;; << old V__current_free_address__primitive_string
-   ;;    old V__current_free_address__jo_heap
+   ;; << old V__current_free_address__primitive_string_area
+   ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length]
    ;;    -- >>
@@ -4893,8 +4893,8 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx literal, 10, write_byte
 
    xx address, V__first_jo_in_jotionary, save
-   xx address, V__current_free_address__jo_heap, save
-   xx address, V__current_free_address__primitive_string
+   xx address, V__current_free_address__jo_area, save
+   xx address, V__current_free_address__primitive_string_area
    xx save
    xx end
 
@@ -4907,11 +4907,11 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
+   xx V__current_free_address__primitive_string_area, xxswapx
+   xx V__current_free_address__jo_area, xxswapx
    xx V__first_jo_in_jotionary, xxswapx
-   ;; << old V__current_free_address__primitive_string
-   ;;    old V__current_free_address__jo_heap
+   ;; << old V__current_free_address__primitive_string_area
+   ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
 
@@ -4920,21 +4920,21 @@ define_function "define-function", CICADA__define_function
    xx   !undo_make_jojo
    xx   end
 
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
+   xx V__current_free_address__primitive_string_area
+   xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
+   xx   save_into__primitive_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
-   xx V__current_free_address__jo_heap
+   xx V__current_free_address__jo_area
    xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$function
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
    xx dup2
    xx string_tail__word
@@ -4945,11 +4945,11 @@ define_function "define-function", CICADA__define_function
 
 define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string, xxswapx
-   xx V__current_free_address__jo_heap, xxswapx
+   xx V__current_free_address__primitive_string_area, xxswapx
+   xx V__current_free_address__jo_area, xxswapx
    xx V__first_jo_in_jotionary, xxswapx
-   ;; << old V__current_free_address__primitive_string
-   ;;    old V__current_free_address__jo_heap
+   ;; << old V__current_free_address__primitive_string_area
+   ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
 
@@ -4958,21 +4958,21 @@ define_function "define-exception", CICADA__define_exception
    xx   !undo_make_jojo
    xx   end
 
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
+   xx V__current_free_address__primitive_string_area
+   xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
+   xx   save_into__primitive_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
-   xx V__current_free_address__jo_heap
+   xx V__current_free_address__jo_area
    xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$exception
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
    xx dup2
    xx string_tail__word
@@ -4983,47 +4983,47 @@ define_function "define-exception", CICADA__define_exception
 
 define_function "define-variable", CICADA__define_variable
    ;; << variable, string[address, length] -- >>
-   xx V__current_free_address__primitive_string
-   xx   save_into__jo_heap
+   xx V__current_free_address__primitive_string_area
+   xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_heap
+   xx   save_into__primitive_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
-   xx V__current_free_address__jo_heap
+   xx V__current_free_address__jo_area
    xx address, V__first_jo_in_jotionary
    xx save
 
    xx literal, explain$variable
-   xx   save_into__jo_heap
+   xx   save_into__jo_area
 
    ;; when debugging
    ;; instead of drop2
    ;; one may wish to do some thing to the string
    xx drop2
-   xx save_into__jo_heap
+   xx save_into__jo_area
    xx end
 
-size$local_data_vector = 1024 * 1024 * jo_size
+size$local_jo = 1024 * 1024 * jo_size
 
-address$local_data_vector labeling
-   preserve size$local_data_vector
+address$local_jo labeling
+   preserve size$local_jo
 
-current_free_address$local_data_vector:
-   xx address$local_data_vector
+current_free_address$local_jo:
+   xx address$local_jo
 
 define_primitive_function "local-data-allocate,jo", local_data_allocate__jo
    ;; << number -- >>
    pop_argument_stack rax
    imul rax, jo_size
-   add [current_free_address$local_data_vector], rax
+   add [current_free_address$local_jo], rax
    next
 
 match =64bit, machine {
 
-define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vector
+define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
    ;; << offset, n -- value-1, ..., value-n >>
    mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -5037,7 +5037,7 @@ define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vecto
    loop .loop
    next
 
-define_primitive_function "n-save,local-data-vector", n_save__local_data_vector
+define_primitive_function "n-save,local-jo", n_save__local_jo
    ;; << value-n, ..., value-1, offset, n -- >>
    mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -5061,7 +5061,7 @@ define_primitive_function "n-save,local-data-vector", n_save__local_data_vector
 
 match =32bit, machine {
 
-define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vector
+define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
    ;; << offset, n -- value-1, ..., value-n >>
    mov rax, [pointer$return_stack]
    mov rbx, [rax - (2 * jo_size)]
@@ -5076,7 +5076,7 @@ define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vecto
    loop .loop
    next
 
-define_primitive_function "n-save,local-data-vector", n_save__local_data_vector
+define_primitive_function "n-save,local-jo", n_save__local_jo
    ;; << value-n, ..., value-1, offset, n -- >>
    mov rax, [pointer$return_stack]
    mov rbx, [rax - (2 * jo_size)]
@@ -5237,18 +5237,18 @@ define_function "syntax,local-variable-fetch,make-jojo", syntax__local_variable_
    ;;    string[address, length] >>
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-   ;;   literal, <offese>, literal, n, n_fetch__local_data_vector
+   ;;   literal, <offese>, literal, n, n_fetch__local_jo
    xx     literal, literal
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    ;;     offset
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    xx     literal, literal
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    ;;     n
    xx     count_front_colon
-   xx       save_into__jo_heap
-   xx     literal, n_fetch__local_data_vector
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
+   xx     literal, n_fetch__local_jo
+   xx       save_into__jo_area
    xx   end
 .not_found:
    xx write_local_variable_not_bound_report
@@ -5297,18 +5297,18 @@ define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_s
    xx string_tail__char
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-   ;;   literal, <offese>, literal, n, n_save__local_data_vector
+   ;;   literal, <offese>, literal, n, n_save__local_jo
    xx     literal, literal
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    ;;     offset
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    xx     literal, literal
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
    ;;     n
    xx     count_front_colon
-   xx       save_into__jo_heap
-   xx     literal, n_save__local_data_vector
-   xx       save_into__jo_heap
+   xx       save_into__jo_area
+   xx     literal, n_save__local_jo
+   xx       save_into__jo_area
    xx   end
 .not_found:
    xx dup2
@@ -5317,39 +5317,39 @@ define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_s
    xx count_front_colon
    ;; literal, <number>, local_data_allocate__jo
    xx   literal, literal
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    ;;   number of jo
-   xx     dup, save_into__jo_heap
+   xx     dup, save_into__jo_area
    xx   literal, local_data_allocate__jo
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    ;; literal, <offese>, literal, n, save_local_data
    xx   literal, literal
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    ;;   offset
    xx   swap
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    xx   literal, literal
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
    ;;   n
-   xx     save_into__jo_heap
-   xx   literal, n_save__local_data_vector
-   xx     save_into__jo_heap
+   xx     save_into__jo_area
+   xx   literal, n_save__local_jo
+   xx     save_into__jo_area
    xx end
 
-size$local_data_heap = 1024 * 1024 * jo_size
+size$local_byte = 1024 * 1024 * jo_size
 
-address$local_data_heap labeling
-   preserve size$local_data_heap
+address$local_byte labeling
+   preserve size$local_byte
 
-current_free_address$local_data_heap:
-   xx address$local_data_heap
+current_free_address$local_byte:
+   xx address$local_byte
 
 define_primitive_function "allocate-local-memory", allocate_local_memory
    ;; << size -- address >>
    pop_argument_stack rbx
-   mov rax, [current_free_address$local_data_heap]
+   mov rax, [current_free_address$local_byte]
    push_argument_stack rax
-   add [current_free_address$local_data_heap], rbx
+   add [current_free_address$local_byte], rbx
    next
 
 define_function "platform", the_platform
@@ -5375,8 +5375,8 @@ define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
 define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
   xx current_free_address$un_initialized_memory
 
-define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
-   xx current_free_address$primitive_string_heap
+define_variable "*current-free-address,primitive-string-area*", V__current_free_address__primitive_string_area
+   xx current_free_address$primitive_string_area
 
 last_link = link
 

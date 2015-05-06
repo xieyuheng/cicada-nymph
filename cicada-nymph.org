@@ -159,7 +159,7 @@
 ** 5th-instar
    * type of jo
    * more in epilog
-     1. *current-free-address,primitive-string-heap*
+     1. *current-free-address,primitive-string-area*
    * colon semicolon
      1. ":" and ";" are used to read a string of words for compiler
         [looks like bar-ket but special]
@@ -191,13 +191,12 @@
    * 兩個一對
 ** syntax-set
 ** local-variable-table
-   * a heap like table of string
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
      這個數據結構被 syntax__local_variable_save__make_jojo
      和 syntax__local_variable_fetch__make_jojo 所使用
    * 其中保存
-     * offset-in-local-data-vector
+     * offset-in-local-jo
      * length-of-string
      * address-of-string
    * 並且每次在定義一個新的函數體的時候
@@ -206,9 +205,9 @@
      * clear
        清空 offset 和 border
      * insert
-       插入字符串 和 offset-in-local-data-vector
+       插入字符串 和 offset-in-local-jo
      * find
-       通過字符串尋找 offset-in-local-data-vector
+       通過字符串尋找 offset-in-local-jo
      有兩個全局變量幫助實現這些接口
      * cursor
        每次 find 的時候使用一個新的 cursor 來做循環
@@ -217,7 +216,7 @@
        find 以 border 爲邊界
      另外 還有一個全局變量
      * offset
-       用以計算 offset-in-local-data-vector
+       用以計算 offset-in-local-jo
 * 記 性狀總結
 ** 自動管理加載文件時所使用的搜索路徑列表
    * 原理如下
@@ -712,15 +711,15 @@
   ;; initial link to point to 0 (as null)
   link = 0
   #+end_src
-* primitive_string_heap
+* primitive_string_area
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$primitive_string_heap = 64 * 1024 ;; (byte)
+   size$primitive_string_area = 64 * 1024 ;; (byte)
 
-   address$primitive_string_heap:
-      times size$primitive_string_heap db 0
+   address$primitive_string_area:
+      times size$primitive_string_area db 0
 
-   current_free_address$primitive_string_heap = address$primitive_string_heap
+   current_free_address$primitive_string_area = address$primitive_string_area
    #+end_src
 ** make_primitive_string
    * 2 bytes for length of name_string
@@ -736,17 +735,17 @@
       dw (.end$string - .start$string)
       load .length word from (.end$string)
    finish virtual
-   store word .length at (current_free_address$primitive_string_heap)
+   store word .length at (current_free_address$primitive_string_area)
 
-   current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 2
+   current_free_address$primitive_string_area = current_free_address$primitive_string_area + 2
 
    repeat .length
       virtual at 0
          db string
          load .char byte from (% - 1)
       finish virtual
-      store byte .char at (current_free_address$primitive_string_heap)
-      current_free_address$primitive_string_heap = current_free_address$primitive_string_heap + 1
+      store byte .char at (current_free_address$primitive_string_area)
+      current_free_address$primitive_string_area = current_free_address$primitive_string_area + 1
    finish repeat
 
    }
@@ -769,7 +768,7 @@
    define_function__#jo:
 
    name__#jo:
-      xx current_free_address$primitive_string_heap
+      xx current_free_address$primitive_string_area
 
       make_primitive_string string
 
@@ -792,9 +791,9 @@
      which stores a jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    explain$function:
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_byte]
       push_return_stack rbx
-      mov rbx, [current_free_address$local_data_vector]
+      mov rbx, [current_free_address$local_jo]
       push_return_stack rbx
       add rax, jo_size
       push_return_stack rax
@@ -812,7 +811,7 @@
    define_primitive_function__#jo:
 
    name__#jo:
-      xx current_free_address$primitive_string_heap
+      xx current_free_address$primitive_string_area
 
       make_primitive_string string
 
@@ -845,7 +844,7 @@
    define_variable__#jo:
 
    name__#jo:
-      xx current_free_address$primitive_string_heap
+      xx current_free_address$primitive_string_area
 
       make_primitive_string string
 
@@ -891,7 +890,7 @@
    define_exception__#jo:
 
    name__#jo:
-      xx current_free_address$primitive_string_heap
+      xx current_free_address$primitive_string_area
 
       make_primitive_string string
 
@@ -995,10 +994,10 @@
       pop_return_stack rax
       mov pointer$argument_stack, rax
 
-      mov rbx, [current_free_address$local_data_vector]
+      mov rbx, [current_free_address$local_jo]
       push_return_stack rbx
 
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_byte]
       push_return_stack rbx
 
       add rsi, jo_size
@@ -1049,10 +1048,10 @@
       pop_return_stack rax
       mov [pointer$argument_stack], rax
 
-      mov rbx, [current_free_address$local_data_vector]
+      mov rbx, [current_free_address$local_jo]
       push_return_stack rbx
 
-      mov rbx, [current_free_address$local_data_heap]
+      mov rbx, [current_free_address$local_byte]
       push_return_stack rbx
 
       add rsi, jo_size
@@ -1156,16 +1155,16 @@
       xx end
    #+end_src
 ** ----------------------------------
-* primitive-string-heap
-** *primitive-string-heap*
+* primitive-string-area
+** *primitive-string-area*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*primitive-string-heap*", V__primitive_string_heap
-      xx address$primitive_string_heap
+   define_variable "*primitive-string-area*", V__primitive_string_area
+      xx address$primitive_string_area
 
-   define_variable "*size,primitive-string-heap*", V__size__primitive_string_heap
-      xx size$primitive_string_heap
+   define_variable "*size,primitive-string-area*", V__size__primitive_string_area
+      xx size$primitive_string_area
 
-   ;; *current-free-address,primitive-string-heap*
+   ;; *current-free-address,primitive-string-area*
    ;; is at epilog
    #+end_src
 ** address->primitive-string
@@ -1222,12 +1221,12 @@
      從棧頂開始數 這三個值分別是
      1. 結束執行的一串珠珠本身
         這個值是被捨棄的
-     2. local_data_vector 中的一個地址
+     2. local_jo 中的一個地址
         用於重置
-        [current_free_address$local_data_vector]
-     3. local_data_heap 中的一個地址
+        [current_free_address$local_jo]
+     3. local_byte 中的一個地址
         用於重置
-        [current_free_address$local_data_heap]
+        [current_free_address$local_byte]
    * end 和 taca 的區別在於
      * end
        入返回棧一串新的珠珠
@@ -1241,9 +1240,9 @@
    define_primitive_function "end", end
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_data_vector], rax
+      mov [current_free_address$local_jo], rax
       pop_return_stack rax
-      mov [current_free_address$local_data_heap], rax
+      mov [current_free_address$local_byte], rax
       next
    #+end_src
 ** taca
@@ -1254,9 +1253,9 @@
    define_primitive_function "<>", taca
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_data_vector], rax
+      mov [current_free_address$local_jo], rax
       pop_return_stack rax
-      mov [current_free_address$local_data_heap], rax
+      mov [current_free_address$local_byte], rax
       mov rax, [rbx]
       jmp qword [rax]
    }
@@ -1267,9 +1266,9 @@
    define_primitive_function "<>", taca
       pop_return_stack rbx
       pop_return_stack rcx
-      mov [current_free_address$local_data_vector], rcx
+      mov [current_free_address$local_jo], rcx
       pop_return_stack rcx
-      mov [current_free_address$local_data_heap], rcx
+      mov [current_free_address$local_byte], rcx
       mov rax, [rbx]
       jmp dword [rax]
 
@@ -1280,7 +1279,7 @@
    ;; define_primitive_function "<>", taca
    ;;    pop_return_stack ebx
    ;;    pop_return_stack eax
-   ;;    mov [current_free_address$local_data_vector], eax
+   ;;    mov [current_free_address$local_jo], eax
    ;;    mov eax, [ebx]
    ;;    jmp dword [eax]
 
@@ -1487,18 +1486,18 @@
    }
    #+end_src
 ** ----------------------------------
-** __reset_local_data_vector
+** __reset_local_jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   __reset_local_data_vector:
-      mov rax, address$local_data_vector
-      mov [current_free_address$local_data_vector], rax
+   __reset_local_jo:
+      mov rax, address$local_jo
+      mov [current_free_address$local_jo], rax
       ret
    #+end_src
-** __reset_local_data_heap
+** __reset_local_byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   __reset_local_data_heap:
-      mov rax, address$local_data_heap
-      mov [current_free_address$local_data_heap], rax
+   __reset_local_byte:
+      mov rax, address$local_byte
+      mov [current_free_address$local_byte], rax
       ret
    #+end_src
 ** ----------------------------------
@@ -1523,10 +1522,10 @@
       mov rax, jojo_for__report_return_stack_is_empty_and_exit
       push_return_stack rax
 
-      mov rax, address$local_data_heap
+      mov rax, address$local_byte
       push_return_stack rax
 
-      mov rax, address$local_data_vector
+      mov rax, address$local_jo
       push_return_stack rax
 
       mov rax, first_jojo
@@ -1582,7 +1581,7 @@
       xx report_return_stack_is_empty_and_exit
    #+end_src
 ** reset-top-level-REPL
-   * local_data_vector & local_data_heap
+   * local_jo & local_byte
      will get reseted in by this function
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -1590,8 +1589,8 @@
    define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
       ;; << top_level_REPL [jo] -- >>
       call __reset_return_stack
-      call __reset_local_data_vector
-      call __reset_local_data_heap
+      call __reset_local_jo
+      call __reset_local_byte
       pop_argument_stack rax
       jmp qword [rax]
 
@@ -1602,8 +1601,8 @@
    define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
       ;; << top_level_REPL [jo] -- >>
       call __reset_return_stack
-      call __reset_local_data_vector
-      call __reset_local_data_heap
+      call __reset_local_jo
+      call __reset_local_byte
       pop_argument_stack rax
       jmp dword [rax]
 
@@ -5726,55 +5725,55 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
-* jojo-heap
+* jo-area
 ** note
    * you can see how the naming convention is used
      for functions that create structured data into memory
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$jo_heap = 1024 * 1024 * jo_size
+   size$jo_area = 1024 * 1024 * jo_size
 
-   define_variable "*jo-heap*", V__jo_heap
-     xx address$jo_heap
+   define_variable "*jo-area*", V__jo_area
+     xx address$jo_area
 
-   define_variable "*size,jo-heap*", V__size__jo_heap
-     xx size$jo_heap
+   define_variable "*size,jo-area*", V__size__jo_area
+     xx size$jo_area
 
 
-   address$jo_heap labeling
-      preserve size$jo_heap
+   address$jo_area labeling
+      preserve size$jo_area
 
-   define_variable "*current-free-address,jo-heap*", V__current_free_address__jo_heap
-      xx address$jo_heap
+   define_variable "*current-free-address,jo-area*", V__current_free_address__jo_area
+      xx address$jo_area
    #+end_src
-** save-into,primitive-string-heap
+** save-into,primitive-string-area
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,primitive-string-heap", save_into__primitive_string_heap
+   define_function "save-into,primitive-string-area", save_into__primitive_string_area
       ;; << string[address, length] -- >>
-      xx dup, V__current_free_address__primitive_string
+      xx dup, V__current_free_address__primitive_string_area
       xx save_two_bytes
 
       xx literal, 2
-      xx address, V__current_free_address__primitive_string
+      xx address, V__current_free_address__primitive_string_area
       xx add_save
 
       xx tuck
-      xx V__current_free_address__primitive_string
+      xx V__current_free_address__primitive_string_area
       xx string_to_buffer!
 
-      xx address, V__current_free_address__primitive_string
+      xx address, V__current_free_address__primitive_string_area
       xx add_save
       xx end
    #+end_src
-** save-into,jo-heap
+** save-into,jo-area
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,jo-heap", save_into__jo_heap
+   define_function "save-into,jo-area", save_into__jo_area
       ;; << number -- >>
-      xx V__current_free_address__jo_heap
+      xx V__current_free_address__jo_area
       xx save
 
       xx literal, jo_size
-      xx address, V__current_free_address__jo_heap
+      xx address, V__current_free_address__jo_area
       xx add_save
       xx end
    #+end_src
@@ -6145,9 +6144,9 @@
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx string_to_integer
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx end
    #+end_src
 ** ----------------------------------
@@ -6173,12 +6172,12 @@
       xx drop2
 
       xx literal, address
-      xx save_into__jo_heap
+      xx save_into__jo_area
 
       xx dup2
       xx string_head__word
       xx find, false?branch, 4
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx   string_tail__word
       xx   end
 
@@ -6223,12 +6222,12 @@
       xx drop2
 
       xx literal, literal
-      xx save_into__jo_heap
+      xx save_into__jo_area
 
       xx dup2
       xx string_head__word
       xx find, false?branch, 4
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx   string_tail__word
       xx   end
 
@@ -6273,13 +6272,13 @@
       xx drop2
 
       xx literal, branch
-      xx save_into__jo_heap
+      xx save_into__jo_area
 
       xx dup2
       xx string_head__word
       xx dup2, integer_string?, false?branch, 5
       xx   string_to_integer
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx   string_tail__word
       xx   end
 
@@ -6324,13 +6323,13 @@
       xx drop2
 
       xx literal, false?branch
-      xx save_into__jo_heap
+      xx save_into__jo_area
 
       xx dup2
       xx string_head__word
       xx dup2, integer_string?, false?branch, 5
       xx   string_to_integer
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx   string_tail__word
       xx   end
 
@@ -6368,7 +6367,7 @@
       xx end
    #+end_src
 ** syntax,double-quote,make-jojo
-   * primitive-string-heap is used
+   * primitive-string-area is used
      to allocate string literal in function body
    * in ASCII encode double-quote is 34
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6385,17 +6384,17 @@
 
       ;; address
       xx   literal, literal
-      xx     save_into__jo_heap
-      xx   V__current_free_address__primitive_string, add2
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
+      xx   V__current_free_address__primitive_string_area, add2
+      xx     save_into__jo_area
       xx   xoverxx, over
-      xx     save_into__primitive_string_heap
+      xx     save_into__primitive_string_area
 
       ;; length
       xx   literal, literal
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       xx   dup
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
 
       xx   tuck, subtraction
       xx   xxswapx
@@ -6472,7 +6471,7 @@
       xx dup2
       xx find, false?branch, 5
       xx   xxswapx, drop2 ;; drop word
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
       xx   end
       xx write_undefined_word_report__for_make_jojo
       xx write_string
@@ -6499,8 +6498,8 @@
 ** !undo-make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_exception "!undo-make-jojo", !undo_make_jojo
-      ;; << old V__current_free_address__primitive_string
-      ;;    old V__current_free_address__jo_heap
+      ;; << old V__current_free_address__primitive_string_area
+      ;;    old V__current_free_address__jo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length]
       ;;    -- >>
@@ -6516,8 +6515,8 @@
       xx literal, 10, write_byte
 
       xx address, V__first_jo_in_jotionary, save
-      xx address, V__current_free_address__jo_heap, save
-      xx address, V__current_free_address__primitive_string
+      xx address, V__current_free_address__jo_area, save
+      xx address, V__current_free_address__primitive_string_area
       xx save
       xx end
 
@@ -6532,11 +6531,11 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
-      xx V__current_free_address__primitive_string, xxswapx
-      xx V__current_free_address__jo_heap, xxswapx
+      xx V__current_free_address__primitive_string_area, xxswapx
+      xx V__current_free_address__jo_area, xxswapx
       xx V__first_jo_in_jotionary, xxswapx
-      ;; << old V__current_free_address__primitive_string
-      ;;    old V__current_free_address__jo_heap
+      ;; << old V__current_free_address__primitive_string_area
+      ;;    old V__current_free_address__jo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
@@ -6545,21 +6544,21 @@
       xx   !undo_make_jojo
       xx   end
 
-      xx V__current_free_address__primitive_string
-      xx   save_into__jo_heap
+      xx V__current_free_address__primitive_string_area
+      xx   save_into__jo_area
       xx dup2, string_head__word
-      xx   save_into__primitive_string_heap
+      xx   save_into__primitive_string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
-      xx V__current_free_address__jo_heap
+      xx V__current_free_address__jo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$function
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
       xx dup2
       xx string_tail__word
@@ -6572,11 +6571,11 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-exception", CICADA__define_exception
       ;; << string[address, length] -- >>
-      xx V__current_free_address__primitive_string, xxswapx
-      xx V__current_free_address__jo_heap, xxswapx
+      xx V__current_free_address__primitive_string_area, xxswapx
+      xx V__current_free_address__jo_area, xxswapx
       xx V__first_jo_in_jotionary, xxswapx
-      ;; << old V__current_free_address__primitive_string
-      ;;    old V__current_free_address__jo_heap
+      ;; << old V__current_free_address__primitive_string_area
+      ;;    old V__current_free_address__jo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
@@ -6585,21 +6584,21 @@
       xx   !undo_make_jojo
       xx   end
 
-      xx V__current_free_address__primitive_string
-      xx   save_into__jo_heap
+      xx V__current_free_address__primitive_string_area
+      xx   save_into__jo_area
       xx dup2, string_head__word
-      xx   save_into__primitive_string_heap
+      xx   save_into__primitive_string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
-      xx V__current_free_address__jo_heap
+      xx V__current_free_address__jo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$exception
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
       xx dup2
       xx string_tail__word
@@ -6613,27 +6612,27 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-variable", CICADA__define_variable
       ;; << variable, string[address, length] -- >>
-      xx V__current_free_address__primitive_string
-      xx   save_into__jo_heap
+      xx V__current_free_address__primitive_string_area
+      xx   save_into__jo_area
       xx dup2, string_head__word
-      xx   save_into__primitive_string_heap
+      xx   save_into__primitive_string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
-      xx V__current_free_address__jo_heap
+      xx V__current_free_address__jo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$variable
-      xx   save_into__jo_heap
+      xx   save_into__jo_area
 
       ;; when debugging
       ;; instead of drop2
       ;; one may wish to do some thing to the string
       xx drop2
-      xx save_into__jo_heap
+      xx save_into__jo_area
       xx end
    #+end_src
 ** test define-function
@@ -6661,13 +6660,13 @@
    #+end_src
 * -----------------------------------
 * 記 有名字的局部變量 與 變長的局部數據
-  * local-data-vector
+  * local-jo
     用來實現 有名字的局部變量
     在編譯時計算 offset
-    到這個 local-data-vector 中的 offset 做爲變量的值
+    到這個 local-jo 中的 offset 做爲變量的值
     有 *local-variable-table* 這個數據結構
     幫助計算 offset
-  * local-data-heap
+  * local-byte
     用來分配 變長的局部數據
     在運行時計算 offset
   * 兩個機制配合使用
@@ -6773,7 +6772,7 @@
      每次進入一個函數體的執行
      即 每次將一串珠珠入棧時
      同時在這串珠子底部加上
-     current_free_address$local_data_vector
+     current_free_address$local_jo
      即 在 explain$function 中需要做特殊處理
      注意
      explain$exception
@@ -6783,10 +6782,10 @@
      所以也需要做特殊處理
    * 這個值在函數退出時
      [即 在 end 這個函數中]
-     用以重置 current_free_address$local_data_vector
+     用以重置 current_free_address$local_jo
      也就是 釋放在這次函數作用過程中所分配的內存
    * 每次 >:name 的時候
-     都更新 current_free_address$local_data_vector
+     都更新 current_free_address$local_jo
      以分配內存就行了
    * 也就是說
      return-stack 中的大多數有效值
@@ -6794,7 +6793,7 @@
    * 兩個結尾詞是 end 和 <>
      對於 <>
      即 對於明顯的尾遞歸調用
-     需要利用棧中的值重置 current_free_address$local_data_vector
+     需要利用棧中的值重置 current_free_address$local_jo
      但是並不入棧新值
 ** 語法擴展方面的支持
    * 這裏需要識別 >:name 還有 :name 等等
@@ -6821,7 +6820,7 @@
      使用 offset 就行了
    * 底層
      local-data-allocate,jo
-     這個只讓 current_free_address$local_data_vector 前進
+     這個只讓 current_free_address$local_jo 前進
      而不後退
    * 注意
      最爲重要的特點是
@@ -6852,28 +6851,28 @@
    * 改代碼並調整對輔助函數的使用
      就被稱作是 "re-factoring"
      即 函數的因子的重新分解
-* local-data-vector
+* local-jo
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_data_vector = 1024 * 1024 * jo_size
+   size$local_jo = 1024 * 1024 * jo_size
 
-   address$local_data_vector labeling
-      preserve size$local_data_vector
+   address$local_jo labeling
+      preserve size$local_jo
 
-   current_free_address$local_data_vector:
-      xx address$local_data_vector
+   current_free_address$local_jo:
+      xx address$local_jo
    #+end_src
 ** 記 注意結尾詞會初始化局部變量指針
    * 下面的接口函數必須是 primitive-function
      因爲 否則 遇到 end 和 taca 的時候
-     current_free_address$local_data_vector 就又被初始化了
+     current_free_address$local_jo 就又被初始化了
 ** local_data_allocate__jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "local-data-allocate,jo", local_data_allocate__jo
       ;; << number -- >>
       pop_argument_stack rax
       imul rax, jo_size
-      add [current_free_address$local_data_vector], rax
+      add [current_free_address$local_jo], rax
       next
    #+end_src
 ** note many fetch & save
@@ -6887,7 +6886,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vector
+   define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
       ;; << offset, n -- value-1, ..., value-n >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -6901,7 +6900,7 @@
       loop .loop
       next
 
-   define_primitive_function "n-save,local-data-vector", n_save__local_data_vector
+   define_primitive_function "n-save,local-jo", n_save__local_jo
       ;; << value-n, ..., value-1, offset, n -- >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -6927,7 +6926,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "n-fetch,local-data-vector", n_fetch__local_data_vector
+   define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
       ;; << offset, n -- value-1, ..., value-n >>
       mov rax, [pointer$return_stack]
       mov rbx, [rax - (2 * jo_size)]
@@ -6942,7 +6941,7 @@
       loop .loop
       next
 
-   define_primitive_function "n-save,local-data-vector", n_save__local_data_vector
+   define_primitive_function "n-save,local-jo", n_save__local_jo
       ;; << value-n, ..., value-1, offset, n -- >>
       mov rax, [pointer$return_stack]
       mov rbx, [rax - (2 * jo_size)]
@@ -6983,13 +6982,13 @@
 
         ;; >::var2
         xx literal, 2, local_data_allocate__jo
-        xx literal, 0, literal, 2, n_save__local_data_vector
+        xx literal, 0, literal, 2, n_save__local_jo
 
         ;; >::var2
-        xx literal, 0, literal, 2, n_save__local_data_vector
+        xx literal, 0, literal, 2, n_save__local_jo
 
         ;; ::var2
-        xx literal, 0, literal, 2, n_fetch__local_data_vector
+        xx literal, 0, literal, 2, n_fetch__local_jo
 
         xx end
      #+end_src
@@ -7204,18 +7203,18 @@
       ;;    string[address, length] >>
       xx dup2
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_fetch__local_data_vector
+      ;;   literal, <offese>, literal, n, n_fetch__local_jo
       xx     literal, literal
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       ;;     offset
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       xx     literal, literal
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       ;;     n
       xx     count_front_colon
-      xx       save_into__jo_heap
-      xx     literal, n_fetch__local_data_vector
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
+      xx     literal, n_fetch__local_jo
+      xx       save_into__jo_area
       xx   end
    .not_found:
       xx write_local_variable_not_bound_report
@@ -7274,18 +7273,18 @@
       xx string_tail__char
       xx dup2
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_save__local_data_vector
+      ;;   literal, <offese>, literal, n, n_save__local_jo
       xx     literal, literal
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       ;;     offset
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       xx     literal, literal
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
       ;;     n
       xx     count_front_colon
-      xx       save_into__jo_heap
-      xx     literal, n_save__local_data_vector
-      xx       save_into__jo_heap
+      xx       save_into__jo_area
+      xx     literal, n_save__local_jo
+      xx       save_into__jo_area
       xx   end
    .not_found:
       xx dup2
@@ -7294,33 +7293,33 @@
       xx count_front_colon
       ;; literal, <number>, local_data_allocate__jo
       xx   literal, literal
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       ;;   number of jo
-      xx     dup, save_into__jo_heap
+      xx     dup, save_into__jo_area
       xx   literal, local_data_allocate__jo
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       ;; literal, <offese>, literal, n, save_local_data
       xx   literal, literal
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       ;;   offset
       xx   swap
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       xx   literal, literal
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
       ;;   n
-      xx     save_into__jo_heap
-      xx   literal, n_save__local_data_vector
-      xx     save_into__jo_heap
+      xx     save_into__jo_area
+      xx   literal, n_save__local_jo
+      xx     save_into__jo_area
       xx end
    #+end_src
 ** ----------------------------------
-* local-data-heap
+* local-byte
 ** 記
    * 並不需要給這裏的接口設計特殊的語法擴展
      直接使用函數就可以了
    * 但是接口必須是 primitive-function
      因爲 否則 遇到 end 和 taca 的時候
-     current_free_address$local_data_heap 就又被初始化了
+     current_free_address$local_byte 就又被初始化了
 ** 記 使用
    * 在一個函數內
      用 allocate-local-memory 所申請的局部數據空間
@@ -7335,22 +7334,22 @@
      所申請的 allocate-local-memory 是相同的
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_data_heap = 1024 * 1024 * jo_size
+   size$local_byte = 1024 * 1024 * jo_size
 
-   address$local_data_heap labeling
-      preserve size$local_data_heap
+   address$local_byte labeling
+      preserve size$local_byte
 
-   current_free_address$local_data_heap:
-      xx address$local_data_heap
+   current_free_address$local_byte:
+      xx address$local_byte
    #+end_src
 ** allocate-local-memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "allocate-local-memory", allocate_local_memory
       ;; << size -- address >>
       pop_argument_stack rbx
-      mov rax, [current_free_address$local_data_heap]
+      mov rax, [current_free_address$local_byte]
       push_argument_stack rax
-      add [current_free_address$local_data_heap], rbx
+      add [current_free_address$local_byte], rbx
       next
    #+end_src
 ** test
@@ -7419,12 +7418,12 @@
    define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
      xx current_free_address$un_initialized_memory
    #+end_src
-** *current-free-address,primitive-string-heap*
+** *current-free-address,primitive-string-area*
    * the last_primitive_string_in_assembly
-     is just "*current-free-address,primitive-string-heap*"
+     is just "*current-free-address,primitive-string-area*"
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*current-free-address,primitive-string-heap*", V__current_free_address__primitive_string
-      xx current_free_address$primitive_string_heap
+   define_variable "*current-free-address,primitive-string-area*", V__current_free_address__primitive_string_area
+      xx current_free_address$primitive_string_area
    #+end_src
 ** last_link
    * this word helps to initialize V__first_jo_in_jotionary
