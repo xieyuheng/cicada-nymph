@@ -1645,7 +1645,7 @@
    #+end_src
 * -----------------------------------
 * constant for linux                  :linux:
-** init-syscall-number
+** init-syscall-number                :32bit:
    #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 4 equal? if
      5   : :syscall-number,open:       ; define-variable
@@ -1662,7 +1662,12 @@
      1   : :syscall-number,exit:       ; define-variable
      43  : :syscall-number,times:      ; define-variable
      20  : :syscall-number,getpid:     ; define-variable
+     183 : :syscall-number,getcwd:     ; define-variable
+     12  : :syscall-number,chdir:      ; define-variable
    then
+   #+end_src
+** init-syscall-number                :64bit:
+   #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 8 equal? if
      2   : :syscall-number,open:       ; define-variable
      3   : :syscall-number,close:      ; define-variable
@@ -1678,6 +1683,8 @@
      60  : :syscall-number,exit:       ; define-variable
      100 : :syscall-number,times:      ; define-variable
      39  : :syscall-number,getpid:     ; define-variable
+     79  : :syscall-number,getcwd:     ; define-variable
+     80  : :syscall-number,chdir:      ; define-variable
    then
    #+end_src
 ** error-code->string
@@ -1845,6 +1852,19 @@
    #+end_src
 * -----------------------------------
 * port
+** note syscall with string arguments
+   * for syscall the arguments in stack look like
+     << ..., arg3, arg2, arg1 >>
+     so
+     for read(port, buffer, size)
+     we need
+     << size, buffer, port >>
+     but the interface (port,read) in cicada-nymph is
+     << buffer, size, port >>
+     thus we need a swap here
+     and
+     we should be careful
+     for other interface functions in cicada-nymph
 ** note linux header
    * 8 base number :
      O_ACCMODE          0003
@@ -2717,24 +2737,356 @@
    ; define-function
    test,directory,find-directory
    #+end_src
+* system environment                  :linux:
+** note two directories
+   * all files about cicada
+     are stored in two directories only
+     1. user :
+        "/home/<user>/.cicada"
+     2. system :
+        "/etc/cicada"
+   * note that
+     the convention of linux is not followed
+     "/share" and "/include" are not used
+** note linux system environment
+   * pid is the key to all the linux system environment
+   * command-line
+     /proc/<pid>/cmdline
+   * environment-string-variable-list
+     /proc/<pid>/environ
+** [init|get]-pid
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : *pid* ; define-variable
+
+   : init-pid
+     << -- >>
+     :syscall-number,getpid:
+     0 syscall
+     address *pid* save
+     end
+   ; define-function
+
+   : get-pid
+     << -- pid >>
+     *pid*
+     end
+   ; define-function
+   #+end_src
+** [init|get]-command-line
+   #+begin_src cicada-nymph :tangle core.cn
+   512 allocate-memory
+   : *address,command-line*
+   ; define-variable
+
+   512
+   : *length,command-line*
+   ; define-variable
+
+   : init-command-line
+     << -- >>
+     64 allocate-local-memory >:path-buffer
+     :path-buffer >:cursor
+
+     get-pid write-number,fill-buffer >::pid-string
+
+     "/proc/" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     ::pid-string dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     "/cmdline" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     :path-buffer
+     :cursor :path-buffer sub dup2 >::path
+     input-port,open if
+     else
+       "* (init-command-line) fail to open : " .s ::path .s .l
+       end
+     then
+     >:port
+
+     *address,command-line*
+     *length,command-line*
+     :port
+     port,read if
+     else
+       "* (init-command-line) fail to read : " .s ::path .s .l
+       end
+     then
+     address *length,command-line* save
+     end
+   ; define-function
+
+   : get-command-line
+     << -- string[address, length] >>
+     *address,command-line* *length,command-line*
+     end
+   ; define-function
+   #+end_src
+** [init|get]-environment-string-variable-list
+   * the size of /proc/<pid>/environ is limited to 4k
+   #+begin_src cicada-nymph :tangle core.cn
+   1024 4 mul allocate-memory
+   : *address,environment-string-variable-list*
+   ; define-variable
+
+   1024 4 mul
+   : *length,environment-string-variable-list*
+   ; define-variable
+
+   : init-environment-string-variable-list
+     << -- >>
+     64 allocate-local-memory >:path-buffer
+     :path-buffer >:cursor
+
+     get-pid write-number,fill-buffer >::pid-string
+
+     "/proc/" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     ::pid-string dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     "/environ" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     :path-buffer
+     :cursor :path-buffer sub dup2 >::path
+     input-port,open if
+     else
+       "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
+       end
+     then
+     >:port
+
+     *address,environment-string-variable-list*
+     *length,environment-string-variable-list*
+     :port
+     port,read if
+     else
+       "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
+       end
+     then
+     address *length,environment-string-variable-list* save
+     end
+   ; define-function
+
+   : get-environment-string-variable-list
+     << -- string[address, length] >>
+     *address,environment-string-variable-list* *length,environment-string-variable-list*
+     end
+   ; define-function
+   #+end_src
+** find-environment-string-variable
+   * the string used to find an environment-string-variable
+     can not contain "="
+     no error handling on this
+   #+begin_src cicada-nymph :tangle core.cn
+   : find-environment-string-variable,loop
+     << string[address, length], cursor
+        -- string[address, length], true
+        -- false >>
+     dup
+     get-environment-string-variable-list add
+     greater-than? if
+       drop drop2
+       false
+       end
+     then
+     >:cursor
+     >:length
+     >:address
+     :address :cursor :length
+     compare-buffer not if
+       :address :length
+       :cursor 0 cursor->next-matching-byte
+       <> find-environment-string-variable,loop
+     then
+     :cursor :length fetch-byte
+     "=" string-head,char
+     equal? not if
+       :address :length
+       :cursor 0 cursor->next-matching-byte
+       <> find-environment-string-variable,loop
+     then
+     :cursor :length add
+     add1 >:find-address
+     :find-address
+     0 cursor->next-matching-byte
+     :find-address sub
+     >:find-length
+     :find-address
+     :find-length
+     end
+   ; define-function
+
+   : find-environment-string-variable
+     << string[address, length]
+        -- string[address, length], true
+        -- false >>
+     get-environment-string-variable-list drop
+     find-environment-string-variable,loop
+     end
+   ; define-function
+   #+end_src
+** initialize system environment
+   #+begin_src cicada-nymph :tangle core.cn
+   init-pid
+   init-command-line
+   init-environment-string-variable-list
+   #+end_src
+* working-directory
+** get-working-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   512 allocate-memory
+   : *buffer,working-directory*
+   ; define-variable
+
+   : get-working-directory
+     << -- directory[address, length] >>
+     512
+     *buffer,working-directory*
+     :syscall-number,getcwd:
+     2 syscall
+     dup negative? if
+       "* (get-working-directory) fail" .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     *buffer,working-directory*
+     swap
+     end
+   ; define-function
+   #+end_src
+** change-working-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : change-working-directory
+     << directory-path[address, length] -- >>
+     string->syscall-string
+     :syscall-number,chdir:
+     1 syscall
+     dup negative? if
+       "* (change-working-directory) fail" .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     drop
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   get-working-directory .s
+   "/home" change-working-directory
+   get-working-directory .s
+   #+end_src
+* poi
+** note
+   * poi denotes path-organizer
+     it can give a name to a path
+     one path one name
+   * a path as a string must not contain any space chars
+** note two directories
+   * two directories to store the name path record
+     1. user :
+        "/home/<user>/.cicada/poi"
+     2. system :
+        "/etc/cicada/poi"
+   * note that
+     these two directories are viewed as one by poi
+     no such things like
+     user overriding system will happen
+     one name can only exist in one of the two directories
+     more on this in the following note
+** note interface for command-line-function
+   * cn poi add  <name> <relative-path>
+   * cn poi sub  <name>
+   * cn poi up   <name> <relative-path>
+   * cn poi show <name>
+   * cn poi list
+   * <relative-path> is converted to <full-path>
+     with the help of working-directory
+   * <relative-path> is in the format of
+     "./directory/file"
+     "./directory/directory"
+     note that
+     for a <relative-path> of directory
+     not tailing "/" should be added
+** poi,add
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,add
+     << name[address, length], relative-path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,sub
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,sub
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,up
+   * up denotes update
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,up
+     << name[address, length], relative-path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,list
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,list
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,show
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,show
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,help
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,help
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
 * path
 ** 記 syntax about path
    * 利用了系統的路徑格式
      同時又把系統的路徑格式抽象掉了
    #+begin_src cicada-nymph
-   {path: home xyh cicada core.cn}
+   path: home xyh cicada core.cn ;
    "/home/xyh/cicada/core.cn"
 
-   {path: home xyh cicada}
+   path: home xyh cicada ;
    "/home/xyh/cicada"
 
-   {path: +working+ core.cn}
+   path: +working+ core.cn ;
    "./core.cn"
 
-   {path: +parent+ cicada core.cn}
+   path: +parent+ cicada core.cn ;
    "../cicada/core.cn"
 
-   {path: +library+ kkk main.cn}
+   path: +library+ kkk main.cn ;
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
 ** stat structure
@@ -2992,98 +3344,6 @@
    : cn ; path,directory? . << 0 >>
    : core ; path,directory? . << 1 >>
    : ai ; path,directory? . << 0 >>
-   #+end_src
-* poi
-** note
-   * poi denotes path-organizer
-     it can give a name to a path
-     one path one name
-     it is designed for (load-file)
-** note two directories
-   * two directories to store the name path record
-     1. user :
-        "/home/<user>/.cicada/poi"
-     2. system :
-        "/etc/cicada/poi"
-   * note that
-     these two directories are viewed as one by poi
-     no such things like
-     user overriding system will happen
-     one name can only exist in one of the two directories
-     more on this in the following note
-** note interface for command-line-function
-   * cn poi add  <name> <relative-path>
-   * cn poi sub  <name>
-   * cn poi up   <name> <relative-path>
-   * cn poi show <name>
-   * cn poi list
-   * <relative-path> is converted to <full-path>
-     with the help of working-directory
-   * <relative-path> is in the format of
-     "./directory/file"
-     "./directory/directory"
-     note that
-     for a <relative-path> of directory
-     not tailing "/" should be added
-** note interface for load-file
-   * a path can be a file or a directory
-     1. file
-        "name" load-file
-     2. directory
-        "name/file" load-file
-        note that
-        use "name/file"
-        instead of "name/file.cn"
-** note interface in cicada-nymph code
-   * poi should not be called in cicada-nymph code
-** poi,help
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,help
-     << -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,add
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,add
-     << name[address, length], relative-path[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,sub
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,sub
-     << name[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,up
-   * up denotes update
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,up
-     << name[address, length], relative-path[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,list
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,list
-     << -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,show
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,show
-     << name[address, length] -- >>
-
-     end
-   ; define-function
    #+end_src
 * -----------------------------------
 * module
@@ -3541,212 +3801,6 @@
    ; define-function
    #+end_src
 * -----------------------------------
-* system environment                  :linux:
-** note two directories
-   * all files about cicada
-     are stored in two directories only
-     1. user :
-        "/home/<user>/.cicada"
-     2. system :
-        "/etc/cicada"
-   * note that
-     the convention of linux is not followed
-     "/share" and "/include" are not used
-** note linux system environment
-   * pid is the key to all the linux system environment
-   * command-line
-     /proc/<pid>/cmdline
-   * environment-string-variable-list
-     /proc/<pid>/environ
-** [init|get]-pid
-   #+begin_src cicada-nymph :tangle core.cn
-   0 : *pid* ; define-variable
-
-   : init-pid
-     << -- >>
-     :syscall-number,getpid:
-     0 syscall
-     address *pid* save
-     end
-   ; define-function
-
-   : get-pid
-     << -- pid >>
-     *pid*
-     end
-   ; define-function
-   #+end_src
-** [init|get]-command-line
-   #+begin_src cicada-nymph :tangle core.cn
-   512 allocate-memory
-   : *address,command-line*
-   ; define-variable
-
-   512
-   : *length,command-line*
-   ; define-variable
-
-   : init-command-line
-     << -- >>
-     64 allocate-local-memory >:path-buffer
-     :path-buffer >:cursor
-
-     get-pid write-number,fill-buffer >::pid-string
-
-     "/proc/" dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     ::pid-string dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     "/cmdline" dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     :path-buffer
-     :cursor :path-buffer sub dup2 >::path
-     input-port,open if
-     else
-       "* (init-command-line) fail to open : " .s ::path .s .l
-       end
-     then
-     >:port
-
-     *address,command-line*
-     *length,command-line*
-     :port
-     port,read if
-     else
-       "* (init-command-line) fail to read : " .s ::path .s .l
-       end
-     then
-     address *length,command-line* save
-     end
-   ; define-function
-
-   : get-command-line
-     << -- string[address, length] >>
-     *address,command-line* *length,command-line*
-     end
-   ; define-function
-   #+end_src
-** [init|get]-environment-string-variable-list
-   * the size of /proc/<pid>/environ is limited to 4k
-   #+begin_src cicada-nymph :tangle core.cn
-   1024 4 mul allocate-memory
-   : *address,environment-string-variable-list*
-   ; define-variable
-
-   1024 4 mul
-   : *length,environment-string-variable-list*
-   ; define-variable
-
-   : init-environment-string-variable-list
-     << -- >>
-     64 allocate-local-memory >:path-buffer
-     :path-buffer >:cursor
-
-     get-pid write-number,fill-buffer >::pid-string
-
-     "/proc/" dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     ::pid-string dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     "/environ" dup >:add-to-cursor
-     :cursor string->buffer!
-     :add-to-cursor :cursor add >:cursor
-
-     :path-buffer
-     :cursor :path-buffer sub dup2 >::path
-     input-port,open if
-     else
-       "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
-       end
-     then
-     >:port
-
-     *address,environment-string-variable-list*
-     *length,environment-string-variable-list*
-     :port
-     port,read if
-     else
-       "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
-       end
-     then
-     address *length,environment-string-variable-list* save
-     end
-   ; define-function
-
-   : get-environment-string-variable-list
-     << -- string[address, length] >>
-     *address,environment-string-variable-list* *length,environment-string-variable-list*
-     end
-   ; define-function
-   #+end_src
-** find-environment-string-variable
-   * the string used to find an environment-string-variable
-     can not contain "="
-     no error handling on this
-   #+begin_src cicada-nymph :tangle core.cn
-   : find-environment-string-variable,loop
-     << string[address, length], cursor
-        -- string[address, length], true
-        -- false >>
-     dup
-     get-environment-string-variable-list add
-     greater-than? if
-       drop drop2
-       false
-       end
-     then
-     >:cursor
-     >:length
-     >:address
-     :address :cursor :length
-     compare-buffer not if
-       :address :length
-       :cursor 0 cursor->next-matching-byte
-       <> find-environment-string-variable,loop
-     then
-     :cursor :length fetch-byte
-     "=" string-head,char
-     equal? not if
-       :address :length
-       :cursor 0 cursor->next-matching-byte
-       <> find-environment-string-variable,loop
-     then
-     :cursor :length add
-     add1 >:find-address
-     :find-address
-     0 cursor->next-matching-byte
-     :find-address sub
-     >:find-length
-     :find-address
-     :find-length
-     end
-   ; define-function
-
-   : find-environment-string-variable
-     << string[address, length]
-        -- string[address, length], true
-        -- false >>
-     get-environment-string-variable-list drop
-     find-environment-string-variable,loop
-     end
-   ; define-function
-   #+end_src
-** initialize system environment
-   #+begin_src cicada-nymph :tangle core.cn
-   init-pid
-   init-command-line
-   init-environment-string-variable-list
-   #+end_src
 * report
 ** report-memory
    #+begin_src cicada-nymph :tangle core.cn

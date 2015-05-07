@@ -893,7 +893,10 @@ jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
   1   : :syscall-number,exit:       ; define-variable
   43  : :syscall-number,times:      ; define-variable
   20  : :syscall-number,getpid:     ; define-variable
+  183 : :syscall-number,getcwd:     ; define-variable
+  12  : :syscall-number,chdir:      ; define-variable
 then
+
 *jo-size* 8 equal? if
   2   : :syscall-number,open:       ; define-variable
   3   : :syscall-number,close:      ; define-variable
@@ -909,6 +912,8 @@ then
   60  : :syscall-number,exit:       ; define-variable
   100 : :syscall-number,times:      ; define-variable
   39  : :syscall-number,getpid:     ; define-variable
+  79  : :syscall-number,getcwd:     ; define-variable
+  80  : :syscall-number,chdir:      ; define-variable
 then
 
 : error-code->string
@@ -1565,6 +1570,251 @@ then
   end
 ; define-function
 
+0 : *pid* ; define-variable
+
+: init-pid
+  << -- >>
+  :syscall-number,getpid:
+  0 syscall
+  address *pid* save
+  end
+; define-function
+
+: get-pid
+  << -- pid >>
+  *pid*
+  end
+; define-function
+
+512 allocate-memory
+: *address,command-line*
+; define-variable
+
+512
+: *length,command-line*
+; define-variable
+
+: init-command-line
+  << -- >>
+  64 allocate-local-memory >:path-buffer
+  :path-buffer >:cursor
+
+  get-pid write-number,fill-buffer >::pid-string
+
+  "/proc/" dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  ::pid-string dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  "/cmdline" dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  :path-buffer
+  :cursor :path-buffer sub dup2 >::path
+  input-port,open if
+  else
+    "* (init-command-line) fail to open : " .s ::path .s .l
+    end
+  then
+  >:port
+
+  *address,command-line*
+  *length,command-line*
+  :port
+  port,read if
+  else
+    "* (init-command-line) fail to read : " .s ::path .s .l
+    end
+  then
+  address *length,command-line* save
+  end
+; define-function
+
+: get-command-line
+  << -- string[address, length] >>
+  *address,command-line* *length,command-line*
+  end
+; define-function
+
+1024 4 mul allocate-memory
+: *address,environment-string-variable-list*
+; define-variable
+
+1024 4 mul
+: *length,environment-string-variable-list*
+; define-variable
+
+: init-environment-string-variable-list
+  << -- >>
+  64 allocate-local-memory >:path-buffer
+  :path-buffer >:cursor
+
+  get-pid write-number,fill-buffer >::pid-string
+
+  "/proc/" dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  ::pid-string dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  "/environ" dup >:add-to-cursor
+  :cursor string->buffer!
+  :add-to-cursor :cursor add >:cursor
+
+  :path-buffer
+  :cursor :path-buffer sub dup2 >::path
+  input-port,open if
+  else
+    "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
+    end
+  then
+  >:port
+
+  *address,environment-string-variable-list*
+  *length,environment-string-variable-list*
+  :port
+  port,read if
+  else
+    "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
+    end
+  then
+  address *length,environment-string-variable-list* save
+  end
+; define-function
+
+: get-environment-string-variable-list
+  << -- string[address, length] >>
+  *address,environment-string-variable-list* *length,environment-string-variable-list*
+  end
+; define-function
+
+: find-environment-string-variable,loop
+  << string[address, length], cursor
+     -- string[address, length], true
+     -- false >>
+  dup
+  get-environment-string-variable-list add
+  greater-than? if
+    drop drop2
+    false
+    end
+  then
+  >:cursor
+  >:length
+  >:address
+  :address :cursor :length
+  compare-buffer not if
+    :address :length
+    :cursor 0 cursor->next-matching-byte
+    <> find-environment-string-variable,loop
+  then
+  :cursor :length fetch-byte
+  "=" string-head,char
+  equal? not if
+    :address :length
+    :cursor 0 cursor->next-matching-byte
+    <> find-environment-string-variable,loop
+  then
+  :cursor :length add
+  add1 >:find-address
+  :find-address
+  0 cursor->next-matching-byte
+  :find-address sub
+  >:find-length
+  :find-address
+  :find-length
+  end
+; define-function
+
+: find-environment-string-variable
+  << string[address, length]
+     -- string[address, length], true
+     -- false >>
+  get-environment-string-variable-list drop
+  find-environment-string-variable,loop
+  end
+; define-function
+
+init-pid
+init-command-line
+init-environment-string-variable-list
+
+512 allocate-memory
+: *buffer,working-directory*
+; define-variable
+
+: get-working-directory
+  << -- directory[address, length] >>
+  512
+  *buffer,working-directory*
+  :syscall-number,getcwd:
+  2 syscall
+  dup negative? if
+    "* (get-working-directory) fail" .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  *buffer,working-directory*
+  swap
+  end
+; define-function
+
+: change-working-directory
+  << directory-path[address, length] -- >>
+  string->syscall-string
+  :syscall-number,chdir:
+  1 syscall
+  dup negative? if
+    "* (change-working-directory) fail" .s .l
+    "  " .s error-code->string .s .l
+    end
+  then
+  drop
+  end
+; define-function
+
+: poi,add
+  << name[address, length], relative-path[address, length] -- >>
+
+  end
+; define-function
+
+: poi,sub
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,up
+  << name[address, length], relative-path[address, length] -- >>
+
+  end
+; define-function
+
+: poi,list
+  << -- >>
+
+  end
+; define-function
+
+: poi,show
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,help
+  << -- >>
+
+  end
+; define-function
+
 0 : +stat,st_dev+        ; define-variable
 0 : +stat,st_ino+        ; define-variable
 0 : +stat,st_mode+       ; define-variable
@@ -1738,42 +1988,6 @@ then
   S_IFLNK       00120000 /* Symbolic link.  */
   S_IFSOCK      00140000 /* Socket.  */
   >>
-  end
-; define-function
-
-: poi,help
-  << -- >>
-
-  end
-; define-function
-
-: poi,add
-  << name[address, length], relative-path[address, length] -- >>
-
-  end
-; define-function
-
-: poi,sub
-  << name[address, length] -- >>
-
-  end
-; define-function
-
-: poi,up
-  << name[address, length], relative-path[address, length] -- >>
-
-  end
-; define-function
-
-: poi,list
-  << -- >>
-
-  end
-; define-function
-
-: poi,show
-  << name[address, length] -- >>
-
   end
 ; define-function
 
@@ -2112,181 +2326,6 @@ allocate-memory
   .l
   end
 ; define-function
-
-0 : *pid* ; define-variable
-
-: init-pid
-  << -- >>
-  :syscall-number,getpid:
-  0 syscall
-  address *pid* save
-  end
-; define-function
-
-: get-pid
-  << -- pid >>
-  *pid*
-  end
-; define-function
-
-512 allocate-memory
-: *address,command-line*
-; define-variable
-
-512
-: *length,command-line*
-; define-variable
-
-: init-command-line
-  << -- >>
-  64 allocate-local-memory >:path-buffer
-  :path-buffer >:cursor
-
-  get-pid write-number,fill-buffer >::pid-string
-
-  "/proc/" dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  ::pid-string dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  "/cmdline" dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  :path-buffer
-  :cursor :path-buffer sub dup2 >::path
-  input-port,open if
-  else
-    "* (init-command-line) fail to open : " .s ::path .s .l
-    end
-  then
-  >:port
-
-  *address,command-line*
-  *length,command-line*
-  :port
-  port,read if
-  else
-    "* (init-command-line) fail to read : " .s ::path .s .l
-    end
-  then
-  address *length,command-line* save
-  end
-; define-function
-
-: get-command-line
-  << -- string[address, length] >>
-  *address,command-line* *length,command-line*
-  end
-; define-function
-
-1024 4 mul allocate-memory
-: *address,environment-string-variable-list*
-; define-variable
-
-1024 4 mul
-: *length,environment-string-variable-list*
-; define-variable
-
-: init-environment-string-variable-list
-  << -- >>
-  64 allocate-local-memory >:path-buffer
-  :path-buffer >:cursor
-
-  get-pid write-number,fill-buffer >::pid-string
-
-  "/proc/" dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  ::pid-string dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  "/environ" dup >:add-to-cursor
-  :cursor string->buffer!
-  :add-to-cursor :cursor add >:cursor
-
-  :path-buffer
-  :cursor :path-buffer sub dup2 >::path
-  input-port,open if
-  else
-    "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
-    end
-  then
-  >:port
-
-  *address,environment-string-variable-list*
-  *length,environment-string-variable-list*
-  :port
-  port,read if
-  else
-    "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
-    end
-  then
-  address *length,environment-string-variable-list* save
-  end
-; define-function
-
-: get-environment-string-variable-list
-  << -- string[address, length] >>
-  *address,environment-string-variable-list* *length,environment-string-variable-list*
-  end
-; define-function
-
-: find-environment-string-variable,loop
-  << string[address, length], cursor
-     -- string[address, length], true
-     -- false >>
-  dup
-  get-environment-string-variable-list add
-  greater-than? if
-    drop drop2
-    false
-    end
-  then
-  >:cursor
-  >:length
-  >:address
-  :address :cursor :length
-  compare-buffer not if
-    :address :length
-    :cursor 0 cursor->next-matching-byte
-    <> find-environment-string-variable,loop
-  then
-  :cursor :length fetch-byte
-  "=" string-head,char
-  equal? not if
-    :address :length
-    :cursor 0 cursor->next-matching-byte
-    <> find-environment-string-variable,loop
-  then
-  :cursor :length add
-  add1 >:find-address
-  :find-address
-  0 cursor->next-matching-byte
-  :find-address sub
-  >:find-length
-  :find-address
-  :find-length
-  end
-; define-function
-
-: find-environment-string-variable
-  << string[address, length]
-     -- string[address, length], true
-     -- false >>
-  get-environment-string-variable-list drop
-  find-environment-string-variable,loop
-  end
-; define-function
-
-init-pid
-init-command-line
-init-environment-string-variable-list
 
 : report-memory
   << -- >>
