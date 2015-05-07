@@ -3,6 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** 如何處理 name-hash-table           :question:
+   * 根本不在 cicada-nymph 中使用 name ???
+     還是讓 name 能夠在 cicada-nymph 和 cicada 中被同時使用 ???
+** 根目錄有關的函數應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
      因爲 address 這個詞 對於 variable-jo 而言 太一般了
@@ -47,6 +51,7 @@
      1. little-tester
      2. 在不同的平臺下執行不同的代碼
 ** debug-REPL
+** language-level support for creating and managing processes
 ** [really needed] error handling for io function
    * write-file 可能遇到磁盤滿載的情況
 ** fixnum in other base
@@ -1656,6 +1661,7 @@
      106 : :syscall-number,stat:       ; define-variable
      1   : :syscall-number,exit:       ; define-variable
      43  : :syscall-number,times:      ; define-variable
+     20  : :syscall-number,getpid:     ; define-variable
    then
    *jo-size* 8 equal? if
      2   : :syscall-number,open:       ; define-variable
@@ -1671,6 +1677,7 @@
      4   : :syscall-number,stat:       ; define-variable
      60  : :syscall-number,exit:       ; define-variable
      100 : :syscall-number,times:      ; define-variable
+     39  : :syscall-number,getpid:     ; define-variable
    then
    #+end_src
 ** error-code->string
@@ -1836,175 +1843,6 @@
      end
    ; define-function
    #+end_src
-* report
-** report-memory
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-memory
-     << -- >>
-     "* *un-initialized-memory*" .s .l
-     "  * size : " .s
-          *size,un-initialized-memory*
-          . .l
-     "  * used : " .s
-          *current-free-address,un-initialized-memory*
-          *un-initialized-memory*
-          sub . .l
-     "  * free : " .s
-          *size,un-initialized-memory*
-          *current-free-address,un-initialized-memory*
-          *un-initialized-memory*
-          sub sub . .l
-     "* *primitive-string-area*" .s .l
-     "  * size : " .s
-          *size,primitive-string-area*
-          . .l
-     "  * used : " .s
-          *current-free-address,primitive-string-area*
-          *primitive-string-area*
-          sub . .l
-     "  * free : " .s
-          *size,primitive-string-area*
-          *current-free-address,primitive-string-area*
-          *primitive-string-area*
-          sub sub . .l
-     "* *jo-area*" .s .l
-     "  * size : " .s
-          *size,jo-area* . .l
-     "  * used : " .s
-          *current-free-address,jo-area*
-          *jo-area*
-          sub . .l
-     "  * free : " .s
-          *size,jo-area*
-          *current-free-address,jo-area*
-          *jo-area*
-          sub sub . .l
-     end
-   ; define-function
-   #+end_src
-** report-platform
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-platform
-     << -- >>
-     "* platform : " .s
-     platform .s
-     .l
-     end
-   ; define-function
-   #+end_src
-** report-jo-size
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-jo-size
-     << -- >>
-     "* jo-size : " .s
-     *jo-size* write-number
-     " bytes" .s
-     .l
-     end
-   ; define-function
-   #+end_src
-** report-machine-word-size
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-machine-word-size
-     << -- >>
-     "* machine-word-size : " .s
-     *jo-size* 8 mul write-number
-     " bits" .s
-     .l
-     end
-   ; define-function
-   #+end_src
-** report-syntax
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-syntax
-     << -- >>
-     "* *rule-set,make-jojo* :" .s .l
-      *rule-set,make-jojo* rule-set,list
-     "* *rule-set,basic-REPL* :" .s .l
-      *rule-set,basic-REPL* rule-set,list
-     "* tos-syntax-stack :" .s .l
-      tos-syntax-stack rule-set,list
-     end
-   ; define-function
-   #+end_src
-** report-loaded-core-file
-   #+begin_src cicada-nymph :tangle core.cn
-   : report-loaded-core-file
-     << -- >>
-     "* loaded-core-file : " .s
-     get-path,loaded-core-file .s .l
-     end
-   ; define-function
-   #+end_src
-** initial-report
-   #+begin_src cicada-nymph :tangle core.cn
-   : initial-report
-     << -- >>
-     "* initial-report : " .s .l
-     "  " .s report-loaded-core-file
-     "  " .s report-platform
-     "  " .s report-machine-word-size
-     "  " .s report-jo-size
-     end
-   ; define-function
-   #+end_src
-* hi
-** welcome
-   #+begin_src cicada-nymph :tangle core.cn
-   : welcome
-     << -- >>
-     "* welcome to cicada-nymph" .s .l
-     end
-   ; define-function
-   #+end_src
-** hi
-   #+begin_src cicada-nymph :tangle core.cn
-   0
-   : *hi,random-base*
-   ; define-variable
-
-   : hi,random
-     << -- random-number >>
-     0 :syscall-number,times:
-     1 syscall
-     9 mod
-     <<
-      *hi,random-base*
-      *hi,random-base* add1 13 mod
-      address *hi,random-base* save
-     >>
-     end
-   ; define-function
-
-   : hi,say
-     << number -- >>
-     dup 0 equal? if drop "  cica cica da yaya !!!" .s .l end then
-     dup 1 equal? if drop "  hi ^-^" .s .l end then
-     dup 2 equal? if drop "  hello :)" .s .l end then
-     dup 3 equal? if drop "  hey *^-^*" .s .l end then
-     dup 4 equal? if drop "  hiya \^o^/" .s .l end then
-     dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
-     dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
-     dup 7 equal? if drop "  o.o" .s .l end then
-                     drop "  lovely ^3^" .s .l end
-   ; define-function
-
-   : hi
-     << -- >>
-     hi,random
-     hi,say
-     end
-   ; define-function
-   #+end_src
-** help
-   #+begin_src cicada-nymph :tangle core.cn
-   : help
-     << -- >>
-     "* helpful documentations will be written soon" .s .l
-     "  please wait ^-^" .s .l
-     end
-   ; define-function
-   #+end_src
 * -----------------------------------
 * port
 ** note linux header
@@ -2041,7 +1879,7 @@
         這裏將抽象掉 port 這個概念
         也就是每次簡單的讀寫都伴隨兩個對 port 的操作
         這樣接口就很簡單 但是速度可能會非常慢
-** input-port,open                    :redefine:
+** input-port,open
    #+begin_src cicada-nymph :tangle core.cn
    : input-port,open
      << path[address, length]
@@ -2126,7 +1964,7 @@
      end
    ; define-function
    #+end_src
-** port,close                         :redefine:
+** port,close
    #+begin_src cicada-nymph :tangle core.cn
    : port,close
      << port
@@ -2165,7 +2003,7 @@
    ; define-function
    test,output-port,update
    #+end_src
-** port,read                          :redefine:
+** port,read
    #+begin_src cicada-nymph :tangle core.cn
    : port,read
      << buffer, max-size, port
@@ -2899,8 +2737,6 @@
    {path: +library+ kkk main.cn}
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
-** relative-path?
-** full-path?
 ** stat structure
    #+begin_src cicada-nymph :tangle core.cn
    0 : +stat,st_dev+        ; define-variable
@@ -3200,7 +3036,7 @@
         instead of "name/file.cn"
 ** note interface in cicada-nymph code
    * poi should not be called in cicada-nymph code
-** help
+** poi,help
    #+begin_src cicada-nymph :tangle core.cn
    : poi,help
      << -- >>
@@ -3208,7 +3044,7 @@
      end
    ; define-function
    #+end_src
-** add
+** poi,add
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
      << name[address, length], relative-path[address, length] -- >>
@@ -3216,7 +3052,7 @@
      end
    ; define-function
    #+end_src
-** sub
+** poi,sub
    #+begin_src cicada-nymph :tangle core.cn
    : poi,sub
      << name[address, length] -- >>
@@ -3224,7 +3060,7 @@
      end
    ; define-function
    #+end_src
-** up
+** poi,up
    * up denotes update
    #+begin_src cicada-nymph :tangle core.cn
    : poi,up
@@ -3233,7 +3069,7 @@
      end
    ; define-function
    #+end_src
-** list
+** poi,list
    #+begin_src cicada-nymph :tangle core.cn
    : poi,list
      << -- >>
@@ -3241,7 +3077,7 @@
      end
    ; define-function
    #+end_src
-** show
+** poi,show
    #+begin_src cicada-nymph :tangle core.cn
    : poi,show
      << name[address, length] -- >>
@@ -3249,6 +3085,22 @@
      end
    ; define-function
    #+end_src
+* -----------------------------------
+* module
+  * a erlang like module system
+    但是
+    於 erlang 之間的重要區別在於
+    * cicada-nymph 是純粹解釋型的語言
+      並不需要編譯文件
+  * 一個 module 就是一個 保存源代碼的文件
+    其中必須包含固定格式的元數據
+  * 元數據中包含
+    1. 如何扭曲 jotionary
+       也就是說 確實是在扭曲 jotionary
+       但是扭曲的方式可以非常靈活
+* load-file
+** 記 元數據
+   * 被加載的文件的開頭應該有元數據
 * -----------------------------------
 * name-hash-table
 ** note naming & factoring
@@ -3689,6 +3541,371 @@
    ; define-function
    #+end_src
 * -----------------------------------
+* system environment                  :linux:
+** note two directories
+   * all files about cicada
+     are stored in two directories only
+     1. user :
+        "/home/<user>/.cicada"
+     2. system :
+        "/etc/cicada"
+   * note that
+     the convention of linux is not followed
+     "/share" and "/include" are not used
+** note linux system environment
+   * pid is the key to all the linux system environment
+   * command-line
+     /proc/<pid>/cmdline
+   * environment-string-variable-list
+     /proc/<pid>/environ
+** [init|get]-pid
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : *pid* ; define-variable
+
+   : init-pid
+     << -- >>
+     :syscall-number,getpid:
+     0 syscall
+     address *pid* save
+     end
+   ; define-function
+
+   : get-pid
+     << -- pid >>
+     *pid*
+     end
+   ; define-function
+   #+end_src
+** [init|get]-command-line
+   #+begin_src cicada-nymph :tangle core.cn
+   512 allocate-memory
+   : *address,command-line*
+   ; define-variable
+
+   512
+   : *length,command-line*
+   ; define-variable
+
+   : init-command-line
+     << -- >>
+     64 allocate-local-memory >:path-buffer
+     :path-buffer >:cursor
+
+     get-pid write-number,fill-buffer >::pid-string
+
+     "/proc/" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     ::pid-string dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     "/cmdline" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     :path-buffer
+     :cursor :path-buffer sub dup2 >::path
+     input-port,open if
+     else
+       "* (init-command-line) fail to open : " .s ::path .s .l
+       end
+     then
+     >:port
+
+     *address,command-line*
+     *length,command-line*
+     :port
+     port,read if
+     else
+       "* (init-command-line) fail to read : " .s ::path .s .l
+       end
+     then
+     address *length,command-line* save
+     end
+   ; define-function
+
+   : get-command-line
+     << -- string[address, length] >>
+     *address,command-line* *length,command-line*
+     end
+   ; define-function
+   #+end_src
+** [init|get]-environment-string-variable-list
+   * the size of /proc/<pid>/environ is limited to 4k
+   #+begin_src cicada-nymph :tangle core.cn
+   1024 4 mul allocate-memory
+   : *address,environment-string-variable-list*
+   ; define-variable
+
+   1024 4 mul
+   : *length,environment-string-variable-list*
+   ; define-variable
+
+   : init-environment-string-variable-list
+     << -- >>
+     64 allocate-local-memory >:path-buffer
+     :path-buffer >:cursor
+
+     get-pid write-number,fill-buffer >::pid-string
+
+     "/proc/" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     ::pid-string dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     "/environ" dup >:add-to-cursor
+     :cursor string->buffer!
+     :add-to-cursor :cursor add >:cursor
+
+     :path-buffer
+     :cursor :path-buffer sub dup2 >::path
+     input-port,open if
+     else
+       "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
+       end
+     then
+     >:port
+
+     *address,environment-string-variable-list*
+     *length,environment-string-variable-list*
+     :port
+     port,read if
+     else
+       "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
+       end
+     then
+     address *length,environment-string-variable-list* save
+     end
+   ; define-function
+
+   : get-environment-string-variable-list
+     << -- string[address, length] >>
+     *address,environment-string-variable-list* *length,environment-string-variable-list*
+     end
+   ; define-function
+   #+end_src
+** find-environment-string-variable
+   * the string used to find an environment-string-variable
+     can not contain "="
+     no error handling on this
+   #+begin_src cicada-nymph :tangle core.cn
+   : find-environment-string-variable,loop
+     << string[address, length], cursor
+        -- string[address, length], true
+        -- false >>
+     dup
+     get-environment-string-variable-list add
+     greater-than? if
+       drop drop2
+       false
+       end
+     then
+     >:cursor
+     >:length
+     >:address
+     :address :cursor :length
+     compare-buffer not if
+       :address :length
+       :cursor 0 cursor->next-matching-byte
+       <> find-environment-string-variable,loop
+     then
+     :cursor :length fetch-byte
+     "=" string-head,char
+     equal? not if
+       :address :length
+       :cursor 0 cursor->next-matching-byte
+       <> find-environment-string-variable,loop
+     then
+     :cursor :length add
+     add1 >:find-address
+     :find-address
+     0 cursor->next-matching-byte
+     :find-address sub
+     >:find-length
+     :find-address
+     :find-length
+     end
+   ; define-function
+
+   : find-environment-string-variable
+     << string[address, length]
+        -- string[address, length], true
+        -- false >>
+     get-environment-string-variable-list drop
+     find-environment-string-variable,loop
+     end
+   ; define-function
+   #+end_src
+** initialize system environment
+   #+begin_src cicada-nymph :tangle core.cn
+   init-pid
+   init-command-line
+   init-environment-string-variable-list
+   #+end_src
+* report
+** report-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-memory
+     << -- >>
+     "* *un-initialized-memory*" .s .l
+     "  * size : " .s
+          *size,un-initialized-memory*
+          . .l
+     "  * used : " .s
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub . .l
+     "  * free : " .s
+          *size,un-initialized-memory*
+          *current-free-address,un-initialized-memory*
+          *un-initialized-memory*
+          sub sub . .l
+     "* *primitive-string-area*" .s .l
+     "  * size : " .s
+          *size,primitive-string-area*
+          . .l
+     "  * used : " .s
+          *current-free-address,primitive-string-area*
+          *primitive-string-area*
+          sub . .l
+     "  * free : " .s
+          *size,primitive-string-area*
+          *current-free-address,primitive-string-area*
+          *primitive-string-area*
+          sub sub . .l
+     "* *jo-area*" .s .l
+     "  * size : " .s
+          *size,jo-area* . .l
+     "  * used : " .s
+          *current-free-address,jo-area*
+          *jo-area*
+          sub . .l
+     "  * free : " .s
+          *size,jo-area*
+          *current-free-address,jo-area*
+          *jo-area*
+          sub sub . .l
+     end
+   ; define-function
+   #+end_src
+** report-platform
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-platform
+     << -- >>
+     "* platform : " .s
+     platform .s
+     .l
+     end
+   ; define-function
+   #+end_src
+** report-jo-size
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-jo-size
+     << -- >>
+     "* jo-size : " .s
+     *jo-size* write-number
+     " bytes" .s
+     .l
+     end
+   ; define-function
+   #+end_src
+** report-machine-word-size
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-machine-word-size
+     << -- >>
+     "* machine-word-size : " .s
+     *jo-size* 8 mul write-number
+     " bits" .s
+     .l
+     end
+   ; define-function
+   #+end_src
+** report-syntax
+   #+begin_src cicada-nymph :tangle core.cn
+   : report-syntax
+     << -- >>
+     "* *rule-set,make-jojo* :" .s .l
+      *rule-set,make-jojo* rule-set,list
+     "* *rule-set,basic-REPL* :" .s .l
+      *rule-set,basic-REPL* rule-set,list
+     "* tos-syntax-stack :" .s .l
+      tos-syntax-stack rule-set,list
+     end
+   ; define-function
+   #+end_src
+** initial-report
+   #+begin_src cicada-nymph :tangle core.cn
+   : initial-report
+     << -- >>
+     "* initial-report : " .s .l
+     "  " .s report-platform
+     "  " .s report-machine-word-size
+     "  " .s report-jo-size
+     end
+   ; define-function
+   #+end_src
+* hi
+** welcome
+   #+begin_src cicada-nymph :tangle core.cn
+   : welcome
+     << -- >>
+     "* welcome to cicada-nymph" .s .l
+     end
+   ; define-function
+   #+end_src
+** hi
+   #+begin_src cicada-nymph :tangle core.cn
+   0
+   : *hi,random-base*
+   ; define-variable
+
+   : hi,random
+     << -- random-number >>
+     0 :syscall-number,times:
+     1 syscall
+     9 mod
+     <<
+      *hi,random-base*
+      *hi,random-base* add1 13 mod
+      address *hi,random-base* save
+     >>
+     end
+   ; define-function
+
+   : hi,say
+     << number -- >>
+     dup 0 equal? if drop "  cica cica da yaya !!!" .s .l end then
+     dup 1 equal? if drop "  hi ^-^" .s .l end then
+     dup 2 equal? if drop "  hello :)" .s .l end then
+     dup 3 equal? if drop "  hey *^-^*" .s .l end then
+     dup 4 equal? if drop "  hiya \^o^/" .s .l end then
+     dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
+     dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
+     dup 7 equal? if drop "  o.o" .s .l end then
+                     drop "  lovely ^3^" .s .l end
+   ; define-function
+
+   : hi
+     << -- >>
+     hi,random
+     hi,say
+     end
+   ; define-function
+   #+end_src
+** help
+   #+begin_src cicada-nymph :tangle core.cn
+   : help
+     << -- >>
+     "* helpful documentations will be written soon" .s .l
+     "  please wait ^-^" .s .l
+     end
+   ; define-function
+   #+end_src
 * command-line-interface
 ** note
 ** command-line,unknow-function
@@ -3699,7 +3916,7 @@
      get-command-line
      string-tail,word
      string-head,word .s .l
-     "* good bye ^-^/" .s .l
+     "  good bye ^-^/" .s .l
      bye
      end
    ; define-function

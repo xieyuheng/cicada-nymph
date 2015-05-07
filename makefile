@@ -21,12 +21,6 @@ help:
 	echo "  * tangle"
 	echo "    * tangle-cicada-nymph.org"
 	echo "    * tangle-core.org"
-	echo "  * copy-core-file"
-	echo "    * copy-core-file-user"
-	echo "    * copy-core-file-system"
-	echo "  * remove-core-file"
-	echo "    * remove-core-file-user"
-	echo "    * remove-core-file-system"
 	echo "  * install"
 	echo "  * uninstall"
 	echo "  * clean"
@@ -66,34 +60,6 @@ tangle-core.org:
 	echo "* tangle-core.org" &&\
 	echo -e "\e[0m" &&\
 	./tangle.el
-
-copy-core-file: copy-core-file-user copy-core-file-system
-copy-core-file-user:
-	@
-	echo -e "\e[33;1m"
-	echo "* copy-core-file--user"
-	echo -e "\e[0m"
-	install -D --mode=664 core/core.cn -t "$(CICADADIR)"
-copy-core-file-system:
-	@
-	echo -e "\e[33;1m"
-	echo "* copy-core-file--system"
-	echo -e "\e[0m"
-	install -D --mode=664 core/core.cn -t "$(SYSTEM_CICADADIR)"
-
-remove-core-file: remove-core-file-user remove-core-file-system
-remove-core-file-user:
-	@
-	echo -e "\e[33;1m"
-	echo "* remove-core-file--user"
-	echo -e "\e[0m"
-	rm $(CICADADIR)/core.cn
-remove-core-file-system:
-	@
-	echo -e "\e[33;1m"
-	echo "* remove-core-file--system"
-	echo -e "\e[0m"
-	rm $(SYSTEM_CICADADIR)/core.cn
 
 install:
 	@

@@ -325,7 +325,6 @@
    define linux64_syscall_write  1
    define linux64_syscall_open   2
    define linux64_syscall_close  3
-   define linux64_syscall_getpid 39
    define linux64_syscall_exit   60
    ;; about open & read & write
 
@@ -366,7 +365,6 @@
    define linux32_syscall_write   4
    define linux32_syscall_open    5
    define linux32_syscall_close   6
-   define linux32_syscall_getpid  20
 
    }
    #+end_src
@@ -713,10 +711,14 @@
 * primitive_string_area
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$primitive_string_area = 64 * 1024 ;; (byte)
-
    address$primitive_string_area:
-      times size$primitive_string_area db 0
+      times 64 * 1024 db 0
+
+   address$core_file:
+      file "core/core.cn"
+   end$core_file:
+
+   end$primitive_string_area:
 
    current_free_address$primitive_string_area = address$primitive_string_area
    #+end_src
@@ -1161,7 +1163,7 @@
       xx address$primitive_string_area
 
    define_variable "*size,primitive-string-area*", V__size__primitive_string_area
-      xx size$primitive_string_area
+      xx (end$primitive_string_area - address$primitive_string_area)
 
    ;; *current-free-address,primitive-string-area*
    ;; is at epilog
@@ -1539,6 +1541,22 @@
 
    }
    #+end_src
+** initialization
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "initialization", initialization
+      ;; << -- >>
+      xx init__rule_set__make_jojo
+      xx end
+   #+end_src
+** load-core-file
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "load-core-file", load_core_file
+      ;; << unknown -- unknown >>
+      xx literal, address$core_file
+      xx literal, (end$core_file - address$core_file)
+      xx eval_string__ready
+      xx end
+   #+end_src
 ** ----------------------------------
 ** note top-level-REPL
    * a top-level-REPL always lives at the bottom of return-stack
@@ -1563,7 +1581,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    string$report_return_stack_is_empty_and_exit:
       db "* the return-stack is empty now", 10
-      db "* good bye ^-^/", 10
+      db "  good bye ^-^/", 10
    .end:
    length$report_return_stack_is_empty_and_exit = (.end - string$report_return_stack_is_empty_and_exit)
 
@@ -3907,881 +3925,6 @@
       xx end
    #+end_src
 * -----------------------------------
-* port
-** ----------------------------------
-** input-port,open                    :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   name_buffer$input_port__open labeling
-      preserve 512
-
-   define_primitive_function "input-port,open", input_port__open
-      ;; << file-name-string[address, length] --
-      ;;    [file handle] or [error code] >>
-      pop_argument_stack rcx
-      pop_argument_stack rsi
-      ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$input_port__open
-      rep movsb
-      xor rax, rax
-      mov byte [rdi], al
-      mov linux64_sys_2_rsi, 0 ;; OPEN__read_only
-      mov linux64_sys_1_rdi, name_buffer$input_port__open
-      mov linux64_sys_n_rax, linux64_syscall_open
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** port,close                         :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "port,close", port__close
-      ;; << file-handle -- >>
-      pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, linux64_syscall_close
-      syscall
-      next
-
-   }
-   #+end_src
-** port,read                          :64bit:linux:
-   * from disk to memory
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "port,read", port__read
-      ;; << [file handle], buffer[address, length] --
-      ;;    [number of char] or [error code] >>
-      pop_argument_stack linux64_sys_3_rdx
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_1_rdi
-      mov linux64_sys_n_rax, linux64_syscall_read
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** ----------------------------------
-** input-port,open                    :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   name_buffer$input_port__open labeling
-      preserve 512
-
-   define_primitive_function "input-port,open", input_port__open
-      ;; << file-name-string[address, length] --
-      ;;    [file handle] or [error code] >>
-      pop_argument_stack rcx
-      pop_argument_stack rsi
-      ;; copy file-name as a null-terminal string
-      mov rdi, name_buffer$input_port__open
-      rep movsb
-      xor rax, rax
-      mov byte [rdi], al
-      mov linux32_sys_2_ecx, 0 ;; OPEN__read_only
-      mov linux32_sys_1_ebx, name_buffer$input_port__open
-      mov linux32_sys_n_eax, linux32_syscall_open
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** port,close                         :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "port,close", port__close
-      ;; << file-handle -- >>
-      pop_argument_stack linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_close
-      syscall
-      next
-
-   }
-   #+end_src
-** port,read                          :32bit:linux:
-   * from disk to memory
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "port,read", port__read
-      ;; << [file handle], buffer[address, length] --
-      ;;    [number of char] or [error code] >>
-      pop_argument_stack linux32_sys_3_edx
-      pop_argument_stack linux32_sys_2_ecx
-      pop_argument_stack linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_read
-      syscall
-      push_argument_stack rax
-      next
-
-   }
-   #+end_src
-** ----------------------------------
-* system environment
-** ----------------------------------
-** note two directories
-   * all files about cicada
-     are stored in two directories only
-     1. user :
-        "/home/<user>/.cicada"
-     2. system :
-        "/etc/cicada"
-   * note that
-     the convention of linux is not followed
-     "/share" and "/include" are not used
-** note linux system environment
-   * pid is the key to all the linux system environment
-   * command-line
-     /proc/<pid>/cmdline
-   * environment-string-variable-list
-     /proc/<pid>/environ
-** ----------------------------------
-** init-operating-system-environment  :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   define_function "init-operating-system-environment", init_operating_system_environment
-      ;; << -- >>
-      xx init_pid
-      xx init_command_line
-      xx init_environment_string_variable_list
-      xx end
-
-   }
-   #+end_src
-** ----------------------------------
-** init-pid                           :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "init-pid", init_pid
-      ;; << -- pid >>
-      mov linux64_sys_n_rax, linux64_syscall_getpid
-      syscall
-      mov [value$get_pid], rax
-      next
-
-   }
-   #+end_src
-** init-pid                           :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "init-pid", init_pid
-      ;; << -- pid >>
-      mov linux32_sys_n_eax, linux32_syscall_getpid
-      syscall
-      mov [value$get_pid], rax
-      next
-
-   }
-   #+end_src
-** get-pid                            :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   value$get_pid:
-      xx 2
-
-   define_function "get-pid", get_pid
-      ;; << -- pid >>
-      xx literal, value$get_pid, fetch
-      xx end
-
-   }
-   #+end_src
-** ----------------------------------
-** [init|get]-command-line            :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   file$init_command_line:
-      db "/cmdline" ;; length of 8
-
-   path$init_command_line:
-      db "/proc/"   ;; length of 6
-   pid$init_command_line:
-      db "********************************"
-
-   address$init_command_line:
-      times 512 db 0
-   length$init_command_line:
-      xx 0
-
-   define_function "init-command-line", init_command_line
-      ;; << -- >>
-      xx get_pid
-      xx write_number__fill_buffer
-      xx tuck
-      xx literal, pid$init_command_line
-      xx string_to_buffer!
-      xx literal, file$init_command_line
-      xx literal, 8
-      xx literal, pid$init_command_line
-      xx xoverxxx, addition
-      xx string_to_buffer!
-      xx literal, path$init_command_line
-      xx swap
-      xx literal, 8, addition
-      xx literal, 6, addition
-      xx input_port__open
-      xx literal, address$init_command_line
-      xx literal, 512
-      xx port__read
-      xx literal, length$init_command_line
-      xx save
-      xx end
-
-   define_function "get-command-line", get_command_line
-      ;; << -- string[address, length] >>
-      xx literal, address$init_command_line
-      xx literal, length$init_command_line, fetch
-      xx end
-
-   }
-   #+end_src
-** [init|get]-environment-string-variable-list :linux:
-   * the size of /proc/<pid>/environ is limited to 4k
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   file$init_environment_string_variable_list:
-      db "/environ" ;; length of 8
-
-   path$init_environment_string_variable_list:
-      db "/proc/"   ;; length of 6
-   pid$init_environment_string_variable_list:
-      db "********************************"
-
-   address$init_environment_string_variable_list:
-      times (4 * 1024) db 0
-   length$init_environment_string_variable_list:
-      xx 0
-
-   define_function "init-environment-string-variable-list", init_environment_string_variable_list
-      ;; << -- >>
-      xx get_pid
-      xx write_number__fill_buffer
-      xx tuck
-      xx literal, pid$init_environment_string_variable_list
-      xx string_to_buffer!
-      xx literal, file$init_environment_string_variable_list
-      xx literal, 8
-      xx literal, pid$init_environment_string_variable_list
-      xx xoverxxx, addition
-      xx string_to_buffer!
-      xx literal, path$init_environment_string_variable_list
-      xx swap
-      xx literal, 8, addition
-      xx literal, 6, addition
-      xx input_port__open
-      xx literal, address$init_environment_string_variable_list
-      xx literal, (4 * 1024)
-      xx port__read
-      xx literal, length$init_environment_string_variable_list
-      xx save
-      xx end
-
-   define_function "get-environment-string-variable-list", get_environment_string_variable_list
-      ;; << -- string[address, length] >>
-      xx literal, address$init_environment_string_variable_list
-      xx literal, length$init_environment_string_variable_list, fetch
-      xx end
-
-   }
-   #+end_src
-** ----------------------------------
-** find-environment-string-variable   :linux:
-   * the string used to find an environment-string-variable
-     can not contain "="
-     no error handling on this
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   define_function "find-environment-string-variable", find_environment_string_variable
-      ;; << string[address, length]
-      ;;    -- string[address, length], true
-      ;;    -- false >>
-      xx literal, address$init_environment_string_variable_list ;; cursor
-      xx find_environment_string_variable__loop
-      xx end
-
-   define_function "find-environment-string-variable,loop", find_environment_string_variable__loop
-      ;; << string[address, length], cursor
-      ;;    -- string[address, length], true
-      ;;    -- false >>
-      xx dup
-      xx literal, address$init_environment_string_variable_list
-      xx literal, length$init_environment_string_variable_list, fetch
-      xx addition
-      xx greater_than?, false?branch, 5
-      xx   drop, drop2
-      xx   false
-      xx   end
-      xx xxoverx, xoverxx, swap
-      xx compare_buffer, false?, false?branch, 7
-      xx   literal, 0
-      xx   cursor_to_next_matching_byte
-      xx   add1
-      xx   taca, find_environment_string_variable__loop
-      xx dup, xoverxx, addition, fetch_byte
-      xx literal, '=', equal?, false?, false?branch, 7
-      xx   literal, 0
-      xx   cursor_to_next_matching_byte
-      xx   add1
-      xx   taca, find_environment_string_variable__loop
-      xx xswapxx, drop
-      xx addition, add1
-      xx dup
-      xx literal, 0
-      xx cursor_to_next_matching_byte
-      xx over, subtraction
-      xx true
-      xx end
-
-   }
-   #+end_src
-** ----------------------------------
-** [init|get]-path,home-directory     :linux:
-   * need error handling
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$init_path__home_directory:
-      db "HOME"
-
-   define_function "init-path,home-directory", init_path__home_directory
-      ;; << -- >>
-      xx literal, string$init_path__home_directory
-      xx literal, 4
-      xx find_environment_string_variable
-      xx drop
-      xx dup
-      xx literal, length$get_path__home_directory
-      xx save
-      xx literal, string$get_path__home_directory
-      xx string_to_buffer!
-      xx end
-
-   string$get_path__home_directory:
-      times 512 db 0
-   length$get_path__home_directory:
-      xx 0
-
-   define_function "get-path,home-directory", get_path__home_directory
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__home_directory
-      xx literal, length$get_path__home_directory, fetch
-      xx end
-
-   }
-   #+end_src
-** [init|get]-path,working-directory  :linux:
-   * need error handling
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$init_path__working_directory:
-      db "PWD"
-
-   define_function "init-path,working-directory", init_path__working_directory
-      ;; << -- >>
-      xx literal, string$init_path__working_directory
-      xx literal, 3
-      xx find_environment_string_variable
-      xx drop
-      xx dup
-      xx literal, length$get_path__working_directory
-      xx save
-      xx literal, string$get_path__working_directory
-      xx string_to_buffer!
-      xx end
-
-   string$get_path__working_directory:
-      times 512 db 0
-   length$get_path__working_directory:
-      xx 0
-
-   define_function "get-path,working-directory", get_path__working_directory
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__working_directory
-      xx literal, length$get_path__working_directory, fetch
-      xx end
-
-   }
-   #+end_src
-** [init|get]-path,user-core-file     :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$init_path__user_core_file:
-      db "/.cicada/core.cn"
-   .end:
-   length$init_path__user_core_file = (.end - string$init_path__user_core_file)
-
-
-   define_function "init-path,user-core-file", init_path__user_core_file
-      ;; << -- >>
-      xx get_path__home_directory
-      xx tuck
-      xx literal, string$get_path__user_core_file
-      xx string_to_buffer!
-
-      xx literal, string$init_path__user_core_file
-      xx literal, length$init_path__user_core_file
-      xx xoverxx
-      xx literal, string$get_path__user_core_file
-      xx addition
-      xx string_to_buffer!
-
-      xx literal, length$init_path__user_core_file
-      xx addition
-      xx literal, length$get_path__user_core_file
-      xx save
-      xx end
-
-   string$get_path__user_core_file:
-      times 510 db 0
-
-   length$get_path__user_core_file:
-      xx 0
-
-   define_function "get-path,user-core-file", get_path__user_core_file
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__user_core_file
-      xx literal, length$get_path__user_core_file, fetch
-      xx end
-
-   }
-   #+end_src
-** get-path,system-core-file          :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$get_path__system_core_file:
-      db "/etc/cicada/core.cn"
-   .end:
-   length$get_path__system_core_file = (.end - string$get_path__system_core_file)
-
-   define_function "get-path,system-core-file", get_path__system_core_file
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__system_core_file
-      xx literal, length$get_path__system_core_file
-      xx end
-
-   }
-   #+end_src
-** get-path,loaded-core-file          :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   string$get_path__loaded_core_file:
-      times 510 db 0
-
-   length$get_path__loaded_core_file:
-      xx 0
-
-   define_function "get-path,loaded-core-file", get_path__loaded_core_file
-      ;; << -- string[address, length] >>
-      xx literal, string$get_path__loaded_core_file
-      xx literal, length$get_path__loaded_core_file, fetch
-      xx end
-
-   }
-   #+end_src
-** ----------------------------------
-* to load core file
-** path-file?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   address$path_file?:
-      db 0
-
-   define_function "path-file?", path_file?
-      ;; << path[address, length] -- bool >>
-      xx input_port__open
-      xx dup, negative?, false?branch, 4
-      xx   drop
-      xx   false
-      xx   end
-      xx dup
-      xx literal, address$path_file?
-      xx literal, 1
-      xx port__read
-      xx swap, port__close
-      xx positive?, false?branch, 3
-      xx   true
-      xx   end
-      xx false
-      xx end
-   #+end_src
-** load-first-file
-   * load is read and eval
-   * load-first-file can not be nested
-   * a function (load-file) will be implemented in core
-     to support nested loading
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   buffer$load_first_file labeling
-     preserve 128 * 1024
-
-   define_function "load-first-file", load_first_file
-      ;; << name-string[address, length] -- unknown >>
-      xx input_port__open
-      xx dup
-      xx   literal, buffer$load_first_file ;; buffer
-      xx   literal, 1024 * 1024      ;; length
-      xx   port__read
-      xx swap, port__close
-      xx dup, positive?, false?branch, (.error-$)/jo_size
-      xx   literal, buffer$load_first_file
-      xx   swap
-      xx   eval_string__ready
-      xx   end
-   .error:
-      xx error_report__load_first_file
-      xx write_integer
-      xx literal, 10, write_byte
-      xx end
-
-   define_function "error-report,load-file", error_report__load_first_file
-      ;; << -- >>
-      xx literal, string$error_report__load_first_file
-      xx literal, length$error_report__load_first_file
-      xx write_string
-      xx end
-
-   string$error_report__load_first_file:
-      db "* (load-file) meets error  (port,read) error code : "
-   .end:
-   length$error_report__load_first_file = (.end - string$error_report__load_first_file)
-   #+end_src
-** load-core-file                     :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   define_function "load-core-file", load_core_file
-      ;; << unknown -- unknown >>
-      xx get_path__user_core_file, path_file?, false?branch, (.fail_user_core_file-$)/jo_size
-      xx   get_path__user_core_file
-      xx   dup
-      xx   literal, length$get_path__loaded_core_file
-      xx   save
-      xx   literal, string$get_path__loaded_core_file
-      xx   string_to_buffer!
-      xx   get_path__user_core_file, load_first_file
-      xx   end
-   .fail_user_core_file:
-
-      xx get_path__system_core_file, path_file?, false?branch, (.fail_system_core_file-$)/jo_size
-      xx   get_path__system_core_file
-      xx   dup
-      xx   literal, length$get_path__loaded_core_file
-      xx   save
-      xx   literal, string$get_path__loaded_core_file
-      xx   string_to_buffer!
-      xx   get_path__system_core_file, load_first_file
-      xx   end
-   .fail_system_core_file:
-
-      xx literal, string$load_core_file__report_1
-      xx literal, length$load_core_file__report_1
-      xx write_string
-      xx get_path__user_core_file, write_string
-      xx literal, string$load_core_file__report_2
-      xx literal, length$load_core_file__report_2
-      xx write_string
-      xx get_path__system_core_file, write_string
-      xx literal, string$load_core_file__report_3
-      xx literal, length$load_core_file__report_3
-      xx write_string
-
-      xx end
-
-   string$load_core_file__report_1:
-      db "* (load-core-file)", 10
-      db "  * no core file is loaded", 10
-      db "  * when cicada-nymph is started", 10
-      db "    first", 10
-      db "    it trys to load the user's core file from :", 10
-      db "       "
-   .end:
-   length$load_core_file__report_1 = (.end - string$load_core_file__report_1)
-
-   string$load_core_file__report_2:
-      db 10
-      db "    if it fails", 10
-      db "    then", 10
-      db "    it trys to load the system core file from :", 10
-      db "       "
-   .end:
-   length$load_core_file__report_2 = (.end - string$load_core_file__report_2)
-
-   string$load_core_file__report_3:
-      db 10
-      db "    if it fails", 10
-      db "    no core file is loaded", 10
-      db "  * now you are running cicada-nymph without core", 10
-   .end:
-   length$load_core_file__report_3 = (.end - string$load_core_file__report_3)
-
-   }
-   #+end_src
-* -----------------------------------
-* syscall
-** note
-   * there are two ways to treat the syscall
-     1. syscall is NOT expose to cicada-nymph
-        system functions are wraped in assembly code
-        thus
-        make cicada-nymph code be more clean
-     2. syscall is expose to cicada-nymph
-        system functions are wraped in cicada-nymph code
-        thus
-        more easy to wraped more system functions
-        and
-        make assembly code be more clean
-        [only needs some system functions to load core file]
-   * I choose the second way for now
-** string->syscall-string
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   string$string_to_syscall_string:
-      times 256 db 0
-
-   define_function "string->syscall-string", string_to_syscall_string
-      ;; << string[address, length] -- syscall-string[address] >>
-      xx dup
-      xx   literal, string$string_to_syscall_string
-      xx   addition
-      xx   literal, 0
-      xx   swap, save_byte
-      xx literal, string$string_to_syscall_string
-      xx string_to_buffer!
-      xx literal, string$string_to_syscall_string
-      xx end
-   #+end_src
-** string->syscall-string-2
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   string$string_to_syscall_string_2:
-      times 256 db 0
-
-   define_function "string->syscall-string-2", string_to_syscall_string_2
-      ;; << string[address, length] -- syscall-string[address] >>
-      xx dup
-      xx   literal, string$string_to_syscall_string_2
-      xx   addition
-      xx   literal, 0
-      xx   swap, save_byte
-      xx literal, string$string_to_syscall_string_2
-      xx string_to_buffer!
-      xx literal, string$string_to_syscall_string_2
-      xx end
-   #+end_src
-** syscall                            :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   define_primitive_function "syscall", CICADA__syscall
-      ;; << ..., argument2, argument1,
-      ;;    syscall-number,
-      ;;    number-of-arguments
-      ;;    -- return-value >>
-      pop_argument_stack rax
-      cmp rax, 0
-      je __syscall_with_0
-      cmp rax, 1
-      je __syscall_with_1
-      cmp rax, 2
-      je __syscall_with_2
-      cmp rax, 3
-      je __syscall_with_3
-      cmp rax, 4
-      je __syscall_with_4
-      cmp rax, 5
-      je __syscall_with_5
-      cmp rax, 6
-      je __syscall_with_6
-      jmp __syscall_with_too_many
-
-   __syscall_with_0:
-      pop_argument_stack linux64_sys_n_rax
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_1:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_2:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      pop_argument_stack linux64_sys_2_rsi
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_3:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_3_rdx
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_4:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_3_rdx
-      pop_argument_stack linux64_sys_4_r10
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_5:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_3_rdx
-      pop_argument_stack linux64_sys_4_r10
-      pop_argument_stack linux64_sys_5_r9
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_6:
-      pop_argument_stack linux64_sys_n_rax
-      pop_argument_stack linux64_sys_1_rdi
-      pop_argument_stack linux64_sys_2_rsi
-      pop_argument_stack linux64_sys_3_rdx
-      pop_argument_stack linux64_sys_4_r10
-      pop_argument_stack linux64_sys_5_r9
-      pop_argument_stack linux64_sys_6_r8
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_too_many:
-      call __exit_with_six
-
-   }
-   #+end_src
-** syscall                            :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   define_primitive_function "syscall", CICADA__syscall
-      ;; << ..., argument2, argument1,
-      ;;    syscall-number,
-      ;;    number-of-arguments
-      ;;    -- return-value >>
-      pop_argument_stack rax
-      cmp rax, 0
-      je __syscall_with_0
-      cmp rax, 1
-      je __syscall_with_1
-      cmp rax, 2
-      je __syscall_with_2
-      cmp rax, 3
-      je __syscall_with_3
-      cmp rax, 4
-      je __syscall_with_4
-      cmp rax, 5
-      je __syscall_with_5
-      jmp __syscall_with_too_many
-
-   __syscall_with_0:
-      pop_argument_stack linux32_sys_n_eax
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_1:
-      pop_argument_stack linux32_sys_n_eax
-      pop_argument_stack linux32_sys_1_ebx
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_2:
-      pop_argument_stack linux32_sys_n_eax
-      pop_argument_stack linux32_sys_1_ebx
-      pop_argument_stack linux32_sys_2_ecx
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_3:
-      pop_argument_stack linux32_sys_n_eax
-      pop_argument_stack linux32_sys_1_ebx
-      pop_argument_stack linux32_sys_2_ecx
-      pop_argument_stack linux32_sys_3_edx
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_4:
-      pop_argument_stack linux32_sys_n_eax
-      pop_argument_stack linux32_sys_1_ebx
-      pop_argument_stack linux32_sys_2_ecx
-      pop_argument_stack linux32_sys_3_edx
-      pop_argument_stack linux32_sys_4_esi
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_5:
-      pop_argument_stack linux32_sys_n_eax
-      pop_argument_stack linux32_sys_1_ebx
-      pop_argument_stack linux32_sys_2_ecx
-      pop_argument_stack linux32_sys_3_edx
-      pop_argument_stack linux32_sys_4_esi
-      pop_argument_stack linux32_sys_5_edi
-      syscall
-      push_argument_stack rax
-      next
-
-   __syscall_with_too_many:
-      call __exit_with_six
-
-   }
-   #+end_src
-* -----------------------------------
-* initialization
-** initialization
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "initialization", initialization
-      ;; << -- >>
-      xx init_system
-      xx init__rule_set__make_jojo
-      xx end
-   #+end_src
-** initialize-system                  :linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux, platform {
-
-   define_function "init-system", init_system
-      ;; << -- >>
-      xx init_operating_system_environment
-      xx init_path__home_directory
-      xx init_path__user_core_file
-      xx init_path__working_directory
-      xx end
-
-   }
-   #+end_src
-* -----------------------------------
 * char
 ** space-char?
    * as for space-char
@@ -5179,7 +4322,7 @@
       xx end
 
    define_function "write-number,fill-buffer", write_number__fill_buffer
-      ;; << number -- >>
+      ;; << number -- string[address, length] >>
       xx zero
       xx literal, counter$write_number, save
 
@@ -7386,6 +6529,230 @@
      40218561
    40218545
    >>
+   #+end_src
+* -----------------------------------
+* syscall
+** note
+   * there are two ways to treat the syscall
+     1. syscall is NOT expose to cicada-nymph
+        system functions are wraped in assembly code
+        thus
+        make cicada-nymph code be more clean
+     2. syscall is expose to cicada-nymph
+        system functions are wraped in cicada-nymph code
+        thus
+        more easy to wraped more system functions
+        and
+        make assembly code be more clean
+        [only needs some system functions to load core file]
+   * I choose the second way for now
+** string->syscall-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$string_to_syscall_string:
+      times 256 db 0
+
+   define_function "string->syscall-string", string_to_syscall_string
+      ;; << string[address, length] -- syscall-string[address] >>
+      xx dup
+      xx   literal, string$string_to_syscall_string
+      xx   addition
+      xx   literal, 0
+      xx   swap, save_byte
+      xx literal, string$string_to_syscall_string
+      xx string_to_buffer!
+      xx literal, string$string_to_syscall_string
+      xx end
+   #+end_src
+** string->syscall-string-2
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   string$string_to_syscall_string_2:
+      times 256 db 0
+
+   define_function "string->syscall-string-2", string_to_syscall_string_2
+      ;; << string[address, length] -- syscall-string[address] >>
+      xx dup
+      xx   literal, string$string_to_syscall_string_2
+      xx   addition
+      xx   literal, 0
+      xx   swap, save_byte
+      xx literal, string$string_to_syscall_string_2
+      xx string_to_buffer!
+      xx literal, string$string_to_syscall_string_2
+      xx end
+   #+end_src
+** syscall                            :64bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   define_primitive_function "syscall", CICADA__syscall
+      ;; << ..., argument2, argument1,
+      ;;    syscall-number,
+      ;;    number-of-arguments
+      ;;    -- return-value >>
+      pop_argument_stack rax
+      cmp rax, 0
+      je __syscall_with_0
+      cmp rax, 1
+      je __syscall_with_1
+      cmp rax, 2
+      je __syscall_with_2
+      cmp rax, 3
+      je __syscall_with_3
+      cmp rax, 4
+      je __syscall_with_4
+      cmp rax, 5
+      je __syscall_with_5
+      cmp rax, 6
+      je __syscall_with_6
+      jmp __syscall_with_too_many
+
+   __syscall_with_0:
+      pop_argument_stack linux64_sys_n_rax
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_1:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_2:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_3:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_4:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_5:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      pop_argument_stack linux64_sys_5_r9
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_6:
+      pop_argument_stack linux64_sys_n_rax
+      pop_argument_stack linux64_sys_1_rdi
+      pop_argument_stack linux64_sys_2_rsi
+      pop_argument_stack linux64_sys_3_rdx
+      pop_argument_stack linux64_sys_4_r10
+      pop_argument_stack linux64_sys_5_r9
+      pop_argument_stack linux64_sys_6_r8
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_too_many:
+      call __exit_with_six
+
+   }
+   #+end_src
+** syscall                            :32bit:linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =32bit, platform machine {
+
+   define_primitive_function "syscall", CICADA__syscall
+      ;; << ..., argument2, argument1,
+      ;;    syscall-number,
+      ;;    number-of-arguments
+      ;;    -- return-value >>
+      pop_argument_stack rax
+      cmp rax, 0
+      je __syscall_with_0
+      cmp rax, 1
+      je __syscall_with_1
+      cmp rax, 2
+      je __syscall_with_2
+      cmp rax, 3
+      je __syscall_with_3
+      cmp rax, 4
+      je __syscall_with_4
+      cmp rax, 5
+      je __syscall_with_5
+      jmp __syscall_with_too_many
+
+   __syscall_with_0:
+      pop_argument_stack linux32_sys_n_eax
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_1:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_2:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_3:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_4:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      pop_argument_stack linux32_sys_4_esi
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_5:
+      pop_argument_stack linux32_sys_n_eax
+      pop_argument_stack linux32_sys_1_ebx
+      pop_argument_stack linux32_sys_2_ecx
+      pop_argument_stack linux32_sys_3_edx
+      pop_argument_stack linux32_sys_4_esi
+      pop_argument_stack linux32_sys_5_edi
+      syscall
+      push_argument_stack rax
+      next
+
+   __syscall_with_too_many:
+      call __exit_with_six
+
+   }
    #+end_src
 * -----------------------------------
 * epilog
