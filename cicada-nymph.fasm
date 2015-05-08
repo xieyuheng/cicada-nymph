@@ -860,8 +860,9 @@ define_function "initialization", initialization
 define_function "load-core-file", load_core_file
    ;; << unknown -- unknown >>
    xx literal, address$core_file
+   xx literal, cursor$read_byte, save
    xx literal, (end$core_file - address$core_file)
-   xx eval_string__ready
+   xx literal, length$read_byte, save
    xx end
 
 string$report_return_stack_is_empty_and_exit:
@@ -2622,11 +2623,6 @@ define_primitive_function "write-byte", write_byte
 
 }
 
-max_input_length = 1024 * 1024
-
-buffer$read_byte labeling
-   preserve max_input_length
-
 match =linux =64bit, platform machine {
 
 define_primitive_function "read-line-from-stdin", read_line_from_stdin
@@ -2659,6 +2655,17 @@ define_primitive_function "read-line-from-stdin", read_line_from_stdin
 
 }
 
+max_input_length = 64 * 1024
+
+buffer$read_byte labeling
+   preserve max_input_length
+
+cursor$read_byte:
+   xx buffer$read_byte
+
+length$read_byte:
+   xx 0
+
 define_function "read-byte", read_byte
    ;; << -- byte >>
    xx have_unreaded_ket_char?, false?branch, 9
@@ -2671,7 +2678,8 @@ define_function "read-byte", read_byte
 
 define_function "read-byte,without-unread", read_byte__without_unread
    ;; << -- byte >>
-   xx eval_string_stack_empty?, false?branch, (.not_empty-$)/jo_size
+   xx literal, length$read_byte, fetch
+   xx zero?, false?branch, (.not_empty-$)/jo_size
    xx   literal, buffer$read_byte
    xx   literal, max_input_length
    xx   read_line_from_stdin
@@ -2680,20 +2688,17 @@ define_function "read-byte,without-unread", read_byte__without_unread
    ;;     ignore reading error
    xx     drop
    xx     taca, read_byte__without_unread
-   xx   push_eval_string_stack
+   xx   literal, length$read_byte, save
    xx   literal, buffer$read_byte
-   xx   push_eval_string_stack
+   xx   literal, cursor$read_byte, save
    xx   taca, read_byte__without_unread
    .not_empty:
-   xx pop_eval_string_stack
-   xx pop_eval_string_stack
-   xx dup, zero?, false?branch, 4
-   xx   drop2
-   xx   taca, read_byte__without_unread
-   xx sub1, push_eval_string_stack
-   xx dup
-   xx add1, push_eval_string_stack
+   xx literal, cursor$read_byte, fetch
    xx fetch_byte
+   xx literal, 1
+   xx literal, cursor$read_byte, add_save
+   xx literal, 1
+   xx literal, length$read_byte, sub_save
    xx end
 
 flag$unreaded_ket_char:
@@ -2713,90 +2718,6 @@ define_function "unread-ket-char", unread_ket_char
    xx literal, char$unreaded_ket_char, save
    xx true, literal, flag$unreaded_ket_char
    xx save
-   xx end
-
-size$eval_string_stack = 1024 * jo_size
-
-   preserve 64 * jo_size
-address$eval_string_stack labeling
-   preserve size$eval_string_stack
-
-pointer$eval_string_stack:
-   xx address$eval_string_stack
-
-match =64bit, machine {
-
- define_primitive_function "push-eval-string-stack", push_eval_string_stack
-    ;; argument-stack -> eval-string-stack
-    pop_argument_stack rax
-    mov rbx, [pointer$eval_string_stack]
-    mov [rbx], rax
-    add qword [pointer$eval_string_stack], jo_size
-    next
-
- define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
-    ;; eval-string-stack -> argument-stack
-    sub qword [pointer$eval_string_stack], jo_size
-    mov rbx, [pointer$eval_string_stack]
-    mov rax, [rbx]
-    push_argument_stack rax
-    next
-
-}
-
-match =32bit, machine {
-
- define_primitive_function "push-eval-string-stack", push_eval_string_stack
-    ;; argument-stack -> eval-string-stack
-    pop_argument_stack rax
-    mov rsi, [pointer$eval_string_stack]
-    mov [rsi], rax
-    add dword [pointer$eval_string_stack], jo_size
-    next
-
- define_primitive_function "pop-eval-string-stack", pop_eval_string_stack
-    ;; eval-string-stack -> argument-stack
-    sub dword [pointer$eval_string_stack], jo_size
-    mov rsi, [pointer$eval_string_stack]
-    mov rax, [rsi]
-    push_argument_stack rax
-    next
-
-}
-
-match =64bit, machine {
-
-define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
-   ;; << -- >>
-   mov qword [pointer$eval_string_stack], address$eval_string_stack
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "clear-eval-string-stack", clear_eval_string_stack
-   ;; << -- >>
-   mov eax, address$eval_string_stack
-   mov dword [pointer$eval_string_stack], eax;address$eval_string_stack
-   next
-
-}
-
-define_primitive_function "eval-string-stack-empty?", eval_string_stack_empty?
-   ;; << -- bool >>
-   mov rax, [pointer$eval_string_stack]
-   cmp rax, address$eval_string_stack
-   ;; less-than is treated as equal
-   setle al
-   movzx rax, al
-   push_argument_stack rax
-   next
-
-define_function "eval-string,ready", eval_string__ready
-   ;; << string[address, length] -- unknown >>
-   xx push_eval_string_stack
-   xx push_eval_string_stack
    xx end
 
 define_function "space-char?", space_char?
@@ -4280,9 +4201,6 @@ define_function "define-variable", CICADA__define_variable
    xx literal, explain$variable
    xx   save_into__jo_area
 
-   ;; when debugging
-   ;; instead of drop2
-   ;; one may wish to do some thing to the string
    xx drop2
    xx save_into__jo_area
    xx end
