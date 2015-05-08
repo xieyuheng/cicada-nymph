@@ -2,10 +2,20 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* variable must be able to store string
+  * 更改定義 variable 的語法
+    使得一個 variable 中可以保存多個值
+    並且提供語法 [或函數]
+    來以不同的方式 取出其中的全部值或部分值
+  * 通過更改匯編代碼中的 explain$variable 來實現這一點
+* name-hash-table
+  * 讓 name 能夠在 cicada-nymph 和 cicada 中被同時使用
+    讓 find 這個函數使用 name-hash-table
+    也就是說 將有兩個 find 函數
+    1. 一個通過單項鏈接的鏈表來搜索
+    2. 一個通過 name-hash-table 來搜索
+  * name-hash-table 本身的接口也應該更豐富
 * todo
-** 如何處理 name-hash-table           :question:
-   * 根本不在 cicada-nymph 中使用 name ???
-     還是讓 name 能夠在 cicada-nymph 和 cicada 中被同時使用 ???
 ** 根目錄有關的函數應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
@@ -52,15 +62,7 @@
      2. 在不同的平臺下執行不同的代碼
 ** debug-REPL
 ** language-level support for creating and managing processes
-** [really needed] error handling for io function
-   * write-file 可能遇到磁盤滿載的情況
-** fixnum in other base
 ** more design about the command-line-interface
-** re-design the color of cicada-nymph-mode and re-write the emacs-lisp code
-** [how] variable must be able to store string
-** name-hash-table
-   * better factoring
-   * better naming
 ** title-name-table
 ** data-giver
 ** big number and 同餘方程
@@ -2988,107 +2990,7 @@
    "/home" change-working-directory
    get-working-directory .s
    #+end_src
-* poi
-** note
-   * poi denotes path-organizer
-     it can give a name to a path
-     one path one name
-   * a path as a string must not contain any space chars
-** note two directories
-   * two directories to store the name path record
-     1. user :
-        "/home/<user>/.cicada/poi"
-     2. system :
-        "/etc/cicada/poi"
-   * note that
-     these two directories are viewed as one by poi
-     no such things like
-     user overriding system will happen
-     one name can only exist in one of the two directories
-     more on this in the following note
-** note interface for command-line-function
-   * cn poi add  <name> <relative-path>
-   * cn poi sub  <name>
-   * cn poi up   <name> <relative-path>
-   * cn poi show <name>
-   * cn poi list
-   * <relative-path> is converted to <full-path>
-     with the help of working-directory
-   * <relative-path> is in the format of
-     "./directory/file"
-     "./directory/directory"
-     note that
-     for a <relative-path> of directory
-     not tailing "/" should be added
-** poi,add
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,add
-     << name[address, length], relative-path[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,sub
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,sub
-     << name[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,up
-   * up denotes update
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,up
-     << name[address, length], relative-path[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,list
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,list
-     << -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,show
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,show
-     << name[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,help
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,help
-     << -- >>
-
-     end
-   ; define-function
-   #+end_src
-* path
-** 記 syntax about path
-   * 利用了系統的路徑格式
-     同時又把系統的路徑格式抽象掉了
-   #+begin_src cicada-nymph
-   path: home xyh cicada core.cn ;
-   "/home/xyh/cicada/core.cn"
-
-   path: home xyh cicada ;
-   "/home/xyh/cicada"
-
-   path: +working+ core.cn ;
-   "./core.cn"
-
-   path: +parent+ cicada core.cn ;
-   "../cicada/core.cn"
-
-   path: +library+ kkk main.cn ;
-   "/home/xyh/.cicada/library/kkk/main.cn"
-   #+end_src
+* >< path
 ** stat structure
    #+begin_src cicada-nymph :tangle core.cn
    0 : +stat,st_dev+        ; define-variable
@@ -3333,17 +3235,144 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : cn ; path,nothing? . << 0 >>
-   : core ; path,nothing? . << 0 >>
-   : ai ; path,nothing? . << 1 >>
+   "cn" path,nothing? . << 0 >>
+   "core" path,nothing? . << 0 >>
+   "ai" path,nothing? . << 1 >>
 
-   : cn ; path,file? . << 1 >>
-   : core ; path,file? . << 0 >>
-   : ai ; path,file? . << 0 >>
+   "cn" path,file? . << 1 >>
+   "core" path,file? . << 0 >>
+   "ai" path,file? . << 0 >>
 
-   : cn ; path,directory? . << 0 >>
-   : core ; path,directory? . << 1 >>
-   : ai ; path,directory? . << 0 >>
+   "cn" path,directory? . << 0 >>
+   "core" path,directory? . << 1 >>
+   "ai" path,directory? . << 0 >>
+   #+end_src
+** >< relative-path?
+   #+begin_src cicada-nymph :tangle core.cn
+   : relative-path?
+     << string[address, length] -- bool >>
+
+     end
+   ; define-function
+   #+end_src
+** >< full-path?
+   #+begin_src cicada-nymph :tangle core.cn
+   : full-path?
+     << string[address, length] -- bool >>
+
+     end
+   ; define-function
+   #+end_src
+** >< relative-path->full-path
+   * note that
+     this function is using circular-string-area
+   #+begin_src cicada-nymph :tangle core.cn
+   : relative-path->full-path
+     << relative-path[address, length] -- full-path[address, length] >>
+
+     end
+   ; define-function
+   #+end_src
+* >< poi
+** note
+   * poi denotes path-organizer
+     it can give a name to a path
+     one path one name
+   * a path as a string must not contain any space chars
+** note two directories
+   * two directories to store the name path record
+     1. user :
+        "/home/<user>/.cicada/poi"
+     2. system :
+        "/etc/cicada/poi"
+   * note that
+     these two directories are viewed as one by poi
+     no such things like
+     user overriding system will happen
+     one name can only exist in one of the two directories
+     more on this in the following note
+** note interface for command-line-function
+   * cn poi add  <name> <relative-path>
+   * cn poi sub  <name>
+   * cn poi up   <name> <relative-path>
+   * cn poi show <name>
+   * cn poi list
+   * <relative-path> is converted to <full-path>
+     with the help of working-directory
+   * <relative-path> is in the format of
+     "./directory/file"
+     "./directory/directory"
+     note that
+     for a <relative-path> of directory
+     not tailing "/" should be added
+** poi,add
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,add
+     << name[address, length], relative-path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,sub
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,sub
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,up
+   * up denotes update
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,up
+     << name[address, length], relative-path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,list
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,list
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,show
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,show
+     << name[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** poi,help
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,help
+     << -- >>
+
+     end
+   ; define-function
+   #+end_src
+* >< path syntax
+** 記 syntax about path
+   * 利用了系統的路徑格式
+     同時又把系統的路徑格式抽象掉了
+   #+begin_src cicada-nymph
+   path: home xyh cicada core.cn ;
+   "/home/xyh/cicada/core.cn"
+
+   path: home xyh cicada ;
+   "/home/xyh/cicada"
+
+   path: +working+ core.cn ;
+   "./core.cn"
+
+   path: +parent+ cicada core.cn ;
+   "../cicada/core.cn"
+
+   path: +library+ kkk main.cn ;
+   "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
 * -----------------------------------
 * module
@@ -3702,36 +3731,6 @@
      end
    ; define-function
    #+end_src
-** test
-   * set *name-hash-table,size* to a small number [for example 13]
-     then use the following function
-     and (name-hash-table,report) to do test
-   #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,test
-     << -- >>
-     "a-000" string->name . .l
-     "a-111" string->name . .l
-     "a-222" string->name . .l
-     "a-333" string->name . .l
-     "a-444" string->name . .l
-     "a-555" string->name . .l
-     "a-666" string->name . .l
-     "a-777" string->name . .l
-     "a-888" string->name . .l
-     "a-999" string->name . .l
-     "b-000" string->name . .l
-     "b-111" string->name . .l
-     "b-222" string->name . .l
-     "b-333" string->name . .l
-     "b-444" string->name . .l
-     "b-555" string->name . .l
-     "b-666" string->name . .l
-     "b-777" string->name . .l
-     "b-888" string->name . .l
-     "b-999" string->name . .l
-     end
-   ; define-function
-   #+end_src
 ** note about report
    * report point orbit by orbit
      in the following format
@@ -3799,6 +3798,39 @@
      .l
      end
    ; define-function
+   #+end_src
+** test
+   * set *name-hash-table,size* to a small number [for example 13]
+     then use the following function
+     and (name-hash-table,report) to do test
+   #+begin_src cicada-nymph
+   : test,name-hash-table
+     << -- >>
+     "a-000" string->name . .l
+     "a-111" string->name . .l
+     "a-222" string->name . .l
+     "a-333" string->name . .l
+     "a-444" string->name . .l
+     "a-555" string->name . .l
+     "a-666" string->name . .l
+     "a-777" string->name . .l
+     "a-888" string->name . .l
+     "a-999" string->name . .l
+     "b-000" string->name . .l
+     "b-111" string->name . .l
+     "b-222" string->name . .l
+     "b-333" string->name . .l
+     "b-444" string->name . .l
+     "b-555" string->name . .l
+     "b-666" string->name . .l
+     "b-777" string->name . .l
+     "b-888" string->name . .l
+     "b-999" string->name . .l
+     end
+   ; define-function
+   test,name-hash-table
+
+   name-hash-table,report
    #+end_src
 * -----------------------------------
 * report
@@ -4054,11 +4086,6 @@
   #+end_src
 * ===================================
 * test
-** name-hash-table
-   #+begin_src cicada-nymph
-   name-hash-table,test
-   name-hash-table,report
-   #+end_src
 ** report
    #+begin_src cicada-nymph
    report-memory

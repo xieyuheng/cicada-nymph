@@ -21,22 +21,16 @@
       yaourt -S cicada-git
 
 * 貢獻
-  * 聊天
-    用 IRC
-    在 irc.freenode.net 服務器的 #cicada-language 頻道
+  * IRC 頻道
+    irc.freenode.net 服務器上的 #cicada-language
   * 郵件列表
-    用 google group
-    論壇在這裏
     https://groups.google.com/forum/#!forum/cicada-language
-  * 分享你的主意和經驗
-    你可以編輯維基頁面
+  * 看版
+    http://www.reddit.com/r/CicadaLanguage/
+  * 維基
     https://github.com/the-little-language-designer/cicada/wiki
-  * 發現錯誤 或 要求新性狀
-    你可以在這裏創建話題
-    https://github.com/the-little-language-designer/cicada/issues
-  * 修復錯誤 或 貢獻新的性狀
-    你可以在這裏要求我把你的貢獻狀融合到主要文庫中
-    https://github.com/the-little-language-designer/cicada/pulls
+    或者
+    http://www.reddit.com/r/CicadaLanguage/wiki/index
 
 * ===================================
 
@@ -59,21 +53,15 @@
       yaourt -S cicada-git
 
 * to contribute
-  * to chat
-    we use IRC
-    we have #cicada-language channel on irc.freenode.net
+  * IRC channel
+    #cicada-language on irc.freenode.net
   * mailing list
-    we use google group
-    you can find cicada-language forum here
     https://groups.google.com/forum/#!forum/cicada-language
-  * to share your ideas and experiences
-    you can edit the wiki page here
+  * reddit
+    http://www.reddit.com/r/CicadaLanguage/
+  * wiki
     https://github.com/the-little-language-designer/cicada/wiki
-  * to track bugs, feature requests, and more
-    you can create an issue here
-    https://github.com/the-little-language-designer/cicada/issues
-  * to send patch and fix bug
-    you can do pull request here
-    https://github.com/the-little-language-designer/cicada/pulls
+    or
+    http://www.reddit.com/r/CicadaLanguage/wiki/index
 
 * ===================================

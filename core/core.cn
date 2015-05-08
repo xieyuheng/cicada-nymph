@@ -1779,42 +1779,6 @@ init-environment-string-variable-list
   end
 ; define-function
 
-: poi,add
-  << name[address, length], relative-path[address, length] -- >>
-
-  end
-; define-function
-
-: poi,sub
-  << name[address, length] -- >>
-
-  end
-; define-function
-
-: poi,up
-  << name[address, length], relative-path[address, length] -- >>
-
-  end
-; define-function
-
-: poi,list
-  << -- >>
-
-  end
-; define-function
-
-: poi,show
-  << name[address, length] -- >>
-
-  end
-; define-function
-
-: poi,help
-  << -- >>
-
-  end
-; define-function
-
 0 : +stat,st_dev+        ; define-variable
 0 : +stat,st_ino+        ; define-variable
 0 : +stat,st_mode+       ; define-variable
@@ -1988,6 +1952,60 @@ init-environment-string-variable-list
   S_IFLNK       00120000 /* Symbolic link.  */
   S_IFSOCK      00140000 /* Socket.  */
   >>
+  end
+; define-function
+
+: relative-path?
+  << string[address, length] -- bool >>
+
+  end
+; define-function
+
+: full-path?
+  << string[address, length] -- bool >>
+
+  end
+; define-function
+
+: relative-path->full-path
+  << relative-path[address, length] -- full-path[address, length] >>
+
+  end
+; define-function
+
+: poi,add
+  << name[address, length], relative-path[address, length] -- >>
+
+  end
+; define-function
+
+: poi,sub
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,up
+  << name[address, length], relative-path[address, length] -- >>
+
+  end
+; define-function
+
+: poi,list
+  << -- >>
+
+  end
+; define-function
+
+: poi,show
+  << name[address, length] -- >>
+
+  end
+; define-function
+
+: poi,help
+  << -- >>
+
   end
 ; define-function
 
@@ -2242,31 +2260,6 @@ allocate-memory
 : name->string
   << name -- string[address, length]] >>
   name,fetch-string
-  end
-; define-function
-
-: name-hash-table,test
-  << -- >>
-  "a-000" string->name . .l
-  "a-111" string->name . .l
-  "a-222" string->name . .l
-  "a-333" string->name . .l
-  "a-444" string->name . .l
-  "a-555" string->name . .l
-  "a-666" string->name . .l
-  "a-777" string->name . .l
-  "a-888" string->name . .l
-  "a-999" string->name . .l
-  "b-000" string->name . .l
-  "b-111" string->name . .l
-  "b-222" string->name . .l
-  "b-333" string->name . .l
-  "b-444" string->name . .l
-  "b-555" string->name . .l
-  "b-666" string->name . .l
-  "b-777" string->name . .l
-  "b-888" string->name . .l
-  "b-999" string->name . .l
   end
 ; define-function
 

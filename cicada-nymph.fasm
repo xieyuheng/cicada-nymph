@@ -371,6 +371,9 @@ macro define_variable string, jo {
 
 define_variable__#jo:
 
+length__#jo:
+   xx 1
+
 name__#jo:
    xx current_free_address$primitive_string_area
 
@@ -388,11 +391,33 @@ jo:
 
 }
 
+match =64bit, machine {
+
 explain$variable:
+   mov rcx, [rax - (jo_size * 3)]
    add rax, jo_size
-   mov rbx, [rax]
-   push_argument_stack rbx
+.loop:
+   mov rdx, qword [rax]
+   push_argument_stack rdx
+   add rax, jo_size
+   loop .loop
    next
+
+}
+
+match =32bit, machine {
+
+explain$variable:
+   mov rcx, [rax - (jo_size * 3)]
+   add rax, jo_size
+.loop:
+   mov rdx, dword [rax]
+   push_argument_stack rdx
+   add rax, jo_size
+   loop .loop
+   next
+
+}
 
 macro define_exception string, jo {
 
@@ -3659,9 +3684,9 @@ define_primitive_function "add-rule", add_rule
 define_function "cursor->rule", cursor_to_rule
    ;; << cursor -- rule[predicate, function] >>
    xx V__jo_size, subtraction
-   xx dup, fetch, swap
    xx V__jo_size, subtraction
-   xx fetch
+   xx literal, 2
+   xx n_fetch
    xx end
 
 define_function "cursor->predicate", cursor_to_predicate
@@ -4236,6 +4261,9 @@ define_function "define-exception", CICADA__define_exception
 
 define_function "define-variable", CICADA__define_variable
    ;; << variable, string[address, length] -- >>
+   xx literal, 1
+   xx   save_into__jo_area
+
    xx V__current_free_address__primitive_string_area
    xx   save_into__jo_area
    xx dup2, string_head__word
