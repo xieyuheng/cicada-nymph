@@ -40,7 +40,6 @@
      | convention   | jo type  |
      |--------------+----------|
      | prefix "V__" | variable |
-     | prefix "M__" | macro    |
    * but I use
      1. "zero" instead of "V__zero"
      2. "true" instead of "V__true"
@@ -186,9 +185,6 @@
      決定了 如何入這個棧
    * 結尾詞
      決定了 如何出這個棧
-** eval-string-stack
-   * 兩個一對
-** syntax-set
 ** local-variable-table
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
@@ -1786,10 +1782,10 @@
       ;; xx exit_with_TOS
       ;;;; 2 1 4 3 2 1
 
-      ;;;; find
+      ;;;; find_jo__through_jo_link
       ;; xx read_word, string_to_integer ;; number
       ;; xx read_word, string_to_integer ;; number
-      ;; xx read_word, find ;; add
+      ;; xx read_word, find_jo__through_jo_link ;; add
       ;; xx drop ;; true
       ;; xx execute_jo
       ;; xx write_integer
@@ -1822,10 +1818,6 @@
    * the name of an instruction
      might not be exported to cicada-language as a function
      but as a variable
-   * the name of a special primitive function in assembly code
-     maybe reused as a macro word in cicada-language
-     but the name of the macro in assembly code
-     is prefixed by "M__"
 ** ----------------------------------
 ** literal
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -3566,7 +3558,7 @@
       push_argument_stack rax
       next
    #+end_src
-** find
+** find-[lowest|highest]-set-bit
    * "bsf" "bsr"
      instructions scan a word or double word for first set bit
      and store the index of this bit into destination operand
@@ -4470,32 +4462,39 @@
      from source code
      it defines new function into jotionary
      by creating new structured data into memory
-** find
-   * as find
-   * find jo in jotionary by word
-     but I simply call it "find"
+** note about find
    * a function whoes name is prefixed by "find"
      maybe fail to find
      and maybe returns a signal
      to inform the function who calls it
+** 記 遍歷鏈表的方式
+   * 循環進行的方式是
+     1. 保證循環開始時 所得到的 jo 不是最後一個
+     2. 處理這個 jo
+     3. 看看這個 jo 是否是最後一個
+        * 如果是
+          退出
+        * 如果不是
+          取下一個 jo 以循環
+** find-jo,through-jo-link
+   * find jo in jotionary by word
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
       xx (last_link + jo_size)
 
-   define_function "find", find
+   define_function "find-jo,through-jo-link", find_jo__through_jo_link
       ;; << word[address, length]
       ;;    -- jo, true
       ;;    -- false >>
       xx V__first_jo_in_jotionary
-      xx help__find
+      xx find_jo__through_jo_link__loop
       xx end
 
-   define_function "help,find", help__find
+   define_function "find-jo,through-jo-link,loop", find_jo__through_jo_link__loop
       ;; << word[address, length], jo
       ;;    -- jo, true
       ;;    -- false >>
       xx xxtuckx
-
 
       xx jo_to_name, xxoverxx
 
@@ -4509,7 +4508,6 @@
       ;; xx   dup, write_integer, literal, 32, write_byte
       ;; xx   write_string, literal, 10, write_byte
 
-
       xx string_equal?, false?branch, 4
       xx   drop2, true
       xx   end
@@ -4519,7 +4517,7 @@
       xx   false
       xx   end
       xx jo_to_pre_jo
-      xx taca, help__find
+      xx taca, find_jo__through_jo_link__loop
    #+end_src
 ** execute-word
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4532,7 +4530,7 @@
 
       xx dup2 ;; for to report undefined word
 
-      xx find, false?branch, 5
+      xx find_jo__through_jo_link, false?branch, 5
       xx   xxswapx, drop2
       xx   execute_jo
       xx   end
@@ -5222,7 +5220,7 @@
 
       xx dup2
       xx string_head__word
-      xx find, false?branch, 4
+      xx find_jo__through_jo_link, false?branch, 4
       xx   save_into__jo_area
       xx   string_tail__word
       xx   end
@@ -5272,7 +5270,7 @@
 
       xx dup2
       xx string_head__word
-      xx find, false?branch, 4
+      xx find_jo__through_jo_link, false?branch, 4
       xx   save_into__jo_area
       xx   string_tail__word
       xx   end
@@ -5478,11 +5476,38 @@
      make-jojo can be viewed as the "compiler" of the cicada-nymph
      it does NOT (can not) compile file to file
      but creates structured data directly into memory
+** make-jojo,dispatch-syntax-word
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
+      ;; << string[address, length], word[address, length] --
+      ;;    string[address, length] >>
+      xx dup2
+      xx find_syntax, false?branch, 3
+      xx   execute_jo
+      xx   end
+      xx dup2
+      xx find_jo__through_jo_link, false?branch, 5
+      xx   xxswapx, drop2 ;; drop word
+      xx   save_into__jo_area
+      xx   end
+      xx write_undefined_word_report__for_make_jojo
+      xx write_string
+      xx literal, 10, write_byte
+      xx !undo_make_jojo
+
+   define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
+      ;; << -- >>
+      xx literal, string$undefined_word_report__for_make_jojo
+      xx literal, length$undefined_word_report__for_make_jojo
+      xx write_string
+      xx end
+
+   string$undefined_word_report__for_make_jojo:
+      db "* (make-jojo) meets undefined word : "
+   .end:
+   length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+   #+end_src
 ** make-jojo
-   * 這裏又產生了特殊的一類珠
-     它雖然以 "M__" 爲前綴
-     但是沒有作爲字符串的名字
-     每個這種珠都與一個謂詞相對
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "make-jojo", make_jojo
       ;; << string[address, length] -- >>
@@ -5504,37 +5529,6 @@
       ;; << tail[address, length], head[address, length] >>
       xx make_jojo__dispatch_syntax_word
       xx taca, make_jojo__loop
-   #+end_src
-** make-jojo,dispatch-syntax-word
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
-      ;; << string[address, length], word[address, length] --
-      ;;    string[address, length] >>
-      xx dup2
-      xx find_syntax, false?branch, 3
-      xx   execute_jo
-      xx   end
-      xx dup2
-      xx find, false?branch, 5
-      xx   xxswapx, drop2 ;; drop word
-      xx   save_into__jo_area
-      xx   end
-      xx write_undefined_word_report__for_make_jojo
-      xx write_string
-      xx literal, 10, write_byte
-      xx !undo_make_jojo
-
-   define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
-      ;; << -- >>
-      xx literal, string$undefined_word_report__for_make_jojo
-      xx literal, length$undefined_word_report__for_make_jojo
-      xx write_string
-      xx end
-
-   string$undefined_word_report__for_make_jojo:
-      db "* (make-jojo) meets undefined word : "
-   .end:
-   length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
    #+end_src
 * define-[function|exception|variable]
 ** note
@@ -5609,8 +5603,11 @@
       xx dup2
       xx string_tail__word
       xx make_jojo
+
       xx drop2
-      xx drop, drop, drop
+      xx drop
+      xx drop
+      xx drop
       xx end
    #+end_src
 ** define-exception
@@ -5649,14 +5646,17 @@
       xx dup2
       xx string_tail__word
       xx make_jojo
+
       xx drop2
-      xx drop, drop, drop
+      xx drop
+      xx drop
+      xx drop
       xx end
    #+end_src
-** define-variable
-   * not undo is needed for define-variable
+** define-variable,with-tos
+   * not undo is needed for define-variable,with-tos
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "define-variable", CICADA__define_variable
+   define_function "define-variable,with-tos", CICADA__define_variable__with_tos
       ;; << variable, string[address, length] -- >>
       xx literal, 1
       xx   save_into__jo_area
@@ -5692,9 +5692,9 @@
    : negate 0 swap sub end ; define-function
    1 negate . << -1 >>
    #+end_src
-** test define-variable
+** test define-variable,with-tos
    #+begin_src cicada-nymph
-   233 : *three* ; define-variable
+   233 : *three* ; define-variable,with-tos
    : add-three *three* add end ; define-function
    1 add-three . << 234 >>
 
@@ -6097,7 +6097,7 @@
    address$local_variable_table labeling
       preserve size$local_variable_table
    #+end_src
-** clear
+** local-variable-table,clear
    #+begin_src fasm :tangle cicada-nymph.fasm
    border$local_variable_table:
       xx address$local_variable_table
@@ -6113,7 +6113,7 @@
       xx literal, offset$local_variable_table, save
       xx end
    #+end_src
-** insert
+** local-variable-table,insert
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "local-variable-table,insert", local_variable_table__insert
       ;; << string[address, length] -- offset >>
@@ -6148,7 +6148,7 @@
 
       xx end
    #+end_src
-** find
+** local-variable-table,find
    #+begin_src fasm :tangle cicada-nymph.fasm
    cursor$local_variable_table:
       xx address$local_variable_table
@@ -6660,6 +6660,17 @@
    #+end_src
 * -----------------------------------
 * epilog
+** constant
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*explainer,function*", CICADA__explain$function
+      xx explain$function
+
+   define_variable "*explainer,exception*", CICADA__explain$exception
+      xx explain$exception
+
+   define_variable "*explainer,variable*", CICADA__explain$variable
+      xx explain$variable
+   #+end_src
 ** platform
    * this word is implemented as a function
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6702,7 +6713,7 @@
    #+end_src
 ** un_initialized_memory              :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+   size$un_initialized_memory = 88 * 1024 * 1024 ;; (byte)
 
    match =linux, platform {
 

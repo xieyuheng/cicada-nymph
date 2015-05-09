@@ -2,19 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* variable must be able to store string
-  * 更改定義 variable 的語法
-    使得一個 variable 中可以保存多個值
-    並且提供語法 [或函數]
-    來以不同的方式 取出其中的全部值或部分值
-  * 通過更改匯編代碼中的 explain$variable 來實現這一點
-* name-hash-table
-  * 讓 name 能夠在 cicada-nymph 和 cicada 中被同時使用
-    讓 find 這個函數使用 name-hash-table
-    也就是說 將有兩個 find 函數
-    1. 一個通過單項鏈接的鏈表來搜索
-    2. 一個通過 name-hash-table 來搜索
-  * name-hash-table 本身的接口也應該更豐富
+* eval-string & redefine define-variable
 * todo
 ** 根目錄有關的函數應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
@@ -288,6 +276,760 @@
    ; define-function
 
    more,rule-set,make-jojo
+   #+end_src
+* allocate
+** note
+   * an interface of *un-initialized-memory*
+** clear-memory [not using]
+   * this kinds of functions
+     must be implemented in assembly code
+   #+begin_src cicada-nymph
+   : clear-memory
+     << size, address -- >>
+     over zero? if
+       drop2
+       end
+     then
+     0 over save
+     add1 swap
+     sub1 swap
+     <> clear-memory
+   ; define-function
+   #+end_src
+** allocate-memory
+   #+begin_src cicada-nymph :tangle core.cn
+   : allocate-memory
+     << size -- address >>
+     dup *current-free-address,un-initialized-memory* clear-memory
+     *current-free-address,un-initialized-memory* swap << address as return value >>
+     address *current-free-address,un-initialized-memory* add-save
+     end
+   ; define-function
+   #+end_src
+* *name-hash-table*
+** note
+   * the name-hash-table
+     is used both in cicada-nymph and cicada-language
+** memory allocation
+   * the following are some prime number
+     ready to be used
+     * 1000003   about 976 k
+     * 1000033
+     * 1000333
+     * 100003    about 97 k
+     * 100333
+     * 997
+     * 499
+   #+begin_src cicada-nymph :tangle core.cn
+   100333
+   << drop 13 >>
+   : *name-hash-table,size*
+   ; define-variable,with-tos
+
+   *jo-size* 5 mul
+   : *name-hash-table,unit*
+   ; define-variable,with-tos
+
+   *name-hash-table,size*
+   *name-hash-table,unit* mul
+   allocate-memory
+   : *name-hash-table*
+   ; define-variable,with-tos
+
+   0
+   : *name-hash-table,counter*
+   ; define-variable,with-tos
+   #+end_src
+* name
+** note
+   * a name is an index into name-hash-table
+   * an entry can be viewed
+     1. as a point
+     2. as an orbit
+   * in a name entry we have the following fields
+     |-------------------------------+------------------------------|
+     |                               | note                         |
+     |-------------------------------+------------------------------|
+     | primitive-string              | 0 denotes                    |
+     | [address]                     | name not used                |
+     |-------------------------------+------------------------------|
+     | title                         | 0 denotes                    |
+     | [index into name-title-table] | name not used as title       |
+     |-------------------------------+------------------------------|
+     | orbit-length                  | as an orbit                  |
+     | [number]                      | its length gets updated      |
+     |-------------------------------+------------------------------|
+     | orbiton                       | as a point                   |
+     | [address]                     | it is on an orbit            |
+     |-------------------------------+------------------------------|
+     | jo                            | 0 denotes                    |
+     | [address]                     | name not used as jo in nymph |
+     |-------------------------------+------------------------------|
+** name->address
+   #+begin_src cicada-nymph :tangle core.cn
+   : name->address
+     << name -- address >>
+     *name-hash-table,unit* mul
+     *name-hash-table* add
+     end
+   ; define-function
+   #+end_src
+** name,used?
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,used?
+     << name -- bool >>
+     name->address
+     fetch zero? false?
+     end
+   ; define-function
+   #+end_src
+** name,used-as-title?
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,used-as-title?
+     << name -- bool >>
+     name->address
+     *jo-size* add
+     fetch zero? not
+     end
+   ; define-function
+   #+end_src
+** name,used-as-nymph-jo?
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,used-as-nymph-jo?
+     << name -- bool >>
+     name->address
+     *jo-size* 4 mul add
+     fetch zero? not
+     end
+   ; define-function
+   #+end_src
+** name,fetch-string
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,fetch-string
+     << name -- string[address, length] >>
+     name->address
+     fetch
+     address->primitive-string
+     end
+   ; define-function
+   #+end_src
+** name,fetch-title-index
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,fetch-title-index
+     << name -- title-index >>
+     name->address
+     *jo-size* add
+     fetch
+     end
+   ; define-function
+   #+end_src
+** name,fetch-orbit-length
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,fetch-orbit-length
+     << name -- orbit-length >>
+     name->address
+     *jo-size* 2 mul add
+     fetch
+     end
+   ; define-function
+   #+end_src
+** name,fetch-orbiton
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,fetch-orbiton
+     << name -- orbiton >>
+     name->address
+     *jo-size* 3 mul add
+     fetch
+     end
+   ; define-function
+   #+end_src
+** name,fetch-nymph-jo
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,fetch-nymph-jo
+     << name -- nymph-jo >>
+     name->address
+     *jo-size* 4 mul add
+     fetch
+     end
+   ; define-function
+   #+end_src
+** name,save-string
+   * note that
+     primitive-string-area is used
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,save-string
+     << string[address, length], name -- >>
+     *current-free-address,primitive-string-area*
+     xx|swap|xx
+     save-into,primitive-string-area
+     swap
+     name->address
+     save
+     end
+   ; define-function
+   #+end_src
+** name,save-title-index
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,save-title-index
+     << title-index, name -- >>
+     name->address
+     *jo-size* add
+     save
+     end
+   ; define-function
+   #+end_src
+** name,save-orbit-length
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,save-orbit-length
+     << orbit-length, name -- >>
+     name->address
+     *jo-size* 2 mul add
+     save
+     end
+   ; define-function
+   #+end_src
+** name,save-orbiton
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,save-orbiton
+     << orbiton, name -- >>
+     name->address
+     *jo-size* 3 mul add
+     save
+     end
+   ; define-function
+   #+end_src
+** name,save-nymph-jo
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,save-nymph-jo
+     << nymph-jo, name -- >>
+     name->address
+     *jo-size* 4 mul add
+     save
+     end
+   ; define-function
+   #+end_src
+** name,no-collision?
+   #+begin_src cicada-nymph :tangle core.cn
+   : name,no-collision?
+     << name -- bool >>
+     dup name,fetch-orbiton
+     equal?
+     end
+   ; define-function
+   #+end_src
+* name-hash-table
+** note interface
+   * open addressing
+     for we do not need to delete
+   * math
+     * hash
+   * memory
+     * insert
+     * search
+   * function
+     * string->name
+     * name->string
+** name-hash-table,hash
+   * prime table size
+   * linear probing
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,hash
+     << number, counter -- index >>
+     add *name-hash-table,size* mod
+     end
+   ; define-function
+   #+end_src
+** string->finite-carry-sum
+   #+begin_src cicada-nymph :tangle core.cn
+   16
+   : *max-carry-position*
+   ; define-variable,with-tos
+
+   : string->finite-carry-sum,loop
+     << carry-sum, string[address, length], counter -- carry-sum >>
+     over zero? if
+       drop drop2
+       end
+     then
+     dup *max-carry-position* greater-than? if
+       drop 0 << re-start from 0 >>
+     then
+     xx|over|x
+     string-head,char over
+     2 swap power
+     mul
+     x|swap|xxxx add xxx|swap|x
+     add1 xx|swap|x
+     string-tail,char x|swap|xx
+     <> string->finite-carry-sum,loop
+   ; define-function
+
+   : string->finite-carry-sum
+     << string[address, length] -- carry-sum >>
+     0 xx|swap|x << carry-sum >>
+     0 << counter >>
+     string->finite-carry-sum,loop
+     end
+   ; define-function
+   #+end_src
+** name-hash-table,search
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,search,loop
+     << string[address, length], number, counter
+        -- name, true
+        -- name, false >>
+     >:counter >:number >::string
+     :number :counter name-hash-table,hash
+     >:name
+     :number 0 name-hash-table,hash
+     >:orbit
+     :name name,used? false? if
+       :name false
+       end
+     then
+     :name name,fetch-string
+     ::string string-equal? if
+       :name true
+       end
+     then
+     :name name,fetch-orbit-length
+     :counter equal? if
+       :name false
+       end
+     then
+     ::string
+     :number :counter add1
+     <> name-hash-table,search,loop
+   ; define-function
+
+   : name-hash-table,search
+     << string[address, length]
+        -- name, true
+        -- name, false >>
+     dup2 string->finite-carry-sum
+     0 name-hash-table,search,loop
+     end
+   ; define-function
+   #+end_src
+** name-hash-table,insert
+   * I found that (insert) can not re-use (search)
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,insert,loop
+     << string[address, length], number, counter
+        -- name, true
+        -- name, false >>
+     >:counter >:number >::string
+     :number :counter name-hash-table,hash
+     >:name
+     :number 0 name-hash-table,hash
+     >:orbit
+     :name name,used? false? if
+       ::string :name
+       name,save-string
+       :orbit :name
+       name,save-orbiton
+       :counter :orbit
+       name,save-orbit-length
+       1 address *name-hash-table,counter* add-save
+       :name true
+       end
+     then
+     :name name,fetch-string
+     ::string string-equal? if
+       :name true
+       end
+     then
+     :counter *name-hash-table,size* equal? if
+       :name false
+       end
+     then
+     ::string
+     :number :counter add1
+     <> name-hash-table,insert,loop
+   ; define-function
+
+   : name-hash-table,insert
+     << string[address, length]
+        -- name, true
+        -- name, false >>
+     dup2 string->finite-carry-sum
+     0 name-hash-table,insert,loop
+     end
+   ; define-function
+   #+end_src
+** string->name & name->string
+   * error handling here
+   #+begin_src cicada-nymph :tangle core.cn
+   : string->name
+     << string[address, length] -- name >>
+     name-hash-table,insert
+     false? if
+       "* (string->name) *name-hash-table* is full!" .s .l
+       end
+     then
+     end
+   ; define-function
+
+   : name->string
+     << name -- string[address, length]] >>
+     name,fetch-string
+     end
+   ; define-function
+   #+end_src
+** note about report
+   * report point orbit by orbit
+     in the following format
+   * {index} string # orbit-lenght
+     * {index} string
+     * {index} string
+     * {index} string
+   * if used as title
+     add a (AS TITLE) as postfix
+** name-hash-table,report
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,report,orbit
+     << name, counter -- >>
+     over name,fetch-orbit-length
+     over less-than? if
+       drop2
+       end
+     then
+     over name,fetch-string string->finite-carry-sum
+     over name-hash-table,hash
+     dup name,fetch-orbiton
+     << name, counter, new-name, orbiton >>
+     x|over|xxx name,fetch-string string->finite-carry-sum
+     0 name-hash-table,hash
+     equal? if
+       "  {" .s
+       dup write-number
+       "} " .s
+       name,fetch-string .s
+       .l
+     else
+       drop
+     then
+     add1 <> name-hash-table,report,orbit
+   ; define-function
+
+   : name-hash-table,report,loop
+     << name -- >>
+     dup *name-hash-table,size* equal? if
+       drop
+       end
+     then
+     dup name,used? if
+     dup name,no-collision? if
+       << * {index} string # orbit-lenght >>
+       "* {" .s
+       dup write-number
+       "} " .s
+       dup name,fetch-string .s
+       " # " .s
+       dup name,fetch-orbit-length
+       write-number
+       .l
+       dup 1 name-hash-table,report,orbit
+     then
+     then
+     add1 <> name-hash-table,report,loop
+   ; define-function
+
+   : name-hash-table,report
+     << -- >>
+     0 name-hash-table,report,loop
+     "* totally : " .s
+     *name-hash-table,counter* write-number
+     .l
+     end
+   ; define-function
+   #+end_src
+** test
+   * set *name-hash-table,size* to a small number [for example 13]
+     then use the following function
+     and (name-hash-table,report) to do test
+   #+begin_src cicada-nymph
+   : test,name-hash-table
+     << -- >>
+     "a-000" string->name . .l
+     "a-111" string->name . .l
+     "a-222" string->name . .l
+     "a-333" string->name . .l
+     "a-444" string->name . .l
+     "a-555" string->name . .l
+     "a-666" string->name . .l
+     "a-777" string->name . .l
+     "a-888" string->name . .l
+     "a-999" string->name . .l
+     "b-000" string->name . .l
+     "b-111" string->name . .l
+     "b-222" string->name . .l
+     "b-333" string->name . .l
+     "b-444" string->name . .l
+     "b-555" string->name . .l
+     "b-666" string->name . .l
+     "b-777" string->name . .l
+     "b-888" string->name . .l
+     "b-999" string->name . .l
+     end
+   ; define-function
+   test,name-hash-table
+
+   name-hash-table,report
+   #+end_src
+* jo in name-hash-table
+** jo,save-into,name-hash-table
+   #+begin_src cicada-nymph :tangle core.cn
+   : jo,save-into,name-hash-table
+     << jo -- >>
+     >:jo
+     :jo jo->name string->name >:name
+     :jo :name name,save-nymph-jo
+     end
+   ; define-function
+   #+end_src
+** find-jo
+   * as find-jo in name-hash-table
+   #+begin_src cicada-nymph :tangle core.cn
+   : find-jo
+     << word[address, length]
+        -- jo, true
+        -- false >>
+     name-hash-table,search if
+     else
+       drop
+       false
+       end
+     then
+     dup name,used-as-nymph-jo? if
+       name,fetch-nymph-jo
+       true
+       end
+     then
+     drop
+     false
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "add" find-jo
+   #+end_src
+* make-jojo                           :redefine:
+** make-jojo,dispatch-syntax-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,dispatch-syntax-word
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     dup2 find-syntax if
+       execute-jo
+       end
+     then
+     dup2 find-jo if
+       xx|swap|x drop2
+       save-into,jo-area
+       end
+     then
+     "* (make-jojo) meets undefined word : " .s .s .l
+     !undo-make-jojo
+   ; define-function
+   #+end_src
+** make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,loop
+     << string[address, length] -- >>
+     dup2 space-string? if
+       drop2
+       end
+     then
+     dup2
+     string-tail,word
+     xx|swap|xx
+     string-head,word
+     make-jojo,dispatch-syntax-word
+     <> make-jojo,loop
+   ; define-function
+
+   : make-jojo
+     << string[address, length] -- >>
+     local-variable-table,clear
+     *rule-set,make-jojo*
+     push-syntax-stack
+     make-jojo,loop
+     drop-syntax-stack
+     end
+   ; define-function
+   #+end_src
+* define-[function|exception]         :redefine:
+** init,name-hash-table,nymph-jo
+   * the function should be executed right after
+     (define-function) is redefined
+   * the function loads a nymph-jo into a entry in the name-hash-table
+     only when the entry is not already used as nymph-jo
+     thus
+     it should only be called once
+   * you can see
+     how the features above
+     make the re-definition of (define-function) hard to test
+   #+begin_src cicada-nymph :tangle core.cn
+   : init,name-hash-table,nymph-jo,loop
+     << jo -- >>
+     dup jo->name
+     name-hash-table,search if
+       name,used-as-nymph-jo? if
+         dup last-jo,jotionary? if
+           drop
+           end
+         then
+         jo->pre-jo
+         <> init,name-hash-table,nymph-jo,loop
+       then
+     else
+       drop
+     then
+
+     dup jo,save-into,name-hash-table
+
+     dup last-jo,jotionary? if
+       drop
+       end
+     then
+     jo->pre-jo
+     <> init,name-hash-table,nymph-jo,loop
+   ; define-function
+
+   : init,name-hash-table,nymph-jo
+     << -- >>
+     *first-jo-in-jotionary*
+     init,name-hash-table,nymph-jo,loop
+     end
+   ; define-function
+   #+end_src
+** define-variable,with-tos
+   * not undo is needed for define-variable,with-tos
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-variable,with-tos
+     << variable, string[address, length] -- >>
+     1 save-into,jo-area
+
+     *current-free-address,primitive-string-area*
+       save-into,jo-area
+     dup2 string-head,word
+       save-into,primitive-string-area
+
+     *first-jo-in-jotionary*
+     jo->link
+       save-into,jo-area
+
+     *current-free-address,jo-area*
+     dup jo,save-into,name-hash-table
+     address *first-jo-in-jotionary* save
+
+     *explainer,variable*
+       save-into,jo-area
+
+     drop2
+     save-into,jo-area
+     end
+   ; define-function
+   #+end_src
+** define-exception
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-exception
+     << string[address, length] -- >>
+     *current-free-address,primitive-string-area* xx|swap|x
+     *current-free-address,jo-area* xx|swap|x
+     *first-jo-in-jotionary* xx|swap|x
+     << *current-free-address,primitive-string-area*
+        *current-free-address,jo-area*
+        *first-jo-in-jotionary*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     *current-free-address,primitive-string-area*
+       save-into,jo-area
+     dup2 string-head,word
+       save-into,primitive-string-area
+
+     *first-jo-in-jotionary*
+     jo->link
+       save-into,jo-area
+
+     *current-free-address,jo-area*
+     dup jo,save-into,name-hash-table
+     address *first-jo-in-jotionary* save
+
+     *explainer,exception*
+       save-into,jo-area
+
+     dup2
+     string-tail,word
+     make-jojo
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+** define-function
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-function
+     << string[address, length] -- >>
+     *current-free-address,primitive-string-area* xx|swap|x
+     *current-free-address,jo-area* xx|swap|x
+     *first-jo-in-jotionary* xx|swap|x
+     << *current-free-address,primitive-string-area*
+        *current-free-address,jo-area*
+        *first-jo-in-jotionary*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     *current-free-address,primitive-string-area*
+       save-into,jo-area
+     dup2 string-head,word
+       save-into,primitive-string-area
+
+     *first-jo-in-jotionary*
+     jo->link
+       save-into,jo-area
+
+     *current-free-address,jo-area*
+     dup jo,save-into,name-hash-table
+     address *first-jo-in-jotionary* save
+
+     *explainer,function*
+       save-into,jo-area
+
+     dup2
+     string-tail,word
+     make-jojo
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+** to load jotionary into name-hash-table
+   #+begin_src cicada-nymph :tangle core.cn
+   init,name-hash-table,nymph-jo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : k 1 2 3 add add . end ; define-function
+   k
+
+   : k 1 2 3 end ; define-function
+   k add add .
+
+   : k no end ; define-function
    #+end_src
 * number with base
 ** 記 原理
@@ -1112,41 +1854,12 @@
 
    test,syntax,base#wild-integer-string,make-jojo
    #+end_src
-* allocate
-** note
-   * an interface of *un-initialized-memory*
-** clear-memory [not using]
-   * this kinds of functions
-     must be implemented in assembly code
-   #+begin_src cicada-nymph
-   : clear-memory
-     << size, address -- >>
-     over zero? if
-       drop2
-       end
-     then
-     0 over save
-     add1 swap
-     sub1 swap
-     <> clear-memory
-   ; define-function
-   #+end_src
-** allocate-memory
-   #+begin_src cicada-nymph :tangle core.cn
-   : allocate-memory
-     << size -- address >>
-     dup *current-free-address,un-initialized-memory* clear-memory
-     *current-free-address,un-initialized-memory* swap << address as return value >>
-     address *current-free-address,un-initialized-memory* add-save
-     end
-   ; define-function
-   #+end_src
 * basic-REPL                          :redefine:
 ** *rule-set,basic-REPL*
    #+begin_src cicada-nymph :tangle core.cn
    1024 *jo-size* mul
    : *size,rule-set,basic-REPL*
-   ; define-variable
+   ; define-variable,with-tos
 
    << for cursor >>
    *jo-size* allocate-memory drop
@@ -1154,7 +1867,7 @@
    *size,rule-set,basic-REPL*
    allocate-memory
    : *rule-set,basic-REPL*
-   ; define-variable
+   ; define-variable,with-tos
 
    *rule-set,basic-REPL*
    *rule-set,basic-REPL* *jo-size* sub
@@ -1166,7 +1879,7 @@
    : execute-word
      << word[address, length] -- unknown >>
      dup2
-     find if
+     find-jo,through-jo-link if
        dup exception-jo? if
          drop
          "* (execute-word) can not execute exception directly : " .s
@@ -1223,7 +1936,8 @@
      drop2
      read-word-for-REPL
      >::word
-     ::word find if
+     << ::word find-jo if >>
+     ::word find-jo,through-jo-link if
        end
      then
      "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -1440,16 +2154,16 @@
    #+begin_src cicada-nymph :tangle core.cn
    1024 1024 mul
    : *circular-string-area,size*
-   ; define-variable
+   ; define-variable,with-tos
 
 
    *circular-string-area,size* allocate-memory
    : *circular-string-area*
-   ; define-variable
+   ; define-variable,with-tos
 
    *circular-string-area*
    : *current-free-address,circular-string-area*
-   ; define-variable
+   ; define-variable,with-tos
    #+end_src
 ** save-into,circular-string-area
    #+begin_src cicada-nymph :tangle core.cn
@@ -1526,14 +2240,15 @@
    #+begin_src cicada-nymph :tangle core.cn
    0
    : *syntax,address,basic-REPL,stack-balancer*
-   ; define-variable
+   ; define-variable,with-tos
 
    : syntax,address,basic-REPL
      << word:address -- address >>
      drop2
      read-word-for-REPL
      >::word
-     ::word find if
+     << ::word find-jo if >>
+     ::word find-jo,through-jo-link if
      else
        "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
        address *syntax,address,basic-REPL,stack-balancer*
@@ -1650,43 +2365,43 @@
 ** init-syscall-number                :32bit:
    #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 4 equal? if
-     5   : :syscall-number,open:       ; define-variable
-     6   : :syscall-number,close:      ; define-variable
-     3   : :syscall-number,read:       ; define-variable
-     4   : :syscall-number,write:      ; define-variable
-     9   : :syscall-number,link:       ; define-variable
-     10  : :syscall-number,unlink:     ; define-variable
-     39  : :syscall-number,mkdir:      ; define-variable
-     40  : :syscall-number,rmdir:      ; define-variable
-     141 : :syscall-number,getdents:   ; define-variable
-     220 : :syscall-number,getdents64: ; define-variable
-     106 : :syscall-number,stat:       ; define-variable
-     1   : :syscall-number,exit:       ; define-variable
-     43  : :syscall-number,times:      ; define-variable
-     20  : :syscall-number,getpid:     ; define-variable
-     183 : :syscall-number,getcwd:     ; define-variable
-     12  : :syscall-number,chdir:      ; define-variable
+     5   : :syscall-number,open:       ; define-variable,with-tos
+     6   : :syscall-number,close:      ; define-variable,with-tos
+     3   : :syscall-number,read:       ; define-variable,with-tos
+     4   : :syscall-number,write:      ; define-variable,with-tos
+     9   : :syscall-number,link:       ; define-variable,with-tos
+     10  : :syscall-number,unlink:     ; define-variable,with-tos
+     39  : :syscall-number,mkdir:      ; define-variable,with-tos
+     40  : :syscall-number,rmdir:      ; define-variable,with-tos
+     141 : :syscall-number,getdents:   ; define-variable,with-tos
+     220 : :syscall-number,getdents64: ; define-variable,with-tos
+     106 : :syscall-number,stat:       ; define-variable,with-tos
+     1   : :syscall-number,exit:       ; define-variable,with-tos
+     43  : :syscall-number,times:      ; define-variable,with-tos
+     20  : :syscall-number,getpid:     ; define-variable,with-tos
+     183 : :syscall-number,getcwd:     ; define-variable,with-tos
+     12  : :syscall-number,chdir:      ; define-variable,with-tos
    then
    #+end_src
 ** init-syscall-number                :64bit:
    #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 8 equal? if
-     2   : :syscall-number,open:       ; define-variable
-     3   : :syscall-number,close:      ; define-variable
-     0   : :syscall-number,read:       ; define-variable
-     1   : :syscall-number,write:      ; define-variable
-     86  : :syscall-number,link:       ; define-variable
-     87  : :syscall-number,unlink:     ; define-variable
-     83  : :syscall-number,mkdir:      ; define-variable
-     84  : :syscall-number,rmdir:      ; define-variable
-     78  : :syscall-number,getdents:   ; define-variable
-     217 : :syscall-number,getdents64: ; define-variable
-     4   : :syscall-number,stat:       ; define-variable
-     60  : :syscall-number,exit:       ; define-variable
-     100 : :syscall-number,times:      ; define-variable
-     39  : :syscall-number,getpid:     ; define-variable
-     79  : :syscall-number,getcwd:     ; define-variable
-     80  : :syscall-number,chdir:      ; define-variable
+     2   : :syscall-number,open:       ; define-variable,with-tos
+     3   : :syscall-number,close:      ; define-variable,with-tos
+     0   : :syscall-number,read:       ; define-variable,with-tos
+     1   : :syscall-number,write:      ; define-variable,with-tos
+     86  : :syscall-number,link:       ; define-variable,with-tos
+     87  : :syscall-number,unlink:     ; define-variable,with-tos
+     83  : :syscall-number,mkdir:      ; define-variable,with-tos
+     84  : :syscall-number,rmdir:      ; define-variable,with-tos
+     78  : :syscall-number,getdents:   ; define-variable,with-tos
+     217 : :syscall-number,getdents64: ; define-variable,with-tos
+     4   : :syscall-number,stat:       ; define-variable,with-tos
+     60  : :syscall-number,exit:       ; define-variable,with-tos
+     100 : :syscall-number,times:      ; define-variable,with-tos
+     39  : :syscall-number,getpid:     ; define-variable,with-tos
+     79  : :syscall-number,getcwd:     ; define-variable,with-tos
+     80  : :syscall-number,chdir:      ; define-variable,with-tos
    then
    #+end_src
 ** error-code->string
@@ -2322,12 +3037,12 @@
    #+end_src
 ** getdents64 structure
    #+begin_src cicada-nymph :tangle core.cn
-   0 : +getdents64,d_ino+        ; define-variable
-   0 : +getdents64,d_off+        ; define-variable
-   0 : +getdents64,d_reclen+     ; define-variable
-   0 : +getdents64,d_type+       ; define-variable
-   0 : +getdents64,d_name+       ; define-variable
-   0 : +getdents64,end+          ; define-variable
+   0 : +getdents64,d_ino+        ; define-variable,with-tos
+   0 : +getdents64,d_off+        ; define-variable,with-tos
+   0 : +getdents64,d_reclen+     ; define-variable,with-tos
+   0 : +getdents64,d_type+       ; define-variable,with-tos
+   0 : +getdents64,d_name+       ; define-variable,with-tos
+   0 : +getdents64,end+          ; define-variable,with-tos
 
    : init,getdents64
      << offset -- >>
@@ -2353,7 +3068,7 @@
    ; define-function
 
    0 init,getdents64
-   +getdents64,end+ : +getdents64,length+ ; define-variable
+   +getdents64,end+ : +getdents64,length+ ; define-variable,with-tos
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -2758,7 +3473,7 @@
      /proc/<pid>/environ
 ** [init|get]-pid
    #+begin_src cicada-nymph :tangle core.cn
-   0 : *pid* ; define-variable
+   0 : *pid* ; define-variable,with-tos
 
    : init-pid
      << -- >>
@@ -2778,11 +3493,11 @@
    #+begin_src cicada-nymph :tangle core.cn
    512 allocate-memory
    : *address,command-line*
-   ; define-variable
+   ; define-variable,with-tos
 
    512
    : *length,command-line*
-   ; define-variable
+   ; define-variable,with-tos
 
    : init-command-line
      << -- >>
@@ -2835,11 +3550,11 @@
    #+begin_src cicada-nymph :tangle core.cn
    1024 4 mul allocate-memory
    : *address,environment-string-variable-list*
-   ; define-variable
+   ; define-variable,with-tos
 
    1024 4 mul
    : *length,environment-string-variable-list*
-   ; define-variable
+   ; define-variable,with-tos
 
    : init-environment-string-variable-list
      << -- >>
@@ -2950,7 +3665,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    512 allocate-memory
    : *buffer,working-directory*
-   ; define-variable
+   ; define-variable,with-tos
 
    : get-working-directory
      << -- directory[address, length] >>
@@ -2993,25 +3708,25 @@
 * >< path
 ** stat structure
    #+begin_src cicada-nymph :tangle core.cn
-   0 : +stat,st_dev+        ; define-variable
-   0 : +stat,st_ino+        ; define-variable
-   0 : +stat,st_mode+       ; define-variable
-   0 : +stat,st_nlink+      ; define-variable
-   0 : +stat,st_uid+        ; define-variable
-   0 : +stat,st_gid+        ; define-variable
-   0 : +stat,st_rdev+       ; define-variable
-   0 : +stat,st_size+       ; define-variable
-   0 : +stat,st_blksize+    ; define-variable
-   0 : +stat,st_blocks+     ; define-variable
-   0 : +stat,st_atime+      ; define-variable
-   0 : +stat,st_atime_nsec+ ; define-variable
-   0 : +stat,st_mtime+      ; define-variable
-   0 : +stat,st_mtime_nsec+ ; define-variable
-   0 : +stat,st_ctime+      ; define-variable
-   0 : +stat,st_ctime_nsec+ ; define-variable
-   0 : +stat,__unused4+     ; define-variable
-   0 : +stat,__unused5+     ; define-variable
-   0 : +stat,end+           ; define-variable
+   0 : +stat,st_dev+        ; define-variable,with-tos
+   0 : +stat,st_ino+        ; define-variable,with-tos
+   0 : +stat,st_mode+       ; define-variable,with-tos
+   0 : +stat,st_nlink+      ; define-variable,with-tos
+   0 : +stat,st_uid+        ; define-variable,with-tos
+   0 : +stat,st_gid+        ; define-variable,with-tos
+   0 : +stat,st_rdev+       ; define-variable,with-tos
+   0 : +stat,st_size+       ; define-variable,with-tos
+   0 : +stat,st_blksize+    ; define-variable,with-tos
+   0 : +stat,st_blocks+     ; define-variable,with-tos
+   0 : +stat,st_atime+      ; define-variable,with-tos
+   0 : +stat,st_atime_nsec+ ; define-variable,with-tos
+   0 : +stat,st_mtime+      ; define-variable,with-tos
+   0 : +stat,st_mtime_nsec+ ; define-variable,with-tos
+   0 : +stat,st_ctime+      ; define-variable,with-tos
+   0 : +stat,st_ctime_nsec+ ; define-variable,with-tos
+   0 : +stat,__unused4+     ; define-variable,with-tos
+   0 : +stat,__unused5+     ; define-variable,with-tos
+   0 : +stat,end+           ; define-variable,with-tos
 
    : init,stat
      << offset -- >>
@@ -3069,7 +3784,7 @@
    ; define-function
 
    0 init,stat
-   +stat,end+ : +stat,length+ ; define-variable
+   +stat,end+ : +stat,length+ ; define-variable,with-tos
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -3391,448 +4106,6 @@
 ** 記 元數據
    * 被加載的文件的開頭應該有元數據
 * -----------------------------------
-* name-hash-table
-** note naming & factoring
-   * open addressing
-     for we do not need to delete
-   * math
-     * hash
-     * probe
-   * memory
-     * insert
-     * search
-   * function
-     * map
-     * reverse
-** *name-hash-table*
-   * the following are some prime number
-     ready to be used
-     * 1000003   about 976 k
-     * 1000033
-     * 1000333
-     * 100003    about 97 k
-     * 100333
-     * 997
-     * 499
-   #+begin_src cicada-nymph :tangle core.cn
-   100333 drop
-   13
-   : *name-hash-table,size*
-   ; define-variable
-
-   *jo-size* 4 mul
-   : *name-hash-table,unit*
-   ; define-variable
-
-   *name-hash-table,size*
-   *name-hash-table,unit* mul
-   allocate-memory
-   : *name-hash-table*
-   ; define-variable
-
-   0
-   : *name-hash-table,counter*
-   ; define-variable
-   #+end_src
-** name-hash-table,hash
-   * prime table size
-   * linear probing
-   #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,hash
-     << number, counter -- index >>
-     add *name-hash-table,size* mod
-     end
-   ; define-function
-   #+end_src
-** string->finite-carry-sum
-   #+begin_src cicada-nymph :tangle core.cn
-   16
-   : *max-carry-position*
-   ; define-variable
-
-   : string->finite-carry-sum,loop
-     << carry-sum, string[address, length], counter -- carry-sum >>
-     over zero? if
-       drop drop2
-       end
-     then
-     dup *max-carry-position* greater-than? if
-       drop 0 << re-start from 0 >>
-     then
-     xx|over|x
-     string-head,char over
-     2 swap power
-     mul
-     x|swap|xxxx add xxx|swap|x
-     add1 xx|swap|x
-     string-tail,char x|swap|xx
-     <> string->finite-carry-sum,loop
-   ; define-function
-
-   : string->finite-carry-sum
-     << string[address, length] -- carry-sum >>
-     0 xx|swap|x << carry-sum >>
-     0 << counter >>
-     string->finite-carry-sum,loop
-     end
-   ; define-function
-   #+end_src
-** name
-*** note
-    * a name is an index into name-hash-table
-    * an entry can be viewed
-      1. as a point
-      2. as an orbit
-    * in a name entry we have the following fields
-      |-------------------------------+-------------------------|
-      |                               | note                    |
-      |-------------------------------+-------------------------|
-      | primitive-string              | 0 denotes               |
-      | [address]                     | name not used           |
-      |-------------------------------+-------------------------|
-      | title                         | 0 denotes               |
-      | [index into name-title-table] | name not used as title  |
-      |-------------------------------+-------------------------|
-      | orbit-length                  | as an orbit             |
-      | [number]                      | its length gets updated |
-      |-------------------------------+-------------------------|
-      | orbiton                       | as a point              |
-      | [address]                     | it is on an orbit       |
-      |-------------------------------+-------------------------|
-*** name->address
-    #+begin_src cicada-nymph :tangle core.cn
-    : name->address
-      << name -- address >>
-      *name-hash-table,unit* mul
-      *name-hash-table* add
-      end
-    ; define-function
-    #+end_src
-*** name,used?
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,used?
-      << name -- bool >>
-      name->address
-      fetch zero? false?
-      end
-    ; define-function
-    #+end_src
-*** name,used-as-title?
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,used-as-title?
-      << name -- bool >>
-      name->address
-      *jo-size* add
-      fetch zero?
-      end
-    ; define-function
-    #+end_src
-*** name,fetch-string
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,fetch-string
-      << name -- string[address, length] >>
-      name->address
-      fetch
-      address->primitive-string
-      end
-    ; define-function
-    #+end_src
-*** name,fetch-title-index sadsfiljdasd
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,fetch-title-index
-      << name -- index >>
-      name->address
-      *jo-size* add
-      fetch
-      end
-    ; define-function
-    #+end_src
-*** name,fetch-orbit-length
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,fetch-orbit-length
-      << name -- length >>
-      name->address
-      *jo-size* add
-      *jo-size* add
-      fetch
-      end
-    ; define-function
-    #+end_src
-*** name,fetch-orbiton
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,fetch-orbiton
-      << name -- address >>
-      name->address
-      *jo-size* add
-      *jo-size* add
-      *jo-size* add
-      fetch
-      end
-    ; define-function
-    #+end_src
-*** name,save-string
-    * note that
-      primitive-string-area is used
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,save-string
-      << string[address, length], name -- >>
-      *current-free-address,primitive-string-area*
-      xx|swap|xx
-      save-into,primitive-string-area
-      swap
-      name->address
-      save
-      end
-    ; define-function
-    #+end_src
-*** name,save-title-index
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,save-title-index
-      << index, name -- >>
-      name->address
-      *jo-size* add
-      save
-      end
-    ; define-function
-    #+end_src
-*** name,save-orbit-length
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,save-orbit-length
-      << index, name -- >>
-      name->address
-      *jo-size* add
-      *jo-size* add
-      save
-      end
-    ; define-function
-    #+end_src
-*** name,save-orbiton
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,save-orbiton
-      << index, name -- >>
-      name->address
-      *jo-size* add
-      *jo-size* add
-      *jo-size* add
-      save
-      end
-    ; define-function
-    #+end_src
-*** name,no-collision?
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,no-collision?
-      << name -- bool >>
-      dup name,fetch-orbiton
-      equal?
-      end
-    ; define-function
-    #+end_src
-** name-hash-table,search
-   #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,search,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     >:counter >:number >::string
-     :number :counter name-hash-table,hash
-     >:name
-     :number 0 name-hash-table,hash
-     >:orbit
-     :name name,used? false? if
-       :name false
-       end
-     then
-     :name name,fetch-string
-     ::string string-equal? if
-       :name true
-       end
-     then
-     :name name,fetch-orbit-length
-     :counter equal? if
-       :name false
-       end
-     then
-     ::string
-     :number :counter add1
-     <> name-hash-table,search,loop
-   ; define-function
-
-   : name-hash-table,search
-     << string[address, length]
-        -- name, true
-        -- false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,search,loop
-     end
-   ; define-function
-   #+end_src
-** name-hash-table,insert
-   * I found that (insert) can not re-use (search)
-   #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,insert,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     >:counter >:number >::string
-     :number :counter name-hash-table,hash
-     >:name
-     :number 0 name-hash-table,hash
-     >:orbit
-     :name name,used? false? if
-       ::string :name
-       name,save-string
-       :orbit :name
-       name,save-orbiton
-       :counter :orbit
-       name,save-orbit-length
-       1 address *name-hash-table,counter* add-save
-       :name true
-       end
-     then
-     :name name,fetch-string
-     ::string string-equal? if
-       :name true
-       end
-     then
-     :counter *name-hash-table,size* equal? if
-       :name false
-       end
-     then
-     ::string
-     :number :counter add1
-     <> name-hash-table,insert,loop
-   ; define-function
-
-   : name-hash-table,insert
-     << string[address, length]
-        -- name, true
-        -- name, false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
-     end
-   ; define-function
-   #+end_src
-** string->name & name->string
-   * error handling here
-   #+begin_src cicada-nymph :tangle core.cn
-   : string->name
-     << string[address, length] -- name >>
-     name-hash-table,insert
-     false? if
-       "* (string->name) *name-hash-table* is full!" .s .l
-       end
-     then
-     end
-   ; define-function
-
-   : name->string
-     << name -- string[address, length]] >>
-     name,fetch-string
-     end
-   ; define-function
-   #+end_src
-** note about report
-   * report point orbit by orbit
-     in the following format
-   * {index} string # orbit-lenght
-     * {index} string
-     * {index} string
-     * {index} string
-   * if used as title
-     add a (AS TITLE) as postfix
-** name-hash-table,report
-   #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,report,orbit
-     << name, counter -- >>
-     over name,fetch-orbit-length
-     over less-than? if
-       drop2
-       end
-     then
-     over name,fetch-string string->finite-carry-sum
-     over name-hash-table,hash
-     dup name,fetch-orbiton
-     << name, counter, new-name, orbiton >>
-     x|over|xxx name,fetch-string string->finite-carry-sum
-     0 name-hash-table,hash
-     equal? if
-       "  {" .s
-       dup write-number
-       "} " .s
-       name,fetch-string .s
-       .l
-     else
-       drop
-     then
-     add1 <> name-hash-table,report,orbit
-   ; define-function
-
-   : name-hash-table,report,loop
-     << name -- >>
-     dup *name-hash-table,size* equal? if
-       drop
-       end
-     then
-     dup name,used? if
-     dup name,no-collision? if
-       << * {index} string # orbit-lenght >>
-       "* {" .s
-       dup write-number
-       "} " .s
-       dup name,fetch-string .s
-       " # " .s
-       dup name,fetch-orbit-length
-       write-number
-       .l
-       dup 1 name-hash-table,report,orbit
-     then
-     then
-     add1 <> name-hash-table,report,loop
-   ; define-function
-
-   : name-hash-table,report
-     << -- >>
-     0 name-hash-table,report,loop
-     "* totally : " .s
-     *name-hash-table,counter* write-number
-     .l
-     end
-   ; define-function
-   #+end_src
-** test
-   * set *name-hash-table,size* to a small number [for example 13]
-     then use the following function
-     and (name-hash-table,report) to do test
-   #+begin_src cicada-nymph
-   : test,name-hash-table
-     << -- >>
-     "a-000" string->name . .l
-     "a-111" string->name . .l
-     "a-222" string->name . .l
-     "a-333" string->name . .l
-     "a-444" string->name . .l
-     "a-555" string->name . .l
-     "a-666" string->name . .l
-     "a-777" string->name . .l
-     "a-888" string->name . .l
-     "a-999" string->name . .l
-     "b-000" string->name . .l
-     "b-111" string->name . .l
-     "b-222" string->name . .l
-     "b-333" string->name . .l
-     "b-444" string->name . .l
-     "b-555" string->name . .l
-     "b-666" string->name . .l
-     "b-777" string->name . .l
-     "b-888" string->name . .l
-     "b-999" string->name . .l
-     end
-   ; define-function
-   test,name-hash-table
-
-   name-hash-table,report
-   #+end_src
-* -----------------------------------
 * report
 ** report-memory
    #+begin_src cicada-nymph :tangle core.cn
@@ -3948,7 +4221,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    0
    : *hi,random-base*
-   ; define-variable
+   ; define-variable,with-tos
 
    : hi,random
      << -- random-number >>

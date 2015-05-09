@@ -99,6 +99,551 @@ more,rule-set,make-jojo
 
 more,rule-set,make-jojo
 
+: allocate-memory
+  << size -- address >>
+  dup *current-free-address,un-initialized-memory* clear-memory
+  *current-free-address,un-initialized-memory* swap << address as return value >>
+  address *current-free-address,un-initialized-memory* add-save
+  end
+; define-function
+
+100333
+<< drop 13 >>
+: *name-hash-table,size*
+; define-variable,with-tos
+
+*jo-size* 5 mul
+: *name-hash-table,unit*
+; define-variable,with-tos
+
+*name-hash-table,size*
+*name-hash-table,unit* mul
+allocate-memory
+: *name-hash-table*
+; define-variable,with-tos
+
+0
+: *name-hash-table,counter*
+; define-variable,with-tos
+
+: name->address
+  << name -- address >>
+  *name-hash-table,unit* mul
+  *name-hash-table* add
+  end
+; define-function
+
+: name,used?
+  << name -- bool >>
+  name->address
+  fetch zero? false?
+  end
+; define-function
+
+: name,used-as-title?
+  << name -- bool >>
+  name->address
+  *jo-size* add
+  fetch zero? not
+  end
+; define-function
+
+: name,used-as-nymph-jo?
+  << name -- bool >>
+  name->address
+  *jo-size* 4 mul add
+  fetch zero? not
+  end
+; define-function
+
+: name,fetch-string
+  << name -- string[address, length] >>
+  name->address
+  fetch
+  address->primitive-string
+  end
+; define-function
+
+: name,fetch-title-index
+  << name -- title-index >>
+  name->address
+  *jo-size* add
+  fetch
+  end
+; define-function
+
+: name,fetch-orbit-length
+  << name -- orbit-length >>
+  name->address
+  *jo-size* 2 mul add
+  fetch
+  end
+; define-function
+
+: name,fetch-orbiton
+  << name -- orbiton >>
+  name->address
+  *jo-size* 3 mul add
+  fetch
+  end
+; define-function
+
+: name,fetch-nymph-jo
+  << name -- nymph-jo >>
+  name->address
+  *jo-size* 4 mul add
+  fetch
+  end
+; define-function
+
+: name,save-string
+  << string[address, length], name -- >>
+  *current-free-address,primitive-string-area*
+  xx|swap|xx
+  save-into,primitive-string-area
+  swap
+  name->address
+  save
+  end
+; define-function
+
+: name,save-title-index
+  << title-index, name -- >>
+  name->address
+  *jo-size* add
+  save
+  end
+; define-function
+
+: name,save-orbit-length
+  << orbit-length, name -- >>
+  name->address
+  *jo-size* 2 mul add
+  save
+  end
+; define-function
+
+: name,save-orbiton
+  << orbiton, name -- >>
+  name->address
+  *jo-size* 3 mul add
+  save
+  end
+; define-function
+
+: name,save-nymph-jo
+  << nymph-jo, name -- >>
+  name->address
+  *jo-size* 4 mul add
+  save
+  end
+; define-function
+
+: name,no-collision?
+  << name -- bool >>
+  dup name,fetch-orbiton
+  equal?
+  end
+; define-function
+
+: name-hash-table,hash
+  << number, counter -- index >>
+  add *name-hash-table,size* mod
+  end
+; define-function
+
+16
+: *max-carry-position*
+; define-variable,with-tos
+
+: string->finite-carry-sum,loop
+  << carry-sum, string[address, length], counter -- carry-sum >>
+  over zero? if
+    drop drop2
+    end
+  then
+  dup *max-carry-position* greater-than? if
+    drop 0 << re-start from 0 >>
+  then
+  xx|over|x
+  string-head,char over
+  2 swap power
+  mul
+  x|swap|xxxx add xxx|swap|x
+  add1 xx|swap|x
+  string-tail,char x|swap|xx
+  <> string->finite-carry-sum,loop
+; define-function
+
+: string->finite-carry-sum
+  << string[address, length] -- carry-sum >>
+  0 xx|swap|x << carry-sum >>
+  0 << counter >>
+  string->finite-carry-sum,loop
+  end
+; define-function
+
+: name-hash-table,search,loop
+  << string[address, length], number, counter
+     -- name, true
+     -- name, false >>
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    :name false
+    end
+  then
+  :name name,fetch-string
+  ::string string-equal? if
+    :name true
+    end
+  then
+  :name name,fetch-orbit-length
+  :counter equal? if
+    :name false
+    end
+  then
+  ::string
+  :number :counter add1
+  <> name-hash-table,search,loop
+; define-function
+
+: name-hash-table,search
+  << string[address, length]
+     -- name, true
+     -- name, false >>
+  dup2 string->finite-carry-sum
+  0 name-hash-table,search,loop
+  end
+; define-function
+
+: name-hash-table,insert,loop
+  << string[address, length], number, counter
+     -- name, true
+     -- name, false >>
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    ::string :name
+    name,save-string
+    :orbit :name
+    name,save-orbiton
+    :counter :orbit
+    name,save-orbit-length
+    1 address *name-hash-table,counter* add-save
+    :name true
+    end
+  then
+  :name name,fetch-string
+  ::string string-equal? if
+    :name true
+    end
+  then
+  :counter *name-hash-table,size* equal? if
+    :name false
+    end
+  then
+  ::string
+  :number :counter add1
+  <> name-hash-table,insert,loop
+; define-function
+
+: name-hash-table,insert
+  << string[address, length]
+     -- name, true
+     -- name, false >>
+  dup2 string->finite-carry-sum
+  0 name-hash-table,insert,loop
+  end
+; define-function
+
+: string->name
+  << string[address, length] -- name >>
+  name-hash-table,insert
+  false? if
+    "* (string->name) *name-hash-table* is full!" .s .l
+    end
+  then
+  end
+; define-function
+
+: name->string
+  << name -- string[address, length]] >>
+  name,fetch-string
+  end
+; define-function
+
+: name-hash-table,report,orbit
+  << name, counter -- >>
+  over name,fetch-orbit-length
+  over less-than? if
+    drop2
+    end
+  then
+  over name,fetch-string string->finite-carry-sum
+  over name-hash-table,hash
+  dup name,fetch-orbiton
+  << name, counter, new-name, orbiton >>
+  x|over|xxx name,fetch-string string->finite-carry-sum
+  0 name-hash-table,hash
+  equal? if
+    "  {" .s
+    dup write-number
+    "} " .s
+    name,fetch-string .s
+    .l
+  else
+    drop
+  then
+  add1 <> name-hash-table,report,orbit
+; define-function
+
+: name-hash-table,report,loop
+  << name -- >>
+  dup *name-hash-table,size* equal? if
+    drop
+    end
+  then
+  dup name,used? if
+  dup name,no-collision? if
+    << * {index} string # orbit-lenght >>
+    "* {" .s
+    dup write-number
+    "} " .s
+    dup name,fetch-string .s
+    " # " .s
+    dup name,fetch-orbit-length
+    write-number
+    .l
+    dup 1 name-hash-table,report,orbit
+  then
+  then
+  add1 <> name-hash-table,report,loop
+; define-function
+
+: name-hash-table,report
+  << -- >>
+  0 name-hash-table,report,loop
+  "* totally : " .s
+  *name-hash-table,counter* write-number
+  .l
+  end
+; define-function
+
+: jo,save-into,name-hash-table
+  << jo -- >>
+  >:jo
+  :jo jo->name string->name >:name
+  :jo :name name,save-nymph-jo
+  end
+; define-function
+
+: find-jo
+  << word[address, length]
+     -- jo, true
+     -- false >>
+  name-hash-table,search if
+  else
+    drop
+    false
+    end
+  then
+  dup name,used-as-nymph-jo? if
+    name,fetch-nymph-jo
+    true
+    end
+  then
+  drop
+  false
+  end
+; define-function
+
+: make-jojo,dispatch-syntax-word
+  << string[address, length], word[address, length] --
+     string[address, length] >>
+  dup2 find-syntax if
+    execute-jo
+    end
+  then
+  dup2 find-jo if
+    xx|swap|x drop2
+    save-into,jo-area
+    end
+  then
+  "* (make-jojo) meets undefined word : " .s .s .l
+  !undo-make-jojo
+; define-function
+
+: make-jojo,loop
+  << string[address, length] -- >>
+  dup2 space-string? if
+    drop2
+    end
+  then
+  dup2
+  string-tail,word
+  xx|swap|xx
+  string-head,word
+  make-jojo,dispatch-syntax-word
+  <> make-jojo,loop
+; define-function
+
+: make-jojo
+  << string[address, length] -- >>
+  local-variable-table,clear
+  *rule-set,make-jojo*
+  push-syntax-stack
+  make-jojo,loop
+  drop-syntax-stack
+  end
+; define-function
+
+: init,name-hash-table,nymph-jo,loop
+  << jo -- >>
+  dup jo->name
+  name-hash-table,search if
+    name,used-as-nymph-jo? if
+      dup last-jo,jotionary? if
+        drop
+        end
+      then
+      jo->pre-jo
+      <> init,name-hash-table,nymph-jo,loop
+    then
+  else
+    drop
+  then
+
+  dup jo,save-into,name-hash-table
+
+  dup last-jo,jotionary? if
+    drop
+    end
+  then
+  jo->pre-jo
+  <> init,name-hash-table,nymph-jo,loop
+; define-function
+
+: init,name-hash-table,nymph-jo
+  << -- >>
+  *first-jo-in-jotionary*
+  init,name-hash-table,nymph-jo,loop
+  end
+; define-function
+
+: define-variable,with-tos
+  << variable, string[address, length] -- >>
+  1 save-into,jo-area
+
+  *current-free-address,primitive-string-area*
+    save-into,jo-area
+  dup2 string-head,word
+    save-into,primitive-string-area
+
+  *first-jo-in-jotionary*
+  jo->link
+    save-into,jo-area
+
+  *current-free-address,jo-area*
+  dup jo,save-into,name-hash-table
+  address *first-jo-in-jotionary* save
+
+  *explainer,variable*
+    save-into,jo-area
+
+  drop2
+  save-into,jo-area
+  end
+; define-function
+
+: define-exception
+  << string[address, length] -- >>
+  *current-free-address,primitive-string-area* xx|swap|x
+  *current-free-address,jo-area* xx|swap|x
+  *first-jo-in-jotionary* xx|swap|x
+  << *current-free-address,primitive-string-area*
+     *current-free-address,jo-area*
+     *first-jo-in-jotionary*
+     string[address, length] >>
+  prepare-for
+    !undo-make-jojo
+    end
+
+  *current-free-address,primitive-string-area*
+    save-into,jo-area
+  dup2 string-head,word
+    save-into,primitive-string-area
+
+  *first-jo-in-jotionary*
+  jo->link
+    save-into,jo-area
+
+  *current-free-address,jo-area*
+  dup jo,save-into,name-hash-table
+  address *first-jo-in-jotionary* save
+
+  *explainer,exception*
+    save-into,jo-area
+
+  dup2
+  string-tail,word
+  make-jojo
+
+  drop2
+  drop
+  drop
+  drop
+  end
+; define-function
+
+: define-function
+  << string[address, length] -- >>
+  *current-free-address,primitive-string-area* xx|swap|x
+  *current-free-address,jo-area* xx|swap|x
+  *first-jo-in-jotionary* xx|swap|x
+  << *current-free-address,primitive-string-area*
+     *current-free-address,jo-area*
+     *first-jo-in-jotionary*
+     string[address, length] >>
+  prepare-for
+    !undo-make-jojo
+    end
+
+  *current-free-address,primitive-string-area*
+    save-into,jo-area
+  dup2 string-head,word
+    save-into,primitive-string-area
+
+  *first-jo-in-jotionary*
+  jo->link
+    save-into,jo-area
+
+  *current-free-address,jo-area*
+  dup jo,save-into,name-hash-table
+  address *first-jo-in-jotionary* save
+
+  *explainer,function*
+    save-into,jo-area
+
+  dup2
+  string-tail,word
+  make-jojo
+
+  drop2
+  drop
+  drop
+  drop
+  end
+; define-function
+
+init,name-hash-table,nymph-jo
+
 : remove-char!,loop
   << cursor, length, char -- cursor >>
   >:char
@@ -525,17 +1070,9 @@ more,rule-set,make-jojo
 
 more,rule-set,make-jojo
 
-: allocate-memory
-  << size -- address >>
-  dup *current-free-address,un-initialized-memory* clear-memory
-  *current-free-address,un-initialized-memory* swap << address as return value >>
-  address *current-free-address,un-initialized-memory* add-save
-  end
-; define-function
-
 1024 *jo-size* mul
 : *size,rule-set,basic-REPL*
-; define-variable
+; define-variable,with-tos
 
 << for cursor >>
 *jo-size* allocate-memory drop
@@ -543,7 +1080,7 @@ more,rule-set,make-jojo
 *size,rule-set,basic-REPL*
 allocate-memory
 : *rule-set,basic-REPL*
-; define-variable
+; define-variable,with-tos
 
 *rule-set,basic-REPL*
 *rule-set,basic-REPL* *jo-size* sub
@@ -552,7 +1089,7 @@ save
 : execute-word
   << word[address, length] -- unknown >>
   dup2
-  find if
+  find-jo,through-jo-link if
     dup exception-jo? if
       drop
       "* (execute-word) can not execute exception directly : " .s
@@ -599,7 +1136,8 @@ save
   drop2
   read-word-for-REPL
   >::word
-  ::word find if
+  << ::word find-jo if >>
+  ::word find-jo,through-jo-link if
     end
   then
   "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -714,16 +1252,16 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
 
 1024 1024 mul
 : *circular-string-area,size*
-; define-variable
+; define-variable,with-tos
 
 
 *circular-string-area,size* allocate-memory
 : *circular-string-area*
-; define-variable
+; define-variable,with-tos
 
 *circular-string-area*
 : *current-free-address,circular-string-area*
-; define-variable
+; define-variable,with-tos
 
 : save-into,circular-string-area
   << string[address, length] -- >>
@@ -778,14 +1316,15 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
 
 0
 : *syntax,address,basic-REPL,stack-balancer*
-; define-variable
+; define-variable,with-tos
 
 : syntax,address,basic-REPL
   << word:address -- address >>
   drop2
   read-word-for-REPL
   >::word
-  ::word find if
+  << ::word find-jo if >>
+  ::word find-jo,through-jo-link if
   else
     "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
     address *syntax,address,basic-REPL,stack-balancer*
@@ -879,41 +1418,41 @@ jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
 ; define-function
 
 *jo-size* 4 equal? if
-  5   : :syscall-number,open:       ; define-variable
-  6   : :syscall-number,close:      ; define-variable
-  3   : :syscall-number,read:       ; define-variable
-  4   : :syscall-number,write:      ; define-variable
-  9   : :syscall-number,link:       ; define-variable
-  10  : :syscall-number,unlink:     ; define-variable
-  39  : :syscall-number,mkdir:      ; define-variable
-  40  : :syscall-number,rmdir:      ; define-variable
-  141 : :syscall-number,getdents:   ; define-variable
-  220 : :syscall-number,getdents64: ; define-variable
-  106 : :syscall-number,stat:       ; define-variable
-  1   : :syscall-number,exit:       ; define-variable
-  43  : :syscall-number,times:      ; define-variable
-  20  : :syscall-number,getpid:     ; define-variable
-  183 : :syscall-number,getcwd:     ; define-variable
-  12  : :syscall-number,chdir:      ; define-variable
+  5   : :syscall-number,open:       ; define-variable,with-tos
+  6   : :syscall-number,close:      ; define-variable,with-tos
+  3   : :syscall-number,read:       ; define-variable,with-tos
+  4   : :syscall-number,write:      ; define-variable,with-tos
+  9   : :syscall-number,link:       ; define-variable,with-tos
+  10  : :syscall-number,unlink:     ; define-variable,with-tos
+  39  : :syscall-number,mkdir:      ; define-variable,with-tos
+  40  : :syscall-number,rmdir:      ; define-variable,with-tos
+  141 : :syscall-number,getdents:   ; define-variable,with-tos
+  220 : :syscall-number,getdents64: ; define-variable,with-tos
+  106 : :syscall-number,stat:       ; define-variable,with-tos
+  1   : :syscall-number,exit:       ; define-variable,with-tos
+  43  : :syscall-number,times:      ; define-variable,with-tos
+  20  : :syscall-number,getpid:     ; define-variable,with-tos
+  183 : :syscall-number,getcwd:     ; define-variable,with-tos
+  12  : :syscall-number,chdir:      ; define-variable,with-tos
 then
 
 *jo-size* 8 equal? if
-  2   : :syscall-number,open:       ; define-variable
-  3   : :syscall-number,close:      ; define-variable
-  0   : :syscall-number,read:       ; define-variable
-  1   : :syscall-number,write:      ; define-variable
-  86  : :syscall-number,link:       ; define-variable
-  87  : :syscall-number,unlink:     ; define-variable
-  83  : :syscall-number,mkdir:      ; define-variable
-  84  : :syscall-number,rmdir:      ; define-variable
-  78  : :syscall-number,getdents:   ; define-variable
-  217 : :syscall-number,getdents64: ; define-variable
-  4   : :syscall-number,stat:       ; define-variable
-  60  : :syscall-number,exit:       ; define-variable
-  100 : :syscall-number,times:      ; define-variable
-  39  : :syscall-number,getpid:     ; define-variable
-  79  : :syscall-number,getcwd:     ; define-variable
-  80  : :syscall-number,chdir:      ; define-variable
+  2   : :syscall-number,open:       ; define-variable,with-tos
+  3   : :syscall-number,close:      ; define-variable,with-tos
+  0   : :syscall-number,read:       ; define-variable,with-tos
+  1   : :syscall-number,write:      ; define-variable,with-tos
+  86  : :syscall-number,link:       ; define-variable,with-tos
+  87  : :syscall-number,unlink:     ; define-variable,with-tos
+  83  : :syscall-number,mkdir:      ; define-variable,with-tos
+  84  : :syscall-number,rmdir:      ; define-variable,with-tos
+  78  : :syscall-number,getdents:   ; define-variable,with-tos
+  217 : :syscall-number,getdents64: ; define-variable,with-tos
+  4   : :syscall-number,stat:       ; define-variable,with-tos
+  60  : :syscall-number,exit:       ; define-variable,with-tos
+  100 : :syscall-number,times:      ; define-variable,with-tos
+  39  : :syscall-number,getpid:     ; define-variable,with-tos
+  79  : :syscall-number,getcwd:     ; define-variable,with-tos
+  80  : :syscall-number,chdir:      ; define-variable,with-tos
 then
 
 : error-code->string
@@ -1317,12 +1856,12 @@ then
   end
 ; define-function
 
-0 : +getdents64,d_ino+        ; define-variable
-0 : +getdents64,d_off+        ; define-variable
-0 : +getdents64,d_reclen+     ; define-variable
-0 : +getdents64,d_type+       ; define-variable
-0 : +getdents64,d_name+       ; define-variable
-0 : +getdents64,end+          ; define-variable
+0 : +getdents64,d_ino+        ; define-variable,with-tos
+0 : +getdents64,d_off+        ; define-variable,with-tos
+0 : +getdents64,d_reclen+     ; define-variable,with-tos
+0 : +getdents64,d_type+       ; define-variable,with-tos
+0 : +getdents64,d_name+       ; define-variable,with-tos
+0 : +getdents64,end+          ; define-variable,with-tos
 
 : init,getdents64
   << offset -- >>
@@ -1348,7 +1887,7 @@ then
 ; define-function
 
 0 init,getdents64
-+getdents64,end+ : +getdents64,length+ ; define-variable
++getdents64,end+ : +getdents64,length+ ; define-variable,with-tos
 
 : empty-directory?
   << path[address, length] -- bool >>
@@ -1570,7 +2109,7 @@ then
   end
 ; define-function
 
-0 : *pid* ; define-variable
+0 : *pid* ; define-variable,with-tos
 
 : init-pid
   << -- >>
@@ -1588,11 +2127,11 @@ then
 
 512 allocate-memory
 : *address,command-line*
-; define-variable
+; define-variable,with-tos
 
 512
 : *length,command-line*
-; define-variable
+; define-variable,with-tos
 
 : init-command-line
   << -- >>
@@ -1642,11 +2181,11 @@ then
 
 1024 4 mul allocate-memory
 : *address,environment-string-variable-list*
-; define-variable
+; define-variable,with-tos
 
 1024 4 mul
 : *length,environment-string-variable-list*
-; define-variable
+; define-variable,with-tos
 
 : init-environment-string-variable-list
   << -- >>
@@ -1747,7 +2286,7 @@ init-environment-string-variable-list
 
 512 allocate-memory
 : *buffer,working-directory*
-; define-variable
+; define-variable,with-tos
 
 : get-working-directory
   << -- directory[address, length] >>
@@ -1779,25 +2318,25 @@ init-environment-string-variable-list
   end
 ; define-function
 
-0 : +stat,st_dev+        ; define-variable
-0 : +stat,st_ino+        ; define-variable
-0 : +stat,st_mode+       ; define-variable
-0 : +stat,st_nlink+      ; define-variable
-0 : +stat,st_uid+        ; define-variable
-0 : +stat,st_gid+        ; define-variable
-0 : +stat,st_rdev+       ; define-variable
-0 : +stat,st_size+       ; define-variable
-0 : +stat,st_blksize+    ; define-variable
-0 : +stat,st_blocks+     ; define-variable
-0 : +stat,st_atime+      ; define-variable
-0 : +stat,st_atime_nsec+ ; define-variable
-0 : +stat,st_mtime+      ; define-variable
-0 : +stat,st_mtime_nsec+ ; define-variable
-0 : +stat,st_ctime+      ; define-variable
-0 : +stat,st_ctime_nsec+ ; define-variable
-0 : +stat,__unused4+     ; define-variable
-0 : +stat,__unused5+     ; define-variable
-0 : +stat,end+           ; define-variable
+0 : +stat,st_dev+        ; define-variable,with-tos
+0 : +stat,st_ino+        ; define-variable,with-tos
+0 : +stat,st_mode+       ; define-variable,with-tos
+0 : +stat,st_nlink+      ; define-variable,with-tos
+0 : +stat,st_uid+        ; define-variable,with-tos
+0 : +stat,st_gid+        ; define-variable,with-tos
+0 : +stat,st_rdev+       ; define-variable,with-tos
+0 : +stat,st_size+       ; define-variable,with-tos
+0 : +stat,st_blksize+    ; define-variable,with-tos
+0 : +stat,st_blocks+     ; define-variable,with-tos
+0 : +stat,st_atime+      ; define-variable,with-tos
+0 : +stat,st_atime_nsec+ ; define-variable,with-tos
+0 : +stat,st_mtime+      ; define-variable,with-tos
+0 : +stat,st_mtime_nsec+ ; define-variable,with-tos
+0 : +stat,st_ctime+      ; define-variable,with-tos
+0 : +stat,st_ctime_nsec+ ; define-variable,with-tos
+0 : +stat,__unused4+     ; define-variable,with-tos
+0 : +stat,__unused5+     ; define-variable,with-tos
+0 : +stat,end+           ; define-variable,with-tos
 
 : init,stat
   << offset -- >>
@@ -1855,7 +2394,7 @@ init-environment-string-variable-list
 ; define-function
 
 0 init,stat
-+stat,end+ : +stat,length+ ; define-variable
++stat,end+ : +stat,length+ ; define-variable,with-tos
 
 : path,nothing?
   << path[address, length] -- bool >>
@@ -2009,317 +2548,6 @@ init-environment-string-variable-list
   end
 ; define-function
 
-100333 drop
-13
-: *name-hash-table,size*
-; define-variable
-
-*jo-size* 4 mul
-: *name-hash-table,unit*
-; define-variable
-
-*name-hash-table,size*
-*name-hash-table,unit* mul
-allocate-memory
-: *name-hash-table*
-; define-variable
-
-0
-: *name-hash-table,counter*
-; define-variable
-
-: name-hash-table,hash
-  << number, counter -- index >>
-  add *name-hash-table,size* mod
-  end
-; define-function
-
-16
-: *max-carry-position*
-; define-variable
-
-: string->finite-carry-sum,loop
-  << carry-sum, string[address, length], counter -- carry-sum >>
-  over zero? if
-    drop drop2
-    end
-  then
-  dup *max-carry-position* greater-than? if
-    drop 0 << re-start from 0 >>
-  then
-  xx|over|x
-  string-head,char over
-  2 swap power
-  mul
-  x|swap|xxxx add xxx|swap|x
-  add1 xx|swap|x
-  string-tail,char x|swap|xx
-  <> string->finite-carry-sum,loop
-; define-function
-
-: string->finite-carry-sum
-  << string[address, length] -- carry-sum >>
-  0 xx|swap|x << carry-sum >>
-  0 << counter >>
-  string->finite-carry-sum,loop
-  end
-; define-function
-
-: name->address
-  << name -- address >>
-  *name-hash-table,unit* mul
-  *name-hash-table* add
-  end
-; define-function
-
-: name,used?
-  << name -- bool >>
-  name->address
-  fetch zero? false?
-  end
-; define-function
-
-: name,used-as-title?
-  << name -- bool >>
-  name->address
-  *jo-size* add
-  fetch zero?
-  end
-; define-function
-
-: name,fetch-string
-  << name -- string[address, length] >>
-  name->address
-  fetch
-  address->primitive-string
-  end
-; define-function
-
-: name,fetch-title-index
-  << name -- index >>
-  name->address
-  *jo-size* add
-  fetch
-  end
-; define-function
-
-: name,fetch-orbit-length
-  << name -- length >>
-  name->address
-  *jo-size* add
-  *jo-size* add
-  fetch
-  end
-; define-function
-
-: name,fetch-orbiton
-  << name -- address >>
-  name->address
-  *jo-size* add
-  *jo-size* add
-  *jo-size* add
-  fetch
-  end
-; define-function
-
-: name,save-string
-  << string[address, length], name -- >>
-  *current-free-address,primitive-string-area*
-  xx|swap|xx
-  save-into,primitive-string-area
-  swap
-  name->address
-  save
-  end
-; define-function
-
-: name,save-title-index
-  << index, name -- >>
-  name->address
-  *jo-size* add
-  save
-  end
-; define-function
-
-: name,save-orbit-length
-  << index, name -- >>
-  name->address
-  *jo-size* add
-  *jo-size* add
-  save
-  end
-; define-function
-
-: name,save-orbiton
-  << index, name -- >>
-  name->address
-  *jo-size* add
-  *jo-size* add
-  *jo-size* add
-  save
-  end
-; define-function
-
-: name,no-collision?
-  << name -- bool >>
-  dup name,fetch-orbiton
-  equal?
-  end
-; define-function
-
-: name-hash-table,search,loop
-  << string[address, length], number, counter
-     -- name, true
-     -- name, false >>
-  >:counter >:number >::string
-  :number :counter name-hash-table,hash
-  >:name
-  :number 0 name-hash-table,hash
-  >:orbit
-  :name name,used? false? if
-    :name false
-    end
-  then
-  :name name,fetch-string
-  ::string string-equal? if
-    :name true
-    end
-  then
-  :name name,fetch-orbit-length
-  :counter equal? if
-    :name false
-    end
-  then
-  ::string
-  :number :counter add1
-  <> name-hash-table,search,loop
-; define-function
-
-: name-hash-table,search
-  << string[address, length]
-     -- name, true
-     -- false >>
-  dup2 string->finite-carry-sum
-  0 name-hash-table,search,loop
-  end
-; define-function
-
-: name-hash-table,insert,loop
-  << string[address, length], number, counter
-     -- name, true
-     -- name, false >>
-  >:counter >:number >::string
-  :number :counter name-hash-table,hash
-  >:name
-  :number 0 name-hash-table,hash
-  >:orbit
-  :name name,used? false? if
-    ::string :name
-    name,save-string
-    :orbit :name
-    name,save-orbiton
-    :counter :orbit
-    name,save-orbit-length
-    1 address *name-hash-table,counter* add-save
-    :name true
-    end
-  then
-  :name name,fetch-string
-  ::string string-equal? if
-    :name true
-    end
-  then
-  :counter *name-hash-table,size* equal? if
-    :name false
-    end
-  then
-  ::string
-  :number :counter add1
-  <> name-hash-table,insert,loop
-; define-function
-
-: name-hash-table,insert
-  << string[address, length]
-     -- name, true
-     -- name, false >>
-  dup2 string->finite-carry-sum
-  0 name-hash-table,insert,loop
-  end
-; define-function
-
-: string->name
-  << string[address, length] -- name >>
-  name-hash-table,insert
-  false? if
-    "* (string->name) *name-hash-table* is full!" .s .l
-    end
-  then
-  end
-; define-function
-
-: name->string
-  << name -- string[address, length]] >>
-  name,fetch-string
-  end
-; define-function
-
-: name-hash-table,report,orbit
-  << name, counter -- >>
-  over name,fetch-orbit-length
-  over less-than? if
-    drop2
-    end
-  then
-  over name,fetch-string string->finite-carry-sum
-  over name-hash-table,hash
-  dup name,fetch-orbiton
-  << name, counter, new-name, orbiton >>
-  x|over|xxx name,fetch-string string->finite-carry-sum
-  0 name-hash-table,hash
-  equal? if
-    "  {" .s
-    dup write-number
-    "} " .s
-    name,fetch-string .s
-    .l
-  else
-    drop
-  then
-  add1 <> name-hash-table,report,orbit
-; define-function
-
-: name-hash-table,report,loop
-  << name -- >>
-  dup *name-hash-table,size* equal? if
-    drop
-    end
-  then
-  dup name,used? if
-  dup name,no-collision? if
-    << * {index} string # orbit-lenght >>
-    "* {" .s
-    dup write-number
-    "} " .s
-    dup name,fetch-string .s
-    " # " .s
-    dup name,fetch-orbit-length
-    write-number
-    .l
-    dup 1 name-hash-table,report,orbit
-  then
-  then
-  add1 <> name-hash-table,report,loop
-; define-function
-
-: name-hash-table,report
-  << -- >>
-  0 name-hash-table,report,loop
-  "* totally : " .s
-  *name-hash-table,counter* write-number
-  .l
-  end
-; define-function
-
 : report-memory
   << -- >>
   "* *un-initialized-memory*" .s .l
@@ -2417,7 +2645,7 @@ allocate-memory
 
 0
 : *hi,random-base*
-; define-variable
+; define-variable,with-tos
 
 : hi,random
   << -- random-number >>

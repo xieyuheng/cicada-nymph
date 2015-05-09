@@ -1025,10 +1025,10 @@ define_function "little_test", little_test
    ;; xx exit_with_TOS
    ;;;; 2 1 4 3 2 1
 
-   ;;;; find
+   ;;;; find_jo__through_jo_link
    ;; xx read_word, string_to_integer ;; number
    ;; xx read_word, string_to_integer ;; number
-   ;; xx read_word, find ;; add
+   ;; xx read_word, find_jo__through_jo_link ;; add
    ;; xx drop ;; true
    ;; xx execute_jo
    ;; xx write_integer
@@ -3229,20 +3229,19 @@ define_function "string-tail,word", string_tail__word
 define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
    xx (last_link + jo_size)
 
-define_function "find", find
+define_function "find-jo,through-jo-link", find_jo__through_jo_link
    ;; << word[address, length]
    ;;    -- jo, true
    ;;    -- false >>
    xx V__first_jo_in_jotionary
-   xx help__find
+   xx find_jo__through_jo_link__loop
    xx end
 
-define_function "help,find", help__find
+define_function "find-jo,through-jo-link,loop", find_jo__through_jo_link__loop
    ;; << word[address, length], jo
    ;;    -- jo, true
    ;;    -- false >>
    xx xxtuckx
-
 
    xx jo_to_name, xxoverxx
 
@@ -3256,7 +3255,6 @@ define_function "help,find", help__find
    ;; xx   dup, write_integer, literal, 32, write_byte
    ;; xx   write_string, literal, 10, write_byte
 
-
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end
@@ -3266,7 +3264,7 @@ define_function "help,find", help__find
    xx   false
    xx   end
    xx jo_to_pre_jo
-   xx taca, help__find
+   xx taca, find_jo__through_jo_link__loop
 
 define_function "execute-word", execute_word
    ;; << word[address, length] -- unknown >>
@@ -3277,7 +3275,7 @@ define_function "execute-word", execute_word
 
    xx dup2 ;; for to report undefined word
 
-   xx find, false?branch, 5
+   xx find_jo__through_jo_link, false?branch, 5
    xx   xxswapx, drop2
    xx   execute_jo
    xx   end
@@ -3801,7 +3799,7 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
 
    xx dup2
    xx string_head__word
-   xx find, false?branch, 4
+   xx find_jo__through_jo_link, false?branch, 4
    xx   save_into__jo_area
    xx   string_tail__word
    xx   end
@@ -3846,7 +3844,7 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
 
    xx dup2
    xx string_head__word
-   xx find, false?branch, 4
+   xx find_jo__through_jo_link, false?branch, 4
    xx   save_into__jo_area
    xx   string_tail__word
    xx   end
@@ -4024,6 +4022,35 @@ string$not_integer_string_report__for_double_quote:
 .end:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
+define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
+   ;; << string[address, length], word[address, length] --
+   ;;    string[address, length] >>
+   xx dup2
+   xx find_syntax, false?branch, 3
+   xx   execute_jo
+   xx   end
+   xx dup2
+   xx find_jo__through_jo_link, false?branch, 5
+   xx   xxswapx, drop2 ;; drop word
+   xx   save_into__jo_area
+   xx   end
+   xx write_undefined_word_report__for_make_jojo
+   xx write_string
+   xx literal, 10, write_byte
+   xx !undo_make_jojo
+
+define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
+   ;; << -- >>
+   xx literal, string$undefined_word_report__for_make_jojo
+   xx literal, length$undefined_word_report__for_make_jojo
+   xx write_string
+   xx end
+
+string$undefined_word_report__for_make_jojo:
+   db "* (make-jojo) meets undefined word : "
+.end:
+length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+
 define_function "make-jojo", make_jojo
    ;; << string[address, length] -- >>
    xx local_variable_table__clear
@@ -4044,35 +4071,6 @@ define_function "make-jojo,loop", make_jojo__loop
    ;; << tail[address, length], head[address, length] >>
    xx make_jojo__dispatch_syntax_word
    xx taca, make_jojo__loop
-
-define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
-   ;; << string[address, length], word[address, length] --
-   ;;    string[address, length] >>
-   xx dup2
-   xx find_syntax, false?branch, 3
-   xx   execute_jo
-   xx   end
-   xx dup2
-   xx find, false?branch, 5
-   xx   xxswapx, drop2 ;; drop word
-   xx   save_into__jo_area
-   xx   end
-   xx write_undefined_word_report__for_make_jojo
-   xx write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_make_jojo
-   xx literal, length$undefined_word_report__for_make_jojo
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_make_jojo:
-   db "* (make-jojo) meets undefined word : "
-.end:
-length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
 
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__primitive_string_area
@@ -4138,8 +4136,11 @@ define_function "define-function", CICADA__define_function
    xx dup2
    xx string_tail__word
    xx make_jojo
+
    xx drop2
-   xx drop, drop, drop
+   xx drop
+   xx drop
+   xx drop
    xx end
 
 define_function "define-exception", CICADA__define_exception
@@ -4176,11 +4177,14 @@ define_function "define-exception", CICADA__define_exception
    xx dup2
    xx string_tail__word
    xx make_jojo
+
    xx drop2
-   xx drop, drop, drop
+   xx drop
+   xx drop
+   xx drop
    xx end
 
-define_function "define-variable", CICADA__define_variable
+define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    ;; << variable, string[address, length] -- >>
    xx literal, 1
    xx   save_into__jo_area
@@ -4751,6 +4755,15 @@ __syscall_with_too_many:
 
 }
 
+define_variable "*explainer,function*", CICADA__explain$function
+   xx explain$function
+
+define_variable "*explainer,exception*", CICADA__explain$exception
+   xx explain$exception
+
+define_variable "*explainer,variable*", CICADA__explain$variable
+   xx explain$variable
+
 define_function "platform", the_platform
    xx literal, string$platform
    xx literal, length$platform
@@ -4779,7 +4792,7 @@ define_variable "*current-free-address,primitive-string-area*", V__current_free_
 
 last_link = link
 
-size$un_initialized_memory = 64 * 1024 * 1024 ;; (byte)
+size$un_initialized_memory = 88 * 1024 * 1024 ;; (byte)
 
 match =linux, platform {
 
