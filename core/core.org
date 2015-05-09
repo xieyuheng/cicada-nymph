@@ -2,7 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* eval-string & redefine define-variable
+* eval-string & (define-variable)
 * todo
 ** 根目錄有關的函數應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
@@ -1031,6 +1031,7 @@
 
    : k no end ; define-function
    #+end_src
+* -----------------------------------
 * number with base
 ** 記 原理
    * 現在 的 number 就只是 "integer" 而已
@@ -3147,17 +3148,10 @@
      end
    ; define-function
 
-   : play ;
-   test,getdents64
-
-   : play/kkk ;
-   test,getdents64
-
-   : . ;
-   test,getdents64
-
-   : / ;
-   test,getdents64
+   "play" test,getdents64
+   "play/kkk" test,getdents64
+   "." test,getdents64
+   "/" test,getdents64
    #+end_src
 ** empty-directory?
    #+begin_src cicada-nymph :tangle core.cn
@@ -3190,20 +3184,11 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : play ;
-   empty-directory? . .l
-
-   : play/kkk ;
-   empty-directory? . .l
-
-   : play/aaa ;
-   empty-directory? . .l
-
-   : . ;
-   empty-directory? . .l
-
-   : / ;
-   empty-directory? . .l
+   "play" empty-directory? . .l
+   "play/kkk" empty-directory? . .l
+   "play/aaa" empty-directory? . .l
+   "." empty-directory? . .l
+   "/" empty-directory? . .l
    #+end_src
 ** directory,list-by-file-type-code
    #+begin_src cicada-nymph :tangle core.cn
@@ -3297,20 +3282,20 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : play ;
-   dup2 directory,list-file
+   "play" dup2
+   directory,list-file
    directory,list-directory
 
-   : play/kkk ;
-   dup2 directory,list-file
+   "play/kkk" dup2
+   directory,list-file
    directory,list-directory
 
-   : . ;
-   dup2 directory,list-file
+   "." dup2
+   directory,list-file
    directory,list-directory
 
-   : / ;
-   dup2 directory,list-file
+   "/" dup2
+   irectory,list-file
    directory,list-directory
    #+end_src
 ** directory,find-by-file-type-code
@@ -3835,11 +3820,8 @@
      end
    ; define-function
 
-   : cn ;
-   test,stat
-
-   : no ;
-   test,stat
+   "cn" test,stat
+   "no" test,stat
    #+end_src
 ** note predicate
    * to use predicate to know more about the file-tree
