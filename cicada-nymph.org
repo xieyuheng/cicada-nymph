@@ -3,6 +3,10 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** find a better way to protect reading-stack
+   * now
+     "1 2 3 add add . jo" eval-string
+     will crush the interpreter
 ** protect on the overloading of a variety of memories
 ** better naming of headings
 ** add more notes about the limitations of the program
@@ -185,6 +189,8 @@
      決定了 如何入這個棧
    * 結尾詞
      決定了 如何出這個棧
+** syntax-stack
+** reading-stack
 ** local-variable-table
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
@@ -1578,16 +1584,6 @@
    define_function "initialization", initialization
       ;; << -- >>
       xx init__rule_set__make_jojo
-      xx end
-   #+end_src
-** load-core-file
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "load-core-file", load_core_file
-      ;; << unknown -- unknown >>
-      xx literal, address$core_file
-      xx literal, cursor$read_byte, save
-      xx literal, (end$core_file - address$core_file)
-      xx literal, length$read_byte, save
       xx end
    #+end_src
 ** ----------------------------------
@@ -3634,7 +3630,7 @@
    2#00000000 find-highest-set-bit
    #+end_src
 * -----------------------------------
-* basic io
+* write-byte
 ** write-byte                         :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
@@ -3680,13 +3676,129 @@
 
    }
    #+end_src
+* reading-stack
 ** note
+   * for we do not build border-check
+     into the interface of pop and push
+     we allocation some memory below the stacks
+   * (read-byte) only sees the tos of reading-stack
+   * reading-stack helps to implement (eval-string)
+     push and pop of reading-stack happens in the function (eval-string)
+   * the interface action on string
+     i.e. two values
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$reading_stack = 1024 * jo_size
+
+      preserve 64 * jo_size
+   address$reading_stack labeling
+      preserve size$reading_stack
+
+   pointer$reading_stack:
+      xx address$reading_stack
+   #+end_src
+** push & pop & drop                  :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "push-reading-stack", push_reading_stack
+      ;; << string[address, length] -- >>
+      pop_argument_stack rax
+      mov rbx, [pointer$reading_stack]
+      mov [rbx], rax
+      add qword [pointer$reading_stack], jo_size
+      pop_argument_stack rax
+      mov rbx, [pointer$reading_stack]
+      mov [rbx], rax
+      add qword [pointer$reading_stack], jo_size
+      next
+
+   define_primitive_function "pop-reading-stack", pop_reading_stack
+      ;; << -- string[address, length] >>
+      sub qword [pointer$reading_stack], jo_size
+      mov rbx, [pointer$reading_stack]
+      mov rax, [rbx]
+      push_argument_stack rax
+      sub qword [pointer$reading_stack], jo_size
+      mov rbx, [pointer$reading_stack]
+      mov rax, [rbx]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "drop-reading-stack", drop_reading_stack
+      ;; << -- >>
+      sub qword [pointer$reading_stack], (jo_size * 2)
+      next
+
+   }
+   #+end_src
+** push & pop & drop                  :32bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =32bit, machine {
+
+   define_primitive_function "push-reading-stack", push_reading_stack
+      ;; << string[address, length] -- >>
+      pop_argument_stack rax
+      mov rsi, [pointer$reading_stack]
+      mov [rsi], rax
+      add dword [pointer$reading_stack], jo_size
+      pop_argument_stack rax
+      mov rsi, [pointer$reading_stack]
+      mov [rsi], rax
+      add dword [pointer$reading_stack], jo_size
+      next
+
+   define_primitive_function "pop-reading-stack", pop_reading_stack
+      ;; << -- string[address, length] >>
+      sub dword [pointer$reading_stack], jo_size
+      mov rsi, [pointer$reading_stack]
+      mov rax, [rsi]
+      push_argument_stack rax
+      sub dword [pointer$reading_stack], jo_size
+      mov rsi, [pointer$reading_stack]
+      mov rax, [rsi]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "drop-reading-stack", drop_reading_stack
+      ;; << -- >>
+      sub dword [pointer$reading_stack], (jo_size * 2)
+      next
+
+   }
+   #+end_src
+** tos
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_primitive_function "tos-reading-stack", tos_reading_stack
+      ;; << -- string[address, length] >>
+      mov rbx, [pointer$reading_stack]
+      sub rbx, jo_size
+      mov rax, [rbx]
+      push_argument_stack rax
+      mov rbx, [pointer$reading_stack]
+      sub rbx, jo_size
+      sub rbx, jo_size
+      mov rax, [rbx]
+      push_argument_stack rax
+      next
+   #+end_src
+** reading-stack-empty?
+   * only one string is in reading-stack and it length is zero
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "reading-stack-empty?", reading_stack_empty?
+      ;; << -- bool >>
+      xx literal, pointer$reading_stack, fetch
+      xx literal, address$reading_stack
+      xx equal?
+      xx end
+   #+end_src
+* read-byte
+** note end of file
    * do not exit the program
      when meeting <end-of-file>
      so
      when you hit <C-d>
      some you will not exit the interpreter
-   * add the feature to unread one ket-char
 ** note factoring
    * reading from file of stdin is slow
      thus
@@ -3740,11 +3852,11 @@
 ** test read-line-from-stdin
    #+begin_src fasm
    define_function "", test__read_line_from_stdin
-      xx literal, buffer$read_byte
+      xx literal, buffer$reading
       xx literal, max_input_length
       xx read_line_from_stdin
       xx pretty_write_integer
-      xx literal, buffer$read_byte
+      xx literal, buffer$reading
       xx literal, 10
       xx write_string
       xx exit_with_TOS
@@ -3754,71 +3866,69 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    max_input_length = 64 * 1024
 
-   buffer$read_byte labeling
+   buffer$reading labeling
       preserve max_input_length
 
-   cursor$read_byte:
-      xx buffer$read_byte
-
-   length$read_byte:
-      xx 0
+   replace$reading labeling
+      preserve 1024
 
    define_function "read-byte", read_byte
       ;; << -- byte >>
-      xx have_unreaded_ket_char?, false?branch, 9
-      xx   literal, char$unreaded_ket_char, fetch_byte
-      xx   zero, literal, flag$unreaded_ket_char
-      xx   save
+      xx pop_reading_stack
+      xx dup2, empty_string?, CICADA__not, false?branch, (.bad_tos-$)/jo_size
+      xx   sub1, swap
+      xx   tuck
+      xx   add1, swap
+      xx   push_reading_stack
+      xx   fetch_byte
       xx   end
-      xx read_byte__without_unread
-      xx end
-
-   define_function "read-byte,without-unread", read_byte__without_unread
-      ;; << -- byte >>
-      xx literal, length$read_byte, fetch
-      xx zero?, false?branch, (.not_empty-$)/jo_size
-      xx   literal, buffer$read_byte
+   .bad_tos:
+      xx reading_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx   drop2
+      xx   literal, buffer$reading
       xx   literal, max_input_length
       xx   read_line_from_stdin
-      xx     dup, positive?, false?, false?branch, 4
-      ;;     ignore <end-of-file>
-      ;;     ignore reading error
-      xx     drop
-      xx     taca, read_byte__without_unread
-      xx   literal, length$read_byte, save
-      xx   literal, buffer$read_byte
-      xx   literal, cursor$read_byte, save
-      xx   taca, read_byte__without_unread
-      .not_empty:
-      xx literal, cursor$read_byte, fetch
-      xx fetch_byte
-      xx literal, 1
-      xx literal, cursor$read_byte, add_save
-      xx literal, 1
-      xx literal, length$read_byte, sub_save
-      xx end
+      xx   dup, positive?, false?branch, (.read_error-$)/jo_size
+      xx     literal, buffer$reading
+      xx     swap
+      xx     push_reading_stack
+      xx     taca, read_byte
+   .read_error:
+      ;;   ignore <end-of-file>
+      ;;   ignore reading error
+      xx   drop
+      xx   literal, buffer$reading
+      xx   literal, 0
+      xx   push_reading_stack
+      xx   taca, read_byte
+   .not_empty:
+      xx   literal, error$read_byte
+      xx   literal, length$read_byte
+      xx   write_string
+      xx   literal, replace$reading
+      xx   literal, 1024
+      xx   read_line_from_stdin
+      xx   literal, replace$reading
+      xx   swap
+      xx   push_reading_stack
+      xx   taca, read_byte
+
+   error$read_byte:
+      db "* (read-byte) meets empty-string in reading-stack", 10
+      db "  and this empty-stack is not at the bottom of the reading-stack", 10
+      db "  you can type a line to replace this empty string", 10
+   .end:
+   length$read_byte = (.end - error$read_byte)
    #+end_src
-** unread-ket-char
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   flag$unreaded_ket_char:
-      xx 0
-
-   char$unreaded_ket_char:
-      xx 0
-
-   define_function "have-unreaded-ket-char?", have_unreaded_ket_char?
-      ;; << -- bool >>
-      xx literal, flag$unreaded_ket_char
-      xx fetch
-      xx end
-
-   define_function "unread-ket-char", unread_ket_char
-      ;; << char -- >>
-      xx literal, char$unreaded_ket_char, save
-      xx true, literal, flag$unreaded_ket_char
-      xx save
-      xx end
-   #+end_src
+* load-core-file
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "load-core-file", load_core_file
+     ;; << unknown -- unknown >>
+     xx literal, address$core_file
+     xx literal, (end$core_file - address$core_file)
+     xx push_reading_stack
+     xx end
+  #+end_src
 * -----------------------------------
 * char
 ** space-char?
@@ -3957,6 +4067,14 @@
       xx end
    #+end_src
 ** ----------------------------------
+** empty-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "empty-string?", empty_string?
+     ;; << string[address, length] -- bool >>
+     xx swap, drop
+     xx zero?
+     xx end
+   #+end_src
 ** string-equal?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-equal?", string_equal?
@@ -4196,7 +4314,7 @@
    fetch-byte . << 32 >>
    #+end_src
 ** ----------------------------------
-* io about number
+* write number
 ** write-number
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;; 2 ^ 64 = 18446744073709551616
@@ -4274,15 +4392,27 @@
       xx pretty_write_integer
       xx end
    #+end_src
-* word
-** ----------------------------------
-** note io about word
+* note word
+** io about word
    * words are separated by spaces
    * a bar-ket is a word
      even when there are no spaces around it
+** bar-ket
+   * (read-word) is not implemented by (read-byte)
+     instead it is implemented directly by side-effect on reading-stack
+     [just like (read-byte)]
+     thus
+     we can implement bar-ket as word easily
+     and nothing like un-read is needed
+     and
+     it is (string-head,word) and (string-tail,word)
+     these two functions are maintaining the "bar-ket as word" feature
+   * otherwise
+     the implementation of (eval-string) will meet problems
+* read-word->buffer & read-word & read-word-for-REPL
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   max_word_length = 1024
+   max_word_length = 512
 
    buffer$read_word labeling
       preserve max_word_length
@@ -4302,53 +4432,55 @@
       xx taca, read_word_begin_char
    #+end_src
 ** read-word->buffer
-   1. skip any space-char (whitespace newline)
-   2. call read_char to read characters into buffer
-      until it hits a blank
-   3. return the address of buffer and length to argument_stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "read-word->buffer", read_word_to_buffer
       ;; << buffer -- word[address, length] >>
-      xx read_word_begin_char
-      ;; no metter what the begin char is
-      ;; save it into buffer
-      xx dup2, swap, save_byte
-      xx swap, add1, swap
-      xx one, swap ;; leave length counter
-      ;; << cursor[address in buffer], counter, begin char >>
-      xx dup, bar_ket_char?, false?branch, 4
+      xx pop_reading_stack
+      xx dup2, space_string?, CICADA__not, false?branch, (.bad_tos-$)/jo_size
+      xx   dup2, string_tail__word, push_reading_stack
+      xx   string_head__word
+      xx   xoverxx, xxoverx
+      xx   xswapxx
+      xx   string_to_buffer!
+      xx   swap, drop
+      xx   end
+   .bad_tos:
+      xx reading_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx   drop2
+      xx   literal, buffer$reading
+      xx   literal, max_input_length
+      xx   read_line_from_stdin
+      xx   dup, positive?, false?branch, (.read_error-$)/jo_size
+      xx     literal, buffer$reading
+      xx     swap
+      xx     push_reading_stack
+      xx     taca, read_word_to_buffer
+   .read_error:
+      ;;   ignore <end-of-file>
+      ;;   ignore reading error
       xx   drop
-      xx   help__read_word_to_buffer__bar_ket
-      xx   end
-      ;; maybe add other type of chars
-      xx drop
-      xx help__read_word_to_buffer__regular
-      xx end
-
-   define_function "help,read-word->buffer,bar-ket", help__read_word_to_buffer__bar_ket
-      ;; << cursor[address in buffer], counter -- word[address, length] >>
-      xx tuck, subtraction
-      xx swap
-      xx end
-
-
-   define_function "help,read-word->buffer,regular", help__read_word_to_buffer__regular
-      ;; << cursor[address in buffer], counter -- word[address, length] >>
-      xx read_byte
-      xx dup, bar_ket_char?, false?branch, 6
-      xx   unread_ket_char
-      xx   tuck, subtraction
+      xx   literal, buffer$reading
+      xx   literal, 0
+      xx   push_reading_stack
+      xx   taca, read_word_to_buffer
+   .not_empty:
+      xx   literal, error$read_word_to_buffer
+      xx   literal, length$read_word_to_buffer
+      xx   write_string
+      xx   literal, replace$reading
+      xx   literal, 1024
+      xx   read_line_from_stdin
+      xx   literal, replace$reading
       xx   swap
-      xx   end
-      xx dup, space_char?, false?branch, 6
-      xx   drop
-      xx   tuck, subtraction
-      xx   swap
-      xx   end
-      xx xoverxx, save_byte
-      xx add1
-      xx swap, add1, swap
-      xx taca, help__read_word_to_buffer__regular
+      xx   push_reading_stack
+      xx   taca, read_word_to_buffer
+
+   error$read_word_to_buffer:
+      db "* (read-word->buffer) meets empty-string in reading-stack", 10
+      db "  and this empty-stack is not at the bottom of the reading-stack", 10
+      db "  you can type a line to replace this empty string", 10
+   .end:
+   length$read_word_to_buffer = (.end - error$read_word_to_buffer)
    #+end_src
 ** read-word
    * read-word will override the word readed before
@@ -4365,7 +4497,7 @@
       xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx end
    #+end_src
-** ----------------------------------
+* string-[head|tail],word
 ** note
    * one should use space-string? to make sure
      that the string is not space-string
@@ -4445,7 +4577,6 @@
       xx string_to_word_end
       xx end
    #+end_src
-** ----------------------------------
 * jotionary
 ** note
    * the jotionary is a single-linked-list
@@ -4749,7 +4880,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "<<", ignore_comment
       ;; << -- >>
-      xx read_word
+      xx read_word_for_REPL
       xx dup2, comment_begin_string?, false?branch, 5
       xx   drop2
       xx     ignore_comment ;; for the new nested-comment

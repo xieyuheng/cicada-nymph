@@ -2,9 +2,10 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* eval-string & (define-variable)
+* (define-variable)
 * todo
-** 根目錄有關的函數應該忽略 linux 中的 "." 和 ".."
+** 在 primitive-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
+** 根目錄有關的函數 應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
      因爲 address 這個詞 對於 variable-jo 而言 太一般了
@@ -84,6 +85,7 @@
      end
    ; define-function
    #+end_src
+* -----------------------------------
 * *rule-set,make-jojo* : if & else & then
 ** 記 條件轉跳
    * one predicate can make two branchs
@@ -277,6 +279,7 @@
 
    more,rule-set,make-jojo
    #+end_src
+* -----------------------------------
 * allocate
 ** note
    * an interface of *un-initialized-memory*
@@ -456,6 +459,10 @@
 ** name,save-string
    * note that
      primitive-string-area is used
+   * currently (name,save-string) is to
+     copy string into primitive-string-area
+     maybe a better interface should be designed for this
+     for some strings are already staticly allocated
    #+begin_src cicada-nymph :tangle core.cn
    : name,save-string
      << string[address, length], name -- >>
@@ -777,6 +784,7 @@
 
    name-hash-table,report
    #+end_src
+* -----------------------------------
 * jo in name-hash-table
 ** jo,save-into,name-hash-table
    #+begin_src cicada-nymph :tangle core.cn
@@ -1240,15 +1248,6 @@
      end
    ; define-function
    test,wild-integer-string?
-   #+end_src
-** empty-string?
-   #+begin_src cicada-nymph :tangle core.cn
-   : empty-string?
-     << string[address, length] -- bool >>
-     swap drop
-     zero?
-     end
-   ; define-function
    #+end_src
 ** base#wild-integer-string?
    * a string for the following format
@@ -2358,6 +2357,52 @@
        end
      *rule-set,basic-REPL* push-syntax-stack
      stack-REPL,loop
+     end
+   ; define-function
+     #+end_src
+* -----------------------------------
+* eval-string
+** note
+   * eval-string is implemented by doing side-effect on reading-stack
+     this is because syntax extension system is implemented by reader-macro
+   * by implementing eval-string this way
+     i can easily change the syntax be used to eval a string
+** eval-string
+   #+begin_src cicada-nymph :tangle core.cn
+   : eval-string,loop
+     << unknown -- unknown >>
+     tos-reading-stack space-string? if
+       end
+     then
+     read-word-for-REPL
+     dup2 find-syntax if
+       execute-jo
+     else
+       execute-word
+     then
+     <> eval-string,loop
+   ; define-function
+
+   : eval-string
+     << string[address, length] -- unknown >>
+     push-reading-stack
+     eval-string,loop
+     drop-reading-stack
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "1 2 3 add add . " eval-string
+   "1 2 3 add add ." eval-string
+   ": k 1 2 3 add add . end ; define-function k" eval-string
+   #+end_src
+* define-variable
+** define-variable
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-variable
+     << string[address, length] -- >>
+
      end
    ; define-function
    #+end_src

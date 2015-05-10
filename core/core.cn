@@ -770,13 +770,6 @@ init,name-hash-table,nymph-jo
   end
 ; define-function
 
-: empty-string?
-  << string[address, length] -- bool >>
-  swap drop
-  zero?
-  end
-; define-function
-
 : base#wild-integer-string?
   << string[address, length] -- bool >>
   128 allocate-local-memory
@@ -1414,6 +1407,34 @@ jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
     end
   *rule-set,basic-REPL* push-syntax-stack
   stack-REPL,loop
+  end
+; define-function
+
+: eval-string,loop
+  << unknown -- unknown >>
+  tos-reading-stack space-string? if
+    end
+  then
+  read-word-for-REPL
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
+  <> eval-string,loop
+; define-function
+
+: eval-string
+  << string[address, length] -- unknown >>
+  push-reading-stack
+  eval-string,loop
+  drop-reading-stack
+  end
+; define-function
+
+: define-variable
+  << string[address, length] -- >>
+
   end
 ; define-function
 
