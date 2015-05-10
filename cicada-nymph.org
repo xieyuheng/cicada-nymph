@@ -3063,25 +3063,76 @@
    #+end_src
 ** ----------------------------------
 * memory
-** note
+** note fetch & save
    * although the following functions are all side-effect
      but I use "save" instead of "save!"
-** save                               :64bit:
+   * (fetch) and (save) default to a jo_size
+** note endianness of n-fetch & n-save
+   * big-endian is used
+     in memory
+     | value-1 |
+     | value-2 |
+     | value-3 |
+     on stack
+     << value-1, value-2, value-3 >>
+   * thus
+     what saved into the address
+     will re-occur when fetching through the address
+   * thus
+     I do not implement n-fetch-byte & n-save-byte
+     for the endianness of machine
+     might not be big-endian
+** fetch                              :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   ;; "save" and "fetch" default to a jo_size
-   ;; the rule of "fetch2" and so on are:
-   ;;   in memory:
-   ;;     ||  1 : value-1  ||
-   ;;     ||  1 : value-2  ||
-   ;;     ||  1 : value-3  ||
-   ;;     ...
-   ;;   on stack:
-   ;;     << value-1, value-2, value-3, ... >>
-   ;; of course we have:
-   ;;   fetch2 : memory=copy=>stack
-   ;;   save2  : stack->memory
+   define_primitive_function "fetch", fetch
+      ;; ( address -- value )
+      pop_argument_stack  rbx
+      mov rax, [rbx]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "fetch-byte", fetch_byte
+      ;; ( address -- value )
+      pop_argument_stack rbx
+      xor rax, rax
+      mov al, byte[rbx]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "fetch-two-bytes", fetch_two_bytes
+      ;; ( address -- value )
+      pop_argument_stack rbx
+      xor rax, rax
+      mov ax, word [rbx]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "fetch-four-bytes", fetch_four_bytes
+      ;; ( address -- value )
+      pop_argument_stack rbx
+      xor rax, rax
+      mov eax, dword [rbx]
+      push_argument_stack rax
+      next
+
+   define_primitive_function "n-fetch", n_fetch
+      ;; << address, n -- value-1, ..., value-n >>
+      pop_argument_stack  rcx
+      pop_argument_stack  rdx
+   .loop:
+      mov rax, qword [rdx]
+      push_argument_stack rax
+      add rdx, jo_size
+      loop .loop
+      next
+
+   }
+   #+end_src
+** save                               :64bit:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
 
    define_primitive_function "save", save
       ;; ( value, address -- )
@@ -3128,25 +3179,6 @@
       loop .loop
       next
 
-   define_function "save2", save2
-      ;; << value-2, value-1, address -- >>
-      xx literal, 2
-      xx n_save
-      xx end
-
-   define_primitive_function "n-save-byte", n_save_byte
-      ;; << value-n, ..., value-1, address, n -- >>
-      pop_argument_stack rcx
-      pop_argument_stack rdx
-      add rdx, rcx
-      dec rdx
-   .loop:
-      pop_argument_stack rax
-      mov byte [rdx], al
-      dec rdx
-      loop .loop
-      next
-
    define_primitive_function "add-save", add_save
       ;; ( number to add, address -- )
       pop_argument_stack rbx
@@ -3163,9 +3195,9 @@
 
    }
    #+end_src
-** fetch                              :64bit:
+** fetch                              :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
+   match =32bit, machine {
 
    define_primitive_function "fetch", fetch
       ;; ( address -- value )
@@ -3198,57 +3230,22 @@
       push_argument_stack rax
       next
 
-   ;;   in memory:
-   ;;     ||  1 : value-1  ||
-   ;;     ...
-   ;;     ||  1 : value-n  ||
    define_primitive_function "n-fetch", n_fetch
       ;; << address, n -- value-1, ..., value-n >>
       pop_argument_stack  rcx
       pop_argument_stack  rdx
    .loop:
-      mov rax, qword [rdx]
+      mov rax, dword [rdx]
       push_argument_stack rax
       add rdx, jo_size
       loop .loop
       next
-
-   define_primitive_function "n-fetch-byte", n_fetch_byte
-      ;; << address, n -- byte-1, ..., byte-n >>
-      pop_argument_stack  rcx
-      pop_argument_stack  rdx
-      xor rax, rax
-   .loop:
-      mov al, byte [rdx]
-      push_argument_stack rax
-      inc rdx
-      loop .loop
-      next
-
-   define_function "fetch2", fetch2
-      ;; << address -- value-1, value-2 >>
-      xx literal, 2
-      xx n_fetch
-      xx end
 
    }
    #+end_src
 ** save                               :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
-
-   ;; "save" and "fetch" default to a jo_size
-   ;; the rule of "fetch2" and so on are:
-   ;;   in memory:
-   ;;     ||  1 : value-1  ||
-   ;;     ||  1 : value-2  ||
-   ;;     ||  1 : value-3  ||
-   ;;     ...
-   ;;   on stack:
-   ;;     << value-1, value-2, value-3, ... >>
-   ;; of course we have:
-   ;;   fetch2 : memory=copy=>stack
-   ;;   save2  : stack->memory
 
    define_primitive_function "save", save
       ;; ( value, address -- )
@@ -3295,25 +3292,6 @@
       loop .loop
       next
 
-   define_function "save2", save2
-      ;; << value-2, value-1, address -- >>
-      xx literal, 2
-      xx n_save
-      xx end
-
-   define_primitive_function "n-save-byte", n_save_byte
-      ;; << value-n, ..., value-1, address, n -- >>
-      pop_argument_stack rcx
-      pop_argument_stack rdx
-      add rdx, rcx
-      dec rdx
-   .loop:
-      pop_argument_stack rax
-      mov byte [rdx], al
-      dec rdx
-      loop .loop
-      next
-
    define_primitive_function "add-save", add_save
       ;; ( number to add, address -- )
       pop_argument_stack rbx
@@ -3327,76 +3305,6 @@
       pop_argument_stack rax
       sub dword [rbx], rax
       next
-
-   }
-   #+end_src
-** fetch                              :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "fetch", fetch
-      ;; ( address -- value )
-      pop_argument_stack  rbx
-      mov rax, [rbx]
-      push_argument_stack rax
-      next
-
-   define_primitive_function "fetch-byte", fetch_byte
-      ;; ( address -- value )
-      pop_argument_stack rbx
-      xor rax, rax
-      mov al, byte[rbx]
-      push_argument_stack rax
-      next
-
-   define_primitive_function "fetch-two-bytes", fetch_two_bytes
-      ;; ( address -- value )
-      pop_argument_stack rbx
-      xor rax, rax
-      mov ax, word [rbx]
-      push_argument_stack rax
-      next
-
-   define_primitive_function "fetch-four-bytes", fetch_four_bytes
-      ;; ( address -- value )
-      pop_argument_stack rbx
-      xor rax, rax
-      mov eax, dword [rbx]
-      push_argument_stack rax
-      next
-
-   ;;   in memory:
-   ;;     ||  1 : value-1  ||
-   ;;     ...
-   ;;     ||  1 : value-n  ||
-   define_primitive_function "n-fetch", n_fetch
-      ;; << address, n -- value-1, ..., value-n >>
-      pop_argument_stack  rcx
-      pop_argument_stack  rdx
-   .loop:
-      mov rax, dword [rdx]
-      push_argument_stack rax
-      add rdx, jo_size
-      loop .loop
-      next
-
-   define_primitive_function "n-fetch-byte", n_fetch_byte
-      ;; << address, n -- byte-1, ..., byte-n >>
-      pop_argument_stack  rcx
-      pop_argument_stack  rdx
-      xor rax, rax
-   .loop:
-      mov al, byte [rdx]
-      push_argument_stack rax
-      inc rdx
-      loop .loop
-      next
-
-   define_function "fetch2", fetch2
-      ;; << address -- value-1, value-2 >>
-      xx literal, 2
-      xx n_fetch
-      xx end
 
    }
    #+end_src
@@ -5032,8 +4940,8 @@
 * rule-set
 ** 記 接口
    * 在 rule-set 中 一個 rule 的存在是
-     | function  |
      | predicate |
+     | function  |
    * 在棧中 一個 rule 的存在是
      << rule[predicate, function] >>
    * set is an ordered set
@@ -5047,6 +4955,7 @@
         do nothing
      3. (find-rule)
         find a function from a word
+     4. (list-rule)
 ** 記 使用
    * rule-set,make-jojo 是
      語法謂詞 還有 語法函數 這種對子
@@ -5067,61 +4976,23 @@
         << word[address, length] -- integer >>
      所以在使用時
      一定要注意維護棧中的值的良好性
-** rule-set,fetch-cursor
+** note border
+   * border is current-free-address of rule-set
+** rule-set,fetch-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "rule-set,fetch-cursor", rule_set__fetch_cursor
-      ;; << rule-set -- address >>
+   define_function "rule-set,fetch-border", rule_set__fetch_border
+      ;; << rule-set -- border >>
       xx V__jo_size, subtraction
       xx fetch
       xx end
    #+end_src
-** rule-set,save-cursor
+** rule-set,save-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "rule-set,save-cursor", rule_set__save_cursor
-      ;; << address, rule-set -- >>
+   define_function "rule-set,save-border", rule_set__save_border
+      ;; << border, rule-set -- >>
       xx V__jo_size, subtraction
       xx save
       xx end
-   #+end_src
-** add-rule                           :64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "add-rule", add_rule
-      ;; << rule[predicate, function], rule-set -- >>
-      pop_argument_stack rdx
-      sub rdx, jo_size ;; cursor$rule_set
-      pop_argument_stack rax
-      mov rbx, [rdx]
-      mov [rbx], rax
-      add qword [rdx], jo_size
-      pop_argument_stack rax
-      mov rbx, [rdx]
-      mov [rbx], rax
-      add qword [rdx], jo_size
-      next
-
-   }
-   #+end_src
-** add-rule                           :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "add-rule", add_rule
-      ;; << rule[predicate, function], rule-set -- >>
-      pop_argument_stack rdx
-      sub rdx, jo_size ;; cursor$rule_set
-      pop_argument_stack rax
-      mov rbx, [rdx]
-      mov [rbx], rax
-      add dword [rdx], jo_size
-      pop_argument_stack rax
-      mov rbx, [rdx]
-      mov [rbx], rax
-      add dword [rdx], jo_size
-      next
-
-   }
    #+end_src
 ** cursor->[rule|function|predicate]
    * note that here needs two subtractions
@@ -5137,80 +5008,30 @@
    define_function "cursor->predicate", cursor_to_predicate
       ;; << cursor -- predicate >>
       xx V__jo_size, subtraction
+      xx V__jo_size, subtraction
       xx fetch
       xx end
 
    define_function "cursor->function", cursor_to_function
       ;; << cursor -- function >>
       xx V__jo_size, subtraction
-      xx V__jo_size, subtraction
       xx fetch
       xx end
    #+end_src
-** sub-rule
+** add-rule
    #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$sub_rule:
-      xx 0
-
-   define_function "sub-rule", sub_rule
+   define_function "add-rule", add_rule
       ;; << rule[predicate, function], rule-set -- >>
-      xx dup, rule_set__fetch_cursor
-      xx literal, cursor$sub_rule, save
-      xx sub_rule__loop
-      xx end
-
-   define_function "sub-rule,loop", sub_rule__loop
-      ;; << rule[predicate, function], rule-set -- >>
-      xx literal, cursor$sub_rule, fetch
-      xx over, equal?, false?branch, 4
-      xx   drop, drop2
-      xx   end
-      xx xxoverx
-      ;; << predicate, function, rule-set
-      ;;    predicate, function >>
-      xx literal, cursor$sub_rule, fetch
-      xx cursor_to_rule
-      ;; << predicate, function, rule-set
-      ;;    predicate, function, predicate, function >>
-      xx equal?, false?, false?branch, 9
-      xx   V__jo_size
-      xx   V__jo_size, addition
-      xx   literal, cursor$sub_rule, sub_save
-      xx   taca, sub_rule__loop
+      xx xxtuckx
+      xx rule_set__fetch_border
+      xx literal, 2
+      xx n_save
       xx dup
-      xx literal, cursor$sub_rule, fetch
-      xx sub_rule__move
-      xx end
-
-   define_function "sub-rule,move", sub_rule__move
-      ;; << rule-set, cursor -- >>
-      xx dup2
-      xx equal?, false?branch, (.more_to_move-$)/jo_size
-      xx   drop
-      xx   dup, rule_set__fetch_cursor
-      xx   V__jo_size, subtraction
-      xx   V__jo_size, subtraction
-      xx   swap
-      xx   rule_set__save_cursor
-      xx   end
-   .more_to_move:
-      xx sub_rule__move_one
-      xx taca, sub_rule__move
-
-   define_function "sub-rule,move_one", sub_rule__move_one
-      ;; << cursor -- cursor + element-size >>
-      xx dup
-      xx fetch
-      xx over, V__jo_size, subtraction, V__jo_size, subtraction
-      xx save
-
-      xx dup
-      xx V__jo_size, addition, fetch
-      xx over, V__jo_size, subtraction
-      xx save
-
+      xx rule_set__fetch_border
       xx V__jo_size, addition
       xx V__jo_size, addition
+      xx swap
+      xx rule_set__save_border
       xx end
    #+end_src
 ** find-rule
@@ -5222,7 +5043,7 @@
       ;; << word[address, length], rule-set
       ;;    -- function, true
       ;;    -- false >>
-      xx dup, rule_set__fetch_cursor
+      xx dup, rule_set__fetch_border
       xx literal, cursor$find_rule, save
       xx find_rule__loop
       xx end
@@ -5547,7 +5368,7 @@
    * in ASCII encode double-quote is 34
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
-      ;; << string[address, length], word:jo --
+      ;; << string[address, length], word:double-quote --
       ;;    string[address, length] >>
       xx drop2
 

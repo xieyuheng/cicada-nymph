@@ -2097,18 +2097,51 @@ define_function "positive?", positive?
 
 match =64bit, machine {
 
-;; "save" and "fetch" default to a jo_size
-;; the rule of "fetch2" and so on are:
-;;   in memory:
-;;     ||  1 : value-1  ||
-;;     ||  1 : value-2  ||
-;;     ||  1 : value-3  ||
-;;     ...
-;;   on stack:
-;;     << value-1, value-2, value-3, ... >>
-;; of course we have:
-;;   fetch2 : memory=copy=>stack
-;;   save2  : stack->memory
+define_primitive_function "fetch", fetch
+   ;; ( address -- value )
+   pop_argument_stack  rbx
+   mov rax, [rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "fetch-byte", fetch_byte
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov al, byte[rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "fetch-two-bytes", fetch_two_bytes
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov ax, word [rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "fetch-four-bytes", fetch_four_bytes
+   ;; ( address -- value )
+   pop_argument_stack rbx
+   xor rax, rax
+   mov eax, dword [rbx]
+   push_argument_stack rax
+   next
+
+define_primitive_function "n-fetch", n_fetch
+   ;; << address, n -- value-1, ..., value-n >>
+   pop_argument_stack  rcx
+   pop_argument_stack  rdx
+.loop:
+   mov rax, qword [rdx]
+   push_argument_stack rax
+   add rdx, jo_size
+   loop .loop
+   next
+
+}
+
+match =64bit, machine {
 
 define_primitive_function "save", save
    ;; ( value, address -- )
@@ -2155,25 +2188,6 @@ define_primitive_function "n-save", n_save
    loop .loop
    next
 
-define_function "save2", save2
-   ;; << value-2, value-1, address -- >>
-   xx literal, 2
-   xx n_save
-   xx end
-
-define_primitive_function "n-save-byte", n_save_byte
-   ;; << value-n, ..., value-1, address, n -- >>
-   pop_argument_stack rcx
-   pop_argument_stack rdx
-   add rdx, rcx
-   dec rdx
-.loop:
-   pop_argument_stack rax
-   mov byte [rdx], al
-   dec rdx
-   loop .loop
-   next
-
 define_primitive_function "add-save", add_save
    ;; ( number to add, address -- )
    pop_argument_stack rbx
@@ -2190,7 +2204,7 @@ define_primitive_function "sub-save", sub_save
 
 }
 
-match =64bit, machine {
+match =32bit, machine {
 
 define_primitive_function "fetch", fetch
    ;; ( address -- value )
@@ -2223,55 +2237,20 @@ define_primitive_function "fetch-four-bytes", fetch_four_bytes
    push_argument_stack rax
    next
 
-;;   in memory:
-;;     ||  1 : value-1  ||
-;;     ...
-;;     ||  1 : value-n  ||
 define_primitive_function "n-fetch", n_fetch
    ;; << address, n -- value-1, ..., value-n >>
    pop_argument_stack  rcx
    pop_argument_stack  rdx
 .loop:
-   mov rax, qword [rdx]
+   mov rax, dword [rdx]
    push_argument_stack rax
    add rdx, jo_size
    loop .loop
    next
 
-define_primitive_function "n-fetch-byte", n_fetch_byte
-   ;; << address, n -- byte-1, ..., byte-n >>
-   pop_argument_stack  rcx
-   pop_argument_stack  rdx
-   xor rax, rax
-.loop:
-   mov al, byte [rdx]
-   push_argument_stack rax
-   inc rdx
-   loop .loop
-   next
-
-define_function "fetch2", fetch2
-   ;; << address -- value-1, value-2 >>
-   xx literal, 2
-   xx n_fetch
-   xx end
-
 }
 
 match =32bit, machine {
-
-;; "save" and "fetch" default to a jo_size
-;; the rule of "fetch2" and so on are:
-;;   in memory:
-;;     ||  1 : value-1  ||
-;;     ||  1 : value-2  ||
-;;     ||  1 : value-3  ||
-;;     ...
-;;   on stack:
-;;     << value-1, value-2, value-3, ... >>
-;; of course we have:
-;;   fetch2 : memory=copy=>stack
-;;   save2  : stack->memory
 
 define_primitive_function "save", save
    ;; ( value, address -- )
@@ -2318,25 +2297,6 @@ define_primitive_function "n-save", n_save
    loop .loop
    next
 
-define_function "save2", save2
-   ;; << value-2, value-1, address -- >>
-   xx literal, 2
-   xx n_save
-   xx end
-
-define_primitive_function "n-save-byte", n_save_byte
-   ;; << value-n, ..., value-1, address, n -- >>
-   pop_argument_stack rcx
-   pop_argument_stack rdx
-   add rdx, rcx
-   dec rdx
-.loop:
-   pop_argument_stack rax
-   mov byte [rdx], al
-   dec rdx
-   loop .loop
-   next
-
 define_primitive_function "add-save", add_save
    ;; ( number to add, address -- )
    pop_argument_stack rbx
@@ -2350,74 +2310,6 @@ define_primitive_function "sub-save", sub_save
    pop_argument_stack rax
    sub dword [rbx], rax
    next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "fetch", fetch
-   ;; ( address -- value )
-   pop_argument_stack  rbx
-   mov rax, [rbx]
-   push_argument_stack rax
-   next
-
-define_primitive_function "fetch-byte", fetch_byte
-   ;; ( address -- value )
-   pop_argument_stack rbx
-   xor rax, rax
-   mov al, byte[rbx]
-   push_argument_stack rax
-   next
-
-define_primitive_function "fetch-two-bytes", fetch_two_bytes
-   ;; ( address -- value )
-   pop_argument_stack rbx
-   xor rax, rax
-   mov ax, word [rbx]
-   push_argument_stack rax
-   next
-
-define_primitive_function "fetch-four-bytes", fetch_four_bytes
-   ;; ( address -- value )
-   pop_argument_stack rbx
-   xor rax, rax
-   mov eax, dword [rbx]
-   push_argument_stack rax
-   next
-
-;;   in memory:
-;;     ||  1 : value-1  ||
-;;     ...
-;;     ||  1 : value-n  ||
-define_primitive_function "n-fetch", n_fetch
-   ;; << address, n -- value-1, ..., value-n >>
-   pop_argument_stack  rcx
-   pop_argument_stack  rdx
-.loop:
-   mov rax, dword [rdx]
-   push_argument_stack rax
-   add rdx, jo_size
-   loop .loop
-   next
-
-define_primitive_function "n-fetch-byte", n_fetch_byte
-   ;; << address, n -- byte-1, ..., byte-n >>
-   pop_argument_stack  rcx
-   pop_argument_stack  rdx
-   xor rax, rax
-.loop:
-   mov al, byte [rdx]
-   push_argument_stack rax
-   inc rdx
-   loop .loop
-   next
-
-define_function "fetch2", fetch2
-   ;; << address -- value-1, value-2 >>
-   xx literal, 2
-   xx n_fetch
-   xx end
 
 }
 
@@ -3649,53 +3541,17 @@ define_function "find-syntax", find_syntax
    xx find_rule
    xx end
 
-define_function "rule-set,fetch-cursor", rule_set__fetch_cursor
-   ;; << rule-set -- address >>
+define_function "rule-set,fetch-border", rule_set__fetch_border
+   ;; << rule-set -- border >>
    xx V__jo_size, subtraction
    xx fetch
    xx end
 
-define_function "rule-set,save-cursor", rule_set__save_cursor
-   ;; << address, rule-set -- >>
+define_function "rule-set,save-border", rule_set__save_border
+   ;; << border, rule-set -- >>
    xx V__jo_size, subtraction
    xx save
    xx end
-
-match =64bit, machine {
-
-define_primitive_function "add-rule", add_rule
-   ;; << rule[predicate, function], rule-set -- >>
-   pop_argument_stack rdx
-   sub rdx, jo_size ;; cursor$rule_set
-   pop_argument_stack rax
-   mov rbx, [rdx]
-   mov [rbx], rax
-   add qword [rdx], jo_size
-   pop_argument_stack rax
-   mov rbx, [rdx]
-   mov [rbx], rax
-   add qword [rdx], jo_size
-   next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "add-rule", add_rule
-   ;; << rule[predicate, function], rule-set -- >>
-   pop_argument_stack rdx
-   sub rdx, jo_size ;; cursor$rule_set
-   pop_argument_stack rax
-   mov rbx, [rdx]
-   mov [rbx], rax
-   add dword [rdx], jo_size
-   pop_argument_stack rax
-   mov rbx, [rdx]
-   mov [rbx], rax
-   add dword [rdx], jo_size
-   next
-
-}
 
 define_function "cursor->rule", cursor_to_rule
    ;; << cursor -- rule[predicate, function] >>
@@ -3708,78 +3564,28 @@ define_function "cursor->rule", cursor_to_rule
 define_function "cursor->predicate", cursor_to_predicate
    ;; << cursor -- predicate >>
    xx V__jo_size, subtraction
+   xx V__jo_size, subtraction
    xx fetch
    xx end
 
 define_function "cursor->function", cursor_to_function
    ;; << cursor -- function >>
    xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
    xx fetch
    xx end
 
-cursor$sub_rule:
-   xx 0
-
-define_function "sub-rule", sub_rule
+define_function "add-rule", add_rule
    ;; << rule[predicate, function], rule-set -- >>
-   xx dup, rule_set__fetch_cursor
-   xx literal, cursor$sub_rule, save
-   xx sub_rule__loop
-   xx end
-
-define_function "sub-rule,loop", sub_rule__loop
-   ;; << rule[predicate, function], rule-set -- >>
-   xx literal, cursor$sub_rule, fetch
-   xx over, equal?, false?branch, 4
-   xx   drop, drop2
-   xx   end
-   xx xxoverx
-   ;; << predicate, function, rule-set
-   ;;    predicate, function >>
-   xx literal, cursor$sub_rule, fetch
-   xx cursor_to_rule
-   ;; << predicate, function, rule-set
-   ;;    predicate, function, predicate, function >>
-   xx equal?, false?, false?branch, 9
-   xx   V__jo_size
-   xx   V__jo_size, addition
-   xx   literal, cursor$sub_rule, sub_save
-   xx   taca, sub_rule__loop
+   xx xxtuckx
+   xx rule_set__fetch_border
+   xx literal, 2
+   xx n_save
    xx dup
-   xx literal, cursor$sub_rule, fetch
-   xx sub_rule__move
-   xx end
-
-define_function "sub-rule,move", sub_rule__move
-   ;; << rule-set, cursor -- >>
-   xx dup2
-   xx equal?, false?branch, (.more_to_move-$)/jo_size
-   xx   drop
-   xx   dup, rule_set__fetch_cursor
-   xx   V__jo_size, subtraction
-   xx   V__jo_size, subtraction
-   xx   swap
-   xx   rule_set__save_cursor
-   xx   end
-.more_to_move:
-   xx sub_rule__move_one
-   xx taca, sub_rule__move
-
-define_function "sub-rule,move_one", sub_rule__move_one
-   ;; << cursor -- cursor + element-size >>
-   xx dup
-   xx fetch
-   xx over, V__jo_size, subtraction, V__jo_size, subtraction
-   xx save
-
-   xx dup
-   xx V__jo_size, addition, fetch
-   xx over, V__jo_size, subtraction
-   xx save
-
+   xx rule_set__fetch_border
    xx V__jo_size, addition
    xx V__jo_size, addition
+   xx swap
+   xx rule_set__save_border
    xx end
 
 cursor$find_rule:
@@ -3789,7 +3595,7 @@ define_function "find-rule", find_rule
    ;; << word[address, length], rule-set
    ;;    -- function, true
    ;;    -- false >>
-   xx dup, rule_set__fetch_cursor
+   xx dup, rule_set__fetch_border
    xx literal, cursor$find_rule, save
    xx find_rule__loop
    xx end
@@ -4069,7 +3875,7 @@ define_function "word:double-quote?", word_is_double_quote?
    xx end
 
 define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
-   ;; << string[address, length], word:jo --
+   ;; << string[address, length], word:double-quote --
    ;;    string[address, length] >>
    xx drop2
 

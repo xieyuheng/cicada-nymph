@@ -1410,6 +1410,85 @@ jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
   end
 ; define-function
 
+: list-rule,loop
+  << rule-set, cursor, counter -- >>
+  xx|over|x equal? if
+    drop drop2
+    end
+  then
+  "  * " .s
+  "(" .s
+  add1 dup .i
+  ")" .s .l
+  swap
+    dup cursor->predicate
+    "    " .s jo->name .s .l
+    dup cursor->function
+    "    " .s jo->name .s .l
+    *jo-size* sub *jo-size* sub
+  swap
+  <> list-rule,loop
+; define-function
+
+: list-rule
+  << rule-set -- >>
+  dup rule-set,fetch-border
+  0 list-rule,loop
+  end
+; define-function
+
+: sub-rule,move-one
+  << cursor -- >>
+  >:cursor
+  :cursor 2 n-fetch
+  :cursor *jo-size* 2 mul sub
+  2 n-save
+  end
+; define-function
+
+: sub-rule,move
+  << rule-set, cursor -- >>
+  >:cursor
+  >:rule-set
+  :rule-set rule-set,fetch-border >:border
+  :cursor :border equal? if
+    :border *jo-size* 2 mul sub
+    :rule-set
+    rule-set,save-border
+    end
+  then
+  :cursor sub-rule,move-one
+  :rule-set
+  :cursor *jo-size* 2 mul add
+  <> sub-rule,move
+; define-function
+
+: sub-rule,loop
+  << rule[predicate, function], rule-set, cursor -- >>
+  >:cursor
+  >:rule-set
+  >::rule
+  :cursor :rule-set equal? if
+    end
+  then
+  ::rule :cursor cursor->rule equal2? if
+    :rule-set :cursor
+    sub-rule,move
+    end
+  then
+  ::rule
+  :rule-set
+  :cursor *jo-size* 2 mul sub
+  <> sub-rule,loop
+; define-function
+
+: sub-rule
+  << rule[predicate, function], rule-set -- >>
+  dup rule-set,fetch-border
+  sub-rule,loop
+  end
+; define-function
+
 : eval-string,loop
   << unknown -- unknown >>
   tos-reading-stack space-string? if
@@ -1432,8 +1511,98 @@ jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
   end
 ; define-function
 
+: syntax,double-quote,define-variable,loop
+  << cursor -- cursor >>
+  read-byte
+  dup 34 equal? if
+    drop
+    end
+  then
+  over save-byte
+  add1
+  <> syntax,double-quote,define-variable,loop
+; define-function
+
+: syntax,double-quote,define-variable
+  << word:double-quote -- string[address, length] >>
+  drop2
+  1024 2 mul allocate-local-memory >:buffer
+  :buffer
+  syntax,double-quote,define-variable,loop
+  >:cursor
+  *current-free-address,primitive-string-area* add2 >:address
+  :buffer
+  :cursor :buffer sub dup >:length
+  save-into,primitive-string-area
+  :address
+  :length
+  end
+; define-function
+
 : define-variable
   << string[address, length] -- >>
+  >::string
+  ::string string-head,word >::variable-name
+  ::string string-tail,word >::variable-body
+
+  snapshot-the-stack-pointer
+  *the-stack-pointer-snapshot*
+  >:old-snapshot
+  jo word:double-quote? jo syntax,double-quote,define-variable *rule-set,basic-REPL* add-rule
+  ::variable-body eval-string
+  jo word:double-quote? jo syntax,double-quote,define-variable *rule-set,basic-REPL* sub-rule
+
+  snapshot-the-stack-pointer
+  *the-stack-pointer-snapshot*
+  >:new-snapshot
+
+  :new-snapshot :old-snapshot sub
+
+  dup negative? if
+    negate *jo-size* div
+    "* (define-variable) fail to define variable : " .s ::variable-name .s .l
+    "  because after eval the following variable-body" .s .l
+    "  the stack is " .s .i " below what it use to be" .s .l
+    ::variable-body .s .l
+    end
+  then
+  dup zero? if
+    drop
+    "* (define-variable) fail to define variable : " .s ::variable-name .s .l
+    "  because after eval the following variable-body" .s .l
+    "  the stack is still where it use to be" .s .l
+    ::variable-body .s .l
+    end
+  then
+
+  *jo-size* div >:variable-length
+
+  :variable-length
+    save-into,jo-area
+
+  *current-free-address,primitive-string-area*
+    save-into,jo-area
+  ::variable-name
+    save-into,primitive-string-area
+
+  *first-jo-in-jotionary*
+  jo->link
+    save-into,jo-area
+
+  *current-free-address,jo-area*
+  dup jo,save-into,name-hash-table
+  address *first-jo-in-jotionary* save
+
+  *explainer,variable*
+    save-into,jo-area
+
+  *current-free-address,jo-area*
+  :variable-length
+  n-save
+
+  :variable-length *jo-size* mul
+  address *current-free-address,jo-area*
+  add-save
 
   end
 ; define-function
@@ -1580,33 +1749,6 @@ then
   jotionary,list-by-jo-predicate add
   "* totally : " .s
   .i .l
-  end
-; define-function
-
-: rule-set,list,loop
-  << rule-set, cursor, counter -- >>
-  xx|over|x equal? if
-    drop drop2
-    end
-  then
-  "  * " .s
-  "(" .s
-  add1 dup .i
-  ")" .s .l
-  swap
-    dup cursor->predicate
-    "    " .s jo->name .s .l
-    dup cursor->function
-    "    " .s jo->name .s .l
-    *jo-size* sub *jo-size* sub
-  swap
-  <> rule-set,list,loop
-; define-function
-
-: rule-set,list
-  << rule-set -- >>
-  dup rule-set,fetch-cursor
-  0 rule-set,list,loop
   end
 ; define-function
 
@@ -2641,11 +2783,11 @@ init-environment-string-variable-list
 : report-syntax
   << -- >>
   "* *rule-set,make-jojo* :" .s .l
-   *rule-set,make-jojo* rule-set,list
+   *rule-set,make-jojo* list-rule
   "* *rule-set,basic-REPL* :" .s .l
-   *rule-set,basic-REPL* rule-set,list
+   *rule-set,basic-REPL* list-rule
   "* tos-syntax-stack :" .s .l
-   tos-syntax-stack rule-set,list
+   tos-syntax-stack list-rule
   end
 ; define-function
 
