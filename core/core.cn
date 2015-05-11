@@ -467,6 +467,36 @@ allocate-memory
   end
 ; define-function
 
+: word:name?
+  << word[address, length] -- bool >>
+  "name" string-equal?
+  end
+; define-function
+
+: syntax,name,make-jojo
+  << string[address, length], word[address, length] --
+     string[address, length] >>
+  drop2
+  jo instruction,literal
+    save-into,jo-area
+  dup2
+  string-head,word
+  string->name
+    save-into,jo-area
+  string-tail,word
+  end
+; define-function
+
+: more,rule-set,make-jojo
+  << -- >>
+  jo word:name?
+  jo syntax,name,make-jojo
+  *rule-set,make-jojo* add-rule
+  end
+; define-function
+
+more,rule-set,make-jojo
+
 : jo,save-into,name-hash-table
   << jo -- >>
   >:jo
@@ -1083,7 +1113,7 @@ init,name-hash-table,nymph-jo
   jo instruction,literal
     save-into,jo-area
   base#wild-integer-string->integer
-  save-into,jo-area
+    save-into,jo-area
   end
 ; define-function
 
@@ -1153,6 +1183,29 @@ save
   !bye,basic-REPL
 ; define-function
 
+: basic-REPL,loop
+  << unknown -- unknown >>
+  read-word-for-REPL
+  dup2 find-syntax if
+    execute-jo
+  else
+    execute-word
+  then
+  <> basic-REPL,loop
+; define-function
+
+: basic-REPL
+  << unknown -- unknown >>
+  prepare-for
+    !bye,basic-REPL
+    end
+  *rule-set,basic-REPL* push-syntax-stack
+  basic-REPL,loop
+  end
+; define-function
+
+basic-REPL
+
 : word:jo?
   << word[address, length] -- bool >>
   "jo" string-equal?
@@ -1182,29 +1235,6 @@ save
 ; define-function
 
 init,rule-set,basic-REPL
-
-: basic-REPL,loop
-  << unknown -- unknown >>
-  read-word-for-REPL
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
-  <> basic-REPL,loop
-; define-function
-
-: basic-REPL
-  << unknown -- unknown >>
-  prepare-for
-    !bye,basic-REPL
-    end
-  *rule-set,basic-REPL* push-syntax-stack
-  basic-REPL,loop
-  end
-; define-function
-
-basic-REPL
 
 : syntax,if,basic-REPL,meet-true,else
   << -- >>

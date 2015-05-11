@@ -2,7 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* a macro for name in name-hash-table
 * todo
 ** need more lib functions about string processing and better factoring for string processing
 ** 因實現蟬語而所需要的基本函數
@@ -809,6 +808,52 @@
    test,name-hash-table
 
    name-hash-table,report
+   #+end_src
+* *rule-set,make-jojo* : name
+** word:name?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:name?
+     << word[address, length] -- bool >>
+     "name" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,name,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,name,make-jojo
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     drop2
+     jo instruction,literal
+       save-into,jo-area
+     dup2
+     string-head,word
+     string->name
+       save-into,jo-area
+     string-tail,word
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:name?
+     jo syntax,name,make-jojo
+     *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,syntax,name,make-jojo
+     << -- >>
+     name test-test-test name->string .s
+     end
+   ; define-function
+   test,syntax,name,make-jojo
    #+end_src
 * -----------------------------------
 * jo in name-hash-table
@@ -1796,7 +1841,7 @@
      jo instruction,literal
        save-into,jo-area
      base#wild-integer-string->integer
-     save-into,jo-area
+       save-into,jo-area
      end
    ; define-function
    #+end_src
@@ -1951,42 +1996,6 @@
      !bye,basic-REPL
    ; define-function
    #+end_src
-** word:jo?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:jo?
-     << word[address, length] -- bool >>
-     "jo" string-equal?
-     end
-   ; define-function
-   #+end_src
-** syntax,jo,basic-REPL
-   #+begin_src cicada-nymph :tangle core.cn
-   : syntax,jo,basic-REPL
-     << word:jo -- >>
-     drop2
-     read-word-for-REPL
-     >::word
-     << ::word find-jo if >>
-     ::word find-jo,through-jo-link if
-       end
-     then
-     "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
-     end
-   ; define-function
-   #+end_src
-** init,rule-set,basic-REPL
-   #+begin_src cicada-nymph :tangle core.cn
-   : init,rule-set,basic-REPL
-     << -- >>
-     jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
-     jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
-     jo word:jo?        jo syntax,jo,basic-REPL  *rule-set,basic-REPL* add-rule
-     jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
-     end
-   ; define-function
-
-   init,rule-set,basic-REPL
-   #+end_src
 ** basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : basic-REPL,loop
@@ -2075,6 +2084,43 @@
    36 2 power 35 mul add
    36 3 power 35 mul add
    . .
+   #+end_src
+* *rule-set,basic-REPL* : jo
+** word:jo?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:jo?
+     << word[address, length] -- bool >>
+     "jo" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,jo,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,jo,basic-REPL
+     << word:jo -- >>
+     drop2
+     read-word-for-REPL
+     >::word
+     << ::word find-jo if >>
+     ::word find-jo,through-jo-link if
+       end
+     then
+     "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
+     end
+   ; define-function
+   #+end_src
+** init,rule-set,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : init,rule-set,basic-REPL
+     << -- >>
+     jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
+     jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
+     jo word:jo?        jo syntax,jo,basic-REPL  *rule-set,basic-REPL* add-rule
+     jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
+     end
+   ; define-function
+
+   init,rule-set,basic-REPL
    #+end_src
 * *rule-set,basic-REPL* : if & else & then
 ** note ending jo
