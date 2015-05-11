@@ -2,15 +2,16 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* (relative-path?) and (full-path?)
 * todo
 ** need more lib functions and better factoring for string processing
 ** 因實現蟬語而所需要的基本函數
    * 練習實現匯編器 爲蟬語的 VM 設計做準備
    * 簡單的將代碼模塊化的系統
    * GC 和 hash-table 的實驗
+** [maybe] a way to remove magic numbers [not variable, but file by file like erlang ?]
 ** a macro for name in name-hash-table
 ** 在 primitive-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
-** 根目錄有關的函數 應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
      因爲 address 這個詞 對於 variable-jo 而言 太一般了
@@ -3578,36 +3579,28 @@
    "." empty-directory? . .l
    "/" empty-directory? . .l
    #+end_src
-** directory,list-by-file-type-code
+** directory,map
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,list-by-file-type-code,loop,print
-     << end, cursor, file-type-code -- >>
-     >:file-type-code
+   : directory,map,loop,execute
+     << end, cursor, function -- >>
+     >:function
      dup2 less-or-equal? if
        drop2
        end
      then
      >:cursor
+     >:end
      :cursor init,getdents64
-     +getdents64,d_type+ fetch-byte
-     :file-type-code equal? if
-       "  " .s
-       +getdents64,d_name+
-       dup 256
-       0 string,find-char
-       drop  << drop 0 >>
-       over sub .s .l
-     then
-     :cursor
-     +getdents64,d_reclen+ fetch-two-bytes
-     add
-     :file-type-code
-     <> directory,list-by-file-type-code,loop,print
+     :function execute-jo
+     :end
+     :cursor +getdents64,d_reclen+ fetch-two-bytes add
+     :function
+     <> directory,map,loop,execute
    ; define-function
 
-   : directory,list-by-file-type-code,loop
-     << port, file-type-code -- >>
-     >:file-type-code
+   : directory,map,loop
+     << port, function -- >>
+     >:function
      >:port
      1024 allocate-local-memory >:getdents64-structure-list
      1024
@@ -3616,7 +3609,8 @@
      :syscall-number,getdents64:
      3 syscall
      dup negative? if
-       error-code->string .s .l
+       "* (directory,map,loop) syscall fail" .s .l
+       "  " .s error-code->string .s .l
        end
      then
      dup zero? if
@@ -3625,46 +3619,109 @@
      then
      :getdents64-structure-list add
      :getdents64-structure-list
-     :file-type-code
-     directory,list-by-file-type-code,loop,print
+     :function
+     directory,map,loop,execute
      :port
-     :file-type-code
-     <> directory,list-by-file-type-code,loop
+     :function
+     <> directory,map,loop
    ; define-function
 
-   : directory,list-by-file-type-code
-     << directory-path[address, length], file-type-code -- >>
-     >:file-type-code
-     >::path
-     ::path input-port,open if
+   : directory,map
+     << directory-path[address, length],
+        function
+        -- true
+        -- false >>
+     >:function
+     >::directory-path
+     ::directory-path input-port,open if
      else
-       "* (directory,list-by-file-type-code) fail to open : " .s ::path .s .l
+       "* (directory,map) fail to open : " .s ::directory-path .s .l
        "  " .s error-code->string .s .l
        end
      then
      >:port
-     :port :file-type-code directory,list-by-file-type-code,loop
+     :port :function directory,map,loop
      :port port,close if
        end
      then
-     "* (directory,list-by-file-type-code) fail to close : " .s ::path .s .l
+     "* (directory,map) fail to close : " .s ::directory-path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,function
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     8 equal? if
+       "  " .s
+       +getdents64,d_name+
+       dup 256
+       0 string,find-char
+       drop  << drop 0 >>
+       over sub .s .l
+     then
+     end
+   ; define-function
+
+   : test,directory,map
+     << -- >>
+     "play" jo test,function directory,map
+     end
+   ; define-function
+   test,directory,map
+   #+end_src
 ** directory,list-file
    #+begin_src cicada-nymph :tangle core.cn
+   : directory,list-file,lister
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     8 equal? if
+       "  " .s
+       +getdents64,d_name+
+       dup 256
+       0 string,find-char
+       drop  << drop 0 >>
+       over sub .s .l
+     then
+     end
+   ; define-function
+
    : directory,list-file
      << directory-path[address, length] -- >>
-     8 directory,list-by-file-type-code
+     jo directory,list-file,lister
+     directory,map
      end
    ; define-function
    #+end_src
 ** directory,list-directory
    #+begin_src cicada-nymph :tangle core.cn
+   : directory,list-directory,lister
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     4 equal? if
+       +getdents64,d_name+
+       dup 256
+       0 string,find-char
+       drop  << drop 0 >>
+       over sub >::name
+       ".." ::name string-equal? if
+         end
+       then
+       "." ::name string-equal? if
+         end
+       then
+       "  " .s ::name .s .l
+       end
+     then
+     end
+   ; define-function
+
    : directory,list-directory
      << directory-path[address, length] -- >>
-     4 directory,list-by-file-type-code
+     jo directory,list-directory,lister
+     directory,map
      end
    ; define-function
    #+end_src
@@ -3683,121 +3740,92 @@
    directory,list-directory
 
    "/" dup2
-   irectory,list-file
+   directory,list-file
    directory,list-directory
-   #+end_src
-** directory,find-by-file-type-code
-   #+begin_src cicada-nymph :tangle core.cn
-   : directory,find-by-file-type-code,loop,find
-     << end, cursor, file-name[address, length], file-type-code -- bool >>
-     >:file-type-code
-     >::file-name
-     dup2 less-or-equal? if
-       drop2
-       false
-       end
-     then
-     >:cursor
-     >:end
-     :cursor init,getdents64
-     +getdents64,d_type+ fetch-byte :file-type-code equal? if
-       ::file-name +getdents64,d_name+
-       dup2 add fetch-byte zero? if
-         over string-equal? if
-           true
-           end
-         then
-       else
-         drop drop2
-       then
-     then
-     :end
-     :cursor +getdents64,d_reclen+ fetch-two-bytes add
-     ::file-name
-     :file-type-code
-     <> directory,find-by-file-type-code,loop,find
-   ; define-function
-
-   : directory,find-by-file-type-code,loop
-     << port, file-name[address, length], file-type-code -- bool >>
-     >:file-type-code
-     >::file-name
-     >:port
-     1024 allocate-local-memory >:getdents64-structure-list
-     1024
-     :getdents64-structure-list
-     :port
-     :syscall-number,getdents64:
-     3 syscall
-     dup negative? if
-       "* (directory,find-by-file-type-code,loop) syscall fail" .s .l
-       "  " .s error-code->string .s .l
-       false
-       end
-     then
-     dup zero? if
-       << zero as false >>
-       end
-     then
-     :getdents64-structure-list add
-     :getdents64-structure-list
-     ::file-name
-     :file-type-code
-     directory,find-by-file-type-code,loop,find if
-       true
-       end
-     then
-     :port
-     ::file-name
-     :file-type-code
-     <> directory,find-by-file-type-code,loop
-   ; define-function
-
-   : directory,find-by-file-type-code
-     << directory-path[address, length],
-        file-name[address, length],
-        file-type-code
-        -- true
-        -- false >>
-     >:file-type-code
-     >::file-name
-     >::directory-path
-     ::directory-path input-port,open if
-     else
-       "* (directory,find-by-file-type-code) fail to open : " .s ::directory-path .s .l
-       "  " .s error-code->string .s .l
-       false
-       end
-     then
-     >:port
-     :port ::file-name :file-type-code directory,find-by-file-type-code,loop
-     :port port,close if
-       end
-     then
-     "* (directory,find-by-file-type-code) fail to close : " .s ::directory-path .s .l
-     "  " .s error-code->string .s .l
-     end
-   ; define-function
    #+end_src
 ** directory,find-file
    #+begin_src cicada-nymph :tangle core.cn
+   : directory,find-file,finder
+     << file-name[address, length], bool --
+        file-name[address, length], bool >>
+     +getdents64,d_type+ fetch-byte 8 equal? not if
+       end
+     then
+     >:bool
+     >:file-name,lenght
+     >:file-name,address
+     :file-name,lenght +getdents64,d_name+ add
+     fetch-byte zero? not if
+       :file-name,address
+       :file-name,lenght
+       :bool
+       end
+     then
+     :file-name,address :file-name,lenght
+     +getdents64,d_name+ :file-name,lenght
+     string-equal? if
+       :file-name,address
+       :file-name,lenght
+       true
+       end
+     then
+     :file-name,address
+     :file-name,lenght
+     :bool
+     end
+   ; define-function
+
    : directory,find-file
-     << directory-path[address, length],
-        file-name[address, length]
-        -- true
-        -- false >>
-     8 directory,find-by-file-type-code
+     << directory-path[address, length], file-name[address, length] -- bool >>
+     xx|swap|xx
+     false
+     xx|swap|x
+     jo directory,find-file,finder
+     directory,map
+     xx|swap|x drop2
      end
    ; define-function
    #+end_src
 ** directory,find-directory
    #+begin_src cicada-nymph :tangle core.cn
+   : directory,find-directory,finder
+     << file-name[address, length], bool --
+        file-name[address, length], bool >>
+     +getdents64,d_type+ fetch-byte 4 equal? not if
+       end
+     then
+     >:bool
+     >:file-name,lenght
+     >:file-name,address
+     :file-name,lenght +getdents64,d_name+ add
+     fetch-byte zero? not if
+       :file-name,address
+       :file-name,lenght
+       :bool
+       end
+     then
+     :file-name,address :file-name,lenght
+     +getdents64,d_name+ :file-name,lenght
+     string-equal? if
+       :file-name,address
+       :file-name,lenght
+       true
+       end
+     then
+     :file-name,address
+     :file-name,lenght
+     :bool
+     end
+   ; define-function
+
    : directory,find-directory
-     << directory-path[address, length],
-        file-name[address, length]
-        -- true
-        -- false >>
-     4 directory,find-by-file-type-code
+     << directory-path[address, length], file-name[address, length] -- bool >>
+     xx|swap|xx
+     false
+     xx|swap|x
+     jo directory,find-directory,finder
+     directory,map
+     xx|swap|x drop2
      end
    ; define-function
    #+end_src
@@ -4499,24 +4527,55 @@
      :read-buffer 512
      :buffer :length
      file,read
-     :read-buffer swap .s
+     :read-buffer swap >::the-path
+     "* (poi,ask) " .s .l
+     "  " .s ::name .s " : " .s ::the-path .s .l
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "test-cicada-play" "./play" poi,add
-   "test-cicada-play" poi,ask
-   "test-cicada-play" "./contribution" poi,up
-   "test-cicada-play" poi,ask
-   "test-cicada-play" poi,sub
-   "test-cicada-play" poi,ask
-   #+end_src
 ** poi,list
    #+begin_src cicada-nymph :tangle core.cn
+   : poi,list,lister
+     << -- >>
+     +getdents64,d_type+ fetch-byte
+     4 equal? if
+       512 allocate-local-memory >:path-buffer
+       +getdents64,d_name+
+       dup 256
+       0 string,find-char
+       drop  << drop 0 >>
+       over sub >::name
+
+       ".." ::name string-equal? if
+         end
+       then
+
+       "." ::name string-equal? if
+         end
+       then
+
+       "  " .s ::name .s " : " .s
+
+       *poi-directory,user* "/" ::name "/path"
+       :path-buffer
+       4 n-string->buffer! >:path-length
+
+       512 allocate-local-memory >:reading-buffer
+       :reading-buffer 512
+       :path-buffer :path-length
+       file,read >:reading-length
+
+       :reading-buffer :reading-length
+       .s .l
+     then
+     end
+   ; define-function
+
    : poi,list
      << -- >>
-
+     *poi-directory,user*
+     jo poi,list,lister
+     directory,map
      end
    ; define-function
    #+end_src
@@ -4524,9 +4583,28 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,help
      << -- >>
-
+     "* (poi,help) :" .s .l
+     "  poi" .s .l
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "test-cicada-play" "./play" poi,add
+   "test-cicada-play" poi,ask
+
+   "test-cicada-play-2" "./play-2" poi,add
+   "test-cicada-play-2" poi,ask
+
+   "test-cicada-play" "./contribution" poi,up
+   "test-cicada-play" poi,ask
+
+   "test-cicada-play" poi,sub
+   "test-cicada-play" poi,ask
+
+   poi,list
+
+   poi,help
    #+end_src
 * >< path syntax
 ** 記 syntax about path
