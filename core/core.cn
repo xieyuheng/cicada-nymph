@@ -2442,14 +2442,14 @@ then
 ; define-function
 
 1024 4 mul allocate-memory
-: *address,environment-string-variable-list*
+: *address,environment-variable-list*
 ; define-variable,with-tos
 
 1024 4 mul
-: *length,environment-string-variable-list*
+: *length,environment-variable-list*
 ; define-variable,with-tos
 
-: init-environment-string-variable-list
+: init-environment-variable-list
   << -- >>
   64 allocate-local-memory >:path-buffer
   :path-buffer >:cursor
@@ -2472,36 +2472,36 @@ then
   :cursor :path-buffer sub dup2 >::path
   input-port,open if
   else
-    "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
+    "* (init-environment-variable-list) fail to open : " .s ::path .s .l
     end
   then
   >:port
 
-  *address,environment-string-variable-list*
-  *length,environment-string-variable-list*
+  *address,environment-variable-list*
+  *length,environment-variable-list*
   :port
   port,read if
   else
-    "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
+    "* (init-environment-variable-list) fail to read : " .s ::path .s .l
     end
   then
-  address *length,environment-string-variable-list* save
+  address *length,environment-variable-list* save
   end
 ; define-function
 
-: get-environment-string-variable-list
+: get-environment-variable-list
   << -- string[address, length] >>
-  *address,environment-string-variable-list*
-  *length,environment-string-variable-list*
+  *address,environment-variable-list*
+  *length,environment-variable-list*
   end
 ; define-function
 
-: find-environment-string-variable,loop
+: find-environment-variable,loop
   << string[address, length], cursor
      -- string[address, length], true
      -- false >>
   dup
-  get-environment-string-variable-list add
+  get-environment-variable-list add
   greater-than? if
     drop drop2
     false
@@ -2514,14 +2514,14 @@ then
   compare-buffer not if
     :address :length
     :cursor 0 cursor->next-matching-byte add1
-    <> find-environment-string-variable,loop
+    <> find-environment-variable,loop
   then
   :cursor :length add fetch-byte
   "=" string-head,char
   equal? not if
     :address :length
     :cursor 0 cursor->next-matching-byte add1
-    <> find-environment-string-variable,loop
+    <> find-environment-variable,loop
   then
   :cursor :length add add1 << over "=" >>
   >:find-address
@@ -2532,22 +2532,34 @@ then
   end
 ; define-function
 
-: find-environment-string-variable
+: find-environment-variable
   << string[address, length]
      -- string[address, length], true
      -- false >>
-  get-environment-string-variable-list drop
-  find-environment-string-variable,loop
+  get-environment-variable-list drop
+  find-environment-variable,loop
   end
 ; define-function
 
 init-pid
 init-command-line
-init-environment-string-variable-list
+init-environment-variable-list
 
 : *home-directory*
-  "HOME" find-environment-string-variable
+  "HOME" find-environment-variable
 ; define-variable
+
+: environment-variable,report,loop
+  << -- >>
+
+  <> environment-variable,report,loop
+; define-function
+
+: environment-variable,report
+  << -- >>
+
+  end
+; define-function
 
 512 allocate-memory
 : *buffer,work-directory*
@@ -2791,21 +2803,17 @@ init-environment-string-variable-list
   512 allocate-memory
 ; define-variable
 
-: *poi-directory,user*
+: *poi-directory*
   *home-directory* "/.cicada/poi"
   *poi-directory,user,address*
   2 n-string->buffer!
   *poi-directory,user,address* swap
 ; define-variable
 
-: *poi-directory,system*
-  "/etc/cicada/poi"
-; define-variable
-
 : poi,add
   << name[address, length], relative-path[address, length] -- >>
-  >::name
   >::relative-path
+  >::name
 
   ::relative-path relative-path? not if
     "* (poi,add) the argument must be a relative-path" .s .l
@@ -2814,14 +2822,14 @@ init-environment-string-variable-list
   then
 
   512 allocate-local-memory >:buffer
-  *poi-directory,user* "/" ::name
+  *poi-directory* "/" ::name
   :buffer
   3 n-string->buffer!
   >:length
   :buffer :length
   directory,creat
 
-  *poi-directory,user* "/" ::name "/path"
+  *poi-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer!
   >:length
@@ -2843,14 +2851,14 @@ init-environment-string-variable-list
   << name[address, length] -- >>
   >::name
   512 allocate-local-memory >:buffer
-  *poi-directory,user* "/" ::name "/path"
+  *poi-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer! >:length
 
   :buffer :length
   file,remove
 
-  *poi-directory,user* "/" ::name
+  *poi-directory* "/" ::name
   :buffer
   3 n-string->buffer!
   >:length
@@ -2871,7 +2879,7 @@ init-environment-string-variable-list
   then
 
   512 allocate-local-memory >:buffer
-  *poi-directory,user* "/" ::name "/path"
+  *poi-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer! >:length
 
@@ -2886,21 +2894,36 @@ init-environment-string-variable-list
   end
 ; define-function
 
-: poi,ask
-  << name[address, length] -- >>
+: poi,find
+  << name[address, length]
+     -- path[address, length], true
+     -- false >>
   >::name
   512 allocate-local-memory >:buffer
-  *poi-directory,user* "/" ::name "/path"
+  *poi-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer! >:length
+
+  :buffer :length
+  path,file? not if
+    false
+    end
+  then
 
   512 allocate-local-memory >:read-buffer
   :read-buffer 512
   :buffer :length
-  file,read
-  :read-buffer swap >::the-path
-  "* (poi,ask) " .s .l
-  "  " .s ::name .s " : " .s ::the-path .s .l
+  file,read >:read-length
+
+  *current-free-address,circular-string-area*
+  >:path-address
+
+  :read-buffer :read-length
+  save-into,circular-string-area
+
+  :path-address
+  :read-length
+  true
   end
 ; define-function
 
@@ -2925,7 +2948,7 @@ init-environment-string-variable-list
 
     "  " .s ::name .s " : " .s
 
-    *poi-directory,user* "/" ::name "/path"
+    *poi-directory* "/" ::name "/path"
     :path-buffer
     4 n-string->buffer! >:path-length
 
@@ -2942,7 +2965,7 @@ init-environment-string-variable-list
 
 : poi,list
   << -- >>
-  *poi-directory,user*
+  *poi-directory*
   jo poi,list,lister
   directory,map
   end
@@ -2954,6 +2977,123 @@ init-environment-string-variable-list
   "  poi" .s .l
   end
 ; define-function
+
+: +name+?
+  << string[address, length] -- bool >>
+  dup 1 less-or-equal? if
+    drop2
+    false
+    end
+  then
+  over fetch-byte
+  "+" string-head,char equal? not if
+    drop2
+    false
+    end
+  then
+  add sub1 fetch-byte
+  "+" string-head,char equal?
+  end
+; define-function
+
+: +name+->name
+  << +name+[address, length] -- name[address, length] >>
+  sub2 swap
+  add1 swap
+  end
+; define-function
+
+: word:path:?
+  << word[address, length] -- bool >>
+  "path:" string-equal?
+  end
+; define-function
+
+: !bad-path-syntax-word
+  << -- >>
+  "* !bad-path-syntax-word" .s .l
+  end
+; define-exception
+
+: path-syntax-word->path
+  << word[address, length] -- path[address, length] >>
+  >::word
+  ::word "+root+" string-equal? if
+    "/"
+    end
+  then
+  ::word "+work+" string-equal? if
+    get-work-directory
+    end
+  then
+  ::word "+home+" string-equal? if
+    *home-directory*
+    end
+  then
+  ::word "+back+" string-equal? if
+    ".."
+    end
+  then
+  ::word +name+? not if
+    ::word
+    end
+  then
+  ::word +name+->name poi,find if
+    end
+  then
+  !bad-path-syntax-word
+; define-function
+
+: syntax,path:,basic-REPL,loop
+  << cursor -- cursor >>
+  "here" .s .l
+  >:cursor
+  read-word-for-REPL >::word
+
+  ";" ::word string-equal? if
+    :cursor
+    end
+  then
+
+  ::word path-syntax-word->path dup >:length
+  :cursor
+  string->buffer!
+
+  :cursor :length add
+    dup
+    "/" string-head,char
+    swap
+    save-byte
+  add1
+  <> syntax,path:,basic-REPL,loop
+; define-function
+
+: syntax,path:,basic-REPL
+  << word:path: -- path[address, length] >>
+  drop2
+
+  prepare-for
+    !bad-path-syntax-word
+    end
+
+  512 allocate-local-memory >:buffer
+  :buffer syntax,path:,basic-REPL,loop >:cursor
+
+  :cursor :buffer sub >:length
+
+  *current-free-address,circular-string-area*
+  >:address
+
+  :buffer :length
+  save-into,circular-string-area
+
+  :address :length
+  end
+; define-function
+
+jo word:path:?
+jo syntax,path:,basic-REPL
+*rule-set,basic-REPL* add-rule
 
 : report-memory
   << -- >>

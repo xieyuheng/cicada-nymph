@@ -13,7 +13,6 @@
 ** add more notes about exception handling on io functions
 ** optimize local-variable by new instruction
    * too many literal is too waste of memory
-** bare-metal version of cicada-nymph for x86 :maybe:
 ** make instruction a type of jo      :maybe:
    this is needed when doing report of the jotionary
 * ===================================

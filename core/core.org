@@ -2,8 +2,26 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* 更好的錯誤處理機制
+  1. 當一個 exception 找不到自己在 return-stack 中的退出點時
+     應該有更好地處理方式 而不是不處理這種情況
+  2. 目前
+     當一個 exception 被執行的時候
+     調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
+     [除非爲這個 exception 中設置全局變量]
+     其原因在於
+     當 exception 被執行的時候 參數棧已經被重置了
+     所以其實解法很簡單
+     只要提供一個函數給 exception
+     讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
+     這樣當一個 exception 被執行的時候
+     它可以
+     1. 先以未被重置時的參數棧中的值爲參數
+        這些參數可以是調用這個 exception 的函傳遞給 exception 的
+     2. 之後再以重置之後的參數棧中的值爲參數
+        這些參數是等待 exception 的函爲 exception 所準備的
 * todo
-** need more lib functions and better factoring for string processing
+** need more lib functions about string processing and better factoring for string processing
 ** 因實現蟬語而所需要的基本函數
    * 練習實現匯編器 爲蟬語的 VM 設計做準備
    * 簡單的將代碼模塊化的系統
@@ -29,24 +47,6 @@
    * load-file should maintain a list of loaded files
      what else meta data should be maintained ?
      can them make up a well module system ?
-** 更好的錯誤處理機制
-   1. 當一個 exception 找不到自己在 return-stack 中的退出點時
-      應該有更好地處理方式 而不是不處理這種情況
-   2. 目前
-      當一個 exception 被執行的時候
-      調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
-      [除非爲這個 exception 中設置全局變量]
-      其原因在於
-      當 exception 被執行的時候 參數棧已經被重置了
-      所以其實解法很簡單
-      只要提供一個函數給 exception
-      讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
-      這樣當一個 exception 被執行的時候
-      它可以
-      1. 先以未被重置時的參數棧中的值爲參數
-         這些參數可以是調用這個 exception 的函傳遞給 exception 的
-      2. 之後再以重置之後的參數棧中的值爲參數
-         這些參數是等待 exception 的函爲 exception 所準備的
 ** little-tester                      :needed:
 ** home-path & search-path to load files
    * poi denotes path-organizer
@@ -3862,21 +3862,15 @@
    test,directory,find-directory
    #+end_src
 * system environment                  :linux:
-** note two directories
+** note one directory
    * all files about cicada
-     are stored in two directories only
-     1. user :
-        "/home/<user>/.cicada"
-     2. system :
-        "/etc/cicada"
-   * note that
-     the convention of linux is not followed
-     "/share" and "/include" are not used
+     are stored in
+     "/home/<user>/.cicada"
 ** note linux system environment
    * pid is the key to all the linux system environment
    * command-line
      /proc/<pid>/cmdline
-   * environment-string-variable-list
+   * environment-variable-list
      /proc/<pid>/environ
 ** [init|get]-pid
    #+begin_src cicada-nymph :tangle core.cn
@@ -3952,18 +3946,18 @@
      end
    ; define-function
    #+end_src
-** [init|get]-environment-string-variable-list
+** [init|get]-environment-variable-list
    * the size of /proc/<pid>/environ is limited to 4k
    #+begin_src cicada-nymph :tangle core.cn
    1024 4 mul allocate-memory
-   : *address,environment-string-variable-list*
+   : *address,environment-variable-list*
    ; define-variable,with-tos
 
    1024 4 mul
-   : *length,environment-string-variable-list*
+   : *length,environment-variable-list*
    ; define-variable,with-tos
 
-   : init-environment-string-variable-list
+   : init-environment-variable-list
      << -- >>
      64 allocate-local-memory >:path-buffer
      :path-buffer >:cursor
@@ -3986,41 +3980,41 @@
      :cursor :path-buffer sub dup2 >::path
      input-port,open if
      else
-       "* (init-environment-string-variable-list) fail to open : " .s ::path .s .l
+       "* (init-environment-variable-list) fail to open : " .s ::path .s .l
        end
      then
      >:port
 
-     *address,environment-string-variable-list*
-     *length,environment-string-variable-list*
+     *address,environment-variable-list*
+     *length,environment-variable-list*
      :port
      port,read if
      else
-       "* (init-environment-string-variable-list) fail to read : " .s ::path .s .l
+       "* (init-environment-variable-list) fail to read : " .s ::path .s .l
        end
      then
-     address *length,environment-string-variable-list* save
+     address *length,environment-variable-list* save
      end
    ; define-function
 
-   : get-environment-string-variable-list
+   : get-environment-variable-list
      << -- string[address, length] >>
-     *address,environment-string-variable-list*
-     *length,environment-string-variable-list*
+     *address,environment-variable-list*
+     *length,environment-variable-list*
      end
    ; define-function
    #+end_src
-** find-environment-string-variable
-   * the string used to find an environment-string-variable
+** find-environment-variable
+   * the string used to find an environment-variable
      can not contain "="
      no error handling on this
    #+begin_src cicada-nymph :tangle core.cn
-   : find-environment-string-variable,loop
+   : find-environment-variable,loop
      << string[address, length], cursor
         -- string[address, length], true
         -- false >>
      dup
-     get-environment-string-variable-list add
+     get-environment-variable-list add
      greater-than? if
        drop drop2
        false
@@ -4033,14 +4027,14 @@
      compare-buffer not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
-       <> find-environment-string-variable,loop
+       <> find-environment-variable,loop
      then
      :cursor :length add fetch-byte
      "=" string-head,char
      equal? not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
-       <> find-environment-string-variable,loop
+       <> find-environment-variable,loop
      then
      :cursor :length add add1 << over "=" >>
      >:find-address
@@ -4051,12 +4045,12 @@
      end
    ; define-function
 
-   : find-environment-string-variable
+   : find-environment-variable
      << string[address, length]
         -- string[address, length], true
         -- false >>
-     get-environment-string-variable-list drop
-     find-environment-string-variable,loop
+     get-environment-variable-list drop
+     find-environment-variable,loop
      end
    ; define-function
    #+end_src
@@ -4064,13 +4058,27 @@
    #+begin_src cicada-nymph :tangle core.cn
    init-pid
    init-command-line
-   init-environment-string-variable-list
+   init-environment-variable-list
    #+end_src
 ** *home-directory*
    #+begin_src cicada-nymph :tangle core.cn
    : *home-directory*
-     "HOME" find-environment-string-variable
+     "HOME" find-environment-variable
    ; define-variable
+   #+end_src
+** environment-variable,report
+   #+begin_src cicada-nymph :tangle core.cn
+   : environment-variable,report,loop
+     << -- >>
+
+     <> environment-variable,report,loop
+   ; define-function
+
+   : environment-variable,report
+     << -- >>
+
+     end
+   ; define-function
    #+end_src
 * work-directory
 ** get-work-directory
@@ -4444,18 +4452,6 @@
      one path one name
    * a path as a string must not contain any space chars
    * a name should only consist of number or letter or "-"
-** note two directories
-   * two directories to store the name path record
-     1. user :
-        "/home/<user>/.cicada/poi"
-     2. system :
-        "/etc/cicada/poi"
-   * note that
-     these two directories are viewed as one by poi
-     no such things like
-     user overriding system will happen
-     one name can only exist in one of the two directories
-     more on this in the following note
 ** note interface for command-line-function
    * cn poi add  <name> <relative-path>
    * cn poi sub  <name>
@@ -4468,29 +4464,27 @@
      note that
      for a <relative-path> of directory
      not tailing "/" should be added
-** *poi-directory,[user|system]*
+** *poi-directory*
+   * one directory to store the name path record
+     "/home/<user>/.cicada/poi"
    #+begin_src cicada-nymph :tangle core.cn
    : *poi-directory,user,address*
      512 allocate-memory
    ; define-variable
 
-   : *poi-directory,user*
+   : *poi-directory*
      *home-directory* "/.cicada/poi"
      *poi-directory,user,address*
      2 n-string->buffer!
      *poi-directory,user,address* swap
-   ; define-variable
-
-   : *poi-directory,system*
-     "/etc/cicada/poi"
    ; define-variable
    #+end_src
 ** poi,add
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
      << name[address, length], relative-path[address, length] -- >>
-     >::name
      >::relative-path
+     >::name
 
      ::relative-path relative-path? not if
        "* (poi,add) the argument must be a relative-path" .s .l
@@ -4499,14 +4493,14 @@
      then
 
      512 allocate-local-memory >:buffer
-     *poi-directory,user* "/" ::name
+     *poi-directory* "/" ::name
      :buffer
      3 n-string->buffer!
      >:length
      :buffer :length
      directory,creat
 
-     *poi-directory,user* "/" ::name "/path"
+     *poi-directory* "/" ::name "/path"
      :buffer
      4 n-string->buffer!
      >:length
@@ -4530,14 +4524,14 @@
      << name[address, length] -- >>
      >::name
      512 allocate-local-memory >:buffer
-     *poi-directory,user* "/" ::name "/path"
+     *poi-directory* "/" ::name "/path"
      :buffer
      4 n-string->buffer! >:length
 
      :buffer :length
      file,remove
 
-     *poi-directory,user* "/" ::name
+     *poi-directory* "/" ::name
      :buffer
      3 n-string->buffer!
      >:length
@@ -4560,7 +4554,7 @@
      then
 
      512 allocate-local-memory >:buffer
-     *poi-directory,user* "/" ::name "/path"
+     *poi-directory* "/" ::name "/path"
      :buffer
      4 n-string->buffer! >:length
 
@@ -4575,23 +4569,40 @@
      end
    ; define-function
    #+end_src
-** poi,ask
+** poi,find
+   * note that
+     this function uses *circular-string-area*
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,ask
-     << name[address, length] -- >>
+   : poi,find
+     << name[address, length]
+        -- path[address, length], true
+        -- false >>
      >::name
      512 allocate-local-memory >:buffer
-     *poi-directory,user* "/" ::name "/path"
+     *poi-directory* "/" ::name "/path"
      :buffer
      4 n-string->buffer! >:length
+
+     :buffer :length
+     path,file? not if
+       false
+       end
+     then
 
      512 allocate-local-memory >:read-buffer
      :read-buffer 512
      :buffer :length
-     file,read
-     :read-buffer swap >::the-path
-     "* (poi,ask) " .s .l
-     "  " .s ::name .s " : " .s ::the-path .s .l
+     file,read >:read-length
+
+     *current-free-address,circular-string-area*
+     >:path-address
+
+     :read-buffer :read-length
+     save-into,circular-string-area
+
+     :path-address
+     :read-length
+     true
      end
    ; define-function
    #+end_src
@@ -4618,7 +4629,7 @@
 
        "  " .s ::name .s " : " .s
 
-       *poi-directory,user* "/" ::name "/path"
+       *poi-directory* "/" ::name "/path"
        :path-buffer
        4 n-string->buffer! >:path-length
 
@@ -4635,7 +4646,7 @@
 
    : poi,list
      << -- >>
-     *poi-directory,user*
+     *poi-directory*
      jo poi,list,lister
      directory,map
      end
@@ -4650,45 +4661,221 @@
      end
    ; define-function
    #+end_src
+** +name+?
+   #+begin_src cicada-nymph :tangle core.cn
+   : +name+?
+     << string[address, length] -- bool >>
+     dup 1 less-or-equal? if
+       drop2
+       false
+       end
+     then
+     over fetch-byte
+     "+" string-head,char equal? not if
+       drop2
+       false
+       end
+     then
+     add sub1 fetch-byte
+     "+" string-head,char equal?
+     end
+   ; define-function
+   #+end_src
+** +name+->name
+   #+begin_src cicada-nymph :tangle core.cn
+   : +name+->name
+     << +name+[address, length] -- name[address, length] >>
+     sub2 swap
+     add1 swap
+     end
+   ; define-function
+   #+end_src
 ** test
    #+begin_src cicada-nymph
    "test-cicada-play" "./play" poi,add
-   "test-cicada-play" poi,ask
+   "test-cicada-play" poi,find
+   if .s .l
+   else "not found" .s .l
+   then
 
    "test-cicada-play-2" "./play-2" poi,add
-   "test-cicada-play-2" poi,ask
+   "test-cicada-play-2" poi,find
+   if .s .l
+   else "not found" .s .l
+   then
 
    "test-cicada-play" "./contribution" poi,up
-   "test-cicada-play" poi,ask
+   "test-cicada-play" poi,find
+   if .s .l
+   else "not found" .s .l
+   then
 
    "test-cicada-play" poi,sub
-   "test-cicada-play" poi,ask
+   "test-cicada-play" poi,find
+   if .s .l
+   else "not found" .s .l
+   then
 
    poi,list
 
    poi,help
+
+   "+work+" +name+? .
+   "work" +name+? .
    #+end_src
-* >< path syntax
-** 記 syntax about path
-   * 利用了系統的路徑格式
-     同時又把系統的路徑格式抽象掉了
+* path syntax
+** note
+   * path syntax can be implemented by a new *rule-set*
+     but in the following
+     I just simply implemented it
+     as a rule in *rule-set,basic-REPL*
+** note format
    #+begin_src cicada-nymph
-   path: home xyh cicada core.cn ;
-   "/home/xyh/cicada/core.cn"
+   <<
+   the following 4 poi are built in
+   +root+
+   +home+
+   +work+
+   +back+
+   >>
 
-   path: home xyh cicada ;
-   "/home/xyh/cicada"
+   path: +root+ home xyh cicada core core.cn ;
+   path: +home+ cicada core core.cn ;
+   "/home/xyh/cicada/core/core.cn"
 
-   path: +work+ core.cn ;
-   "./core.cn"
+   path: +back+ cicada core core.cn ;
+   "../cicada/core/core.cn"
 
-   path: +back+ cicada core.cn ;
-   "../cicada/core.cn"
+   path: +work+ core core.cn ;
+   path: core core.cn ;
 
-   path: +library+ kkk main.cn ;
-   "/home/xyh/.cicada/library/kkk/main.cn"
+
+   path: +library+ hi.cn ;
+   "/home/xyh/cicada/library/hi.cn"
+   #+end_src
+** word:path:?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:path:?
+     << word[address, length] -- bool >>
+     "path:" string-equal?
+     end
+   ; define-function
+   #+end_src
+** !bad-path-syntax-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : !bad-path-syntax-word
+     << -- >>
+     "* !bad-path-syntax-word" .s .l
+     end
+   ; define-exception
+   #+end_src
+** path-syntax-word->path
+   #+begin_src cicada-nymph :tangle core.cn
+   : path-syntax-word->path
+     << word[address, length] -- path[address, length] >>
+     >::word
+     ::word "+root+" string-equal? if
+       "/"
+       end
+     then
+     ::word "+work+" string-equal? if
+       get-work-directory
+       end
+     then
+     ::word "+home+" string-equal? if
+       *home-directory*
+       end
+     then
+     ::word "+back+" string-equal? if
+       ".."
+       end
+     then
+     ::word +name+? not if
+       ::word
+       end
+     then
+     ::word +name+->name poi,find if
+       end
+     then
+     !bad-path-syntax-word
+   ; define-function
+   #+end_src
+** syntax,path:,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,path:,basic-REPL,loop
+     << cursor -- cursor >>
+     "here" .s .l
+     >:cursor
+     read-word-for-REPL >::word
+
+     ";" ::word string-equal? if
+       :cursor
+       end
+     then
+
+     ::word path-syntax-word->path dup >:length
+     :cursor
+     string->buffer!
+
+     :cursor :length add
+       dup
+       "/" string-head,char
+       swap
+       save-byte
+     add1
+     <> syntax,path:,basic-REPL,loop
+   ; define-function
+
+   : syntax,path:,basic-REPL
+     << word:path: -- path[address, length] >>
+     drop2
+
+     prepare-for
+       !bad-path-syntax-word
+       end
+
+     512 allocate-local-memory >:buffer
+     :buffer syntax,path:,basic-REPL,loop >:cursor
+
+     :cursor :buffer sub >:length
+
+     *current-free-address,circular-string-area*
+     >:address
+
+     :buffer :length
+     save-into,circular-string-area
+
+     :address :length
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:path:?
+   jo syntax,path:,basic-REPL
+   *rule-set,basic-REPL* add-rule
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   path: +root+ home xyh cicada core core.cn ;
+   path: +home+ cicada core core.cn ;
+
+   path: +back+ cicada core core.cn ;
+
+   path: +work+ core core.cn ;
+   path: core core.cn ;
+
+   "library" "library" poi,add
+   path: +library+ hi.cn ;
+   "library" "library" poi,sub
+   path: +library+ hi.cn ;
    #+end_src
 * >< load & need
+** note
+   * no library code will be auto loaded
+     you need to configure path by (poi)
+     then
+     load the code you want by using path-syntax
 * -----------------------------------
 * report
 ** report-memory
