@@ -4780,10 +4780,25 @@
    #+end_src
 ** !bad-path-syntax-word
    #+begin_src cicada-nymph :tangle core.cn
-   : !bad-path-syntax-word
+   : bad-path-syntax-word,loop
      << -- >>
+     read-word-for-REPL
+     dup2 ";" string-equal? if
+       .s 32 .b
+       end
+     then
+     .s 32 .b
+     <> bad-path-syntax-word,loop
+   ; define-function
+
+   : !bad-path-syntax-word
+     << word -- >>
+     "* (!bad-path-syntax-word) the following word is of bad syntax : " .s .l
+     "    " .s .s .l
      exception-reset-stack
-     "* !bad-path-syntax-word" .s .l
+     << -- >>
+     "  the rest of the words in path syntax is as following :" .s .l
+     "    " .s bad-path-syntax-word,loop .l
      end
    ; define-exception
    #+end_src
@@ -4815,6 +4830,7 @@
      ::word +name+->name poi,find if
        end
      then
+     ::word
      !bad-path-syntax-word
    ; define-function
    #+end_src
@@ -4822,7 +4838,6 @@
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,path:,basic-REPL,loop
      << cursor -- cursor >>
-     "here" .s .l
      >:cursor
      read-word-for-REPL >::word
 
@@ -4860,10 +4875,12 @@
      *current-free-address,circular-string-area*
      >:address
 
-     :buffer :length
+     :buffer
+     :length
      save-into,circular-string-area
 
-     :address :length
+     :address
+     :length
      end
    ; define-function
    #+end_src
@@ -4875,20 +4892,20 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   path: +root+ home xyh cicada core core.cn ;
-   path: +home+ cicada core core.cn ;
+   path: +root+ home xyh cicada core core.cn ; .s
+   path: +home+ cicada core core.cn ; .s
 
-   path: +back+ cicada core core.cn ;
+   path: +back+ cicada core core.cn ; .s
 
-   path: +work+ core core.cn ;
-   path: core core.cn ;
+   path: +work+ core core.cn ; .s
+   path: core core.cn ; .s
 
    "library" "library" poi,add
-   path: +library+ hi.cn ;
-   "library" "library" poi,sub
+   path: +library+ hi.cn ; .s
+   "library" poi,sub
    path: +library+ hi.cn ;
    #+end_src
-* >< load & need
+* load & need
 ** note
    * no library code will be auto loaded
      you need to configure path by (poi)

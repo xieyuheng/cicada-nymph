@@ -3040,10 +3040,25 @@ init-environment-variable-list
   end
 ; define-function
 
-: !bad-path-syntax-word
+: bad-path-syntax-word,loop
   << -- >>
+  read-word-for-REPL
+  dup2 ";" string-equal? if
+    .s 32 .b
+    end
+  then
+  .s 32 .b
+  <> bad-path-syntax-word,loop
+; define-function
+
+: !bad-path-syntax-word
+  << word -- >>
+  "* (!bad-path-syntax-word) the following word is of bad syntax : " .s .l
+  "    " .s .s .l
   exception-reset-stack
-  "* !bad-path-syntax-word" .s .l
+  << -- >>
+  "  the rest of the words in path syntax is as following :" .s .l
+  "    " .s bad-path-syntax-word,loop .l
   end
 ; define-exception
 
@@ -3073,12 +3088,12 @@ init-environment-variable-list
   ::word +name+->name poi,find if
     end
   then
+  ::word
   !bad-path-syntax-word
 ; define-function
 
 : syntax,path:,basic-REPL,loop
   << cursor -- cursor >>
-  "here" .s .l
   >:cursor
   read-word-for-REPL >::word
 
@@ -3116,10 +3131,12 @@ init-environment-variable-list
   *current-free-address,circular-string-area*
   >:address
 
-  :buffer :length
+  :buffer
+  :length
   save-into,circular-string-area
 
-  :address :length
+  :address
+  :length
   end
 ; define-function
 
