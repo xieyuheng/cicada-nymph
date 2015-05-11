@@ -2,24 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* 更好的錯誤處理機制
-  1. 當一個 exception 找不到自己在 return-stack 中的退出點時
-     應該有更好地處理方式 而不是不處理這種情況
-  2. 目前
-     當一個 exception 被執行的時候
-     調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
-     [除非爲這個 exception 中設置全局變量]
-     其原因在於
-     當 exception 被執行的時候 參數棧已經被重置了
-     所以其實解法很簡單
-     只要提供一個函數給 exception
-     讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
-     這樣當一個 exception 被執行的時候
-     它可以
-     1. 先以未被重置時的參數棧中的值爲參數
-        這些參數可以是調用這個 exception 的函傳遞給 exception 的
-     2. 之後再以重置之後的參數棧中的值爲參數
-        這些參數是等待 exception 的函爲 exception 所準備的
+* a macro for name in name-hash-table
 * todo
 ** need more lib functions about string processing and better factoring for string processing
 ** 因實現蟬語而所需要的基本函數
@@ -27,7 +10,6 @@
    * 簡單的將代碼模塊化的系統
    * GC 和 hash-table 的實驗
 ** [maybe] a way to remove magic numbers [not variable, but file by file like erlang ?]
-** a macro for name in name-hash-table
 ** 在 primitive-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
@@ -133,7 +115,8 @@
      << string[address, length], word:if --
         address, string[address, length] >>
      drop2
-     *false?branch* save-into,jo-area
+     jo instruction,false?branch
+       save-into,jo-area
      *current-free-address,jo-area* xx|swap|x
      0 save-into,jo-area
      end
@@ -143,7 +126,8 @@
      << address, string[address, length], word:else --
         address, string[address, length] >>
      drop2
-     *branch* save-into,jo-area
+     jo instruction,branch
+        save-into,jo-area
      x|swap|xx
      *current-free-address,jo-area* xxx|swap|x
      0 save-into,jo-area
@@ -277,8 +261,10 @@
      << string[address, length], word:prepare-for --
         string[address, length] >>
      drop2
-     *prepare-for*    save-into,jo-area
-     *exception-head* save-into,jo-area
+     jo instruction,prepare-for
+       save-into,jo-area
+     jo instruction,exception-head
+       save-into,jo-area
      end
    ; define-function
    #+end_src
@@ -970,6 +956,8 @@
      prepare-for
        !undo-make-jojo
        end
+
+     0 save-into,jo-area
 
      *current-free-address,primitive-string-area*
        save-into,jo-area
@@ -1780,7 +1768,8 @@
    : syntax,base#wild-integer-string,make-jojo
      << string[address, length], word[address, length] --
         string[address, length] >>
-     *literal* save-into,jo-area
+     jo instruction,literal
+       save-into,jo-area
      base#wild-integer-string->integer
      save-into,jo-area
      end
@@ -2282,7 +2271,9 @@
    #+end_src
 ** add-rule to *rule-set,basic-REPL*
    #+begin_src cicada-nymph :tangle core.cn
-   jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
+   jo word:address?
+   jo syntax,address,basic-REPL
+   *rule-set,basic-REPL* add-rule
    #+end_src
 ** test
    #+begin_src cicada-nymph

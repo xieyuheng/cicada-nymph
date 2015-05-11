@@ -423,6 +423,8 @@ macro define_exception string, jo {
 
 define_exception__#jo:
 
+   xx 0
+
 name__#jo:
    xx current_free_address$primitive_string_area
 
@@ -436,6 +438,24 @@ jo:
    xx explain$exception
 
    ;; here follows a jojo as function-body
+
+}
+
+match =64bit, machine {
+
+define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+   ;; << -- >>
+
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+   ;; << -- >>
+
+   next
 
 }
 
@@ -472,7 +492,10 @@ explain$exception:
    ;;   pointer$return_stack
    ;;   rsi jo
    pop_return_stack rax
-   mov pointer$argument_stack, rax
+   ;; mov pointer$argument_stack, rax
+   mov rbx, rsi
+   sub rbx, (jo_size * 3)
+   mov [rbx], rax
 
    mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
@@ -523,7 +546,10 @@ explain$exception:
    ;;   pointer$return_stack
    ;;   rsi jo
    pop_return_stack rax
-   mov [pointer$argument_stack], rax
+   ;; mov [pointer$argument_stack], rax
+   mov rbx, rsi
+   sub rbx, (jo_size * 3)
+   mov [rbx], rax
 
    mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
@@ -1035,10 +1061,7 @@ define_function "little_test", little_test
    ;; xx basic_REPL
    ;;;; 1 2 add .
 
-define_variable "*literal*", V__literal
-   xx literal
-
-define_primitive_function "", literal
+define_primitive_function "instruction,literal", literal
    ;; << -- fixnum >>
    pop_return_stack rbx
      mov rax, [rbx]
@@ -1047,10 +1070,7 @@ define_primitive_function "", literal
    push_return_stack rbx
    next
 
-define_variable "*address*", V__address
-   xx address
-
-define_primitive_function "", address
+define_primitive_function "instruction,address", address
    ;; << -- address >>
    pop_return_stack rbx
      mov rax, [rbx]
@@ -1060,10 +1080,7 @@ define_primitive_function "", address
    push_return_stack rbx
    next
 
-define_variable "*branch*", V__branch
-   xx branch
-
-define_primitive_function "", branch
+define_primitive_function "instruction,branch", branch
    pop_return_stack rbx
    mov rax, [rbx]
    imul rax, jo_size
@@ -1071,10 +1088,7 @@ define_primitive_function "", branch
    push_return_stack rbx
    next
 
-define_variable "*false?branch*", V__false?branch
-   xx false?branch
-
-define_primitive_function "", false?branch
+define_primitive_function "instruction,false?branch", false?branch
    ;; << true of false -- >>
    pop_argument_stack rax
    test rax, rax
@@ -1095,7 +1109,7 @@ help__false?branch__not_to_branch:
 
 match =64bit, machine {
 
-define_primitive_function "", prepare_for
+define_primitive_function "instruction,prepare-for", prepare_for
    ;; << -- >>
    pop_return_stack rbx
 
@@ -1123,7 +1137,7 @@ define_primitive_function "", prepare_for
 
 match =32bit, machine {
 
-define_primitive_function "", prepare_for
+define_primitive_function "instruction,prepare-for", prepare_for
    ;; << -- >>
    pop_return_stack ebx
 
@@ -1150,17 +1164,11 @@ define_primitive_function "", prepare_for
 
 }
 
-define_variable "*prepare-for*", V__prepare_for
-   xx prepare_for
-
-define_primitive_function "", exception_head
+define_primitive_function "instruction,exception-head", exception_head
    ;; << -- >>
    pop_return_stack rax
    pop_return_stack rax
    next
-
-define_variable "*exception-head*", V__exception_head
-   xx exception_head
 
 define_primitive_function "drop", drop
    ;; << a -- >>

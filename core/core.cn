@@ -38,7 +38,8 @@
   << string[address, length], word:if --
      address, string[address, length] >>
   drop2
-  *false?branch* save-into,jo-area
+  jo instruction,false?branch
+    save-into,jo-area
   *current-free-address,jo-area* xx|swap|x
   0 save-into,jo-area
   end
@@ -48,7 +49,8 @@
   << address, string[address, length], word:else --
      address, string[address, length] >>
   drop2
-  *branch* save-into,jo-area
+  jo instruction,branch
+     save-into,jo-area
   x|swap|xx
   *current-free-address,jo-area* xxx|swap|x
   0 save-into,jo-area
@@ -90,8 +92,10 @@ more,rule-set,make-jojo
   << string[address, length], word:prepare-for --
      string[address, length] >>
   drop2
-  *prepare-for*    save-into,jo-area
-  *exception-head* save-into,jo-area
+  jo instruction,prepare-for
+    save-into,jo-area
+  jo instruction,exception-head
+    save-into,jo-area
   end
 ; define-function
 
@@ -581,6 +585,8 @@ allocate-memory
     !undo-make-jojo
     end
 
+  0 save-into,jo-area
+
   *current-free-address,primitive-string-area*
     save-into,jo-area
   dup2 string-head,word
@@ -1053,7 +1059,8 @@ init,name-hash-table,nymph-jo
 : syntax,base#wild-integer-string,make-jojo
   << string[address, length], word[address, length] --
      string[address, length] >>
-  *literal* save-into,jo-area
+  jo instruction,literal
+    save-into,jo-area
   base#wild-integer-string->integer
   save-into,jo-area
   end
@@ -1340,7 +1347,9 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
   end
 ; define-function
 
-jo word:address? jo syntax,address,basic-REPL *rule-set,basic-REPL* add-rule
+jo word:address?
+jo syntax,address,basic-REPL
+*rule-set,basic-REPL* add-rule
 
 : print-argument-stack,loop
   << address, counter -- >>
