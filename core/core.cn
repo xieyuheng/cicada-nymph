@@ -10,6 +10,12 @@
   end
 ; define-function
 
+: .b
+  << byte -- >>
+  write-byte
+  end
+; define-function
+
 : word:if?
   << word[address, length] -- bool >>
   "if" string-equal?
@@ -2544,27 +2550,27 @@ init-environment-string-variable-list
 ; define-variable
 
 512 allocate-memory
-: *buffer,working-directory*
+: *buffer,work-directory*
 ; define-variable,with-tos
 
-: get-working-directory
+: get-work-directory
   << -- directory[address, length] >>
   512
-  *buffer,working-directory*
+  *buffer,work-directory*
   :syscall-number,getcwd:
   2 syscall
   dup negative? if
-    "* (get-working-directory) fail" .s .l
+    "* (get-work-directory) fail" .s .l
     "  " .s error-code->string .s .l
     end
   then
-  *buffer,working-directory*
+  *buffer,work-directory*
   swap
   sub1 << for the ending zero >>
   end
 ; define-function
 
-: change-working-directory
+: change-work-directory
   << directory-path[address, length] -- >>
   >::directory-path
   ::directory-path
@@ -2572,8 +2578,8 @@ init-environment-string-variable-list
   :syscall-number,chdir:
   1 syscall
   dup negative? if
-    "* (change-working-directory) fail" .s .l
-    "  can not change the working directory into : " .s ::directory-path .s .l
+    "* (change-work-directory) fail" .s .l
+    "  can not change the work directory into : " .s ::directory-path .s .l
     "  " .s error-code->string .s .l
     end
   then
@@ -2759,13 +2765,25 @@ init-environment-string-variable-list
 
 : relative-path?
   << string[address, length] -- bool >>
-
+  dup zero? if
+    drop2
+    false
+    end
+  then
+  string-head,char
+  47 equal? not
   end
 ; define-function
 
 : full-path?
   << string[address, length] -- bool >>
-
+  dup zero? if
+    drop2
+    false
+    end
+  then
+  string-head,char
+  47 equal?
   end
 ; define-function
 
@@ -2786,8 +2804,15 @@ init-environment-string-variable-list
 
 : poi,add
   << name[address, length], relative-path[address, length] -- >>
-  >::relative-path
   >::name
+  >::relative-path
+
+  ::relative-path relative-path? not if
+    "* (poi,add) the argument must be a relative-path" .s .l
+    "  but the following is not : " .s ::relative-path .s .l
+    end
+  then
+
   512 allocate-local-memory >:buffer
   *poi-directory,user* "/" ::name
   :buffer
@@ -2804,7 +2829,7 @@ init-environment-string-variable-list
   file,creat
 
   512 allocate-local-memory >:address,full-path
-  get-working-directory "/" ::relative-path
+  get-work-directory "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
@@ -2820,8 +2845,8 @@ init-environment-string-variable-list
   512 allocate-local-memory >:buffer
   *poi-directory,user* "/" ::name "/path"
   :buffer
-  4 n-string->buffer!
-  >:length
+  4 n-string->buffer! >:length
+
   :buffer :length
   file,remove
 
@@ -2838,13 +2863,20 @@ init-environment-string-variable-list
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
+
+  ::relative-path relative-path? not if
+    "* (poi,up) the argument must be a relative-path" .s .l
+    "  but the following is not : " .s ::relative-path .s .l
+    end
+  then
+
   512 allocate-local-memory >:buffer
   *poi-directory,user* "/" ::name "/path"
   :buffer
   4 n-string->buffer! >:length
 
   512 allocate-local-memory >:address,full-path
-  get-working-directory "/" ::relative-path
+  get-work-directory "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 

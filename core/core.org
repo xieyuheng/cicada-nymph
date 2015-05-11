@@ -2,7 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* (relative-path?) and (full-path?)
 * todo
 ** need more lib functions and better factoring for string processing
 ** 因實現蟬語而所需要的基本函數
@@ -80,7 +79,8 @@
      | .i | write_integer        | core     |
      | .s | write_string         | assembly |
      | .l | linefeed             | core     |
-** .l .i
+     | .b | write-byte           |          |
+** .l .i .b
    #+begin_src cicada-nymph :tangle core.cn
    : .l
      << -- >>
@@ -91,6 +91,12 @@
    : .i
      << -- >>
      write-integer
+     end
+   ; define-function
+
+   : .b
+     << byte -- >>
+     write-byte
      end
    ; define-function
    #+end_src
@@ -4066,33 +4072,33 @@
      "HOME" find-environment-string-variable
    ; define-variable
    #+end_src
-* working-directory
-** get-working-directory
+* work-directory
+** get-work-directory
    #+begin_src cicada-nymph :tangle core.cn
    512 allocate-memory
-   : *buffer,working-directory*
+   : *buffer,work-directory*
    ; define-variable,with-tos
 
-   : get-working-directory
+   : get-work-directory
      << -- directory[address, length] >>
      512
-     *buffer,working-directory*
+     *buffer,work-directory*
      :syscall-number,getcwd:
      2 syscall
      dup negative? if
-       "* (get-working-directory) fail" .s .l
+       "* (get-work-directory) fail" .s .l
        "  " .s error-code->string .s .l
        end
      then
-     *buffer,working-directory*
+     *buffer,work-directory*
      swap
      sub1 << for the ending zero >>
      end
    ; define-function
    #+end_src
-** change-working-directory
+** change-work-directory
    #+begin_src cicada-nymph :tangle core.cn
-   : change-working-directory
+   : change-work-directory
      << directory-path[address, length] -- >>
      >::directory-path
      ::directory-path
@@ -4100,8 +4106,8 @@
      :syscall-number,chdir:
      1 syscall
      dup negative? if
-       "* (change-working-directory) fail" .s .l
-       "  can not change the working directory into : " .s ::directory-path .s .l
+       "* (change-work-directory) fail" .s .l
+       "  can not change the work directory into : " .s ::directory-path .s .l
        "  " .s error-code->string .s .l
        end
      then
@@ -4111,9 +4117,13 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   get-working-directory .s
-   "/home" change-working-directory
-   get-working-directory .s
+   get-work-directory .s
+   "/home" change-work-directory
+   get-work-directory .s
+   "/////home/xyh////cicada/play" change-work-directory
+   get-work-directory .s
+   "//././/home/xyh/././cicada/./" change-work-directory
+   get-work-directory .s
    #+end_src
 * path
 ** stat structure
@@ -4369,25 +4379,63 @@
    "core" path,directory? . << 1 >>
    "ai" path,directory? . << 0 >>
    #+end_src
-** >< relative-path?
+** 記 字符串的謂詞
+   * 下面這兩個函數
+     其實是在用遞歸函數實現正則表達式對字符串的匹配效果
+   * 是否應該設計 正則表達式 子語言 ?
+     還是總是直接使用遞歸函數 ?
+** 記 unix 路徑格式
+   * "/" 相當於 空格
+     連續的 "//" 相當於 連續的空格
+     這種空格使用在字符串開頭時 代表這是一個 絕對路徑
+   * "." 相當於 空格
+     連續的 ".." 不算 連續的空格 有別的語義
+     但是在這種空格使用在最前面的時候 標誌這個
+     這種空格使用在字符串開頭時 代表這是一個 相對路徑
+   * 而對於下面的兩個函數我簡單地要求
+     1. relative-path
+        不以 "/" 開頭 的字符串
+     2. full-path
+        以 "/" 開頭 的字符串
+     3. 並且在這裏我允許 path 內 出現空格
+        保留對這種路徑的處理能力
+        只不過 我不使用這種路徑而已
+** relative-path?
+   * in ASCII "/" is 47
    #+begin_src cicada-nymph :tangle core.cn
    : relative-path?
      << string[address, length] -- bool >>
-
+     dup zero? if
+       drop2
+       false
+       end
+     then
+     string-head,char
+     47 equal? not
      end
    ; define-function
    #+end_src
-** >< full-path?
+** full-path?
+   * in ASCII "/" is 47
    #+begin_src cicada-nymph :tangle core.cn
    : full-path?
      << string[address, length] -- bool >>
-
+     dup zero? if
+       drop2
+       false
+       end
+     then
+     string-head,char
+     47 equal?
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-
+   "/home" relative-path? .
+   "/home" full-path? .
+   "home" relative-path? .
+   "home" full-path? .
    #+end_src
 * poi
 ** note
@@ -4441,8 +4489,15 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
      << name[address, length], relative-path[address, length] -- >>
-     >::relative-path
      >::name
+     >::relative-path
+
+     ::relative-path relative-path? not if
+       "* (poi,add) the argument must be a relative-path" .s .l
+       "  but the following is not : " .s ::relative-path .s .l
+       end
+     then
+
      512 allocate-local-memory >:buffer
      *poi-directory,user* "/" ::name
      :buffer
@@ -4459,7 +4514,7 @@
      file,creat
 
      512 allocate-local-memory >:address,full-path
-     get-working-directory "/" ::relative-path
+     get-work-directory "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -4477,8 +4532,8 @@
      512 allocate-local-memory >:buffer
      *poi-directory,user* "/" ::name "/path"
      :buffer
-     4 n-string->buffer!
-     >:length
+     4 n-string->buffer! >:length
+
      :buffer :length
      file,remove
 
@@ -4497,13 +4552,20 @@
      << name[address, length], relative-path[address, length] -- >>
      >::relative-path
      >::name
+
+     ::relative-path relative-path? not if
+       "* (poi,up) the argument must be a relative-path" .s .l
+       "  but the following is not : " .s ::relative-path .s .l
+       end
+     then
+
      512 allocate-local-memory >:buffer
      *poi-directory,user* "/" ::name "/path"
      :buffer
      4 n-string->buffer! >:length
 
      512 allocate-local-memory >:address,full-path
-     get-working-directory "/" ::relative-path
+     get-work-directory "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -4617,16 +4679,16 @@
    path: home xyh cicada ;
    "/home/xyh/cicada"
 
-   path: +working+ core.cn ;
+   path: +work+ core.cn ;
    "./core.cn"
 
-   path: +parent+ cicada core.cn ;
+   path: +back+ cicada core.cn ;
    "../cicada/core.cn"
 
    path: +library+ kkk main.cn ;
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
-* load & need
+* >< load & need
 * -----------------------------------
 * report
 ** report-memory
