@@ -99,10 +99,31 @@ more,rule-set,make-jojo
   end
 ; define-function
 
+: word:exception-reset-stack?
+  << word[address, length] -- bool >>
+  "exception-reset-stack" string-equal?
+  end
+; define-function
+
+: syntax,exception-reset-stack,make-jojo
+  << string[address, length], word:exception-reset-stack --
+     string[address, length] >>
+  drop2
+  jo instruction,exception-reset-stack
+    save-into,jo-area
+  current-defining-word find-jo,through-jo-link
+  drop
+    save-into,jo-area
+  end
+; define-function
+
 : more,rule-set,make-jojo
   << -- >>
   jo word:prepare-for?
   jo syntax,prepare-for,make-jojo
+  *rule-set,make-jojo* add-rule
+  jo word:exception-reset-stack?
+  jo syntax,exception-reset-stack,make-jojo
   *rule-set,make-jojo* add-rule
   end
 ; define-function
@@ -1121,6 +1142,7 @@ save
 
 : !bye,basic-REPL
   << -- >>
+  exception-reset-stack
   drop-syntax-stack
   end
 ; define-exception
@@ -3020,6 +3042,7 @@ init-environment-variable-list
 
 : !bad-path-syntax-word
   << -- >>
+  exception-reset-stack
   "* !bad-path-syntax-word" .s .l
   end
 ; define-exception

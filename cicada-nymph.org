@@ -1,22 +1,7 @@
 #+TITLE:  小蟬語 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-* 更好的錯誤處理機制 : 調用 !exception 的函數的參數傳遞
-  * 目前
-    當一個 exception 被執行的時候
-    調用這個 exception 的函數是沒法傳遞參數給這個 exception 的
-    [除非爲這個 exception 中設置全局變量]
-    其原因在於
-    當 exception 被執行的時候 參數棧已經被重置了
-    所以其實解法很簡單
-    只要提供一個函數給 exception
-    讓每個 exception 用這個函數來以明顯的方式重置參數棧就行了
-    這樣當一個 exception 被執行的時候
-    它可以
-    1. 先以未被重置時的參數棧中的值爲參數
-       這些參數可以是調用這個 exception 的函傳遞給 exception 的
-    2. 之後再以重置之後的參數棧中的值爲參數
-       這些參數是等待 exception 的函爲 exception 所準備的
+
 * 更好的錯誤處理機制 : 找不到的時候
   * 當一個 exception 找不到自己在 return-stack 中的退出點時
     應該有更好地處理方式 而不是不處理這種情況
@@ -1024,24 +1009,35 @@
    * this instruction shoud be should followed by an exception-jo
    * an extra field in exception-jo
      is dedicated to instruction,reset-stack,exception
-** instruction,reset-stack,exception  :64bit:
+** instruction,exception-reset-stack  :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+   define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
       ;; << -- >>
-
+      pop_return_stack rbx
+        mov rax, [rbx]
+        sub rax, (jo_size * 3)
+        mov pointer$argument_stack, [rax]
+      add rbx, jo_size
+      push_return_stack rbx
       next
 
    }
    #+end_src
-** instruction,reset-stack,exception      :32bit:
+** instruction,exception-reset-stack  :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+   define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
       ;; << -- >>
-
+      pop_return_stack rbx
+        mov rax, [rbx]
+        sub rax, (jo_size * 3)
+        mov rax, [rax]
+        mov [pointer$argument_stack], rax
+      add rbx, jo_size
+      push_return_stack rbx
       next
 
    }
@@ -4661,6 +4657,27 @@
        end
      ; define-function
      #+end_src
+** note buffer$colon
+   * the fact that
+     there is only one buffer dedicated to colon
+     is used to implement (current-defining-word)
+     and (current-defining-body)
+** current-defining-[word|body]
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "current-defining-word", current_defining_word
+      ;; << -- word[address, length] >>
+      xx literal, buffer$colon
+      xx literal, length$colon, fetch
+      xx string_head__word
+      xx end
+
+   define_function "current-defining-body", current_defining_body
+      ;; << -- word[address, length] >>
+      xx literal, buffer$colon
+      xx literal, length$colon, fetch
+      xx string_tail__word
+      xx end
+   #+end_src
 ** [colon|semicolon]-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "colon-string?", colon_string?
@@ -4719,6 +4736,9 @@
    cursor$colon:
       xx 0
 
+   length$colon:
+      xx 0
+
 
    define_function ":", colon
       ;; << -- string[address of buffer$colon, length] >>
@@ -4731,6 +4751,7 @@
       xx literal, cursor$colon, fetch
       xx literal, buffer$colon
       xx subtraction
+      xx dup, literal, length$colon, save
       xx end
 
 
@@ -5527,6 +5548,8 @@
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length]
       ;;    -- >>
+      xx exception_reset_stack, !undo_make_jojo
+
       xx drop_syntax_stack
 
       xx literal, string$undo_make_jojo_report

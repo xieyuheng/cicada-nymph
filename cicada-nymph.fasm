@@ -443,18 +443,29 @@ jo:
 
 match =64bit, machine {
 
-define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
    ;; << -- >>
-
+   pop_return_stack rbx
+     mov rax, [rbx]
+     sub rax, (jo_size * 3)
+     mov pointer$argument_stack, [rax]
+   add rbx, jo_size
+   push_return_stack rbx
    next
 
 }
 
 match =32bit, machine {
 
-define_primitive_function "instruction,reset-stack,exception", reset_stack_for_exception
+define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
    ;; << -- >>
-
+   pop_return_stack rbx
+     mov rax, [rbx]
+     sub rax, (jo_size * 3)
+     mov rax, [rax]
+     mov [pointer$argument_stack], rax
+   add rbx, jo_size
+   push_return_stack rbx
    next
 
 }
@@ -3302,6 +3313,20 @@ define_function "basic-REPL", basic_REPL
    xx execute_word
    xx taca, basic_REPL
 
+define_function "current-defining-word", current_defining_word
+   ;; << -- word[address, length] >>
+   xx literal, buffer$colon
+   xx literal, length$colon, fetch
+   xx string_head__word
+   xx end
+
+define_function "current-defining-body", current_defining_body
+   ;; << -- word[address, length] >>
+   xx literal, buffer$colon
+   xx literal, length$colon, fetch
+   xx string_tail__word
+   xx end
+
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
    xx literal, ':'
@@ -3341,6 +3366,9 @@ buffer$colon labeling
 cursor$colon:
    xx 0
 
+length$colon:
+   xx 0
+
 
 define_function ":", colon
    ;; << -- string[address of buffer$colon, length] >>
@@ -3353,6 +3381,7 @@ define_function ":", colon
    xx literal, cursor$colon, fetch
    xx literal, buffer$colon
    xx subtraction
+   xx dup, literal, length$colon, save
    xx end
 
 
@@ -3989,6 +4018,8 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length]
    ;;    -- >>
+   xx exception_reset_stack, !undo_make_jojo
+
    xx drop_syntax_stack
 
    xx literal, string$undo_make_jojo_report

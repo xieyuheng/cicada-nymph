@@ -240,7 +240,7 @@
 
    more,rule-set,make-jojo
    #+end_src
-* *rule-set,make-jojo* : prepare-for
+* *rule-set,make-jojo* : prepare-for & exception-reset-stack
 ** 記 異常處理
    * 在語言中設計良好的異常處理
      是鼓勵程序員寫出皮實的程序的關鍵
@@ -268,12 +268,37 @@
      end
    ; define-function
    #+end_src
+** word:exception-reset-stack?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:exception-reset-stack?
+     << word[address, length] -- bool >>
+     "exception-reset-stack" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,exception-reset-stack,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,exception-reset-stack,make-jojo
+     << string[address, length], word:exception-reset-stack --
+        string[address, length] >>
+     drop2
+     jo instruction,exception-reset-stack
+       save-into,jo-area
+     current-defining-word find-jo,through-jo-link
+     drop
+       save-into,jo-area
+     end
+   ; define-function
+   #+end_src
 ** more,rule-set,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
      << -- >>
      jo word:prepare-for?
      jo syntax,prepare-for,make-jojo
+     *rule-set,make-jojo* add-rule
+     jo word:exception-reset-stack?
+     jo syntax,exception-reset-stack,make-jojo
      *rule-set,make-jojo* add-rule
      end
    ; define-function
@@ -1913,6 +1938,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : !bye,basic-REPL
      << -- >>
+     exception-reset-stack
      drop-syntax-stack
      end
    ; define-exception
@@ -4756,6 +4782,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : !bad-path-syntax-word
      << -- >>
+     exception-reset-stack
      "* !bad-path-syntax-word" .s .l
      end
    ; define-exception
