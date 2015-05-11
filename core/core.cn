@@ -1752,19 +1752,59 @@ then
   end
 ; define-function
 
+: n-string->buffer!,loop
+  << string-1[address, length],
+     ...
+     string-2[address, length],
+     buffer, n, cursor
+     -- length >>
+  >:cursor
+  >:n
+  >:buffer
+  :n zero? if
+    :buffer
+    :cursor :buffer sub
+    string-reverse!
+    swap drop
+    end
+  then
+  dup zero? if
+    drop2
+    :buffer
+    :n sub1
+    :cursor
+    <> n-string->buffer!,loop
+  then
+  dup2 add sub1 fetch-byte :cursor save-byte
+  sub1
+  :buffer
+  :n
+  :cursor add1
+  <> n-string->buffer!,loop
+; define-function
+
+: n-string->buffer!
+  << string-1[address, length],
+     ...
+     string-2[address, length],
+     buffer, n
+     -- length >>
+  over n-string->buffer!,loop
+  end
+; define-function
+
 : input-port,open
   << path[address, length]
      -- port, true
      -- error-code, false >>
   string->syscall-string
   >:syscall-path
-  0
   0 <<
   O_RDONLY
   >>
   :syscall-path
   :syscall-number,open:
-  3 syscall
+  2 syscall
   dup
   negative? if
     false
@@ -1909,7 +1949,7 @@ then
   end
 ; define-function
 
-: file,update
+: file,write
   << string[address, length], path[address, length] -- >>
   >::path
   >::string
@@ -1928,7 +1968,7 @@ then
   3 syscall
   dup
   negative? if
-    "* (file,update) fail to open port for the following path :" .s .l
+    "* (file,write) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1940,7 +1980,7 @@ then
   3 syscall
   dup
   negative? if
-    "* (file,update) fail to write port for the following path :" .s .l
+    "* (file,write) fail to write port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -1950,9 +1990,56 @@ then
   port,close if
     end
   then
-  "* (file,update) fail to close port for the following path : " .s .l
+  "* (file,write) fail to close port for the following path : " .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
+  end
+; define-function
+
+: file,read
+  << string[address, max-length], path[address, length] -- counter >>
+  >::path
+  >::string
+  ::path
+  string->syscall-string
+  >:syscall-path
+  0 <<
+  O_RDONLY
+  >>
+  :syscall-path
+  :syscall-number,open:
+  2 syscall
+  dup
+  negative? if
+    "* (file,read) fail to open port for the following path :" .s .l
+    "  " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    0
+    end
+  then
+  >:port
+  ::string swap
+  :port
+  :syscall-number,read:
+  3 syscall
+  dup
+  negative? if
+    "* (file,read) fail to read port for the following path :" .s .l
+    "  " .s ::path .s .l
+    "  " .s error-code->string .s .l
+    0
+    end
+  then
+  >:counter << bytes been readed >>
+  :port
+  port,close if
+    :counter
+    end
+  then
+  "* (file,read) fail to close port for the following path : " .s .l
+  "  " .s ::path .s .l
+  "  " .s error-code->string .s .l
+  0
   end
 ; define-function
 
@@ -2392,7 +2479,8 @@ then
 
 : get-environment-string-variable-list
   << -- string[address, length] >>
-  *address,environment-string-variable-list* *length,environment-string-variable-list*
+  *address,environment-string-variable-list*
+  *length,environment-string-variable-list*
   end
 ; define-function
 
@@ -2413,22 +2501,20 @@ then
   :address :cursor :length
   compare-buffer not if
     :address :length
-    :cursor 0 cursor->next-matching-byte
+    :cursor 0 cursor->next-matching-byte add1
     <> find-environment-string-variable,loop
   then
-  :cursor :length fetch-byte
+  :cursor :length add fetch-byte
   "=" string-head,char
   equal? not if
     :address :length
-    :cursor 0 cursor->next-matching-byte
+    :cursor 0 cursor->next-matching-byte add1
     <> find-environment-string-variable,loop
   then
-  :cursor :length add
-  add1 >:find-address
-  :find-address
-  0 cursor->next-matching-byte
-  :find-address sub
-  >:find-length
+  :cursor :length add add1 << over "=" >>
+  >:find-address
+  :find-address 0 cursor->next-matching-byte
+  :find-address sub >:find-length
   :find-address
   :find-length
   end
@@ -2447,6 +2533,10 @@ init-pid
 init-command-line
 init-environment-string-variable-list
 
+: *home-directory*
+  "HOME" find-environment-string-variable
+; define-variable
+
 512 allocate-memory
 : *buffer,working-directory*
 ; define-variable,with-tos
@@ -2464,16 +2554,20 @@ init-environment-string-variable-list
   then
   *buffer,working-directory*
   swap
+  sub1 << for the ending zero >>
   end
 ; define-function
 
 : change-working-directory
   << directory-path[address, length] -- >>
+  >::directory-path
+  ::directory-path
   string->syscall-string
   :syscall-number,chdir:
   1 syscall
   dup negative? if
     "* (change-working-directory) fail" .s .l
+    "  can not change the working directory into : " .s ::directory-path .s .l
     "  " .s error-code->string .s .l
     end
   then
@@ -2669,38 +2763,109 @@ init-environment-string-variable-list
   end
 ; define-function
 
-: relative-path->full-path
-  << relative-path[address, length] -- full-path[address, length] >>
+: *poi-directory,user,address*
+  512 allocate-memory
+; define-variable
 
-  end
-; define-function
+: *poi-directory,user*
+  *home-directory* "/.cicada/poi"
+  *poi-directory,user,address*
+  2 n-string->buffer!
+  *poi-directory,user,address* swap
+; define-variable
+
+: *poi-directory,system*
+  "/etc/cicada/poi"
+; define-variable
 
 : poi,add
   << name[address, length], relative-path[address, length] -- >>
+  >::relative-path
+  >::name
+  512 allocate-local-memory >:buffer
+  *poi-directory,user* "/" ::name
+  :buffer
+  3 n-string->buffer!
+  >:length
+  :buffer :length
+  directory,creat
 
+  *poi-directory,user* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer!
+  >:length
+  :buffer :length
+  file,creat
+
+  512 allocate-local-memory >:address,full-path
+  get-working-directory "/" ::relative-path
+  :address,full-path
+  3 n-string->buffer! >:length,full-path
+
+  :address,full-path :length,full-path
+  :buffer :length
+  file,write
   end
 ; define-function
 
 : poi,sub
   << name[address, length] -- >>
+  >::name
+  512 allocate-local-memory >:buffer
+  *poi-directory,user* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer!
+  >:length
+  :buffer :length
+  file,remove
 
+  *poi-directory,user* "/" ::name
+  :buffer
+  3 n-string->buffer!
+  >:length
+  :buffer :length
+  directory,remove
   end
 ; define-function
 
 : poi,up
   << name[address, length], relative-path[address, length] -- >>
+  >::relative-path
+  >::name
+  512 allocate-local-memory >:buffer
+  *poi-directory,user* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer! >:length
 
+  512 allocate-local-memory >:address,full-path
+  get-working-directory "/" ::relative-path
+  :address,full-path
+  3 n-string->buffer! >:length,full-path
+
+  :address,full-path :length,full-path
+  :buffer :length
+  file,write
+  end
+; define-function
+
+: poi,ask
+  << name[address, length] -- >>
+  >::name
+  512 allocate-local-memory >:buffer
+  *poi-directory,user* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer! >:length
+
+  512 allocate-local-memory >:read-buffer
+  :read-buffer 512
+  :buffer :length
+  file,read
+  :read-buffer swap .s
   end
 ; define-function
 
 : poi,list
   << -- >>
-
-  end
-; define-function
-
-: poi,show
-  << name[address, length] -- >>
 
   end
 ; define-function

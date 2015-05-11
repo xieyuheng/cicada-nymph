@@ -3,6 +3,12 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** need more lib functions and better factoring for string processing
+** 因實現蟬語而所需要的基本函數
+   * 練習實現匯編器 爲蟬語的 VM 設計做準備
+   * 簡單的將代碼模塊化的系統
+   * GC 和 hash-table 的實驗
+** a macro for name in name-hash-table
 ** 在 primitive-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
 ** 根目錄有關的函數 應該忽略 linux 中的 "." 和 ".."
 ** 我有點不滿意 address 做爲給變元賦值的語法
@@ -53,6 +59,9 @@
 ** more design about the command-line-interface
 ** title-name-table
 ** data-giver
+** 注意 目前儘量只寫 就實現 cicada-language 而言有用的函數
+   * 也就是說
+     很多有趣的程序我都推遲再寫
 ** big number and 同餘方程
    * 爲了玩 hash-table
 * ===================================
@@ -2832,6 +2841,63 @@
      end
    ; define-function
    #+end_src
+* string
+** n-string->buffer!
+   * this function return length
+   #+begin_src cicada-nymph :tangle core.cn
+   : n-string->buffer!,loop
+     << string-1[address, length],
+        ...
+        string-2[address, length],
+        buffer, n, cursor
+        -- length >>
+     >:cursor
+     >:n
+     >:buffer
+     :n zero? if
+       :buffer
+       :cursor :buffer sub
+       string-reverse!
+       swap drop
+       end
+     then
+     dup zero? if
+       drop2
+       :buffer
+       :n sub1
+       :cursor
+       <> n-string->buffer!,loop
+     then
+     dup2 add sub1 fetch-byte :cursor save-byte
+     sub1
+     :buffer
+     :n
+     :cursor add1
+     <> n-string->buffer!,loop
+   ; define-function
+
+   : n-string->buffer!
+     << string-1[address, length],
+        ...
+        string-2[address, length],
+        buffer, n
+        -- length >>
+     over n-string->buffer!,loop
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : *test,buffer*
+     512 allocate-memory
+   ; define-variable
+
+   "/home" "/xyh" "/cicada"
+   *test,buffer*
+   3 n-string->buffer!
+   *test,buffer* swap
+   .s
+   #+end_src
 * -----------------------------------
 * port
 ** note syscall with string arguments
@@ -2889,13 +2955,12 @@
         -- error-code, false >>
      string->syscall-string
      >:syscall-path
-     0
      0 <<
      O_RDONLY
      >>
      :syscall-path
      :syscall-number,open:
-     3 syscall
+     2 syscall
      dup
      negative? if
        false
@@ -3077,8 +3142,9 @@
      --------------------------------
      * file
        1. file,creat
-       2. file,update
-       3. file,remove
+       2. file,write
+       3. file,read
+       4. file,remove
      * jotionary
        1. directory,creat
        2. directory,remove
@@ -3140,9 +3206,9 @@
      end
    ; define-function
    #+end_src
-** file,update
+** file,write
    #+begin_src cicada-nymph :tangle core.cn
-   : file,update
+   : file,write
      << string[address, length], path[address, length] -- >>
      >::path
      >::string
@@ -3161,7 +3227,7 @@
      3 syscall
      dup
      negative? if
-       "* (file,update) fail to open port for the following path :" .s .l
+       "* (file,write) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -3173,7 +3239,7 @@
      3 syscall
      dup
      negative? if
-       "* (file,update) fail to write port for the following path :" .s .l
+       "* (file,write) fail to write port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -3183,9 +3249,58 @@
      port,close if
        end
      then
-     "* (file,update) fail to close port for the following path : " .s .l
+     "* (file,write) fail to close port for the following path : " .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
+     end
+   ; define-function
+   #+end_src
+** file,read
+   #+begin_src cicada-nymph :tangle core.cn
+   : file,read
+     << string[address, max-length], path[address, length] -- counter >>
+     >::path
+     >::string
+     ::path
+     string->syscall-string
+     >:syscall-path
+     0 <<
+     O_RDONLY
+     >>
+     :syscall-path
+     :syscall-number,open:
+     2 syscall
+     dup
+     negative? if
+       "* (file,read) fail to open port for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       0
+       end
+     then
+     >:port
+     ::string swap
+     :port
+     :syscall-number,read:
+     3 syscall
+     dup
+     negative? if
+       "* (file,read) fail to read port for the following path :" .s .l
+       "  " .s ::path .s .l
+       "  " .s error-code->string .s .l
+       0
+       end
+     then
+     >:counter << bytes been readed >>
+     :port
+     port,close if
+       :counter
+       end
+     then
+     "* (file,read) fail to close port for the following path : " .s .l
+     "  " .s ::path .s .l
+     "  " .s error-code->string .s .l
+     0
      end
    ; define-function
    #+end_src
@@ -3221,13 +3336,22 @@
    ; define-function
    test,file,creat
 
-   : test,file,update
+   : test,file,write
      << -- >>
      "kkk~" file,creat
-     "kkk took my baby away !!!" "kkk~" file,update
+     "kkk took my baby away !!!" "kkk~" file,write
      end
    ; define-function
-   test,file,update
+   test,file,write
+
+   : test,file,read
+     << -- >>
+     "............................" >::string
+     ::string "kkk~" file,read .i .l
+     ::string .s
+     end
+   ; define-function
+   test,file,read
 
    : test,file,remove
      << -- >>
@@ -3847,7 +3971,8 @@
 
    : get-environment-string-variable-list
      << -- string[address, length] >>
-     *address,environment-string-variable-list* *length,environment-string-variable-list*
+     *address,environment-string-variable-list*
+     *length,environment-string-variable-list*
      end
    ; define-function
    #+end_src
@@ -3873,22 +3998,20 @@
      :address :cursor :length
      compare-buffer not if
        :address :length
-       :cursor 0 cursor->next-matching-byte
+       :cursor 0 cursor->next-matching-byte add1
        <> find-environment-string-variable,loop
      then
-     :cursor :length fetch-byte
+     :cursor :length add fetch-byte
      "=" string-head,char
      equal? not if
        :address :length
-       :cursor 0 cursor->next-matching-byte
+       :cursor 0 cursor->next-matching-byte add1
        <> find-environment-string-variable,loop
      then
-     :cursor :length add
-     add1 >:find-address
-     :find-address
-     0 cursor->next-matching-byte
-     :find-address sub
-     >:find-length
+     :cursor :length add add1 << over "=" >>
+     >:find-address
+     :find-address 0 cursor->next-matching-byte
+     :find-address sub >:find-length
      :find-address
      :find-length
      end
@@ -3908,6 +4031,12 @@
    init-pid
    init-command-line
    init-environment-string-variable-list
+   #+end_src
+** *home-directory*
+   #+begin_src cicada-nymph :tangle core.cn
+   : *home-directory*
+     "HOME" find-environment-string-variable
+   ; define-variable
    #+end_src
 * working-directory
 ** get-working-directory
@@ -3929,6 +4058,7 @@
      then
      *buffer,working-directory*
      swap
+     sub1 << for the ending zero >>
      end
    ; define-function
    #+end_src
@@ -3936,11 +4066,14 @@
    #+begin_src cicada-nymph :tangle core.cn
    : change-working-directory
      << directory-path[address, length] -- >>
+     >::directory-path
+     ::directory-path
      string->syscall-string
      :syscall-number,chdir:
      1 syscall
      dup negative? if
        "* (change-working-directory) fail" .s .l
+       "  can not change the working directory into : " .s ::directory-path .s .l
        "  " .s error-code->string .s .l
        end
      then
@@ -3954,7 +4087,7 @@
    "/home" change-working-directory
    get-working-directory .s
    #+end_src
-* >< path
+* path
 ** stat structure
    #+begin_src cicada-nymph :tangle core.cn
    0 : +stat,st_dev+        ; define-variable,with-tos
@@ -4224,22 +4357,17 @@
      end
    ; define-function
    #+end_src
-** >< relative-path->full-path
-   * note that
-     this function is using circular-string-area
-   #+begin_src cicada-nymph :tangle core.cn
-   : relative-path->full-path
-     << relative-path[address, length] -- full-path[address, length] >>
+** test
+   #+begin_src cicada-nymph
 
-     end
-   ; define-function
    #+end_src
-* >< poi
+* poi
 ** note
    * poi denotes path-organizer
      it can give a name to a path
      one path one name
    * a path as a string must not contain any space chars
+   * a name should only consist of number or letter or "-"
 ** note two directories
    * two directories to store the name path record
      1. user :
@@ -4256,21 +4384,60 @@
    * cn poi add  <name> <relative-path>
    * cn poi sub  <name>
    * cn poi up   <name> <relative-path>
-   * cn poi show <name>
+   * cn poi ask  <name>
    * cn poi list
-   * <relative-path> is converted to <full-path>
-     with the help of working-directory
    * <relative-path> is in the format of
      "./directory/file"
      "./directory/directory"
      note that
      for a <relative-path> of directory
      not tailing "/" should be added
+** *poi-directory,[user|system]*
+   #+begin_src cicada-nymph :tangle core.cn
+   : *poi-directory,user,address*
+     512 allocate-memory
+   ; define-variable
+
+   : *poi-directory,user*
+     *home-directory* "/.cicada/poi"
+     *poi-directory,user,address*
+     2 n-string->buffer!
+     *poi-directory,user,address* swap
+   ; define-variable
+
+   : *poi-directory,system*
+     "/etc/cicada/poi"
+   ; define-variable
+   #+end_src
 ** poi,add
    #+begin_src cicada-nymph :tangle core.cn
    : poi,add
      << name[address, length], relative-path[address, length] -- >>
+     >::relative-path
+     >::name
+     512 allocate-local-memory >:buffer
+     *poi-directory,user* "/" ::name
+     :buffer
+     3 n-string->buffer!
+     >:length
+     :buffer :length
+     directory,creat
 
+     *poi-directory,user* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer!
+     >:length
+     :buffer :length
+     file,creat
+
+     512 allocate-local-memory >:address,full-path
+     get-working-directory "/" ::relative-path
+     :address,full-path
+     3 n-string->buffer! >:length,full-path
+
+     :address,full-path :length,full-path
+     :buffer :length
+     file,write
      end
    ; define-function
    #+end_src
@@ -4278,31 +4445,77 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,sub
      << name[address, length] -- >>
+     >::name
+     512 allocate-local-memory >:buffer
+     *poi-directory,user* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer!
+     >:length
+     :buffer :length
+     file,remove
 
+     *poi-directory,user* "/" ::name
+     :buffer
+     3 n-string->buffer!
+     >:length
+     :buffer :length
+     directory,remove
      end
    ; define-function
    #+end_src
 ** poi,up
-   * up denotes update
    #+begin_src cicada-nymph :tangle core.cn
    : poi,up
      << name[address, length], relative-path[address, length] -- >>
+     >::relative-path
+     >::name
+     512 allocate-local-memory >:buffer
+     *poi-directory,user* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer! >:length
 
+     512 allocate-local-memory >:address,full-path
+     get-working-directory "/" ::relative-path
+     :address,full-path
+     3 n-string->buffer! >:length,full-path
+
+     :address,full-path :length,full-path
+     :buffer :length
+     file,write
      end
    ; define-function
+   #+end_src
+** poi,ask
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,ask
+     << name[address, length] -- >>
+     >::name
+     512 allocate-local-memory >:buffer
+     *poi-directory,user* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer! >:length
+
+     512 allocate-local-memory >:read-buffer
+     :read-buffer 512
+     :buffer :length
+     file,read
+     :read-buffer swap .s
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "test-cicada-play" "./play" poi,add
+   "test-cicada-play" poi,ask
+   "test-cicada-play" "./contribution" poi,up
+   "test-cicada-play" poi,ask
+   "test-cicada-play" poi,sub
+   "test-cicada-play" poi,ask
    #+end_src
 ** poi,list
    #+begin_src cicada-nymph :tangle core.cn
    : poi,list
      << -- >>
-
-     end
-   ; define-function
-   #+end_src
-** poi,show
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,show
-     << name[address, length] -- >>
 
      end
    ; define-function
@@ -4335,22 +4548,7 @@
    path: +library+ kkk main.cn ;
    "/home/xyh/.cicada/library/kkk/main.cn"
    #+end_src
-* -----------------------------------
-* module
-  * a erlang like module system
-    但是
-    於 erlang 之間的重要區別在於
-    * cicada-nymph 是純粹解釋型的語言
-      並不需要編譯文件
-  * 一個 module 就是一個 保存源代碼的文件
-    其中必須包含固定格式的元數據
-  * 元數據中包含
-    1. 如何扭曲 jotionary
-       也就是說 確實是在扭曲 jotionary
-       但是扭曲的方式可以非常靈活
-* load-file
-** 記 元數據
-   * 被加載的文件的開頭應該有元數據
+* load & need
 * -----------------------------------
 * report
 ** report-memory
