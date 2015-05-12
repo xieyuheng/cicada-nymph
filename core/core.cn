@@ -2614,15 +2614,49 @@ init-environment-variable-list
   "HOME" find-environment-variable
 ; define-variable
 
-: environment-variable,report,loop
-  << -- >>
+: report-environment-variable,loop
+  << environment-variable-list[address, length]-- >>
+  dup2 space-string? if
+    drop2
+    end
+  then
 
-  <> environment-variable,report,loop
+  >:length
+  >:address
+
+  :address :length 0 string,find-char drop add1 >:cursor
+  :cursor :address sub >:length-of-one-variable
+
+  :address
+  :length-of-one-variable sub1 .s .l
+
+  :cursor
+  :length :length-of-one-variable sub
+  <> report-environment-variable,loop
 ; define-function
 
-: environment-variable,report
+: report-environment-variable
   << -- >>
+  get-environment-variable-list
+  report-environment-variable,loop
+  end
+; define-function
 
+: report-command-line,loop
+  << command-line[address, length] -- >>
+  dup2 space-string? if
+    drop2
+    end
+  then
+  dup2 string-head,word .s 32 .b
+  string-tail,word
+  <> report-command-line,loop
+; define-function
+
+: report-command-line
+  << -- >>
+  get-command-line
+  report-command-line,loop
   end
 ; define-function
 
@@ -3325,7 +3359,6 @@ jo syntax,path:,basic-REPL
   string-head,word .s .l
   "  good bye ^-^/" .s .l
   bye
-  end
 ; define-function
 
 : command-line,stack-REPL
@@ -3354,9 +3387,51 @@ jo syntax,path:,basic-REPL
 
 : command-line,poi
   << -- >>
-  "* poi byebye" .s .l
+  get-command-line
+  string-tail,word
+  string-tail,word >::command-line
+  ::command-line space-string? if
+    poi,help
+    bye
+  then
+  ::command-line string-head,word >::sub-function-name
+  ::command-line string-tail,word >::command-line-arguments
+  ::sub-function-name "add" string-equal? if
+    ::command-line-arguments string-head,word
+    ::command-line-arguments string-tail,word string-head,word
+    poi,add
+    bye
+  then
+  ::sub-function-name "sub" string-equal? if
+    ::command-line-arguments string-head,word
+    poi,sub
+    bye
+  then
+  ::sub-function-name "up" string-equal? if
+    ::command-line-arguments string-head,word
+    ::command-line-arguments string-tail,word string-head,word
+    poi,up
+    bye
+  then
+  ::sub-function-name "find" string-equal? if
+    ::command-line-arguments string-head,word
+    poi,find if
+      .s .l
+    else
+      "no found" .s .l
+    then
+    bye
+  then
+  ::sub-function-name "list" string-equal? if
+    poi,list
+    bye
+  then
+  "* (poi) meets argument that (poi) can not understand" .s .l
+  "  it is the following command-line that is confusing (poi) :" .s .l
+  "    " .s report-command-line .l
+  "  you can type  cn poi  to get some help info" .s .l
+  "  good bye ^-^/" .s .l
   bye
-  end
 ; define-function
 
 : command-line,no-function
