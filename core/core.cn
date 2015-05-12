@@ -191,7 +191,7 @@ allocate-memory
   << name -- string[address, length] >>
   name->address
   fetch
-  address->primitive-string
+  address->name-string
   end
 ; define-function
 

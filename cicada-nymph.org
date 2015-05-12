@@ -3,19 +3,9 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** find a better way to protect reading-stack
-   * now
-     "1 2 3 add add . jo" eval-string
-     will crush the interpreter
-** protect on the overloading of a variety of memories
-** better naming of headings
-** add more notes about the limitations of the program
-** add more notes about exception handling on io functions
-** optimize local-variable by new instruction
+** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
 ** change the interface of *name-string-area* :maybe:
-** make instruction a type of jo      :maybe:
-   this is needed when doing report of the jotionary
 * ===================================
 * note
 ** notation
@@ -36,6 +26,7 @@
      "string-reverse"
      "string-equal?"
    * side-effect of structured data is postfixed by "!"
+   * exception is prefix be "!"
 ** convention in assembly code
    * using underline to compose big word from small words
    * using "$" as prefix and postfix separator
@@ -118,141 +109,30 @@
     * about comment
       * the comment of the argument & return value of function
         is allowed to be written in free style normal comment
-* note instar
-** 1st-instar
-   * indirect-threaded-code interpreter
-     1. macro about argument_stack & return_stack
-     2. macro about jo & jojo
-     3. macro about next
-     4. the way to do memory allocation
-     5. begin_to_interpret_threaded_code
-     6. little_test
-** 2ed-instar
-   * instruction as special primitive function
-     1. literal
-     2. address
-   * and primitive functions about
-     1. the stack
-     2. bool
-     3. fixnum
-     4. memory
-   * and taca for explicit tail-call
-   * false?branch and taca are needed for "power"
-** 3rd-instar
-   * primitive function about io
-     1. write_byte
-     2. read_byte
-** 4th-instar
-   * more function about io
-     1. about word
-     2. about string
-     3. about number
-   * more function
-     1. jo
-     2. char
-     3. buffer
-   * more in epilog
-     1. last_link
-   * function about jotionary
-     1. find
-     2. execute-word
-   * basic-REPL as postfix-notation function executer
-     1. basic-REPL
-** 5th-instar
-   * type of jo
-   * more in epilog
-     1. *current-free-address,name-string-area*
-   * colon semicolon
-     1. ":" and ";" are used to read a string of words for compiler
-        [looks like bar-ket but special]
-     2. comment is handled here
-        "<< >>" as the only way to do comment
-   * compiler
-     * make-jojo
-       and macro for make-jojo
-       1. macro system
-       2. exception handling system
-     * function about definition
-       which leave data into memory
-** 6th-instar
-   * local-variable
-* 記 數據結構與口總結
-** jojo
-   * jo 的數組
-     每個數組外加一些元數據
-** jotionary of jojo
-   * 單項鏈接的鏈表
-** name-string
-** argument-stack
-** return-stack
-   * jo 的詮釋者
-     決定了 如何入這個棧
-   * 結尾詞
-     決定了 如何出這個棧
-** syntax-stack
-** reading-stack
-** local-variable-table
-   * 只有一個 local-variable-table
-     用以在編譯時期解決局部變元的名與值的對應
-     這個數據結構被 syntax__local_variable_save__make_jojo
-     和 syntax__local_variable_fetch__make_jojo 所使用
-   * 其中保存
-     * offset-in-local-jo
-     * length-of-string
-     * address-of-string
-   * 並且每次在定義一個新的函數體的時候
-     這個 local-variable-table 會被初始化
-   * 基本的接口是
-     * clear
-       清空 offset 和 border
-     * insert
-       插入字符串 和 offset-in-local-jo
-     * find
-       通過字符串尋找 offset-in-local-jo
-     有兩個全局變量幫助實現這些接口
-     * cursor
-       每次 find 的時候使用一個新的 cursor 來做循環
-     * border
-       insert 會擴大 border
-       find 以 border 爲邊界
-     另外 還有一個全局變量
-     * offset
-       用以計算 offset-in-local-jo
-* 記 性狀總結
-** 自動管理加載文件時所使用的搜索路徑列表
-   * 原理如下
-     * 在 cicada-nymph 中 load 一個 file 的時候
-       需要指定出這個 被 load 的 file 的路徑
-     * 維護一個需要被搜索的路徑的列表
-       以使得 load 的 file 的時候
-       不必使用完整的路徑
-     * 提供自動管理搜索路徑的機制
-   * 維護搜索路徑的列表的方式是
-     利用文件系統中的一個某個固定路徑
-     也就是說 只有唯一的一個需要被找到的路徑
-     而其他的路徑都是被自動管理的
-     這個路徑將有一個默認值
-     並且可以被環境變量覆蓋
-   * 限制加載文件的方式
-     使得只能使用所提供的動態管理機制來加載文件
-     這樣就可以減輕理解這個系統的困難
-** >< 局部變元
 * note problem
-** about div                          :bug:
+** memory                             :limit:
+   * need to protect the overloading of a variety of memories
+** reading-stack                      :limit:
+   * need to find a better way to protect reading-stack
+   * now
+     "1 2 3 add add . jo" eval-string
+     will crush the interpreter
+** div                                :bug:
    * div can not handle the following
      -8 2 div .
-** about inline comment               :bug:
+** inline comment                     :bug:
    * inline comment such as
      add1 << dup . >> swap
      will be viewed as
      add1swap
-** about comment in string            :bug:
+** comment in string                  :bug:
    * << >> can not be in ""
-** about stack                        :limit:
+** stack                              :limit:
    * there are 64 positions below the all those stacks
      when you are belowing-stack so much
      bad things happen
-** string-reverse! can not apply on empty-string :bug:
+** string-reverse!                    :bug:
+   * string-reverse! can not apply on empty-string
 * ===================================
 * prolog
 ** ----------------------------------
@@ -504,7 +384,11 @@
    #+end_src
 ** ----------------------------------
 * return_stack
-** ----------------------------------
+** 記
+   * jo 的詮釋者
+     決定了 如何入這個棧
+   * 結尾詞
+     決定了 如何出這個棧
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$return_stack = 1024 * 1024 * jo_size
@@ -513,7 +397,6 @@
    address$return_stack labeling
       preserve size$return_stack
    #+end_src
-** ----------------------------------
 ** pointer                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -541,7 +424,6 @@
 
    }
    #+end_src
-** ----------------------------------
 ** pointer                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
@@ -589,7 +471,6 @@
 
    }
    #+end_src
-** ----------------------------------
 * -----------------------------------
 * next
   #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6134,6 +6015,33 @@
    k2 << 9 10 >>
    #+end_src
 * local-variable-table
+** 記
+   * 只有一個 local-variable-table
+     用以在編譯時期解決局部變元的名與值的對應
+     這個數據結構被 syntax__local_variable_save__make_jojo
+     和 syntax__local_variable_fetch__make_jojo 所使用
+   * 其中保存
+     * offset-in-local-jo
+     * length-of-string
+     * address-of-string
+   * 並且每次在定義一個新的函數體的時候
+     這個 local-variable-table 會被初始化
+   * 基本的接口是
+     * clear
+       清空 offset 和 border
+     * insert
+       插入字符串 和 offset-in-local-jo
+     * find
+       通過字符串尋找 offset-in-local-jo
+     有兩個全局變量幫助實現這些接口
+     * cursor
+       每次 find 的時候使用一個新的 cursor 來做循環
+     * border
+       insert 會擴大 border
+       find 以 border 爲邊界
+     另外 還有一個全局變量
+     * offset
+       用以計算 offset-in-local-jo
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$local_variable_table = 100 * 1024

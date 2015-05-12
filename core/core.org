@@ -3,49 +3,28 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** need more lib functions about string processing and better factoring for string processing
-** 因實現蟬語而所需要的基本函數
-   * 練習實現匯編器 爲蟬語的 VM 設計做準備
-   * 簡單的將代碼模塊化的系統
-   * GC 和 hash-table 的實驗
-** [maybe] a way to remove magic numbers [not variable, but file by file like erlang ?]
-** 在 name-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
-** 我有點不滿意 address 做爲給變元賦值的語法
-   * 也許應該換一個詞
-     因爲 address 這個詞 對於 variable-jo 而言 太一般了
-   * 也許整個 全局 variable 的機制都應該改變
-     比如允許 variable 中存儲 string
-** what happens when executing (end) in REPL ? :question:
-** only one error-code->string is not enough
-** about load-file
-   * nested load-file
-     a stack of allocate buffers in another local-byte
-     the previous local-byte maybe should be called local-jo
-   * load-file should maintain a list of loaded files
-     what else meta data should be maintained ?
-     can them make up a well module system ?
-** little-tester                      :needed:
-** home-path & search-path to load files
-   * poi denotes path-organizer
-   * 實現 條件性的被解釋的代碼
-     這樣就能實現
-     1. little-tester
-     2. 在不同的平臺下執行不同的代碼
-** debug-REPL
-** language-level support for creating and managing processes
 ** more design about the command-line-interface
+** little-tester [於命令行工具還有 load 相結合] :needed:
+** design a way to remove magic numbers [not variable, but file by file like erlang ?]
+** need more lib functions about string processing and better factoring for string processing
 ** title-name-table
-** data-giver
-** 注意 目前儘量只寫 就實現 cicada-language 而言有用的函數
-   * 也就是說
-     很多有趣的程序我都推遲再寫
-** big number and 同餘方程
-   * 爲了玩 hash-table
+** debug-REPL                         :maybe:
+** language-level support for creating and managing processes :maybe:
 * ===================================
 * note
-** notation
-   * use ","
-** data section in cicada-nymph
+** 注意 目前儘量只寫 就實現 cicada-language 而言有用的函數[特性]
+   * 也就是說 很多有趣的程序我都推遲再寫
+     在這個準則下不被實現的有趣函數[特性]
+     1. big number
+     2. 同餘方程
+     3. data section
+   * 而所需要的函數如下
+     1. 練習實現匯編器 爲蟬語的 VM 設計做準備
+     2. 簡單的將代碼模塊化的系統
+     3. GC 和 hash-table 的實驗
+* note problem
+** 在 name-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
+** only one error-code->string is not enough
 * ===================================
 * writers
 ** note name of writers
@@ -2126,6 +2105,12 @@
      things are different from function body
      and there is no such thing as
      the end of a function body in the REPL
+** note executing (end) in REPL
+   * when executing (end) in REPL
+     nothing will happen
+     this is because (execute-word) calls (end)
+     and the jojo (execute-word) is pop out of return-stack
+     just like meet (end) in the function-body of (execute-word)
 ** syntax,if,basic-REPL,meet-true
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,if,basic-REPL,meet-true,else
@@ -4967,6 +4952,7 @@
      you need to configure path by (poi)
      then
      load the code you want by using path-syntax
+   * load-file should maintain a list of loaded files
 * -----------------------------------
 * report
 ** report-memory

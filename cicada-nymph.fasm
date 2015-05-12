@@ -291,7 +291,7 @@ end$name_string_area:
 
 current_free_address$name_string_area = address$name_string_area
 
-macro make_primitive_string string {
+macro make_name_string string {
 
 virtual at 0
 .start$string:
@@ -322,7 +322,7 @@ define_function__#jo:
 name__#jo:
    xx current_free_address$name_string_area
 
-   make_primitive_string string
+   make_name_string string
 
 link__#jo:
    xx link
@@ -351,7 +351,7 @@ define_primitive_function__#jo:
 name__#jo:
    xx current_free_address$name_string_area
 
-   make_primitive_string string
+   make_name_string string
 
 link__#jo:
    xx link
@@ -377,7 +377,7 @@ length__#jo:
 name__#jo:
    xx current_free_address$name_string_area
 
-   make_primitive_string string
+   make_name_string string
 
 link__#jo:
    xx link
@@ -428,7 +428,7 @@ define_exception__#jo:
 name__#jo:
    xx current_free_address$name_string_area
 
-   make_primitive_string string
+   make_name_string string
 
 link__#jo:
    xx link
@@ -631,7 +631,7 @@ define_function "jo->name", jo_to_name
    xx literal, jo_size, subtraction
    xx literal, jo_size, subtraction
    xx fetch
-   xx address_to_primitive_string
+   xx address_to_name_string
    xx end
 
 define_function "jo->link", jo_to_link
@@ -678,7 +678,7 @@ define_variable "*size,name-string-area*", V__size__name_string_area
 ;; *current-free-address,name-string-area*
 ;; is at epilog
 
-define_function "address->primitive-string", address_to_primitive_string
+define_function "address->name-string", address_to_name_string
    ;; << address -- string[address, length] >>
    xx dup
    xx literal, 2, addition  ;; address
@@ -1063,7 +1063,7 @@ define_function "little_test", little_test
    ;;;; type 123
    ;;;; exit code 123
 
-   ;;;; use jo_to_name to test the macro make_primitive_string
+   ;;;; use jo_to_name to test the macro make_name_string
    ;; xx literal, jo_to_name, jo_to_name, write_string
    ;; xx literal, 10, write_byte
    ;; xx literal, addition, jo_to_name, write_string
