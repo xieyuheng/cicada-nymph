@@ -9,7 +9,7 @@
    * 簡單的將代碼模塊化的系統
    * GC 和 hash-table 的實驗
 ** [maybe] a way to remove magic numbers [not variable, but file by file like erlang ?]
-** 在 primitive-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
+** 在 name-string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
 ** 我有點不滿意 address 做爲給變元賦值的語法
    * 也許應該換一個詞
      因爲 address 這個詞 對於 variable-jo 而言 太一般了
@@ -374,7 +374,7 @@
      |-------------------------------+------------------------------|
      |                               | note                         |
      |-------------------------------+------------------------------|
-     | primitive-string              | 0 denotes                    |
+     | name-string                   | 0 denotes                    |
      | [address]                     | name not used                |
      |-------------------------------+------------------------------|
      | title                         | 0 denotes                    |
@@ -433,7 +433,7 @@
      << name -- string[address, length] >>
      name->address
      fetch
-     address->primitive-string
+     address->name-string
      end
    ; define-function
    #+end_src
@@ -479,17 +479,17 @@
    #+end_src
 ** name,save-string
    * note that
-     primitive-string-area is used
+     name-string-area is used
    * currently (name,save-string) is to
-     copy string into primitive-string-area
+     copy string into name-string-area
      maybe a better interface should be designed for this
      for some strings are already staticly allocated
    #+begin_src cicada-nymph :tangle core.cn
    : name,save-string
      << string[address, length], name -- >>
-     *current-free-address,primitive-string-area*
+     *current-free-address,name-string-area*
      xx|swap|xx
-     save-into,primitive-string-area
+     save-into,name-string-area
      swap
      name->address
      save
@@ -987,10 +987,10 @@
      << variable, string[address, length] -- >>
      1 save-into,jo-area
 
-     *current-free-address,primitive-string-area*
+     *current-free-address,name-string-area*
        save-into,jo-area
      dup2 string-head,word
-       save-into,primitive-string-area
+       save-into,name-string-area
 
      *first-jo-in-jotionary*
      jo->link
@@ -1012,10 +1012,10 @@
    #+begin_src cicada-nymph :tangle core.cn
    : define-exception
      << string[address, length] -- >>
-     *current-free-address,primitive-string-area* xx|swap|x
+     *current-free-address,name-string-area* xx|swap|x
      *current-free-address,jo-area* xx|swap|x
      *first-jo-in-jotionary* xx|swap|x
-     << *current-free-address,primitive-string-area*
+     << *current-free-address,name-string-area*
         *current-free-address,jo-area*
         *first-jo-in-jotionary*
         string[address, length] >>
@@ -1025,10 +1025,10 @@
 
      0 save-into,jo-area
 
-     *current-free-address,primitive-string-area*
+     *current-free-address,name-string-area*
        save-into,jo-area
      dup2 string-head,word
-       save-into,primitive-string-area
+       save-into,name-string-area
 
      *first-jo-in-jotionary*
      jo->link
@@ -1056,10 +1056,10 @@
    #+begin_src cicada-nymph :tangle core.cn
    : define-function
      << string[address, length] -- >>
-     *current-free-address,primitive-string-area* xx|swap|x
+     *current-free-address,name-string-area* xx|swap|x
      *current-free-address,jo-area* xx|swap|x
      *first-jo-in-jotionary* xx|swap|x
-     << *current-free-address,primitive-string-area*
+     << *current-free-address,name-string-area*
         *current-free-address,jo-area*
         *first-jo-in-jotionary*
         string[address, length] >>
@@ -1067,10 +1067,10 @@
        !undo-make-jojo
        end
 
-     *current-free-address,primitive-string-area*
+     *current-free-address,name-string-area*
        save-into,jo-area
      dup2 string-head,word
-       save-into,primitive-string-area
+       save-into,name-string-area
 
      *first-jo-in-jotionary*
      jo->link
@@ -2221,7 +2221,7 @@
 * *rule-set,basic-REPL* : double-quote
 ** *circular-string-area*
    * no length in the area anymore
-     [not like the primitive-string-area]
+     [not like the name-string-area]
    * and ending each string here with a 0
    #+begin_src cicada-nymph :tangle core.cn
    1024 1024 mul
@@ -2647,10 +2647,10 @@
      :buffer
      syntax,double-quote,define-variable,loop
      >:cursor
-     *current-free-address,primitive-string-area* add2 >:address
+     *current-free-address,name-string-area* add2 >:address
      :buffer
      :cursor :buffer sub dup >:length
-     save-into,primitive-string-area
+     save-into,name-string-area
      :address
      :length
      end
@@ -2699,10 +2699,10 @@
      :variable-length
        save-into,jo-area
 
-     *current-free-address,primitive-string-area*
+     *current-free-address,name-string-area*
        save-into,jo-area
      ::variable-name
-       save-into,primitive-string-area
+       save-into,name-string-area
 
      *first-jo-in-jotionary*
      jo->link
@@ -4986,18 +4986,18 @@
           *current-free-address,un-initialized-memory*
           *un-initialized-memory*
           sub sub . .l
-     "* *primitive-string-area*" .s .l
+     "* *name-string-area*" .s .l
      "  * size : " .s
-          *size,primitive-string-area*
+          *size,name-string-area*
           . .l
      "  * used : " .s
-          *current-free-address,primitive-string-area*
-          *primitive-string-area*
+          *current-free-address,name-string-area*
+          *name-string-area*
           sub . .l
      "  * free : " .s
-          *size,primitive-string-area*
-          *current-free-address,primitive-string-area*
-          *primitive-string-area*
+          *size,name-string-area*
+          *current-free-address,name-string-area*
+          *name-string-area*
           sub sub . .l
      "* *jo-area*" .s .l
      "  * size : " .s

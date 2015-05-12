@@ -280,16 +280,16 @@ macro next \{
 ;; initial link to point to 0 (as null)
 link = 0
 
-address$primitive_string_area:
+address$name_string_area:
    times 64 * 1024 db 0
 
 address$core_file:
    file "core/core.cn"
 end$core_file:
 
-end$primitive_string_area:
+end$name_string_area:
 
-current_free_address$primitive_string_area = address$primitive_string_area
+current_free_address$name_string_area = address$name_string_area
 
 macro make_primitive_string string {
 
@@ -300,17 +300,17 @@ virtual at 0
    dw (.end$string - .start$string)
    load .length word from (.end$string)
 finish virtual
-store word .length at (current_free_address$primitive_string_area)
+store word .length at (current_free_address$name_string_area)
 
-current_free_address$primitive_string_area = current_free_address$primitive_string_area + 2
+current_free_address$name_string_area = current_free_address$name_string_area + 2
 
 repeat .length
    virtual at 0
       db string
       load .char byte from (% - 1)
    finish virtual
-   store byte .char at (current_free_address$primitive_string_area)
-   current_free_address$primitive_string_area = current_free_address$primitive_string_area + 1
+   store byte .char at (current_free_address$name_string_area)
+   current_free_address$name_string_area = current_free_address$name_string_area + 1
 finish repeat
 
 }
@@ -320,7 +320,7 @@ macro define_function string, jo {
 define_function__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_area
+   xx current_free_address$name_string_area
 
    make_primitive_string string
 
@@ -349,7 +349,7 @@ macro define_primitive_function string, jo {
 define_primitive_function__#jo:
 
 name__#jo:
-   xx current_free_address$primitive_string_area
+   xx current_free_address$name_string_area
 
    make_primitive_string string
 
@@ -375,7 +375,7 @@ length__#jo:
    xx 1
 
 name__#jo:
-   xx current_free_address$primitive_string_area
+   xx current_free_address$name_string_area
 
    make_primitive_string string
 
@@ -426,7 +426,7 @@ define_exception__#jo:
    xx 0
 
 name__#jo:
-   xx current_free_address$primitive_string_area
+   xx current_free_address$name_string_area
 
    make_primitive_string string
 
@@ -669,13 +669,13 @@ define_function "jo->type", jo_to_type
    xx fetch
    xx end
 
-define_variable "*primitive-string-area*", V__primitive_string_area
-   xx address$primitive_string_area
+define_variable "*name-string-area*", V__name_string_area
+   xx address$name_string_area
 
-define_variable "*size,primitive-string-area*", V__size__primitive_string_area
-   xx (end$primitive_string_area - address$primitive_string_area)
+define_variable "*size,name-string-area*", V__size__name_string_area
+   xx (end$name_string_area - address$name_string_area)
 
-;; *current-free-address,primitive-string-area*
+;; *current-free-address,name-string-area*
 ;; is at epilog
 
 define_function "address->primitive-string", address_to_primitive_string
@@ -3528,20 +3528,20 @@ address$jo_area labeling
 define_variable "*current-free-address,jo-area*", V__current_free_address__jo_area
    xx address$jo_area
 
-define_function "save-into,primitive-string-area", save_into__primitive_string_area
+define_function "save-into,name-string-area", save_into__name_string_area
    ;; << string[address, length] -- >>
-   xx dup, V__current_free_address__primitive_string_area
+   xx dup, V__current_free_address__name_string_area
    xx save_two_bytes
 
    xx literal, 2
-   xx address, V__current_free_address__primitive_string_area
+   xx address, V__current_free_address__name_string_area
    xx add_save
 
    xx tuck
-   xx V__current_free_address__primitive_string_area
+   xx V__current_free_address__name_string_area
    xx string_to_buffer!
 
-   xx address, V__current_free_address__primitive_string_area
+   xx address, V__current_free_address__name_string_area
    xx add_save
    xx end
 
@@ -3960,10 +3960,10 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    ;; address
    xx   literal, literal
    xx     save_into__jo_area
-   xx   V__current_free_address__primitive_string_area, add2
+   xx   V__current_free_address__name_string_area, add2
    xx     save_into__jo_area
    xx   xoverxx, over
-   xx     save_into__primitive_string_area
+   xx     save_into__name_string_area
 
    ;; length
    xx   literal, literal
@@ -4048,7 +4048,7 @@ define_function "make-jojo,loop", make_jojo__loop
    xx taca, make_jojo__loop
 
 define_exception "!undo-make-jojo", !undo_make_jojo
-   ;; << old V__current_free_address__primitive_string_area
+   ;; << old V__current_free_address__name_string_area
    ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length]
@@ -4068,7 +4068,7 @@ define_exception "!undo-make-jojo", !undo_make_jojo
 
    xx address, V__first_jo_in_jotionary, save
    xx address, V__current_free_address__jo_area, save
-   xx address, V__current_free_address__primitive_string_area
+   xx address, V__current_free_address__name_string_area
    xx save
    xx end
 
@@ -4081,10 +4081,10 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string_area, xxswapx
+   xx V__current_free_address__name_string_area, xxswapx
    xx V__current_free_address__jo_area, xxswapx
    xx V__first_jo_in_jotionary, xxswapx
-   ;; << old V__current_free_address__primitive_string_area
+   ;; << old V__current_free_address__name_string_area
    ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
@@ -4094,10 +4094,10 @@ define_function "define-function", CICADA__define_function
    xx   !undo_make_jojo
    xx   end
 
-   xx V__current_free_address__primitive_string_area
+   xx V__current_free_address__name_string_area
    xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_area
+   xx   save_into__name_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
@@ -4122,10 +4122,10 @@ define_function "define-function", CICADA__define_function
 
 define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
-   xx V__current_free_address__primitive_string_area, xxswapx
+   xx V__current_free_address__name_string_area, xxswapx
    xx V__current_free_address__jo_area, xxswapx
    xx V__first_jo_in_jotionary, xxswapx
-   ;; << old V__current_free_address__primitive_string_area
+   ;; << old V__current_free_address__name_string_area
    ;;    old V__current_free_address__jo_area
    ;;    old V__first_jo_in_jotionary
    ;;    string[address, length] >>
@@ -4135,10 +4135,10 @@ define_function "define-exception", CICADA__define_exception
    xx   !undo_make_jojo
    xx   end
 
-   xx V__current_free_address__primitive_string_area
+   xx V__current_free_address__name_string_area
    xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_area
+   xx   save_into__name_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
@@ -4166,10 +4166,10 @@ define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    xx literal, 1
    xx   save_into__jo_area
 
-   xx V__current_free_address__primitive_string_area
+   xx V__current_free_address__name_string_area
    xx   save_into__jo_area
    xx dup2, string_head__word
-   xx   save_into__primitive_string_area
+   xx   save_into__name_string_area
 
    xx V__first_jo_in_jotionary
    xx jo_to_link
@@ -4764,8 +4764,8 @@ define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
 define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
   xx current_free_address$un_initialized_memory
 
-define_variable "*current-free-address,primitive-string-area*", V__current_free_address__primitive_string_area
-   xx current_free_address$primitive_string_area
+define_variable "*current-free-address,name-string-area*", V__current_free_address__name_string_area
+   xx current_free_address$name_string_area
 
 last_link = link
 
