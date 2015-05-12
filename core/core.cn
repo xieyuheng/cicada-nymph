@@ -1477,6 +1477,10 @@ jo syntax,address,basic-REPL
   end
 ; define-function
 
+jo stack-REPL
+address *lost-exception-REPL*
+save
+
 : list-rule,loop
   << rule-set, cursor, counter -- >>
   xx|over|x equal? if

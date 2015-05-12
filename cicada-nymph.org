@@ -2,10 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* some functions to write string as helper functions in assembly
-* 更好的錯誤處理機制 : 找不到的時候
-  * 當一個 exception 找不到自己在 return-stack 中的退出點時
-    應該有更好地處理方式 而不是不處理這種情況
 * change *primitive-string-area* to *string-area* and change the interface
 * todo
 ** find a better way to protect reading-stack
@@ -1014,6 +1010,19 @@
    * this instruction shoud be should followed by an exception-jo
    * an extra field in exception-jo
      is dedicated to instruction,reset-stack,exception
+** *lost-exception-REPL*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*lost-exception-REPL*", V__lost_exception_REPL
+      xx basic_REPL
+
+   string$lost_exception_REPL:
+      db "* an exception has lost itself", 10
+      db "  the function-jo stored in *lost-exception-REPL*", 10
+      db "  is reseted to", 10
+      db "  as a top-level-REPL", 10
+   .end:
+   length$lost_exception_REPL = (.end - string$lost_exception_REPL)
+   #+end_src
 ** instruction,exception-reset-stack  :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -1099,7 +1108,15 @@
       next
 
    .not_found:
-      call __exit_with_six
+      mov rax, string$lost_exception_REPL
+      push_argument_stack rax
+      mov rax, length$lost_exception_REPL
+      push_argument_stack rax
+      call __write_string
+
+      mov rax, [V__lost_exception_REPL + jo_size]
+      push_argument_stack rax
+      call (reset_top_level_REPL + jo_size)
 
    }
    #+end_src
@@ -1156,7 +1173,15 @@
       next
 
    .not_found:
-      call __exit_with_six
+      mov rax, string$lost_exception_REPL
+      push_argument_stack rax
+      mov rax, length$lost_exception_REPL
+      push_argument_stack rax
+      call __write_string
+
+      mov rax, [V__lost_exception_REPL + jo_size]
+      push_argument_stack rax
+      call (reset_top_level_REPL + jo_size)
 
       }
    #+end_src
@@ -1438,48 +1463,78 @@
       is actually a loop now
 * -----------------------------------
 * helper function in assembly code
-** ----------------------------------
-** __exit_with_TOS                    :64bit:linux:
+** __exit_with_tos                    :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   __exit_with_TOS:
+   __exit_with_tos:
+      ;; << exit-code -- >>
       pop_argument_stack linux64_sys_1_rdi
       mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
    }
+
+   match =linux =32bit, platform machine {
+
+   __exit_with_tos:
+      ;; << exit-code -- >>
+      pop_argument_stack linux32_sys_1_ebx
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
    #+end_src
-** __exit_with_zero                   :64bit:linux:
+** __exit_with_zero                   :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
    __exit_with_zero:
+      ;; << -- >>
       xor linux64_sys_1_rdi, linux64_sys_1_rdi
       mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
    }
+
+   match =linux =32bit, platform machine {
+
+   __exit_with_zero:
+      ;; << -- >>
+      xor linux32_sys_1_ebx, linux32_sys_1_ebx
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
    #+end_src
-** __exit_with_six                    :64bit:linux:
+** __exit_with_six                    :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
    __exit_with_six:
+      ;; << -- >>
       mov linux64_sys_1_rdi, 6
       mov linux64_sys_n_rax, linux64_syscall_exit
       syscall
 
    }
+
+   match =linux =32bit, platform machine {
+
+   __exit_with_six:
+      ;; << -- >>
+      mov linux32_sys_1_ebx, 6
+      mov linux32_sys_n_eax, linux32_syscall_exit
+      syscall
+
+   }
    #+end_src
-** __print_string                     :64bit:linux:
+** __write_string                     :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =64bit, platform machine {
 
-   __print_string:
+   __write_string:
       ;; << address, length -- >>
-      ;; write can not just write the char in al to stdout
-      ;; write needs the address of the byte to write
       pop_argument_stack linux64_sys_3_rdx     ;; max length to be write
       pop_argument_stack linux64_sys_2_rsi     ;; address
       mov linux64_sys_1_rdi, 1                 ;; stdout
@@ -1488,69 +1543,11 @@
       ret
 
    }
-   #+end_src
-** __reset_argument_stack             :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
 
-   __reset_argument_stack:
-      mov pointer$argument_stack,  address$argument_stack
-      ret
-
-   }
-   #+end_src
-** __reset_return_stack               :64bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =64bit, platform machine {
-
-   __reset_return_stack:
-      mov pointer$return_stack,    address$return_stack
-      ret
-
-   }
-   #+end_src
-** ----------------------------------
-** __exit_with_TOS                    :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
    match =linux =32bit, platform machine {
 
-   __exit_with_TOS:
-      pop_argument_stack linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_zero                   :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __exit_with_zero:
-      xor linux32_sys_1_ebx, linux32_sys_1_ebx
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __exit_with_six                    :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __exit_with_six:
-      mov linux32_sys_1_ebx, 6
-      mov linux32_sys_n_eax, linux32_syscall_exit
-      syscall
-
-   }
-   #+end_src
-** __print_string                     :32bit:linux:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =linux =32bit, platform machine {
-
-   __print_string:
+   __write_string:
       ;; << address, length -- >>
-      ;; write can not just write the char in al to stdout
-      ;; write needs the address of the byte to write
       pop_argument_stack linux32_sys_3_edx     ;; max length to be write
       pop_argument_stack linux32_sys_2_ecx     ;; address
       mov linux32_sys_1_ebx, 1                 ;; stdout
@@ -1560,32 +1557,52 @@
 
    }
    #+end_src
-** __reset_argument_stack             :32bit:linux:
+** __reset_argument_stack             :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __reset_argument_stack:
+      ;; << -- >>
+      mov pointer$argument_stack,  address$argument_stack
+      ret
+
+   }
+
    match =linux =32bit, platform machine {
 
    __reset_argument_stack:
+      ;; << -- >>
       mov rax, address$argument_stack
       mov [pointer$argument_stack], rax
       ret
 
    }
    #+end_src
-** __reset_return_stack               :32bit:linux:
+** __reset_return_stack               :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =linux =64bit, platform machine {
+
+   __reset_return_stack:
+      ;; << -- >>
+      mov pointer$return_stack,    address$return_stack
+      ret
+
+   }
+
    match =linux =32bit, platform machine {
 
    __reset_return_stack:
+      ;; << -- >>
       mov rax, address$return_stack
       mov [pointer$return_stack], rax
       ret
 
    }
    #+end_src
-** ----------------------------------
 ** __reset_local_jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    __reset_local_jo:
+      ;; << -- >>
       mov rax, address$local_jo
       mov [current_free_address$local_jo], rax
       ret
@@ -1593,11 +1610,11 @@
 ** __reset_local_byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    __reset_local_byte:
+      ;; << -- >>
       mov rax, address$local_byte
       mov [current_free_address$local_byte], rax
       ret
    #+end_src
-** ----------------------------------
 * -----------------------------------
 * *the-story-begin*
 ** ----------------------------------
@@ -1678,7 +1695,7 @@
       mov rcx, length$report_return_stack_is_empty_and_exit
       push_argument_stack rax
       push_argument_stack rcx
-      call __print_string
+      call __write_string
       call __exit_with_zero
 
    jojo_for__report_return_stack_is_empty_and_exit:
@@ -1716,7 +1733,7 @@
 ** exit_with_TOS a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "bye", exit_with_TOS
-      call __exit_with_TOS
+      call __exit_with_tos
    #+end_src
 ** ----------------------------------
 ** little_test

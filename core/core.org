@@ -2434,6 +2434,20 @@
      end
    ; define-function
      #+end_src
+* *lost-exception-REPL*
+** reset *lost-exception-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo stack-REPL
+   address *lost-exception-REPL*
+   save
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : function-with-lost-exception
+     !undo-make-jojo
+   ; define-function
+   function-with-lost-exception
+   #+end_src
 * -----------------------------------
 * test endianness of n-fetch & n-save
   * big-endian is used
