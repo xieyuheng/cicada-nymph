@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* some functions to write string as helper functions in assembly
 * 更好的錯誤處理機制 : 找不到的時候
   * 當一個 exception 找不到自己在 return-stack 中的退出點時
     應該有更好地處理方式 而不是不處理這種情況
@@ -925,6 +926,10 @@
         這些參數可以是調用這個 (!exception) 的函傳遞給 (!exception) 的
      2. 之後再以重置之後的參數棧中的值爲參數
         這些參數是等待 (!exception) 的函爲 (!exception) 所準備的
+** 記 找不到時
+   * 用一個全局變量記錄一個函數 在找不到的時候調用
+     這樣 再解釋器中實現了 debug-REPL 時
+     就可以在此調用 debug-REPL
 ** note
    * explain$exception will
      1. search the return-stack for that exception
@@ -1432,7 +1437,7 @@
       it is clear how the example function
       is actually a loop now
 * -----------------------------------
-* helper function in assembly
+* helper function in assembly code
 ** ----------------------------------
 ** __exit_with_TOS                    :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5904,6 +5909,17 @@
    * 改代碼並調整對輔助函數的使用
      就被稱作是 "re-factoring"
      即 函數的因子的重新分解
+* 記 關於分支結構
+  * 對 包含 >:name 的函數體的處理是純線性的
+    根本沒有考慮到 函數體中 因 if else then 而產生的分支結構
+    但是這並不會引起錯誤
+    原因如下
+  * 對 >:name 和 :name 的處理是純粹在編譯時期進行的
+  * 所保證的特性是
+    1. 每一個 name 在 一個函數體中的出現
+       都是在編譯時期對 local-jo 的 一個 offset 的分配
+    2. 同一個 name 在 一個函數體中的出現
+       會得到相同的 offset
 * local-jo
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm

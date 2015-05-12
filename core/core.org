@@ -17,10 +17,6 @@
      比如允許 variable 中存儲 string
 ** what happens when executing (end) in REPL ? :question:
 ** only one error-code->string is not enough
-** 分析局部變元的良好性               :question:
-   * 對 包含 >:name 的函數體的純線性處理
-     當遇到 if 所形成的分支的時候
-     會不會有問題 ???
 ** about load-file
    * nested load-file
      a stack of allocate buffers in another local-byte
