@@ -2,9 +2,10 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* loading-stack
 * let functions about (poi) to use predicate [as I promised]
   * thus better info can be printed in the command-line-interface
+* (poi,help)
+* better design of the command-line-interface
 * un-named function
   * 我發現我已經可以使用 map 了
     爲了實現 un-named function
@@ -28,12 +29,14 @@
   * 關於具體實現有以下問題需要注意
     即
     局部變量一定要能夠在 匿名的 jojo 中被使用
+  * (loop) 和 (recur) 也要能夠在 匿名的 jojo 中被使用
   * cicada-language 還是必要的嘛 ?
     cicada-nymph 就足夠了 ?
     需要回顧一下 cicada-language 的筆記
     調和一下兩個語義的差異
+* better syntax for low-level structure [C structure]
+* loading-stack
 * todo
-** better design of the command-line-interface
 ** little-tester [於命令行工具還有 load 相結合] :needed:
 ** design a way to remove magic numbers [not variable, but file by file like erlang ?]
 ** need more lib functions about string processing and better factoring for string processing
@@ -85,6 +88,16 @@
      write-byte
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : kkk
+     "kkk took my baby away !" .s
+     .l
+     end
+   ; define-function
+
+   kkk
    #+end_src
 * -----------------------------------
 * *rule-set,make-jojo* : if & else & then
@@ -153,16 +166,40 @@
      end
    ; define-function
    #+end_src
-** test if & else & then [by factorial]
+** test if & else & then
    #+begin_src cicada-nymph
-   : kkk
-     "kkk took my baby away !" .s
-     .l
+   : .12
+     << 1 2 -- >>
+     2 equal? if
+       "(^-^)" .s
+       1 equal? if
+         "\^o^/" .s
+       else
+         "     " .s
+       then
+     else
+       "     " .s
+       1 equal? if
+         "\^o^/" .s
+       else
+         "     " .s
+       then
+     then
      end
    ; define-function
 
-   kkk
-
+   : .12,test
+     .l
+     1 2 .12 .l
+     6 2 .12 .l
+     1 6 .12 .l
+     6 6 .12 .l
+     end
+   ; define-function
+   .12,test
+   #+end_src
+** test if & else & then [by factorial]
+   #+begin_src cicada-nymph
    : factorial
      << number -- number >>
      dup
@@ -198,51 +235,7 @@
      20 factorial . .l
      end
    ; define-function
-
-   : .12
-     << 1 2 -- >>
-     2 equal? if
-       "(^-^)" .s
-       1 equal? if
-         "\^o^/" .s
-       else
-         "     " .s
-       then
-     else
-       "     " .s
-       1 equal? if
-         "\^o^/" .s
-       else
-         "     " .s
-       then
-     then
-     end
-   ; define-function
-
-   : .12,test
-     .l
-     1 2 .12 .l
-     6 2 .12 .l
-     1 6 .12 .l
-     6 6 .12 .l
-     end
-   ; define-function
-
-
    factorial,test
-   .12,test
-   #+end_src
-** more,rule-set,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : more,rule-set,make-jojo
-     << -- >>
-     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-     end
-   ; define-function
-
-   more,rule-set,make-jojo
    #+end_src
 * *rule-set,make-jojo* : prepare-for & exception-reset-stack
 ** 記 異常處理
@@ -406,6 +399,10 @@
   #+begin_src cicada-nymph :tangle core.cn
   : more,rule-set,make-jojo
     << -- >>
+    jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+    jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+    jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+
     jo word:prepare-for?
     jo syntax,prepare-for,make-jojo
     *rule-set,make-jojo* add-rule
@@ -417,12 +414,8 @@
     jo syntax,save-to,make-jojo
     *rule-set,make-jojo* add-rule
 
-    jo word:loop?
-    jo syntax,loop,make-jojo
-    *rule-set,make-jojo* add-rule
-    jo word:recur?
-    jo syntax,recur,make-jojo
-    *rule-set,make-jojo* add-rule
+    jo word:loop?  jo syntax,loop,make-jojo  *rule-set,make-jojo* add-rule
+    jo word:recur? jo syntax,recur,make-jojo *rule-set,make-jojo* add-rule
     end
   ; define-function
 
@@ -711,12 +704,12 @@
        drop 0 << re-start from 0 >>
      then
      xx|over|x
-     string-head,char over
+     string-head,byte over
      2 swap power
      mul
      x|swap|xxxx add xxx|swap|x
      add1 xx|swap|x
-     string-tail,char x|swap|xx
+     string-tail,byte x|swap|xx
      loop
    ; define-function
 
@@ -1316,11 +1309,11 @@
    : test,remove-char!
      << -- >>
      "2#1001_1001"
-     "_" string-head,char
+     "_" string-head,byte
      remove-char! .s << 2#1001_1001 >>
      .l
      "___2#1001___1001___"
-     "_" string-head,char
+     "_" string-head,byte
      remove-char! .s << 2#1001_1001 >>
      .l
      end
@@ -1331,16 +1324,16 @@
    #+begin_src cicada-nymph :tangle core.cn
    : latin-char?
      << char -- bool >>
-     dup "A" string-head,char less-than? false?branch 4
+     dup "A" string-head,byte less-than? false?branch 4
        drop false
        end
-     dup "Z" string-head,char less-or-equal? false?branch 4
+     dup "Z" string-head,byte less-or-equal? false?branch 4
        drop true
        end
-     dup "a" string-head,char less-than? false?branch 4
+     dup "a" string-head,byte less-than? false?branch 4
        drop false
        end
-     dup "z" string-head,char less-or-equal? false?branch 4
+     dup "z" string-head,byte less-or-equal? false?branch 4
        drop true
        end
      drop false
@@ -1351,26 +1344,26 @@
    #+begin_src cicada-nymph :tangle core.cn
    : latin-char->number
      << latin-char -- number >>
-     dup "A" string-head,char less-than? if
+     dup "A" string-head,byte less-than? if
        "* (latin-char->number) the argument must be a latin-char" .s .l
        "  but the following char is less-than 'A' : " .s
        .i .l
        end
      then
-     dup "Z" string-head,char less-or-equal? if
-       "A" string-head,char
+     dup "Z" string-head,byte less-or-equal? if
+       "A" string-head,byte
        sub
        10 add
        end
      then
-     dup "a" string-head,char less-than? if
+     dup "a" string-head,byte less-than? if
        "* (latin-char->number) the argument must be a latin-char" .s .l
        "  but the following char is less-than 'a' but greater-then 'Z' : " .s
        .i .l
        end
      then
-     dup "z" string-head,char less-or-equal? if
-       "a" string-head,char
+     dup "z" string-head,byte less-or-equal? if
+       "a" string-head,byte
        sub
        10 add
        end
@@ -1386,7 +1379,7 @@
    : number->latin-char
      << number -- latin-char >>
      10 sub
-     "a" string-head,char
+     "a" string-head,byte
      add
      end
    ; define-function
@@ -1403,7 +1396,7 @@
      dup digit-char?
      swap latin-char?
      or if
-       string-tail,char
+       string-tail,byte
        loop
      then
      drop2
@@ -1419,10 +1412,10 @@
        drop2 false
        end
      then
-     dup2 string-head,char
-     "-" string-head,char
+     dup2 string-head,byte
+     "-" string-head,byte
      equal? if
-       string-tail,char
+       string-tail,byte
        wild-digit-string?
        end
      then
@@ -1463,14 +1456,14 @@
      :string-address
      string->buffer!
      :string-address swap
-     "_" string-head,char
+     "_" string-head,byte
      remove-char!
      >:new-string-length
      >:new-string-address
      << dup2 .s .l 0 end >>
      :new-string-address
      :new-string-length
-     "#" string-head,char
+     "#" string-head,byte
      string,find-char if
      else
        false
@@ -1528,7 +1521,7 @@
      >:address
      :address
      :length
-     "#" string-head,char
+     "#" string-head,byte
      string,find-char if
      else
        "* (base#wild-integer-string->base-string)" .s .l
@@ -1554,7 +1547,7 @@
      >:address
      :address
      :length
-     "#" string-head,char
+     "#" string-head,byte
      string,find-char if
      else
        "* (base#wild-integer-string->wild-integer-string)" .s .l
@@ -1639,10 +1632,10 @@
        0
        end
      then
-     dup2 string-head,char
-     "-" string-head,char
+     dup2 string-head,byte
+     "-" string-head,byte
      equal? if
-       string-tail,char
+       string-tail,byte
        -1 >:sign
      else
        1 >:sign
@@ -1666,7 +1659,7 @@
      tuck :address string->buffer!
        >:length
      :address :length
-     "_" string-head,char remove-char!
+     "_" string-head,byte remove-char!
        >::string
      ::string
      base#wild-integer-string->base-string
@@ -4279,7 +4272,7 @@
        loop
      then
      :cursor :length add fetch-byte
-     "=" string-head,char
+     "=" string-head,byte
      equal? not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
@@ -4708,7 +4701,7 @@
        false
        end
      then
-     string-head,char
+     string-head,byte
      47 equal? not
      end
    ; define-function
@@ -4723,7 +4716,7 @@
        false
        end
      then
-     string-head,char
+     string-head,byte
      47 equal?
      end
    ; define-function
@@ -4949,13 +4942,13 @@
        end
      then
      over fetch-byte
-     "+" string-head,char equal? not if
+     "+" string-head,byte equal? not if
        drop2
        false
        end
      then
      add sub1 fetch-byte
-     "+" string-head,char equal?
+     "+" string-head,byte equal?
      end
    ; define-function
    #+end_src
@@ -5113,7 +5106,7 @@
 
      :cursor :length add
        dup
-       "/" string-head,char
+       "/" string-head,byte
        swap
        save-byte
      add1

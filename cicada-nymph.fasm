@@ -2866,12 +2866,12 @@ define_function "string-equal?", string_equal?
    xx false
    xx end
 
-define_function "string-head,char", string_head__char
+define_function "string-head,byte", string_head__byte
    ;; << string[address, length] -- char >>
    xx drop, fetch_byte
    xx end
 
-define_function "string-tail,char", string_tail__char
+define_function "string-tail,byte", string_tail__byte
    ;; << string[address, length] -- [address + 1, length + 1] >>
    xx sub1, swap
    xx add1
@@ -2948,7 +2948,7 @@ define_function "char-string?", char_string?
    xx   drop2, drop
    xx   false
    xx   end
-   xx string_head__char, equal?, false?branch, 3
+   xx string_head__byte, equal?, false?branch, 3
    xx   true
    xx   end
    xx false
@@ -2960,10 +2960,10 @@ define_function "zero-string?", zero_string?
    xx   drop2, true
    xx   end
    xx dup2
-   xx string_head__char, literal, '-', equal?, false?, false?branch, 4
+   xx string_head__byte, literal, '-', equal?, false?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx string_tail__char, literal, '0', char_string?
+   xx string_tail__byte, literal, '0', char_string?
    xx end
 
 define_function "digit-string?", digit_string?
@@ -2972,7 +2972,7 @@ define_function "digit-string?", digit_string?
    xx   drop2, true
    xx   end
    xx over, fetch_byte, digit_char?, false?branch, 4
-   xx   string_tail__char
+   xx   string_tail__byte
    xx   taca, digit_string?
    xx drop2, false
    xx end
@@ -2985,8 +2985,8 @@ define_function "integer-string?", integer_string?
    xx dup2, literal, '-', char_string?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx dup2, string_head__char, literal, '-', equal?, false?branch, 4
-   xx   string_tail__char
+   xx dup2, string_head__byte, literal, '-', equal?, false?branch, 4
+   xx   string_tail__byte
    xx   digit_string?
    xx   end
    xx digit_string?
@@ -3017,7 +3017,7 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx   drop2
    xx   end
 
-   xx dup2, string_head__char, digit_char_to_number
+   xx dup2, string_head__byte, digit_char_to_number
    xx   literal, 10
    xx   literal, counter$digit_string_to_number, fetch
    xx     one
@@ -3029,15 +3029,15 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx literal, sum$digit_string_to_number
    xx add_save
 
-   xx string_tail__char
+   xx string_tail__byte
    xx taca, help__digit_string_to_number
 
 define_function "string->integer", string_to_integer
    ;; << string[address, length] -- integer >>
-   xx dup2, string_head__char, literal, '-', equal?, false?, false?branch, 3
+   xx dup2, string_head__byte, literal, '-', equal?, false?, false?branch, 3
    xx   digit_string_to_number
    xx   end
-   xx string_tail__char
+   xx string_tail__byte
    xx digit_string_to_number
    xx negate
    xx end
@@ -3056,7 +3056,7 @@ define_function "string,find-char", string__find_char
   xx   true
   xx   end
   xx xxswapx
-  xx string_tail__char
+  xx string_tail__byte
   xx xswapxx
   xx taca, string__find_char
 
@@ -3212,8 +3212,8 @@ define_function "space-string?", space_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, true
    xx   end
-   xx dup2, string_head__char, space_char?, false?branch, 4
-   xx   string_tail__char
+   xx dup2, string_head__byte, space_char?, false?branch, 4
+   xx   string_tail__byte
    xx   taca, space_string?
    xx drop2, false
    xx end
@@ -3223,10 +3223,10 @@ define_function "string->word-begin", string_to_word_begin
    xx dup, zero?, false?branch, 2
    ;;   no error handling
    xx   end
-   xx dup2, string_head__char
+   xx dup2, string_head__byte
    xx space_char?, false?, false?branch, 2
    xx   end
-   xx string_tail__char
+   xx string_tail__byte
    xx taca, string_to_word_begin
 
 define_function "string->word-end", string_to_word_end
@@ -3234,9 +3234,9 @@ define_function "string->word-end", string_to_word_end
    xx dup, zero?, false?branch, 2
    ;;   no error handling
    xx   end
-   xx dup2, string_head__char
+   xx dup2, string_head__byte
    xx bar_ket_char?, false?branch, 3
-   xx   string_tail__char
+   xx   string_tail__byte
    xx   end
    xx help__string_to_word_end
    xx end
@@ -3246,13 +3246,13 @@ define_function "help,string->word-end", help__string_to_word_end
    xx dup, zero?, false?branch, 2
    ;;   no error handling
    xx   end
-   xx dup2, string_head__char
+   xx dup2, string_head__byte
    xx space_char?, false?branch, 2
    xx   end
-   xx dup2, string_head__char
+   xx dup2, string_head__byte
    xx bar_ket_char?, false?branch, 2
    xx   end
-   xx string_tail__char
+   xx string_tail__byte
    xx taca, help__string_to_word_end
 
 define_function "string-head,word", string_head__word
@@ -3976,7 +3976,7 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    xx   addition
    xx   swap
 
-   xx   string_tail__char ;; over the ending double-quote
+   xx   string_tail__byte ;; over the ending double-quote
    xx   end
 
    .not_found:
@@ -4385,12 +4385,12 @@ define_function "count-front-colon,loop", count_front_colon__loop
    xx over, zero?, false?branch, 4
    xx   xxswapx, drop2
    xx   end
-   xx xxoverx, string_head__char
+   xx xxoverx, string_head__byte
    xx literal, ':', equal?, false?, false?branch, 4
    xx   xxswapx, drop2
    xx   end
    xx add1, xxswapx
-   xx string_tail__char, xswapxx
+   xx string_tail__byte, xswapxx
    xx taca, count_front_colon__loop
 
 define_function "local-variable-fetch-string?", local_variable_fetch_string?
@@ -4457,11 +4457,11 @@ define_function "local-variable-save-string?", local_variable_save_string?
    xx equal?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx dup2, string_head__char
+   xx dup2, string_head__byte
    xx literal, '>', equal?, false?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx string_tail__char
+   xx string_tail__byte
    xx dup2, count_front_colon
    xx dup, literal, 0, greater_than?, false?, false?branch, 5
    xx   drop, drop2, false
@@ -4474,7 +4474,7 @@ define_function "local-variable-save-string?", local_variable_save_string?
 define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
-   xx string_tail__char
+   xx string_tail__byte
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
    ;;   literal, <offese>, literal, n, n_save__local_jo

@@ -72,16 +72,6 @@
   end
 ; define-function
 
-: more,rule-set,make-jojo
-  << -- >>
-  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-  end
-; define-function
-
-more,rule-set,make-jojo
-
 : word:prepare-for?
   << word[address, length] -- bool >>
   "prepare-for" string-equal?
@@ -173,6 +163,10 @@ more,rule-set,make-jojo
 
 : more,rule-set,make-jojo
   << -- >>
+  jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
+  jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
+  jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
+
   jo word:prepare-for?
   jo syntax,prepare-for,make-jojo
   *rule-set,make-jojo* add-rule
@@ -184,12 +178,8 @@ more,rule-set,make-jojo
   jo syntax,save-to,make-jojo
   *rule-set,make-jojo* add-rule
 
-  jo word:loop?
-  jo syntax,loop,make-jojo
-  *rule-set,make-jojo* add-rule
-  jo word:recur?
-  jo syntax,recur,make-jojo
-  *rule-set,make-jojo* add-rule
+  jo word:loop?  jo syntax,loop,make-jojo  *rule-set,make-jojo* add-rule
+  jo word:recur? jo syntax,recur,make-jojo *rule-set,make-jojo* add-rule
   end
 ; define-function
 
@@ -362,12 +352,12 @@ allocate-memory
     drop 0 << re-start from 0 >>
   then
   xx|over|x
-  string-head,char over
+  string-head,byte over
   2 swap power
   mul
   x|swap|xxxx add xxx|swap|x
   add1 xx|swap|x
-  string-tail,char x|swap|xx
+  string-tail,byte x|swap|xx
   loop
 ; define-function
 
@@ -809,16 +799,16 @@ init,name-hash-table,nymph-jo
 
 : latin-char?
   << char -- bool >>
-  dup "A" string-head,char less-than? false?branch 4
+  dup "A" string-head,byte less-than? false?branch 4
     drop false
     end
-  dup "Z" string-head,char less-or-equal? false?branch 4
+  dup "Z" string-head,byte less-or-equal? false?branch 4
     drop true
     end
-  dup "a" string-head,char less-than? false?branch 4
+  dup "a" string-head,byte less-than? false?branch 4
     drop false
     end
-  dup "z" string-head,char less-or-equal? false?branch 4
+  dup "z" string-head,byte less-or-equal? false?branch 4
     drop true
     end
   drop false
@@ -827,26 +817,26 @@ init,name-hash-table,nymph-jo
 
 : latin-char->number
   << latin-char -- number >>
-  dup "A" string-head,char less-than? if
+  dup "A" string-head,byte less-than? if
     "* (latin-char->number) the argument must be a latin-char" .s .l
     "  but the following char is less-than 'A' : " .s
     .i .l
     end
   then
-  dup "Z" string-head,char less-or-equal? if
-    "A" string-head,char
+  dup "Z" string-head,byte less-or-equal? if
+    "A" string-head,byte
     sub
     10 add
     end
   then
-  dup "a" string-head,char less-than? if
+  dup "a" string-head,byte less-than? if
     "* (latin-char->number) the argument must be a latin-char" .s .l
     "  but the following char is less-than 'a' but greater-then 'Z' : " .s
     .i .l
     end
   then
-  dup "z" string-head,char less-or-equal? if
-    "a" string-head,char
+  dup "z" string-head,byte less-or-equal? if
+    "a" string-head,byte
     sub
     10 add
     end
@@ -860,7 +850,7 @@ init,name-hash-table,nymph-jo
 : number->latin-char
   << number -- latin-char >>
   10 sub
-  "a" string-head,char
+  "a" string-head,byte
   add
   end
 ; define-function
@@ -875,7 +865,7 @@ init,name-hash-table,nymph-jo
   dup digit-char?
   swap latin-char?
   or if
-    string-tail,char
+    string-tail,byte
     loop
   then
   drop2
@@ -889,10 +879,10 @@ init,name-hash-table,nymph-jo
     drop2 false
     end
   then
-  dup2 string-head,char
-  "-" string-head,char
+  dup2 string-head,byte
+  "-" string-head,byte
   equal? if
-    string-tail,char
+    string-tail,byte
     wild-digit-string?
     end
   then
@@ -908,14 +898,14 @@ init,name-hash-table,nymph-jo
   :string-address
   string->buffer!
   :string-address swap
-  "_" string-head,char
+  "_" string-head,byte
   remove-char!
   >:new-string-length
   >:new-string-address
   << dup2 .s .l 0 end >>
   :new-string-address
   :new-string-length
-  "#" string-head,char
+  "#" string-head,byte
   string,find-char if
   else
     false
@@ -952,7 +942,7 @@ init,name-hash-table,nymph-jo
   >:address
   :address
   :length
-  "#" string-head,char
+  "#" string-head,byte
   string,find-char if
   else
     "* (base#wild-integer-string->base-string)" .s .l
@@ -976,7 +966,7 @@ init,name-hash-table,nymph-jo
   >:address
   :address
   :length
-  "#" string-head,char
+  "#" string-head,byte
   string,find-char if
   else
     "* (base#wild-integer-string->wild-integer-string)" .s .l
@@ -1033,10 +1023,10 @@ init,name-hash-table,nymph-jo
     0
     end
   then
-  dup2 string-head,char
-  "-" string-head,char
+  dup2 string-head,byte
+  "-" string-head,byte
   equal? if
-    string-tail,char
+    string-tail,byte
     -1 >:sign
   else
     1 >:sign
@@ -1058,7 +1048,7 @@ init,name-hash-table,nymph-jo
   tuck :address string->buffer!
     >:length
   :address :length
-  "_" string-head,char remove-char!
+  "_" string-head,byte remove-char!
     >::string
   ::string
   base#wild-integer-string->base-string
@@ -2671,7 +2661,7 @@ then
     loop
   then
   :cursor :length add fetch-byte
-  "=" string-head,char
+  "=" string-head,byte
   equal? not if
     :address :length
     :cursor 0 cursor->next-matching-byte add1
@@ -2970,7 +2960,7 @@ init-environment-variable-list
     false
     end
   then
-  string-head,char
+  string-head,byte
   47 equal? not
   end
 ; define-function
@@ -2982,7 +2972,7 @@ init-environment-variable-list
     false
     end
   then
-  string-head,char
+  string-head,byte
   47 equal?
   end
 ; define-function
@@ -3174,13 +3164,13 @@ init-environment-variable-list
     end
   then
   over fetch-byte
-  "+" string-head,char equal? not if
+  "+" string-head,byte equal? not if
     drop2
     false
     end
   then
   add sub1 fetch-byte
-  "+" string-head,char equal?
+  "+" string-head,byte equal?
   end
 ; define-function
 
@@ -3265,7 +3255,7 @@ init-environment-variable-list
 
   :cursor :length add
     dup
-    "/" string-head,char
+    "/" string-head,byte
     swap
     save-byte
   add1
