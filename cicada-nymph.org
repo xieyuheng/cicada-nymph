@@ -1,4 +1,4 @@
-#+TITLE:  小蟬語 / cicada-nymph
+#+TITLE:  小蟬 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 

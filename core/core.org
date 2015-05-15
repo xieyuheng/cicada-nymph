@@ -1,11 +1,7 @@
-#+TITLE:  小蟬語核 / core of cicada-nymph
+#+TITLE:  小蟬之核 / core of cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* let functions about (poi) to use predicate [as I promised]
-  * thus better info can be printed in the command-line-interface
-* (poi,help)
-* better design of the command-line-interface
 * un-named function
   * 我發現我已經可以使用 map 了
     爲了實現 un-named function
@@ -4750,96 +4746,6 @@
      *poi-directory,user,address* swap
    ; define-variable
    #+end_src
-** poi,add
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,add
-     << name[address, length], relative-path[address, length] -- >>
-     >::relative-path
-     >::name
-
-     ::relative-path relative-path? not if
-       "* (poi,add) the argument must be a relative-path" .s .l
-       "  but the following is not : " .s ::relative-path .s .l
-       end
-     then
-
-     512 allocate-local-memory >:buffer
-     *poi-directory* "/" ::name
-     :buffer
-     3 n-string->buffer!
-     >:length
-     :buffer :length
-     directory,creat
-
-     *poi-directory* "/" ::name "/path"
-     :buffer
-     4 n-string->buffer!
-     >:length
-     :buffer :length
-     file,creat
-
-     512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
-     :address,full-path
-     3 n-string->buffer! >:length,full-path
-
-     :address,full-path :length,full-path
-     :buffer :length
-     file,write
-     end
-   ; define-function
-   #+end_src
-** poi,sub
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,sub
-     << name[address, length] -- >>
-     >::name
-     512 allocate-local-memory >:buffer
-     *poi-directory* "/" ::name "/path"
-     :buffer
-     4 n-string->buffer! >:length
-
-     :buffer :length
-     file,remove
-
-     *poi-directory* "/" ::name
-     :buffer
-     3 n-string->buffer!
-     >:length
-     :buffer :length
-     directory,remove
-     end
-   ; define-function
-   #+end_src
-** poi,up
-   #+begin_src cicada-nymph :tangle core.cn
-   : poi,up
-     << name[address, length], relative-path[address, length] -- >>
-     >::relative-path
-     >::name
-
-     ::relative-path relative-path? not if
-       "* (poi,up) the argument must be a relative-path" .s .l
-       "  but the following is not : " .s ::relative-path .s .l
-       end
-     then
-
-     512 allocate-local-memory >:buffer
-     *poi-directory* "/" ::name "/path"
-     :buffer
-     4 n-string->buffer! >:length
-
-     512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
-     :address,full-path
-     3 n-string->buffer! >:length,full-path
-
-     :address,full-path :length,full-path
-     :buffer :length
-     file,write
-     end
-   ; define-function
-   #+end_src
 ** poi,find
    * note that
      this function uses *circular-string-area*
@@ -4877,6 +4783,130 @@
      end
    ; define-function
    #+end_src
+** poi,add
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,add
+     << name[address, length], relative-path[address, length] -- >>
+     >::relative-path
+     >::name
+
+     ::relative-path relative-path? not if
+       "* (poi,add) the argument must be a relative-path" .s .l
+       "  but the following is not : " .s ::relative-path .s .l
+       end
+     then
+
+     ::relative-path path,directory? not if
+       "* (poi,add) the argument must be a relative-path to a existing directory" .s .l
+       "  but the following path is not to a directory : " .s ::relative-path .s .l
+       end
+     then
+
+     ::name poi,find if
+       "* (poi,add) can not add" .s .l
+       "  for the following poi already exist : " .s ::name .s .l
+       "  name is use as the following directory's name : " .s .s .l
+       end
+     then
+
+     512 allocate-local-memory >:buffer
+     *poi-directory* "/" ::name
+     :buffer
+     3 n-string->buffer!
+     >:length
+     :buffer :length
+     directory,creat
+
+     *poi-directory* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer!
+     >:length
+     :buffer :length
+     file,creat
+
+     512 allocate-local-memory >:address,full-path
+     get-work-directory "/" ::relative-path
+     :address,full-path
+     3 n-string->buffer! >:length,full-path
+
+     :address,full-path :length,full-path
+     :buffer :length
+     file,write
+     end
+   ; define-function
+   #+end_src
+** poi,sub
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,sub
+     << name[address, length] -- >>
+     >::name
+
+     ::name poi,find not if
+       "* (poi,sub) can not sub" .s .l
+       "  for the following poi does not exist : " .s ::name .s .l
+       end
+     then
+     >::named-directory
+
+     512 allocate-local-memory >:buffer
+     *poi-directory* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer! >:length
+
+     :buffer :length
+     file,remove
+
+     *poi-directory* "/" ::name
+     :buffer
+     3 n-string->buffer!
+     >:length
+     :buffer :length
+     directory,remove
+     end
+   ; define-function
+   #+end_src
+** poi,up
+   #+begin_src cicada-nymph :tangle core.cn
+   : poi,up
+     << name[address, length], relative-path[address, length] -- >>
+     >::relative-path
+     >::name
+
+     ::relative-path relative-path? not if
+       "* (poi,up) the argument must be a relative-path" .s .l
+       "  but the following is not : " .s ::relative-path .s .l
+       end
+     then
+
+     ::relative-path path,directory? not if
+       "* (poi,up) the argument must be a relative-path to a existing directory" .s .l
+       "  but the following directory is not exist : " .s ::relative-path .s .l
+       end
+     then
+
+     ::name poi,find not if
+       "* (poi,up) can not up" .s .l
+       "  for the following poi does not exist : " .s ::name .s .l
+       end
+     then
+     >::named-directory
+
+     512 allocate-local-memory >:buffer
+     *poi-directory* "/" ::name "/path"
+     :buffer
+     4 n-string->buffer! >:length
+
+     512 allocate-local-memory >:address,full-path
+     get-work-directory "/" ::relative-path
+     :address,full-path
+     3 n-string->buffer! >:length,full-path
+
+     :address,full-path :length,full-path
+     :buffer :length
+     file,write
+     end
+   ; define-function
+   #+end_src
 ** poi,list
    #+begin_src cicada-nymph :tangle core.cn
    : poi,list,lister
@@ -4898,7 +4928,8 @@
          end
        then
 
-       "  " .s ::name .s " : " .s
+       "  * " .s ::name .s .l
+       "      " .s
 
        *poi-directory* "/" ::name "/path"
        :path-buffer
@@ -4927,8 +4958,12 @@
    #+begin_src cicada-nymph :tangle core.cn
    : poi,help
      << -- >>
-     "* (poi,help) :" .s .l
-     "  poi" .s .l
+     "* (poi,help)" .s .l
+     "  * cn poi add  <new-name> <relative-path-to-existing-directory>" .s .l
+     "  * cn poi sub  <old-name>" .s .l
+     "  * cn poi up   <old-name> <relative-path-to-existing-directory>" .s .l
+     "  * cn poi find <old-name>" .s .l
+     "  * cn poi list" .s .l
      end
    ; define-function
    #+end_src
@@ -5395,29 +5430,40 @@
      get-command-line
      string-tail,word
      string-tail,word >::command-line
+
      ::command-line space-string? if
        poi,help
        bye
      then
+
      ::command-line string-head,word >::sub-function-name
      ::command-line string-tail,word >::command-line-arguments
+
+     ::sub-function-name "help" string-equal? if
+       poi,help
+       bye
+     then
+
      ::sub-function-name "add" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
        poi,add
        bye
      then
+
      ::sub-function-name "sub" string-equal? if
        ::command-line-arguments string-head,word
        poi,sub
        bye
      then
+
      ::sub-function-name "up" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
        poi,up
        bye
      then
+
      ::sub-function-name "find" string-equal? if
        ::command-line-arguments string-head,word
        poi,find if
@@ -5427,14 +5473,17 @@
        then
        bye
      then
+
      ::sub-function-name "list" string-equal? if
        poi,list
        bye
      then
+
      "* (poi) meets argument that (poi) can not understand" .s .l
      "  it is the following command-line that is confusing (poi) :" .s .l
      "    " .s report-command-line .l
-     "  you can type  cn poi  to get some help info" .s .l
+     "  to get some help info  you can type :" .s .l
+     "    cn poi help" .s .l
      "  good bye ^-^/" .s .l
      bye
    ; define-function
