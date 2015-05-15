@@ -2,8 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* since I have (current-defining-word) I can do a better version of <>
-  (recur) and (loop) as two syntax for make-jojo
 * loading-stack
 * let functions about (poi) to use predicate [as I promised]
   * thus better info can be printed in the command-line-interface
@@ -155,7 +153,7 @@
      end
    ; define-function
    #+end_src
-** test if & else & then
+** test if & else & then [by factorial]
    #+begin_src cicada-nymph
    : kkk
      "kkk took my baby away !" .s
@@ -321,6 +319,89 @@
      end
    ; define-function
    #+end_src
+* *rule-set,make-jojo* : loop
+** word:loop?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:loop?
+     << word[address, length] -- bool >>
+     "loop" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,loop,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,loop,make-jojo
+     << string[address, length], word:loop --
+        string[address, length] >>
+     drop2
+     jo <>
+       save-into,jo-area
+     current-defining-word find-jo,through-jo-link
+     drop
+       save-into,jo-area
+     end
+   ; define-function
+   #+end_src
+* *rule-set,make-jojo* : recur
+** word:recur?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:recur?
+     << word[address, length] -- bool >>
+     "recur" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,recur,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,recur,make-jojo
+     << string[address, length], word:recur --
+        string[address, length] >>
+     drop2
+     current-defining-word find-jo,through-jo-link
+     drop
+       save-into,jo-area
+     end
+   ; define-function
+   #+end_src
+** test recur [by factorial]
+   #+begin_src cicada-nymph
+   : factorial
+     << number -- number >>
+     dup
+     one? if
+       end
+     then
+     dup sub1 recur mul
+     end
+   ; define-function
+
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+
+   factorial,test
+   #+end_src
 * more,rule-set,make-jojo
   #+begin_src cicada-nymph :tangle core.cn
   : more,rule-set,make-jojo
@@ -334,6 +415,13 @@
 
     jo word:save-to?
     jo syntax,save-to,make-jojo
+    *rule-set,make-jojo* add-rule
+
+    jo word:loop?
+    jo syntax,loop,make-jojo
+    *rule-set,make-jojo* add-rule
+    jo word:recur?
+    jo syntax,recur,make-jojo
     *rule-set,make-jojo* add-rule
     end
   ; define-function
@@ -357,7 +445,7 @@
      0 over save
      add1 swap
      sub1 swap
-     <> clear-memory
+     loop
    ; define-function
    #+end_src
 ** allocate-memory
@@ -629,7 +717,7 @@
      x|swap|xxxx add xxx|swap|x
      add1 xx|swap|x
      string-tail,char x|swap|xx
-     <> string->finite-carry-sum,loop
+     loop
    ; define-function
 
    : string->finite-carry-sum
@@ -667,7 +755,7 @@
      then
      ::string
      :number :counter add1
-     <> name-hash-table,search,loop
+     loop
    ; define-function
 
    : name-hash-table,search
@@ -713,7 +801,7 @@
      then
      ::string
      :number :counter add1
-     <> name-hash-table,insert,loop
+     loop
    ; define-function
 
    : name-hash-table,insert
@@ -777,7 +865,8 @@
      else
        drop
      then
-     add1 <> name-hash-table,report,orbit
+     add1
+     loop
    ; define-function
 
    : name-hash-table,report,loop
@@ -800,7 +889,8 @@
        dup 1 name-hash-table,report,orbit
      then
      then
-     add1 <> name-hash-table,report,loop
+     add1
+     loop
    ; define-function
 
    : name-hash-table,report
@@ -962,7 +1052,7 @@
      xx|swap|xx
      string-head,word
      make-jojo,dispatch-syntax-word
-     <> make-jojo,loop
+     loop
    ; define-function
 
    : make-jojo
@@ -997,7 +1087,7 @@
            end
          then
          jo->pre-jo
-         <> init,name-hash-table,nymph-jo,loop
+         loop
        then
      else
        drop
@@ -1010,7 +1100,7 @@
        end
      then
      jo->pre-jo
-     <> init,name-hash-table,nymph-jo,loop
+     loop
    ; define-function
 
    : init,name-hash-table,nymph-jo
@@ -1209,7 +1299,7 @@
        :length sub1
        :char
      then
-     <> remove-char!,loop
+     loop
    ; define-function
 
    : remove-char!
@@ -1314,7 +1404,7 @@
      swap latin-char?
      or if
        string-tail,char
-       <> wild-digit-string?
+       loop
      then
      drop2
      false
@@ -1538,7 +1628,7 @@
      :base
      :sum
      :counter add1
-     <> wild-integer-string->integer,with-base,loop
+     loop
    ; define-function
 
    : wild-integer-string->integer,with-base
@@ -1682,7 +1772,7 @@
      :div
      :base
      :cursor add1
-     <> .#,loop
+     loop
    ; define-function
 
    : .#
@@ -1810,7 +1900,7 @@
      :gamber
      :number
      :cursor sub1
-     <> gamber->number,loop
+     loop
    ; define-function
 
    : gamber->number
@@ -2042,7 +2132,7 @@
      else
        execute-word
      then
-     <> basic-REPL,loop
+     loop
    ; define-function
 
    : basic-REPL
@@ -2179,7 +2269,7 @@
      "then" string-equal? if
        end
      then
-     <> syntax,if,basic-REPL,meet-true,else
+     loop
    ; define-function
 
    : syntax,if,basic-REPL,meet-true
@@ -2199,7 +2289,7 @@
      else
        execute-word
      then
-     <> syntax,if,basic-REPL,meet-true
+     loop
    ; define-function
    #+end_src
 ** syntax,if,basic-REPL,meet-false
@@ -2216,7 +2306,7 @@
      else
        execute-word
      then
-     <> syntax,if,basic-REPL,meet-false,else
+     loop
    ; define-function
 
    : syntax,if,basic-REPL,meet-false
@@ -2232,7 +2322,7 @@
        end
      then
      drop2
-     <> syntax,if,basic-REPL,meet-false
+     loop
    ; define-function
    #+end_src
 ** syntax,if,basic-REPL
@@ -2316,7 +2406,7 @@
      then
      over save-byte
      add1
-     <> syntax,double-quote,basic-REPL,loop
+     loop
    ; define-function
 
    : syntax,double-quote,basic-REPL
@@ -2449,7 +2539,7 @@
        dup fetch .
      *jo-size* add
      swap
-     <> print-argument-stack,loop
+     loop
    ; define-function
 
    : print-argument-stack
@@ -2504,7 +2594,7 @@
        execute-word
      then
      print-argument-stack,pretty
-     <> stack-REPL,loop
+     loop
    ; define-function
 
    : stack-REPL
@@ -2576,7 +2666,7 @@
        "    " .s jo->name .s .l
        *jo-size* sub *jo-size* sub
      swap
-     <> list-rule,loop
+     loop
    ; define-function
 
    : list-rule
@@ -2617,7 +2707,7 @@
      :cursor sub-rule,move-one
      :rule-set
      :cursor *jo-size* 2 mul add
-     <> sub-rule,move
+     loop
    ; define-function
 
    : sub-rule,loop
@@ -2636,7 +2726,7 @@
      ::rule
      :rule-set
      :cursor *jo-size* 2 mul sub
-     <> sub-rule,loop
+     loop
    ; define-function
 
    : sub-rule
@@ -2688,7 +2778,7 @@
      else
        execute-word
      then
-     <> eval-string,loop
+     loop
    ; define-function
 
    : eval-string
@@ -2723,7 +2813,7 @@
      then
      over save-byte
      add1
-     <> syntax,double-quote,define-variable,loop
+     loop
    ; define-function
 
    : syntax,double-quote,define-variable
@@ -2951,7 +3041,7 @@
      then
      dup x|over|xxx execute-jo false? if
        jo->pre-jo
-       <> jotionary,list-by-jo-predicate,loop
+       loop
      then
      swap
        "  " .s
@@ -2965,7 +3055,7 @@
        .s .l
      then
      jo->pre-jo
-     <> jotionary,list-by-jo-predicate,loop
+     loop
    ; define-function
 
    : jotionary,list-by-jo-predicate
@@ -3032,14 +3122,14 @@
        :buffer
        :n sub1
        :cursor
-       <> n-string->buffer!,loop
+       loop
      then
      dup2 add sub1 fetch-byte :cursor save-byte
      sub1
      :buffer
      :n
      :cursor add1
-     <> n-string->buffer!,loop
+     loop
    ; define-function
 
    : n-string->buffer!
@@ -3655,7 +3745,7 @@
      :cursor init,getdents64
      test,getdents64,print
      :cursor +getdents64,d_reclen+ fetch-two-bytes add
-     <> test,getdents64,loop,structure
+     loop
    ; define-function
 
    : test,getdents64,loop
@@ -3680,7 +3770,7 @@
      :getdents64-structure-list
      test,getdents64,loop,structure
      :port
-     <> test,getdents64,loop
+     loop
    ; define-function
 
    : test,getdents64
@@ -3760,7 +3850,7 @@
      :end
      :cursor +getdents64,d_reclen+ fetch-two-bytes add
      :function
-     <> directory,map,loop,execute
+     loop
    ; define-function
 
    : directory,map,loop
@@ -3788,7 +3878,7 @@
      directory,map,loop,execute
      :port
      :function
-     <> directory,map,loop
+     loop
    ; define-function
 
    : directory,map
@@ -4186,14 +4276,14 @@
      compare-buffer not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
-       <> find-environment-variable,loop
+       loop
      then
      :cursor :length add fetch-byte
      "=" string-head,char
      equal? not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
-       <> find-environment-variable,loop
+       loop
      then
      :cursor :length add add1 << over "=" >>
      >:find-address
@@ -4245,7 +4335,7 @@
 
      :cursor
      :length :length-of-one-variable sub
-     <> report-environment-variable,loop
+     loop
    ; define-function
 
    : report-environment-variable
@@ -4265,7 +4355,7 @@
      then
      dup2 string-head,word .s 32 .b
      string-tail,word
-     <> report-command-line,loop
+     loop
    ; define-function
 
    : report-command-line
@@ -4959,7 +5049,7 @@
        end
      then
      .s 32 .b
-     <> bad-path-syntax-word,loop
+     loop
    ; define-function
 
    : !bad-path-syntax-word
@@ -5027,7 +5117,7 @@
        swap
        save-byte
      add1
-     <> syntax,path:,basic-REPL,loop
+     loop
    ; define-function
 
    : syntax,path:,basic-REPL
@@ -5360,7 +5450,8 @@
    #+begin_src cicada-nymph :tangle core.cn
    : command-line,no-function
      << -- >>
-     <> command-line,stack-REPL
+     command-line,stack-REPL
+     end
    ; define-function
    #+end_src
 ** command-line-dispatcher
@@ -5371,27 +5462,33 @@
      string-tail,word
      dup2 space-string? if
        drop2
-       <> command-line,no-function
+       command-line,no-function
+       end
      then
      string-head,word
      >::1st-word
      ::1st-word "basic-REPL" string-equal? if
-       <> command-line,basic-REPL
+       command-line,basic-REPL
+       end
      then
      ::1st-word "stack-REPL" string-equal? if
-       <> command-line,stack-REPL
+       command-line,stack-REPL
+       end
      then
      ::1st-word "poi" string-equal? if
-       <> command-line,poi
+       command-line,poi
+       end
      then
-       <> command-line,unknow-function
+     command-line,unknow-function
+     end
    ; define-function
    #+end_src
 * *the-story-begin*
   #+begin_src cicada-nymph :tangle core.cn
   : the-story-begin
     << -- >>
-    <> command-line-dispatcher
+    command-line-dispatcher
+    end
   ; define-function
 
   the-story-begin
