@@ -2,7 +2,40 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* since I have (current-defining-word) I can do a better version of <>
+  (recur) and (loop) as two syntax for make-jojo
+* loading-stack
+* let functions about (poi) to use predicate [as I promised]
+  * thus better info can be printed in the command-line-interface
+* un-named function
+  * 我發現我已經可以使用 map 了
+    爲了實現 un-named function
+    有一下兩種方法
+    1. 去實現 GC
+       同時 還能停止使用 *circular-string-area*
+       * 要知道不論如何 爲了實現 cicada-language GC 都是需要的
+         而
+         就像 現在 *name-hash-table*
+         被 cicada-language 和 cicada-nymph 共用一樣
+         GC 也是可以被共用的
+       * 但是這其實是不可能的
+         因爲 cicada-nymph 是沒有數據類型的
+    2. 使用 *circular-jo-area*
+       要知道現在的效果是
+       string 在 REPL 中出現時 就用 *circular-string-area*
+       string 在 make-jojo 中出現時 就用 *name-string-area*
+       這種設計對於函數可能也同樣適用
+  * 我使用第二種方式來實現我需要的性狀
+    這樣我就能在 cicada-nymph 中實驗 joy 中的組合邏輯語義了
+  * 關於具體實現有以下問題需要注意
+    即
+    局部變量一定要能夠在 匿名的 jojo 中被使用
+  * cicada-language 還是必要的嘛 ?
+    cicada-nymph 就足夠了 ?
+    需要回顧一下 cicada-language 的筆記
+    調和一下兩個語義的差異
 * todo
+** better design of the command-line-interface
 ** little-tester [於命令行工具還有 load 相結合] :needed:
 ** design a way to remove magic numbers [not variable, but file by file like erlang ?]
 ** need more lib functions about string processing and better factoring for string processing
@@ -263,21 +296,50 @@
      end
    ; define-function
    #+end_src
-** more,rule-set,make-jojo
+* *rule-set,make-jojo* : save-to
+** word:save-to?
    #+begin_src cicada-nymph :tangle core.cn
-   : more,rule-set,make-jojo
-     << -- >>
-     jo word:prepare-for?
-     jo syntax,prepare-for,make-jojo
-     *rule-set,make-jojo* add-rule
-     jo word:exception-reset-stack?
-     jo syntax,exception-reset-stack,make-jojo
-     *rule-set,make-jojo* add-rule
+   : word:save-to?
+     << word[address, length] -- bool >>
+     "save-to" string-equal?
      end
    ; define-function
-
-   more,rule-set,make-jojo
    #+end_src
+** syntax,save-to,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,save-to,make-jojo
+     << string[address, length], word:save-to --
+        string[address, length] >>
+     <<
+     note that
+     the following call to (syntax,address,make-jojo)
+     will drop word:save-to
+     >>
+     syntax,address,make-jojo
+     jo save
+       save-into,jo-area
+     end
+   ; define-function
+   #+end_src
+* more,rule-set,make-jojo
+  #+begin_src cicada-nymph :tangle core.cn
+  : more,rule-set,make-jojo
+    << -- >>
+    jo word:prepare-for?
+    jo syntax,prepare-for,make-jojo
+    *rule-set,make-jojo* add-rule
+    jo word:exception-reset-stack?
+    jo syntax,exception-reset-stack,make-jojo
+    *rule-set,make-jojo* add-rule
+
+    jo word:save-to?
+    jo syntax,save-to,make-jojo
+    *rule-set,make-jojo* add-rule
+    end
+  ; define-function
+
+  more,rule-set,make-jojo
+  #+end_src
 * -----------------------------------
 * allocate
 ** note
@@ -976,7 +1038,7 @@
 
      *current-free-address,jo-area*
      dup jo,save-into,name-hash-table
-     address *first-jo-in-jotionary* save
+     save-to *first-jo-in-jotionary*
 
      *explainer,variable*
        save-into,jo-area
@@ -1014,7 +1076,7 @@
 
      *current-free-address,jo-area*
      dup jo,save-into,name-hash-table
-     address *first-jo-in-jotionary* save
+     save-to *first-jo-in-jotionary*
 
      *explainer,exception*
        save-into,jo-area
@@ -1056,7 +1118,7 @@
 
      *current-free-address,jo-area*
      dup jo,save-into,name-hash-table
-     address *first-jo-in-jotionary* save
+     save-to *first-jo-in-jotionary*
 
      *explainer,function*
        save-into,jo-area
@@ -1927,7 +1989,7 @@
    : execute-word
      << word[address, length] -- unknown >>
      dup2
-     find-jo,through-jo-link if
+     find-jo if
        dup exception-jo? if
          drop
          "* (execute-word) can not execute exception directly : " .s
@@ -2075,8 +2137,7 @@
      drop2
      read-word-for-REPL
      >::word
-     << ::word find-jo if >>
-     ::word find-jo,through-jo-link if
+     ::word find-jo if
        end
      then
      "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -2229,8 +2290,7 @@
      *circular-string-area,size* *circular-string-area* add
      greater-or-equal? if
        *circular-string-area*
-       address *current-free-address,circular-string-area*
-       save
+       save-to *current-free-address,circular-string-area*
      then
      tuck
      *current-free-address,circular-string-area*
@@ -2303,8 +2363,7 @@
      drop2
      read-word-for-REPL
      >::word
-     << ::word find-jo if >>
-     ::word find-jo,through-jo-link if
+     ::word find-jo if
      else
        "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
        address *syntax,address,basic-REPL,stack-balancer*
@@ -2334,6 +2393,46 @@
    *syntax,address,basic-REPL,stack-balancer*
 
    address kkk
+   #+end_src
+* *rule-set,basic-REPL* : save-to
+** syntax,save-to,basic-REPL
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,save-to,basic-REPL
+     << value, word:address -- address >>
+     drop2
+     read-word-for-REPL
+     >::word
+     ::word find-jo if
+     else
+       "* (syntax,save-to,basic-REPL) meet undefined word : " .s ::word .s .l
+       "  the value " .s .i " is saved to no where" .s .l
+       end
+     then
+     >:jo
+     :jo variable-jo? if
+     else
+       "* (syntax,save-to,basic-REPL) meet a not variable-jo : " .s ::word .s .l
+       "  the value " .s .i " is saved to no where" .s .l
+       end
+     then
+     :jo *jo-size* add
+     save
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:save-to?
+   jo syntax,save-to,basic-REPL
+   *rule-set,basic-REPL* add-rule
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   666
+   save-to *syntax,address,basic-REPL,stack-balancer*
+   *syntax,address,basic-REPL,stack-balancer*
+
+   1 save-to kkk
    #+end_src
 * stack-REPL
 ** note
@@ -2421,9 +2520,7 @@
 * *lost-exception-REPL*
 ** reset *lost-exception-REPL*
    #+begin_src cicada-nymph :tangle core.cn
-   jo stack-REPL
-   address *lost-exception-REPL*
-   save
+   jo stack-REPL save-to *lost-exception-REPL*
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -2609,6 +2706,11 @@
    ": k 1 2 3 add add . end ; define-function k" eval-string
    #+end_src
 * define-variable
+** note string allocation
+   * string should be allocated to a static area
+     instead of dynamic area like *circular-string-area*
+     thus we have
+     (syntax,double-quote,define-variable)
 ** syntax,double-quote,define-variable
    * in ASCII encode double-quote is 34
    #+begin_src cicada-nymph :tangle core.cn
@@ -2694,7 +2796,7 @@
 
      *current-free-address,jo-area*
      dup jo,save-into,name-hash-table
-     address *first-jo-in-jotionary* save
+     save-to *first-jo-in-jotionary*
 
      *explainer,variable*
        save-into,jo-area
@@ -3500,21 +3602,21 @@
    : init,getdents64
      << offset -- >>
      *jo-size* 4 equal? if
-       dup address +getdents64,d_ino+       save 8 add
-       dup address +getdents64,d_off+       save 8 add
-       dup address +getdents64,d_reclen+    save 2 add
-       dup address +getdents64,d_type+      save 1 add
-       dup address +getdents64,d_name+      save 256 add
-           address +getdents64,end+           save
+       dup save-to +getdents64,d_ino+        8 add
+       dup save-to +getdents64,d_off+        8 add
+       dup save-to +getdents64,d_reclen+     2 add
+       dup save-to +getdents64,d_type+       1 add
+       dup save-to +getdents64,d_name+       256 add
+           save-to +getdents64,end+
        end
      then
      *jo-size* 8 equal? if
-       dup address +getdents64,d_ino+       save 8 add
-       dup address +getdents64,d_off+       save 8 add
-       dup address +getdents64,d_reclen+    save 2 add
-       dup address +getdents64,d_type+      save 1 add
-       dup address +getdents64,d_name+      save 256 add
-           address +getdents64,end+           save
+       dup save-to +getdents64,d_ino+        8 add
+       dup save-to +getdents64,d_off+        8 add
+       dup save-to +getdents64,d_reclen+     2 add
+       dup save-to +getdents64,d_type+       1 add
+       dup save-to +getdents64,d_name+       256 add
+           save-to +getdents64,end+
        end
      then
      end
@@ -3937,7 +4039,7 @@
      << -- >>
      :syscall-number,getpid:
      0 syscall
-     address *pid* save
+     save-to *pid*
      end
    ; define-function
 
@@ -3993,7 +4095,7 @@
        "* (init-command-line) fail to read : " .s ::path .s .l
        end
      then
-     address *length,command-line* save
+     save-to *length,command-line*
      end
    ; define-function
 
@@ -4050,7 +4152,7 @@
        "* (init-environment-variable-list) fail to read : " .s ::path .s .l
        end
      then
-     address *length,environment-variable-list* save
+     save-to *length,environment-variable-list*
      end
    ; define-function
 
@@ -4257,53 +4359,53 @@
    : init,stat
      << offset -- >>
      *jo-size* 4 equal? if
-       dup address +stat,st_dev+        save *jo-size* add
-       dup address +stat,st_ino+        save *jo-size* add
-       dup address +stat,st_mode+       save 2 add
-       dup address +stat,st_nlink+      save 2 add
-       dup address +stat,st_uid+        save 2 add
-       dup address +stat,st_gid+        save 2 add
-       dup address +stat,st_rdev+       save *jo-size* add
-       dup address +stat,st_size+       save *jo-size* add
-       dup address +stat,st_blksize+    save *jo-size* add
-       dup address +stat,st_blocks+     save *jo-size* add
-       dup address +stat,st_atime+      save *jo-size* add
-       dup address +stat,st_atime_nsec+ save *jo-size* add
-       dup address +stat,st_mtime+      save *jo-size* add
-       dup address +stat,st_mtime_nsec+ save *jo-size* add
-       dup address +stat,st_ctime+      save *jo-size* add
-       dup address +stat,st_ctime_nsec+ save *jo-size* add
-       dup address +stat,__unused4+     save *jo-size* add
-       dup address +stat,__unused5+     save *jo-size* add
-           address +stat,end+           save
+       dup save-to +stat,st_dev+         *jo-size* add
+       dup save-to +stat,st_ino+         *jo-size* add
+       dup save-to +stat,st_mode+        2 add
+       dup save-to +stat,st_nlink+       2 add
+       dup save-to +stat,st_uid+         2 add
+       dup save-to +stat,st_gid+         2 add
+       dup save-to +stat,st_rdev+        *jo-size* add
+       dup save-to +stat,st_size+        *jo-size* add
+       dup save-to +stat,st_blksize+     *jo-size* add
+       dup save-to +stat,st_blocks+      *jo-size* add
+       dup save-to +stat,st_atime+       *jo-size* add
+       dup save-to +stat,st_atime_nsec+  *jo-size* add
+       dup save-to +stat,st_mtime+       *jo-size* add
+       dup save-to +stat,st_mtime_nsec+  *jo-size* add
+       dup save-to +stat,st_ctime+       *jo-size* add
+       dup save-to +stat,st_ctime_nsec+  *jo-size* add
+       dup save-to +stat,__unused4+      *jo-size* add
+       dup save-to +stat,__unused5+      *jo-size* add
+           save-to +stat,end+
        end
      then
      *jo-size* 8 equal? if
-       dup address +stat,st_dev+        save *jo-size* add
-       dup address +stat,st_ino+        save *jo-size* add
+       dup save-to +stat,st_dev+         *jo-size* add
+       dup save-to +stat,st_ino+         *jo-size* add
        <<
        note the following order changing
        this is linux' bad
        >>
-       dup address +stat,st_nlink+      save 8 add
-       dup address +stat,st_mode+       save 4 add
+       dup save-to +stat,st_nlink+       8 add
+       dup save-to +stat,st_mode+        4 add
 
-       dup address +stat,st_uid+        save 4 add
-       dup address +stat,st_gid+        save 4 add
+       dup save-to +stat,st_uid+         4 add
+       dup save-to +stat,st_gid+         4 add
                                              4 add << padding >>
-       dup address +stat,st_rdev+       save *jo-size* add
-       dup address +stat,st_size+       save *jo-size* add
-       dup address +stat,st_blksize+    save *jo-size* add
-       dup address +stat,st_blocks+     save *jo-size* add
-       dup address +stat,st_atime+      save *jo-size* add
-       dup address +stat,st_atime_nsec+ save *jo-size* add
-       dup address +stat,st_mtime+      save *jo-size* add
-       dup address +stat,st_mtime_nsec+ save *jo-size* add
-       dup address +stat,st_ctime+      save *jo-size* add
-       dup address +stat,st_ctime_nsec+ save *jo-size* add
-       dup address +stat,__unused4+     save *jo-size* add
-       dup address +stat,__unused5+     save *jo-size* add
-           address +stat,end+           save
+       dup save-to +stat,st_rdev+        *jo-size* add
+       dup save-to +stat,st_size+        *jo-size* add
+       dup save-to +stat,st_blksize+     *jo-size* add
+       dup save-to +stat,st_blocks+      *jo-size* add
+       dup save-to +stat,st_atime+       *jo-size* add
+       dup save-to +stat,st_atime_nsec+  *jo-size* add
+       dup save-to +stat,st_mtime+       *jo-size* add
+       dup save-to +stat,st_mtime_nsec+  *jo-size* add
+       dup save-to +stat,st_ctime+       *jo-size* add
+       dup save-to +stat,st_ctime_nsec+  *jo-size* add
+       dup save-to +stat,__unused4+      *jo-size* add
+       dup save-to +stat,__unused5+      *jo-size* add
+           save-to +stat,end+
        end
      then
      end
@@ -4974,13 +5076,28 @@
    "library" poi,sub
    path: +library+ hi.cn ;
    #+end_src
-* >< load & need
-** note
+* load & need
+** note usage
    * no library code will be auto loaded
      you need to configure path by (poi)
-     then
-     load the code you want by using path-syntax
-   * load-file should maintain a list of loaded files
+     then load the code you want by using path-syntax
+** note loading-stack
+   * by a loading-stack
+     (load) is able to maintain a list of loaded files
+     also be able to un-load code by the loading-order
+** load
+   #+begin_src cicada-nymph
+   : load
+     << path[address, length] -- >>
+
+     end
+   ; define-function
+   #+end_src
+** need
+   * (need) is as (load-when-not-loaded)
+   #+begin_src cicada-nymph
+
+   #+end_src
 * -----------------------------------
 * report
 ** report-memory

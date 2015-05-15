@@ -1,7 +1,7 @@
 #+TITLE:  小蟬語 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-
+* rename jo-area to jojo-area [just like string-area]
 * todo
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
@@ -77,38 +77,6 @@
      thus
      this kind of unique id is not fit
      for some tasks
-** different from the re-designed cicada-language
-    * simplifications are for teaching purpose only
-    * first and foremost
-      function programming will NOT be supported in this implementation
-    * a helper function must be defined before it is used
-    * no mixfix-notation
-      * function call is "function" instead of "(function)"
-      * no such thing like
-        1 2 (add) = 1 (add 2) = (add 1 2)
-    * no named local argument
-      * thus no inited local argument
-    * no title-name-table
-      * thus in this implementation
-        we only use single name space
-      * thus in this implementation
-        we do NOT have the concept of "context"
-        so
-        the syntax is not as flexible as it will be in cicada-language
-    * no type
-      * no type inference
-      * no dynamic type tag
-      * no static type declaration
-    * global linked-list for naming
-      * not hash-table
-      * by the way
-        in classical forth
-        the linked-list of jo is called jotionary
-    * no dynamic-memory-management
-      * no garbage-collector
-    * about comment
-      * the comment of the argument & return value of function
-        is allowed to be written in free style normal comment
 * note problem
 ** memory                             :limit:
    * need to protect the overloading of a variety of memories

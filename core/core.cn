@@ -117,6 +117,26 @@ more,rule-set,make-jojo
   end
 ; define-function
 
+: word:save-to?
+  << word[address, length] -- bool >>
+  "save-to" string-equal?
+  end
+; define-function
+
+: syntax,save-to,make-jojo
+  << string[address, length], word:save-to --
+     string[address, length] >>
+  <<
+  note that
+  the following call to (syntax,address,make-jojo)
+  will drop word:save-to
+  >>
+  syntax,address,make-jojo
+  jo save
+    save-into,jo-area
+  end
+; define-function
+
 : more,rule-set,make-jojo
   << -- >>
   jo word:prepare-for?
@@ -124,6 +144,10 @@ more,rule-set,make-jojo
   *rule-set,make-jojo* add-rule
   jo word:exception-reset-stack?
   jo syntax,exception-reset-stack,make-jojo
+  *rule-set,make-jojo* add-rule
+
+  jo word:save-to?
+  jo syntax,save-to,make-jojo
   *rule-set,make-jojo* add-rule
   end
 ; define-function
@@ -613,7 +637,7 @@ more,rule-set,make-jojo
 
   *current-free-address,jo-area*
   dup jo,save-into,name-hash-table
-  address *first-jo-in-jotionary* save
+  save-to *first-jo-in-jotionary*
 
   *explainer,variable*
     save-into,jo-area
@@ -649,7 +673,7 @@ more,rule-set,make-jojo
 
   *current-free-address,jo-area*
   dup jo,save-into,name-hash-table
-  address *first-jo-in-jotionary* save
+  save-to *first-jo-in-jotionary*
 
   *explainer,exception*
     save-into,jo-area
@@ -689,7 +713,7 @@ more,rule-set,make-jojo
 
   *current-free-address,jo-area*
   dup jo,save-into,name-hash-table
-  address *first-jo-in-jotionary* save
+  save-to *first-jo-in-jotionary*
 
   *explainer,function*
     save-into,jo-area
@@ -1146,7 +1170,7 @@ save
 : execute-word
   << word[address, length] -- unknown >>
   dup2
-  find-jo,through-jo-link if
+  find-jo if
     dup exception-jo? if
       drop
       "* (execute-word) can not execute exception directly : " .s
@@ -1217,8 +1241,7 @@ basic-REPL
   drop2
   read-word-for-REPL
   >::word
-  << ::word find-jo if >>
-  ::word find-jo,through-jo-link if
+  ::word find-jo if
     end
   then
   "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -1327,8 +1350,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   *circular-string-area,size* *circular-string-area* add
   greater-or-equal? if
     *circular-string-area*
-    address *current-free-address,circular-string-area*
-    save
+    save-to *current-free-address,circular-string-area*
   then
   tuck
   *current-free-address,circular-string-area*
@@ -1381,8 +1403,7 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
   drop2
   read-word-for-REPL
   >::word
-  << ::word find-jo if >>
-  ::word find-jo,through-jo-link if
+  ::word find-jo if
   else
     "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
     address *syntax,address,basic-REPL,stack-balancer*
@@ -1401,6 +1422,33 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
 
 jo word:address?
 jo syntax,address,basic-REPL
+*rule-set,basic-REPL* add-rule
+
+: syntax,save-to,basic-REPL
+  << value, word:address -- address >>
+  drop2
+  read-word-for-REPL
+  >::word
+  ::word find-jo if
+  else
+    "* (syntax,save-to,basic-REPL) meet undefined word : " .s ::word .s .l
+    "  the value " .s .i " is saved to no where" .s .l
+    end
+  then
+  >:jo
+  :jo variable-jo? if
+  else
+    "* (syntax,save-to,basic-REPL) meet a not variable-jo : " .s ::word .s .l
+    "  the value " .s .i " is saved to no where" .s .l
+    end
+  then
+  :jo *jo-size* add
+  save
+  end
+; define-function
+
+jo word:save-to?
+jo syntax,save-to,basic-REPL
 *rule-set,basic-REPL* add-rule
 
 : print-argument-stack,loop
@@ -1477,9 +1525,7 @@ jo syntax,address,basic-REPL
   end
 ; define-function
 
-jo stack-REPL
-address *lost-exception-REPL*
-save
+jo stack-REPL save-to *lost-exception-REPL*
 
 : list-rule,loop
   << rule-set, cursor, counter -- >>
@@ -1662,7 +1708,7 @@ save
 
   *current-free-address,jo-area*
   dup jo,save-into,name-hash-table
-  address *first-jo-in-jotionary* save
+  save-to *first-jo-in-jotionary*
 
   *explainer,variable*
     save-into,jo-area
@@ -2187,21 +2233,21 @@ then
 : init,getdents64
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +getdents64,d_ino+       save 8 add
-    dup address +getdents64,d_off+       save 8 add
-    dup address +getdents64,d_reclen+    save 2 add
-    dup address +getdents64,d_type+      save 1 add
-    dup address +getdents64,d_name+      save 256 add
-        address +getdents64,end+           save
+    dup save-to +getdents64,d_ino+        8 add
+    dup save-to +getdents64,d_off+        8 add
+    dup save-to +getdents64,d_reclen+     2 add
+    dup save-to +getdents64,d_type+       1 add
+    dup save-to +getdents64,d_name+       256 add
+        save-to +getdents64,end+
     end
   then
   *jo-size* 8 equal? if
-    dup address +getdents64,d_ino+       save 8 add
-    dup address +getdents64,d_off+       save 8 add
-    dup address +getdents64,d_reclen+    save 2 add
-    dup address +getdents64,d_type+      save 1 add
-    dup address +getdents64,d_name+      save 256 add
-        address +getdents64,end+           save
+    dup save-to +getdents64,d_ino+        8 add
+    dup save-to +getdents64,d_off+        8 add
+    dup save-to +getdents64,d_reclen+     2 add
+    dup save-to +getdents64,d_type+       1 add
+    dup save-to +getdents64,d_name+       256 add
+        save-to +getdents64,end+
     end
   then
   end
@@ -2442,7 +2488,7 @@ then
   << -- >>
   :syscall-number,getpid:
   0 syscall
-  address *pid* save
+  save-to *pid*
   end
 ; define-function
 
@@ -2496,7 +2542,7 @@ then
     "* (init-command-line) fail to read : " .s ::path .s .l
     end
   then
-  address *length,command-line* save
+  save-to *length,command-line*
   end
 ; define-function
 
@@ -2550,7 +2596,7 @@ then
     "* (init-environment-variable-list) fail to read : " .s ::path .s .l
     end
   then
-  address *length,environment-variable-list* save
+  save-to *length,environment-variable-list*
   end
 ; define-function
 
@@ -2721,53 +2767,53 @@ init-environment-variable-list
 : init,stat
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
-    dup address +stat,st_mode+       save 2 add
-    dup address +stat,st_nlink+      save 2 add
-    dup address +stat,st_uid+        save 2 add
-    dup address +stat,st_gid+        save 2 add
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
+    dup save-to +stat,st_dev+         *jo-size* add
+    dup save-to +stat,st_ino+         *jo-size* add
+    dup save-to +stat,st_mode+        2 add
+    dup save-to +stat,st_nlink+       2 add
+    dup save-to +stat,st_uid+         2 add
+    dup save-to +stat,st_gid+         2 add
+    dup save-to +stat,st_rdev+        *jo-size* add
+    dup save-to +stat,st_size+        *jo-size* add
+    dup save-to +stat,st_blksize+     *jo-size* add
+    dup save-to +stat,st_blocks+      *jo-size* add
+    dup save-to +stat,st_atime+       *jo-size* add
+    dup save-to +stat,st_atime_nsec+  *jo-size* add
+    dup save-to +stat,st_mtime+       *jo-size* add
+    dup save-to +stat,st_mtime_nsec+  *jo-size* add
+    dup save-to +stat,st_ctime+       *jo-size* add
+    dup save-to +stat,st_ctime_nsec+  *jo-size* add
+    dup save-to +stat,__unused4+      *jo-size* add
+    dup save-to +stat,__unused5+      *jo-size* add
+        save-to +stat,end+
     end
   then
   *jo-size* 8 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
+    dup save-to +stat,st_dev+         *jo-size* add
+    dup save-to +stat,st_ino+         *jo-size* add
     <<
     note the following order changing
     this is linux' bad
     >>
-    dup address +stat,st_nlink+      save 8 add
-    dup address +stat,st_mode+       save 4 add
+    dup save-to +stat,st_nlink+       8 add
+    dup save-to +stat,st_mode+        4 add
 
-    dup address +stat,st_uid+        save 4 add
-    dup address +stat,st_gid+        save 4 add
+    dup save-to +stat,st_uid+         4 add
+    dup save-to +stat,st_gid+         4 add
                                           4 add << padding >>
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
+    dup save-to +stat,st_rdev+        *jo-size* add
+    dup save-to +stat,st_size+        *jo-size* add
+    dup save-to +stat,st_blksize+     *jo-size* add
+    dup save-to +stat,st_blocks+      *jo-size* add
+    dup save-to +stat,st_atime+       *jo-size* add
+    dup save-to +stat,st_atime_nsec+  *jo-size* add
+    dup save-to +stat,st_mtime+       *jo-size* add
+    dup save-to +stat,st_mtime_nsec+  *jo-size* add
+    dup save-to +stat,st_ctime+       *jo-size* add
+    dup save-to +stat,st_ctime_nsec+  *jo-size* add
+    dup save-to +stat,__unused4+      *jo-size* add
+    dup save-to +stat,__unused5+      *jo-size* add
+        save-to +stat,end+
     end
   then
   end
