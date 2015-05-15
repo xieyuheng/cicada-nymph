@@ -284,9 +284,9 @@ allocate-memory
 
 : name,save-string
   << string[address, length], name -- >>
-  *current-free-address,name-string-area*
+  *current-free-address,string-area*
   xx|swap|xx
-  save-into,name-string-area
+  save-into,string-area
   swap
   name->address
   save
@@ -659,10 +659,10 @@ more,rule-set,make-jojo
   << variable, string[address, length] -- >>
   1 save-into,jo-area
 
-  *current-free-address,name-string-area*
+  *current-free-address,string-area*
     save-into,jo-area
   dup2 string-head,word
-    save-into,name-string-area
+    save-into,string-area
 
   *first-jo-in-jotionary*
   jo->link
@@ -682,10 +682,10 @@ more,rule-set,make-jojo
 
 : define-exception
   << string[address, length] -- >>
-  *current-free-address,name-string-area* xx|swap|x
+  *current-free-address,string-area* xx|swap|x
   *current-free-address,jo-area* xx|swap|x
   *first-jo-in-jotionary* xx|swap|x
-  << *current-free-address,name-string-area*
+  << *current-free-address,string-area*
      *current-free-address,jo-area*
      *first-jo-in-jotionary*
      string[address, length] >>
@@ -695,10 +695,10 @@ more,rule-set,make-jojo
 
   0 save-into,jo-area
 
-  *current-free-address,name-string-area*
+  *current-free-address,string-area*
     save-into,jo-area
   dup2 string-head,word
-    save-into,name-string-area
+    save-into,string-area
 
   *first-jo-in-jotionary*
   jo->link
@@ -724,10 +724,10 @@ more,rule-set,make-jojo
 
 : define-function
   << string[address, length] -- >>
-  *current-free-address,name-string-area* xx|swap|x
+  *current-free-address,string-area* xx|swap|x
   *current-free-address,jo-area* xx|swap|x
   *first-jo-in-jotionary* xx|swap|x
-  << *current-free-address,name-string-area*
+  << *current-free-address,string-area*
      *current-free-address,jo-area*
      *first-jo-in-jotionary*
      string[address, length] >>
@@ -735,10 +735,10 @@ more,rule-set,make-jojo
     !undo-make-jojo
     end
 
-  *current-free-address,name-string-area*
+  *current-free-address,string-area*
     save-into,jo-area
   dup2 string-head,word
-    save-into,name-string-area
+    save-into,string-area
 
   *first-jo-in-jotionary*
   jo->link
@@ -1680,10 +1680,10 @@ jo stack-REPL save-to *lost-exception-REPL*
   :buffer
   syntax,double-quote,define-variable,loop
   >:cursor
-  *current-free-address,name-string-area* add2 >:address
+  *current-free-address,string-area* add2 >:address
   :buffer
   :cursor :buffer sub dup >:length
-  save-into,name-string-area
+  save-into,string-area
   :address
   :length
   end
@@ -1730,10 +1730,10 @@ jo stack-REPL save-to *lost-exception-REPL*
   :variable-length
     save-into,jo-area
 
-  *current-free-address,name-string-area*
+  *current-free-address,string-area*
     save-into,jo-area
   ::variable-name
-    save-into,name-string-area
+    save-into,string-area
 
   *first-jo-in-jotionary*
   jo->link
@@ -3306,18 +3306,18 @@ jo syntax,path:,basic-REPL
        *current-free-address,un-initialized-memory*
        *un-initialized-memory*
        sub sub . .l
-  "* *name-string-area*" .s .l
+  "* *string-area*" .s .l
   "  * size : " .s
-       *size,name-string-area*
+       *size,string-area*
        . .l
   "  * used : " .s
-       *current-free-address,name-string-area*
-       *name-string-area*
+       *current-free-address,string-area*
+       *string-area*
        sub . .l
   "  * free : " .s
-       *size,name-string-area*
-       *current-free-address,name-string-area*
-       *name-string-area*
+       *size,string-area*
+       *current-free-address,string-area*
+       *string-area*
        sub sub . .l
   "* *jo-area*" .s .l
   "  * size : " .s

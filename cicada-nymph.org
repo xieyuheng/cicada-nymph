@@ -1,13 +1,14 @@
 #+TITLE:  小蟬語 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-* rename jo-area to jojo-area [just like string-area]
+
+* rename jo-area to jojo-area and name-string-area to string-area
   * string-area circular-string-area
   * jojo-area circular-jojo-area
 * todo
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
-** change the interface of *name-string-area* :maybe:
+** change the interface of *string-area* :maybe:
 * ===================================
 * note
 ** notation
@@ -561,19 +562,19 @@
   ;; initial link to point to 0 (as null)
   link = 0
   #+end_src
-* name_string_area
+* string_area
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   address$name_string_area:
+   address$string_area:
       times 64 * 1024 db 0
 
    address$core_file:
       file "core/core.cn"
    end$core_file:
 
-   end$name_string_area:
+   end$string_area:
 
-   current_free_address$name_string_area = address$name_string_area
+   current_free_address$string_area = address$string_area
    #+end_src
 ** make_name_string
    * 2 bytes for length of name_string
@@ -589,17 +590,17 @@
       dw (.end$string - .start$string)
       load .length word from (.end$string)
    finish virtual
-   store word .length at (current_free_address$name_string_area)
+   store word .length at (current_free_address$string_area)
 
-   current_free_address$name_string_area = current_free_address$name_string_area + 2
+   current_free_address$string_area = current_free_address$string_area + 2
 
    repeat .length
       virtual at 0
          db string
          load .char byte from (% - 1)
       finish virtual
-      store byte .char at (current_free_address$name_string_area)
-      current_free_address$name_string_area = current_free_address$name_string_area + 1
+      store byte .char at (current_free_address$string_area)
+      current_free_address$string_area = current_free_address$string_area + 1
    finish repeat
 
    }
@@ -622,7 +623,7 @@
    define_function__#jo:
 
    name__#jo:
-      xx current_free_address$name_string_area
+      xx current_free_address$string_area
 
       make_name_string string
 
@@ -665,7 +666,7 @@
    define_primitive_function__#jo:
 
    name__#jo:
-      xx current_free_address$name_string_area
+      xx current_free_address$string_area
 
       make_name_string string
 
@@ -702,7 +703,7 @@
       xx 1
 
    name__#jo:
-      xx current_free_address$name_string_area
+      xx current_free_address$string_area
 
       make_name_string string
 
@@ -791,7 +792,7 @@
       xx 0
 
    name__#jo:
-      xx current_free_address$name_string_area
+      xx current_free_address$string_area
 
       make_name_string string
 
@@ -1128,20 +1129,20 @@
       xx end
    #+end_src
 ** ----------------------------------
-* name-string-area
+* string-area
 ** note interface
-   * the interface of name-string-area is not good
+   * the interface of string-area is not good
      one can NOT use n-fetch and n-save
      to fetch and save value from the address
-** *name-string-area*
+** *string-area*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*name-string-area*", V__name_string_area
-      xx address$name_string_area
+   define_variable "*string-area*", V__string_area
+      xx address$string_area
 
-   define_variable "*size,name-string-area*", V__size__name_string_area
-      xx (end$name_string_area - address$name_string_area)
+   define_variable "*size,string-area*", V__size__string_area
+      xx (end$string_area - address$string_area)
 
-   ;; *current-free-address,name-string-area*
+   ;; *current-free-address,string-area*
    ;; is at epilog
    #+end_src
 ** address->name-string
@@ -4737,55 +4738,55 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
-* jo-area
+* jojo-area
 ** note
    * you can see how the naming convention is used
      for functions that create structured data into memory
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$jo_area = 1024 * 1024 * jo_size
+   size$jojo_area = 1024 * 1024 * jo_size
 
-   define_variable "*jo-area*", V__jo_area
-     xx address$jo_area
+   define_variable "*jojo-area*", V__jojo_area
+     xx address$jojo_area
 
-   define_variable "*size,jo-area*", V__size__jo_area
-     xx size$jo_area
+   define_variable "*size,jojo-area*", V__size__jojo_area
+     xx size$jojo_area
 
 
-   address$jo_area labeling
-      preserve size$jo_area
+   address$jojo_area labeling
+      preserve size$jojo_area
 
-   define_variable "*current-free-address,jo-area*", V__current_free_address__jo_area
-      xx address$jo_area
+   define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
+      xx address$jojo_area
    #+end_src
-** save-into,name-string-area
+** save-into,string-area
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,name-string-area", save_into__name_string_area
+   define_function "save-into,string-area", save_into__string_area
       ;; << string[address, length] -- >>
-      xx dup, V__current_free_address__name_string_area
+      xx dup, V__current_free_address__string_area
       xx save_two_bytes
 
       xx literal, 2
-      xx address, V__current_free_address__name_string_area
+      xx address, V__current_free_address__string_area
       xx add_save
 
       xx tuck
-      xx V__current_free_address__name_string_area
+      xx V__current_free_address__string_area
       xx string_to_buffer!
 
-      xx address, V__current_free_address__name_string_area
+      xx address, V__current_free_address__string_area
       xx add_save
       xx end
    #+end_src
-** save-into,jo-area
+** save-into,jojo-area
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,jo-area", save_into__jo_area
+   define_function "save-into,jojo-area", save_into__jojo_area
       ;; << number -- >>
-      xx V__current_free_address__jo_area
+      xx V__current_free_address__jojo_area
       xx save
 
       xx literal, jo_size
-      xx address, V__current_free_address__jo_area
+      xx address, V__current_free_address__jojo_area
       xx add_save
       xx end
    #+end_src
@@ -5070,9 +5071,9 @@
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx string_to_integer
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx end
    #+end_src
 ** ----------------------------------
@@ -5098,12 +5099,12 @@
       xx drop2
 
       xx literal, address
-      xx save_into__jo_area
+      xx save_into__jojo_area
 
       xx dup2
       xx string_head__word
       xx find_jo__through_jo_link, false?branch, 4
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx   string_tail__word
       xx   end
 
@@ -5148,12 +5149,12 @@
       xx drop2
 
       xx literal, literal
-      xx save_into__jo_area
+      xx save_into__jojo_area
 
       xx dup2
       xx string_head__word
       xx find_jo__through_jo_link, false?branch, 4
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx   string_tail__word
       xx   end
 
@@ -5198,13 +5199,13 @@
       xx drop2
 
       xx literal, branch
-      xx save_into__jo_area
+      xx save_into__jojo_area
 
       xx dup2
       xx string_head__word
       xx dup2, integer_string?, false?branch, 5
       xx   string_to_integer
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx   string_tail__word
       xx   end
 
@@ -5249,13 +5250,13 @@
       xx drop2
 
       xx literal, false?branch
-      xx save_into__jo_area
+      xx save_into__jojo_area
 
       xx dup2
       xx string_head__word
       xx dup2, integer_string?, false?branch, 5
       xx   string_to_integer
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx   string_tail__word
       xx   end
 
@@ -5293,7 +5294,7 @@
       xx end
    #+end_src
 ** syntax,double-quote,make-jojo
-   * name-string-area is used
+   * string-area is used
      to allocate string literal in function body
    * in ASCII encode double-quote is 34
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5310,17 +5311,17 @@
 
       ;; address
       xx   literal, literal
-      xx     save_into__jo_area
-      xx   V__current_free_address__name_string_area, add2
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
+      xx   V__current_free_address__string_area, add2
+      xx     save_into__jojo_area
       xx   xoverxx, over
-      xx     save_into__name_string_area
+      xx     save_into__string_area
 
       ;; length
       xx   literal, literal
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       xx   dup
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
 
       xx   tuck, subtraction
       xx   xxswapx
@@ -5370,7 +5371,7 @@
       xx dup2
       xx find_jo__through_jo_link, false?branch, 5
       xx   xxswapx, drop2 ;; drop word
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
       xx   end
       xx write_undefined_word_report__for_make_jojo
       xx write_string
@@ -5420,8 +5421,8 @@
 ** !undo-make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_exception "!undo-make-jojo", !undo_make_jojo
-      ;; << old V__current_free_address__name_string_area
-      ;;    old V__current_free_address__jo_area
+      ;; << old V__current_free_address__string_area
+      ;;    old V__current_free_address__jojo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length]
       ;;    -- >>
@@ -5439,8 +5440,8 @@
       xx literal, 10, write_byte
 
       xx address, V__first_jo_in_jotionary, save
-      xx address, V__current_free_address__jo_area, save
-      xx address, V__current_free_address__name_string_area
+      xx address, V__current_free_address__jojo_area, save
+      xx address, V__current_free_address__string_area
       xx save
       xx end
 
@@ -5455,11 +5456,11 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
-      xx V__current_free_address__name_string_area, xxswapx
-      xx V__current_free_address__jo_area, xxswapx
+      xx V__current_free_address__string_area, xxswapx
+      xx V__current_free_address__jojo_area, xxswapx
       xx V__first_jo_in_jotionary, xxswapx
-      ;; << old V__current_free_address__name_string_area
-      ;;    old V__current_free_address__jo_area
+      ;; << old V__current_free_address__string_area
+      ;;    old V__current_free_address__jojo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
@@ -5468,21 +5469,21 @@
       xx   !undo_make_jojo
       xx   end
 
-      xx V__current_free_address__name_string_area
-      xx   save_into__jo_area
+      xx V__current_free_address__string_area
+      xx   save_into__jojo_area
       xx dup2, string_head__word
-      xx   save_into__name_string_area
+      xx   save_into__string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
-      xx V__current_free_address__jo_area
+      xx V__current_free_address__jojo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$function
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
       xx dup2
       xx string_tail__word
@@ -5498,11 +5499,11 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-exception", CICADA__define_exception
       ;; << string[address, length] -- >>
-      xx V__current_free_address__name_string_area, xxswapx
-      xx V__current_free_address__jo_area, xxswapx
+      xx V__current_free_address__string_area, xxswapx
+      xx V__current_free_address__jojo_area, xxswapx
       xx V__first_jo_in_jotionary, xxswapx
-      ;; << old V__current_free_address__name_string_area
-      ;;    old V__current_free_address__jo_area
+      ;; << old V__current_free_address__string_area
+      ;;    old V__current_free_address__jojo_area
       ;;    old V__first_jo_in_jotionary
       ;;    string[address, length] >>
 
@@ -5511,21 +5512,21 @@
       xx   !undo_make_jojo
       xx   end
 
-      xx V__current_free_address__name_string_area
-      xx   save_into__jo_area
+      xx V__current_free_address__string_area
+      xx   save_into__jojo_area
       xx dup2, string_head__word
-      xx   save_into__name_string_area
+      xx   save_into__string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
-      xx V__current_free_address__jo_area
+      xx V__current_free_address__jojo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$exception
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
       xx dup2
       xx string_tail__word
@@ -5543,26 +5544,26 @@
    define_function "define-variable,with-tos", CICADA__define_variable__with_tos
       ;; << variable, string[address, length] -- >>
       xx literal, 1
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
-      xx V__current_free_address__name_string_area
-      xx   save_into__jo_area
+      xx V__current_free_address__string_area
+      xx   save_into__jojo_area
       xx dup2, string_head__word
-      xx   save_into__name_string_area
+      xx   save_into__string_area
 
       xx V__first_jo_in_jotionary
       xx jo_to_link
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
-      xx V__current_free_address__jo_area
+      xx V__current_free_address__jojo_area
       xx address, V__first_jo_in_jotionary
       xx save
 
       xx literal, explain$variable
-      xx   save_into__jo_area
+      xx   save_into__jojo_area
 
       xx drop2
-      xx save_into__jo_area
+      xx save_into__jojo_area
       xx end
    #+end_src
 ** test define-function
@@ -6173,16 +6174,16 @@
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
       ;;   literal, <offese>, literal, n, n_fetch__local_jo
       xx     literal, literal
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       ;;     offset
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx     literal, literal
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       ;;     n
       xx     count_front_colon
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx     literal, n_fetch__local_jo
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx   end
    .not_found:
       xx write_local_variable_not_bound_report
@@ -6243,16 +6244,16 @@
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
       ;;   literal, <offese>, literal, n, n_save__local_jo
       xx     literal, literal
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       ;;     offset
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx     literal, literal
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       ;;     n
       xx     count_front_colon
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx     literal, n_save__local_jo
-      xx       save_into__jo_area
+      xx       save_into__jojo_area
       xx   end
    .not_found:
       xx dup2
@@ -6261,23 +6262,23 @@
       xx count_front_colon
       ;; literal, <number>, local_data_allocate__jo
       xx   literal, literal
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       ;;   number of jo
-      xx     dup, save_into__jo_area
+      xx     dup, save_into__jojo_area
       xx   literal, local_data_allocate__jo
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       ;; literal, <offese>, literal, n, save_local_data
       xx   literal, literal
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       ;;   offset
       xx   swap
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       xx   literal, literal
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       ;;   n
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       xx   literal, n_save__local_jo
-      xx     save_into__jo_area
+      xx     save_into__jojo_area
       xx end
    #+end_src
 ** ----------------------------------
@@ -6621,12 +6622,12 @@
    define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
      xx current_free_address$un_initialized_memory
    #+end_src
-** *current-free-address,name-string-area*
+** *current-free-address,string-area*
    * the last_name_string_in_assembly
-     is just "*current-free-address,name-string-area*"
+     is just "*current-free-address,string-area*"
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*current-free-address,name-string-area*", V__current_free_address__name_string_area
-      xx current_free_address$name_string_area
+   define_variable "*current-free-address,string-area*", V__current_free_address__string_area
+      xx current_free_address$string_area
    #+end_src
 ** last_link
    * this word helps to initialize V__first_jo_in_jotionary
