@@ -554,7 +554,7 @@
      << name -- string[address, length] >>
      name->address
      fetch
-     address->name-string
+     address->string
      end
    ; define-function
    #+end_src

@@ -2,9 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* rename jo-area to jojo-area and name-string-area to string-area
-  * string-area circular-string-area
-  * jojo-area circular-jojo-area
 * todo
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
@@ -1074,7 +1071,7 @@
       xx literal, jo_size, subtraction
       xx literal, jo_size, subtraction
       xx fetch
-      xx address_to_name_string
+      xx address_to_string
       xx end
    #+end_src
 ** jo->link
@@ -1145,9 +1142,12 @@
    ;; *current-free-address,string-area*
    ;; is at epilog
    #+end_src
-** address->name-string
+** address->string
+   * under the address there is
+     | length : 2 bytes |
+     | string : n bytes |
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "address->name-string", address_to_name_string
+   define_function "address->string", address_to_string
       ;; << address -- string[address, length] >>
       xx dup
       xx literal, 2, addition  ;; address
