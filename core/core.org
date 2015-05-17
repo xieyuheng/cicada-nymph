@@ -30,6 +30,7 @@
     cicada-nymph 就足夠了 ?
     需要回顧一下 cicada-language 的筆記
     調和一下兩個語義的差異
+* scope of named-local-variable in function
 * better syntax for low-level structure [C structure]
 * loading-stack
 * todo
@@ -51,6 +52,11 @@
      1. 練習實現匯編器 爲蟬語的 VM 設計做準備
      2. 簡單的將代碼模塊化的系統
      3. GC 和 hash-table 的實驗
+** 動態內存管理
+   * 我發現不用 GC
+     我也能實現對結構化數據的有限的處理
+     只要我設計好接口
+     那麼 所得到的結構將是很不錯的
 * note problem
 ** 在 string-area 中函數的姓名在被加載到 name-hash-table 時 被重新複製了一遍
 ** only one error-code->string is not enough
@@ -970,6 +976,30 @@
    ; define-function
    test,syntax,name,make-jojo
    #+end_src
+* -----------------------------------
+* note data-structure
+  * a data-structure is a pattern of bit [thus byte [thus jo]] in memory
+  * a data-structure is referenced by is address in memory
+  * what a low level programming language should provide
+    is a flexible way [a mechanism]
+    to manage the interfaces of all kinds of data-structures
+    including
+    1. define
+    2. allocate & init
+    3. fetch & save
+    4. equal & copy
+    5. other operating functions
+  * that is to say
+    the interface of a data-structure is a set of functions
+    what should be managed are
+    1. how to define these functions
+       maybe to generate these functions group by group
+    2. how to apply these functions on their arguments
+       i.e. to call these functions
+  * the mechanism implemented here is very flexible
+    thus
+    it usage is not limited to help to form the concept about data-structure
+* data-structure
 * -----------------------------------
 * jo in name-hash-table
 ** jo,save-into,name-hash-table
@@ -2342,11 +2372,12 @@
      666 . .l
    then
    #+end_src
-* *rule-set,basic-REPL* : double-quote
-** *circular-string-area*
+* *circular-string-area*
+** note
    * no length in the area anymore
      [not like the string-area]
    * and ending each string here with a 0
+** allocate-memory
    #+begin_src cicada-nymph :tangle core.cn
    1024 1024 mul
    : *circular-string-area,size*
@@ -2361,6 +2392,7 @@
    : *current-free-address,circular-string-area*
    ; define-variable,with-tos
    #+end_src
+* *rule-set,basic-REPL* : double-quote
 ** save-into,circular-string-area
    #+begin_src cicada-nymph :tangle core.cn
    : save-into,circular-string-area

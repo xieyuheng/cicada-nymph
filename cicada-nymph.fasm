@@ -4516,7 +4516,7 @@ define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_s
    xx     save_into__jojo_area
    xx end
 
-size$local_byte = 1024 * 1024 * jo_size
+size$local_byte = 1024 * 1024 * 6
 
 address$local_byte labeling
    preserve size$local_byte

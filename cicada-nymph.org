@@ -2,6 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* (within?)
+  0 1 2 3 are within 0 3
 * todo
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
@@ -46,23 +48,24 @@
      except for bar-ket
      every bar-ket is viewed as a word
 ** syntax of cicada-nymph
-   * syntax &  semantic
-     | syntax          | semantic                  |
-     |-----------------+---------------------------|
-     | borderfix "* *" | variable                  |
-     | borderfix "+ +" | [maybe use]               |
-     | bar-ket ( )     | not use                   |
-     | bar-ket [ ]     | not use                   |
-     | bar-ket { }     | macro call                |
-     |                 | (for macros of which      |
-     |                 | the number of             |
-     |                 | arguments is not fix)     |
-     | double-quote    | viewed as special bar-ket |
-     |                 | (bar is the same as ket)  |
-     |                 | to support string literal |
-     | prefix "!"      | exception                 |
-     | postfix "!"     | some of the side-effect   |
-     | postfix "?"     | predicate                 |
+   * table
+     |----------------------+---------------------------|
+     | syntax               | semantic                  |
+     |----------------------+---------------------------|
+     | word borderfix "* *" | variable                  |
+     | word borderfix "+ +" | variable                  |
+     | word borderfix ": :" | variable                  |
+     | word prefix "!"      | exception                 |
+     | word postfix "!"     | some of the side-effect   |
+     | word postfix "?"     | predicate                 |
+     |----------------------+---------------------------|
+     | bar-ket ( )          | not use                   |
+     | bar-ket [ ]          | not use                   |
+     | bar-ket { }          | not use                   |
+     | double-quote         | viewed as special bar-ket |
+     |                      | (bar is the same as ket)  |
+     |                      | to support string literal |
+     |----------------------+---------------------------|
    * but I use
      1. "true" instead of "*true*"
      2. "false" instead of "*false*"
@@ -4793,7 +4796,7 @@
 * syntax-stack
 ** 記
    * 用 *syntax-stack* 來進行語境轉換
-   * 用 *syntax-set,...* 來進行動態添加
+   * 用 *rule-set,...* 來進行動態添加
 ** memory allocate
    #+begin_src fasm :tangle cicada-nymph.fasm
       preserve jo_size * 64
@@ -5793,7 +5796,7 @@
        都是在編譯時期對 local-jo 的 一個 offset 的分配
     2. 同一個 name 在 一個函數體中的出現
        會得到相同的 offset
-* local-jo
+* *local-jo*
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$local_jo = 1024 * 1024 * jo_size
@@ -5824,7 +5827,7 @@
      | 1 : value-3 |
    * on stack
      << value-1, value-2, value-3, ... >>
-** n-fetch & n-save                   :64bit:
+** [n-fetch|n-save],local-jo          :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -5864,7 +5867,7 @@
 
    }
    #+end_src
-** n-fetch & n-save                   :32bit:
+** [n-fetch|n-save],local-jo          :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
@@ -6282,7 +6285,7 @@
       xx end
    #+end_src
 ** ----------------------------------
-* local-byte
+* *local-byte*
 ** 記
    * 並不需要給這裏的接口設計特殊的語法擴展
      直接使用函數就可以了
@@ -6303,7 +6306,7 @@
      所申請的 allocate-local-memory 是相同的
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_byte = 1024 * 1024 * jo_size
+   size$local_byte = 1024 * 1024 * 6
 
    address$local_byte labeling
       preserve size$local_byte
