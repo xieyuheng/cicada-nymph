@@ -137,7 +137,7 @@
   << string[address, length], word:loop --
      string[address, length] >>
   drop2
-  jo <>
+  jo tail-call
     save-into,jojo-area
   current-defining-word find-jo,through-jo-link
   drop

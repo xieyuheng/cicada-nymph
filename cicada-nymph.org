@@ -1194,9 +1194,9 @@
       xx end
    #+end_src
 * -----------------------------------
-* end & taca
+* end & tail-call
 ** 記 結尾珠
-   * end 和 taca 這兩個結尾珠代表將執行退出操作
+   * end 和 tail-call 這兩個結尾珠代表將執行退出操作
      在退出時
      它們將會從返回棧頂取出三個值
      從棧頂開始數 這三個值分別是
@@ -1208,11 +1208,11 @@
      3. local_byte 中的一個地址
         用於重置
         [current_free_address$local_byte]
-   * end 和 taca 的區別在於
+   * end 和 tail-call 的區別在於
      * end
        入返回棧一串新的珠珠
        [三個值一組的存在]
-     * taca
+     * tail-call
        用一串新的珠珠
        代替返回棧頂的一串珠珠
        [三個值一組的存在]
@@ -1226,12 +1226,12 @@
       mov [current_free_address$local_byte], rax
       next
    #+end_src
-** taca
+** tail-call
    * tail-call
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "<>", taca
+   define_primitive_function "tail-call", tail_call
       pop_return_stack rbx
       pop_return_stack rax
       mov [current_free_address$local_jo], rax
@@ -1244,7 +1244,7 @@
 
    match =32bit, machine {
 
-   define_primitive_function "<>", taca
+   define_primitive_function "tail-call", tail_call
       pop_return_stack rbx
       pop_return_stack rcx
       mov [current_free_address$local_jo], rcx
@@ -1257,7 +1257,7 @@
    ;; ><><>< can not be the following
    ;; maybe still something wrong with pop_return_stack
    ;; but I care less about this now
-   ;; define_primitive_function "<>", taca
+   ;; define_primitive_function "tail-call", tail_call
    ;;    pop_return_stack ebx
    ;;    pop_return_stack eax
    ;;    mov [current_free_address$local_jo], eax
@@ -1278,7 +1278,7 @@
       define_function "example", example
          xx fun1
          xx fun2
-         xx taca, example
+         xx tail_call, example
       #+end_src
    4. and we have the following jojo in return-stack
       #+begin_src return-stack
@@ -1290,30 +1290,30 @@
                 (example)
       - [@][@][ (end) ] - [@][@][ (fun1) ]
                                   (fun2)
-                                  (taca)
+                                  (tail-call)
                                   (example)
       #+end_src
    6. next
       #+begin_src return-stack
                 (example)         (fun1)
       - [@][@][ (end) ] - [@][@][ (fun2) ]
-                                  (taca)
+                                  (tail-call)
                                   (example)
       #+end_src
    7. next
       #+begin_src return-stack
                                   (fun1)
                 (example)         (fun2)
-      - [@][@][ (end) ] - [@][@][ (taca) ]
+      - [@][@][ (end) ] - [@][@][ (tail-call) ]
                                   (example)
       #+end_src
    8. next
-      by the definition of taca
+      by the definition of tail_call
       #+begin_src return-stack
                 (example)
       - [@][@][ (end) ] - [@][@][ (fun1) ]
                                   (fun2)
-                                  (taca)
+                                  (tail-call)
                                   (example)
       #+end_src
    9. you can see return-stack of (8.)
@@ -1509,7 +1509,7 @@
       ;; xx little_test
       xx initialization
       xx load_core_file
-      xx taca, basic_REPL
+      xx tail_call, basic_REPL
 
    }
    #+end_src
@@ -1526,7 +1526,7 @@
      #+begin_src return-stack
                (function)
                (function)
-     - [@][@][ (taca) ]
+     - [@][@][ (tail-call) ]
                (top-level-REPL)
      #+end_src
    * right below the return-stack
@@ -1535,7 +1535,7 @@
      #+begin_src return-stack
                                                              (function)
                                                              (function)
-     - [ (report-return-stack-is-empty-and-exit) ] - [@][@][ (taca) ]
+     - [ (report-return-stack-is-empty-and-exit) ] - [@][@][ (tail-call) ]
                                                              (top-level-REPL)
      #+end_src
    * when you say bye to a top-level-REPL
@@ -1626,7 +1626,7 @@
       ;; xx exit_with_TOS
       ;;;; 6
 
-      ;;;; taca
+      ;;;; tail_call
       ;; xx literal, 2
       ;; xx literal, 4
       ;; xx power
@@ -2862,7 +2862,7 @@
       xx swap
       xx   xoverxx, multiple
       xx swap
-      xx taca, power__loop
+      xx tail_call, power__loop
    #+end_src
 ** div & mod
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -3709,7 +3709,7 @@
       xx     literal, buffer$reading
       xx     swap
       xx     push_reading_stack
-      xx     taca, read_byte
+      xx     tail_call, read_byte
    .read_error:
       ;;   ignore <end-of-file>
       ;;   ignore reading error
@@ -3717,7 +3717,7 @@
       xx   literal, buffer$reading
       xx   literal, 0
       xx   push_reading_stack
-      xx   taca, read_byte
+      xx   tail_call, read_byte
    .not_empty:
       xx   literal, error$read_byte
       xx   literal, length$read_byte
@@ -3728,7 +3728,7 @@
       xx   literal, replace$reading
       xx   swap
       xx   push_reading_stack
-      xx   taca, read_byte
+      xx   tail_call, read_byte
 
    error$read_byte:
       db "* (read-byte) meets empty-string in reading-stack", 10
@@ -3852,7 +3852,7 @@
       xx   end
       xx swap
       xx add1, swap
-      xx taca, cursor_to_next_matching_byte
+      xx tail_call, cursor_to_next_matching_byte
    #+end_src
 * string
 ** ----------------------------------
@@ -3867,7 +3867,7 @@
       xx sub1, swap
       xx dup, fetch_byte, write_byte
       xx add1, swap
-      xx taca, write_string
+      xx tail_call, write_string
 
    define_function ".s", ALIAS__write_string
       ;; << integer -- >>
@@ -4028,7 +4028,7 @@
       xx   end
       xx over, fetch_byte, digit_char?, false?branch, 4
       xx   string_tail__byte
-      xx   taca, digit_string?
+      xx   tail_call, digit_string?
       xx drop2, false
       xx end
    #+end_src
@@ -4089,7 +4089,7 @@
       xx add_save
 
       xx string_tail__byte
-      xx taca, help__digit_string_to_number
+      xx tail_call, help__digit_string_to_number
    #+end_src
 ** string->integer
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4122,7 +4122,7 @@
      xx xxswapx
      xx string_tail__byte
      xx xswapxx
-     xx taca, string__find_char
+     xx tail_call, string__find_char
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -4181,7 +4181,7 @@
       xx dup, zero?, false?branch, 3
       xx   drop
       xx   end
-      xx taca, write_number__loop
+      xx tail_call, write_number__loop
    #+end_src
 ** write-integer
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4246,7 +4246,7 @@
       xx greater_than?, false?branch, 2
       xx   end
       xx drop
-      xx taca, read_word_begin_char
+      xx tail_call, read_word_begin_char
    #+end_src
 ** read-word->buffer
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4271,7 +4271,7 @@
       xx     literal, buffer$reading
       xx     swap
       xx     push_reading_stack
-      xx     taca, read_word_to_buffer
+      xx     tail_call, read_word_to_buffer
    .read_error:
       ;;   ignore <end-of-file>
       ;;   ignore reading error
@@ -4279,7 +4279,7 @@
       xx   literal, buffer$reading
       xx   literal, 0
       xx   push_reading_stack
-      xx   taca, read_word_to_buffer
+      xx   tail_call, read_word_to_buffer
    .not_empty:
       xx   literal, error$read_word_to_buffer
       xx   literal, length$read_word_to_buffer
@@ -4290,7 +4290,7 @@
       xx   literal, replace$reading
       xx   swap
       xx   push_reading_stack
-      xx   taca, read_word_to_buffer
+      xx   tail_call, read_word_to_buffer
 
    error$read_word_to_buffer:
       db "* (read-word->buffer) meets empty-string in reading-stack", 10
@@ -4328,7 +4328,7 @@
       xx   end
       xx dup2, string_head__byte, space_char?, false?branch, 4
       xx   string_tail__byte
-      xx   taca, space_string?
+      xx   tail_call, space_string?
       xx drop2, false
       xx end
    #+end_src
@@ -4348,7 +4348,7 @@
       xx space_char?, false?, false?branch, 2
       xx   end
       xx string_tail__byte
-      xx taca, string_to_word_begin
+      xx tail_call, string_to_word_begin
 
    define_function "string->word-end", string_to_word_end
       ;; << string[address, length] -- string[address, length] >>
@@ -4374,7 +4374,7 @@
       xx bar_ket_char?, false?branch, 2
       xx   end
       xx string_tail__byte
-      xx taca, help__string_to_word_end
+      xx tail_call, help__string_to_word_end
    #+end_src
 ** string-[head|tail],word
    * note that
@@ -4465,7 +4465,7 @@
       xx   false
       xx   end
       xx jo_to_pre_jo
-      xx taca, find_jo__through_jo_link__loop
+      xx tail_call, find_jo__through_jo_link__loop
    #+end_src
 ** execute-word
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4508,7 +4508,7 @@
      ;; << unknown -- unknown >>
      xx read_word_for_REPL
      xx execute_word
-     xx taca, basic_REPL
+     xx tail_call, basic_REPL
   #+end_src
 * -----------------------------------
 * colon semicolon
@@ -4650,8 +4650,8 @@
       xx   literal, cursor$colon
       xx   sub_save
       xx   ignore_comment
-      xx   taca, help__loop__colon
-      xx taca, help__loop__colon
+      xx   tail_call, help__loop__colon
+      xx tail_call, help__loop__colon
 
 
    define_function "", help__save_byte__colon
@@ -4726,12 +4726,12 @@
       xx dup2, comment_begin_string?, false?branch, 5
       xx   drop2
       xx     ignore_comment ;; for the new nested-comment
-      xx   taca, ignore_comment ;; for the rest-comment
+      xx   tail_call, ignore_comment ;; for the rest-comment
       xx dup2, comment_end_string?, false?branch, 3
       xx   drop2
       xx   end
       xx drop2
-      xx taca, ignore_comment
+      xx tail_call, ignore_comment
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -5005,7 +5005,7 @@
       xx V__jo_size, subtraction
       xx V__jo_size, subtraction
       xx literal, cursor$find_rule, save
-      xx taca, find_rule__loop
+      xx tail_call, find_rule__loop
    #+end_src
 * rule-set,make-jojo
 ** ----------------------------------
@@ -5414,7 +5414,7 @@
       xx string_head__word
       ;; << tail[address, length], head[address, length] >>
       xx make_jojo__dispatch_syntax_word
-      xx taca, make_jojo__loop
+      xx tail_call, make_jojo__loop
    #+end_src
 * define-[function|exception|variable]
 ** note
@@ -5604,102 +5604,6 @@
     用來分配 變長的局部數據
     在運行時計算 offset
   * 兩個機制配合使用
-* note *to compare readability*
-** example code without local-variable
-   #+begin_src cicada-nymph
-   : name-hash-table,insert,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     xx|tuck|xx name-hash-table,hash
-     xx|tuck|x
-     << number, counter, name, string[address, length], name >>
-     name,used? false? if
-       x|over|xx name,save-string
-         xx|tuck|x << name as return value >>
-       << name, number, counter, name >>
-       x|over|xx 0 name-hash-table,hash
-       swap name,save-orbiton
-       << name, number, counter >>
-       swap 0 name-hash-table,hash
-       name,save-orbit-length
-       1 address *name-hash-table,counter* add-save
-       true
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|over|xx name,fetch-string
-     xx|over|xx string-equal? if
-       drop2 xx|swap|x drop2
-       true
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|over|xxx *name-hash-table,size* equal? if
-       drop2 xx|swap|x drop2
-       false
-       end
-     then
-     << number, counter, name, string[address, length] >>
-     x|swap|xx drop
-     xx|swap|xx add1
-     <> name-hash-table,insert,loop
-   ; define-function
-
-   : name-hash-table,insert
-     << string[address, length]
-        -- name, true
-        -- name, false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
-     end
-   ; define-function
-   #+end_src
-** example code with local-variable
-   #+begin_src cicada-nymph
-   : name-hash-table,insert,loop
-     << string[address, length], number, counter
-        -- name, true
-        -- name, false >>
-     >:counter >:number >::string
-     :number :counter name-hash-table,hash
-     >:name
-     :number 0 name-hash-table,hash
-     >:orbit
-     :name name,used? false? if
-       ::string :name
-       name,save-string
-       :orbit :name
-       name,save-orbiton
-       :counter :orbit
-       name,save-orbit-length
-       1 address *name-hash-table,counter* add-save
-       :name true
-       end
-     then
-     :name name,fetch-string
-     ::string string-equal? if
-       :name true
-       end
-     then
-     :counter *name-hash-table,size* equal? if
-       :name false
-       end
-     then
-     ::string
-     :number :counter add1
-     <> name-hash-table,insert,loop
-   ; define-function
-
-   : name-hash-table,insert
-     << string[address, length]
-        -- name, true
-        -- name, false >>
-     dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
-     end
-   ; define-function
-   #+end_src
 * 記 再增加局部變元支持之後 需要重寫的部分
 ** 詮釋者 與 收尾詞
    * 在進行時
@@ -5724,8 +5628,8 @@
    * 也就是說
      return-stack 中的大多數有效值
      都是以兩個值一對的方式存在的
-   * 兩個結尾詞是 end 和 <>
-     對於 <>
+   * 兩個結尾詞是 end 和 tail_call
+     對於 tail_call
      即 對於明顯的尾遞歸調用
      需要利用棧中的值重置 current_free_address$local_jo
      但是並不入棧新值
@@ -5809,7 +5713,7 @@
    #+end_src
 ** 記 注意結尾詞會初始化局部變量指針
    * 下面的接口函數必須是 primitive-function
-     因爲 否則 遇到 end 和 taca 的時候
+     因爲 否則 遇到 end 和 tail_call 的時候
      current_free_address$local_jo 就又被初始化了
 ** local_data_allocate__jo
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6117,7 +6021,7 @@
       xx V__jo_size, addition
       xx V__jo_size, addition
       xx literal, cursor$local_variable_table, add_save
-      xx taca, local_variable_table__find__loop
+      xx tail_call, local_variable_table__find__loop
    #+end_src
 ** count-front-colon
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6138,7 +6042,7 @@
       xx   end
       xx add1, xxswapx
       xx string_tail__byte, xswapxx
-      xx taca, count_front_colon__loop
+      xx tail_call, count_front_colon__loop
    #+end_src
 * two syntaxes
 ** ----------------------------------
@@ -6290,7 +6194,7 @@
    * 並不需要給這裏的接口設計特殊的語法擴展
      直接使用函數就可以了
    * 但是接口必須是 primitive-function
-     因爲 否則 遇到 end 和 taca 的時候
+     因爲 否則 遇到 end 和 tail_call 的時候
      current_free_address$local_byte 就又被初始化了
 ** 記 使用
    * 在一個函數內
@@ -6299,7 +6203,7 @@
      但是當函數退出的時候
      其所申請的空間就被結尾珠 (end) 收回了
      而沒法重用了
-     而用 (taca) 來實現循環的時候
+     而用 (tail-call) 來實現循環的時候
      下一次函數的執行過程中
      所申請的 allocate-local-memory
      和上一次函數執行過程中

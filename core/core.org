@@ -329,7 +329,7 @@
      << string[address, length], word:loop --
         string[address, length] >>
      drop2
-     jo <>
+     jo tail-call
        save-into,jojo-area
      current-defining-word find-jo,through-jo-link
      drop
@@ -977,30 +977,6 @@
    test,syntax,name,make-jojo
    #+end_src
 * -----------------------------------
-* note data-structure
-  * a data-structure is a pattern of bit [thus byte [thus jo]] in memory
-  * a data-structure is referenced by is address in memory
-  * what a low level programming language should provide
-    is a flexible way [a mechanism]
-    to manage the interfaces of all kinds of data-structures
-    including
-    1. define
-    2. allocate & init
-    3. fetch & save
-    4. equal & copy
-    5. other operating functions
-  * that is to say
-    the interface of a data-structure is a set of functions
-    what should be managed are
-    1. how to define these functions
-       maybe to generate these functions group by group
-    2. how to apply these functions on their arguments
-       i.e. to call these functions
-  * the mechanism implemented here is very flexible
-    thus
-    it usage is not limited to help to form the concept about data-structure
-* data-structure
-* -----------------------------------
 * jo in name-hash-table
 ** jo,save-into,name-hash-table
    #+begin_src cicada-nymph :tangle core.cn
@@ -1257,6 +1233,54 @@
 
    : k no end ; define-function
    #+end_src
+* -----------------------------------
+* note data-structure
+  * a data-structure is a pattern of bit [thus byte [thus jo]] in memory
+  * a data-structure is referenced by is address in memory
+  * what a low level programming language should provide
+    is a flexible way [a mechanism]
+    to manage the interfaces of all kinds of data-structures
+    including
+    1. define
+    2. allocate & init
+    3. fetch & save
+    4. equal & copy
+    5. other operating functions
+  * that is to say
+    the interface of a data-structure is a set of functions
+    what should be managed are
+    1. how to define these functions
+       maybe to generate these functions group by group
+    2. how to apply these functions on their arguments
+       i.e. to call these functions
+  * the mechanism implemented here is very flexible
+    thus
+    it usage is not limited to help to form the concept about data-structure
+* 記 數據結構總結
+** >< <string>
+** <syntax-stack>
+   push pop
+   tos drop
+   empty?
+   find-syntax
+** <rule-set>
+   fetch-border save-border
+   add-rule sub-rule
+   find-rule
+   list-rule
+** <name-hash-table>
+   size unit couter
+   hash search insert report
+** <name>
+   ->address
+   used? used-as-title? used-as-nymph-jo?
+   fetch-string fetch-title-index fetch-orbit-length fetch-nymph-jo
+   save-string save-title-index save-orbit-length save-orbiton save-nymph-jo
+   no-collision
+* data-structure
+  #+begin_src cicada-nymph
+
+  #+end_src
 * -----------------------------------
 * number with base
 ** 記 原理

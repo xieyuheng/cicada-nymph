@@ -722,7 +722,7 @@ define_primitive_function "end", end
 
 match =64bit, machine {
 
-define_primitive_function "<>", taca
+define_primitive_function "tail-call", tail_call
    pop_return_stack rbx
    pop_return_stack rax
    mov [current_free_address$local_jo], rax
@@ -735,7 +735,7 @@ define_primitive_function "<>", taca
 
 match =32bit, machine {
 
-define_primitive_function "<>", taca
+define_primitive_function "tail-call", tail_call
    pop_return_stack rbx
    pop_return_stack rcx
    mov [current_free_address$local_jo], rcx
@@ -748,7 +748,7 @@ define_primitive_function "<>", taca
 ;; ><><>< can not be the following
 ;; maybe still something wrong with pop_return_stack
 ;; but I care less about this now
-;; define_primitive_function "<>", taca
+;; define_primitive_function "tail-call", tail_call
 ;;    pop_return_stack ebx
 ;;    pop_return_stack eax
 ;;    mov [current_free_address$local_jo], eax
@@ -920,7 +920,7 @@ first_jojo:
    ;; xx little_test
    xx initialization
    xx load_core_file
-   xx taca, basic_REPL
+   xx tail_call, basic_REPL
 
 }
 
@@ -1003,7 +1003,7 @@ define_function "little_test", little_test
    ;; xx exit_with_TOS
    ;;;; 6
 
-   ;;;; taca
+   ;;;; tail_call
    ;; xx literal, 2
    ;; xx literal, 4
    ;; xx power
@@ -2050,7 +2050,7 @@ define_function "power,loop", power__loop
    xx swap
    xx   xoverxx, multiple
    xx swap
-   xx taca, power__loop
+   xx tail_call, power__loop
 
 define_primitive_function "moddiv", moddiv
    ;; << a, b -- a mod b, quotient >>
@@ -2716,7 +2716,7 @@ define_function "read-byte", read_byte
    xx     literal, buffer$reading
    xx     swap
    xx     push_reading_stack
-   xx     taca, read_byte
+   xx     tail_call, read_byte
 .read_error:
    ;;   ignore <end-of-file>
    ;;   ignore reading error
@@ -2724,7 +2724,7 @@ define_function "read-byte", read_byte
    xx   literal, buffer$reading
    xx   literal, 0
    xx   push_reading_stack
-   xx   taca, read_byte
+   xx   tail_call, read_byte
 .not_empty:
    xx   literal, error$read_byte
    xx   literal, length$read_byte
@@ -2735,7 +2735,7 @@ define_function "read-byte", read_byte
    xx   literal, replace$reading
    xx   swap
    xx   push_reading_stack
-   xx   taca, read_byte
+   xx   tail_call, read_byte
 
 error$read_byte:
    db "* (read-byte) meets empty-string in reading-stack", 10
@@ -2826,7 +2826,7 @@ define_function "cursor->next-matching-byte", cursor_to_next_matching_byte
    xx   end
    xx swap
    xx add1, swap
-   xx taca, cursor_to_next_matching_byte
+   xx tail_call, cursor_to_next_matching_byte
 
 define_function "write-string", write_string
    ;; << string[address, length] -- >>
@@ -2836,7 +2836,7 @@ define_function "write-string", write_string
    xx sub1, swap
    xx dup, fetch_byte, write_byte
    xx add1, swap
-   xx taca, write_string
+   xx tail_call, write_string
 
 define_function ".s", ALIAS__write_string
    ;; << integer -- >>
@@ -2973,7 +2973,7 @@ define_function "digit-string?", digit_string?
    xx   end
    xx over, fetch_byte, digit_char?, false?branch, 4
    xx   string_tail__byte
-   xx   taca, digit_string?
+   xx   tail_call, digit_string?
    xx drop2, false
    xx end
 
@@ -3030,7 +3030,7 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx add_save
 
    xx string_tail__byte
-   xx taca, help__digit_string_to_number
+   xx tail_call, help__digit_string_to_number
 
 define_function "string->integer", string_to_integer
    ;; << string[address, length] -- integer >>
@@ -3058,7 +3058,7 @@ define_function "string,find-char", string__find_char
   xx xxswapx
   xx string_tail__byte
   xx xswapxx
-  xx taca, string__find_char
+  xx tail_call, string__find_char
 
 ;; 2 ^ 64 = 18446744073709551616
 ;; which is of length 20
@@ -3107,7 +3107,7 @@ define_function "write-number,loop", write_number__loop
    xx dup, zero?, false?branch, 3
    xx   drop
    xx   end
-   xx taca, write_number__loop
+   xx tail_call, write_number__loop
 
 define_function "write-integer", write_integer
    ;; << integer -- >>
@@ -3146,7 +3146,7 @@ define_function "read-word-begin-char", read_word_begin_char
    xx greater_than?, false?branch, 2
    xx   end
    xx drop
-   xx taca, read_word_begin_char
+   xx tail_call, read_word_begin_char
 
 define_function "read-word->buffer", read_word_to_buffer
    ;; << buffer -- word[address, length] >>
@@ -3169,7 +3169,7 @@ define_function "read-word->buffer", read_word_to_buffer
    xx     literal, buffer$reading
    xx     swap
    xx     push_reading_stack
-   xx     taca, read_word_to_buffer
+   xx     tail_call, read_word_to_buffer
 .read_error:
    ;;   ignore <end-of-file>
    ;;   ignore reading error
@@ -3177,7 +3177,7 @@ define_function "read-word->buffer", read_word_to_buffer
    xx   literal, buffer$reading
    xx   literal, 0
    xx   push_reading_stack
-   xx   taca, read_word_to_buffer
+   xx   tail_call, read_word_to_buffer
 .not_empty:
    xx   literal, error$read_word_to_buffer
    xx   literal, length$read_word_to_buffer
@@ -3188,7 +3188,7 @@ define_function "read-word->buffer", read_word_to_buffer
    xx   literal, replace$reading
    xx   swap
    xx   push_reading_stack
-   xx   taca, read_word_to_buffer
+   xx   tail_call, read_word_to_buffer
 
 error$read_word_to_buffer:
    db "* (read-word->buffer) meets empty-string in reading-stack", 10
@@ -3214,7 +3214,7 @@ define_function "space-string?", space_string?
    xx   end
    xx dup2, string_head__byte, space_char?, false?branch, 4
    xx   string_tail__byte
-   xx   taca, space_string?
+   xx   tail_call, space_string?
    xx drop2, false
    xx end
 
@@ -3227,7 +3227,7 @@ define_function "string->word-begin", string_to_word_begin
    xx space_char?, false?, false?branch, 2
    xx   end
    xx string_tail__byte
-   xx taca, string_to_word_begin
+   xx tail_call, string_to_word_begin
 
 define_function "string->word-end", string_to_word_end
    ;; << string[address, length] -- string[address, length] >>
@@ -3253,7 +3253,7 @@ define_function "help,string->word-end", help__string_to_word_end
    xx bar_ket_char?, false?branch, 2
    xx   end
    xx string_tail__byte
-   xx taca, help__string_to_word_end
+   xx tail_call, help__string_to_word_end
 
 define_function "string-head,word", string_head__word
    ;; << string[address, length] -- word[address, length] >>
@@ -3307,7 +3307,7 @@ define_function "find-jo,through-jo-link,loop", find_jo__through_jo_link__loop
    xx   false
    xx   end
    xx jo_to_pre_jo
-   xx taca, find_jo__through_jo_link__loop
+   xx tail_call, find_jo__through_jo_link__loop
 
 define_function "execute-word", execute_word
    ;; << word[address, length] -- unknown >>
@@ -3346,7 +3346,7 @@ define_function "basic-REPL", basic_REPL
    ;; << unknown -- unknown >>
    xx read_word_for_REPL
    xx execute_word
-   xx taca, basic_REPL
+   xx tail_call, basic_REPL
 
 define_function "current-defining-word", current_defining_word
    ;; << -- word[address, length] >>
@@ -3434,8 +3434,8 @@ define_function "", help__loop__colon
    xx   literal, cursor$colon
    xx   sub_save
    xx   ignore_comment
-   xx   taca, help__loop__colon
-   xx taca, help__loop__colon
+   xx   tail_call, help__loop__colon
+   xx tail_call, help__loop__colon
 
 
 define_function "", help__save_byte__colon
@@ -3506,12 +3506,12 @@ define_function "<<", ignore_comment
    xx dup2, comment_begin_string?, false?branch, 5
    xx   drop2
    xx     ignore_comment ;; for the new nested-comment
-   xx   taca, ignore_comment ;; for the rest-comment
+   xx   tail_call, ignore_comment ;; for the rest-comment
    xx dup2, comment_end_string?, false?branch, 3
    xx   drop2
    xx   end
    xx drop2
-   xx taca, ignore_comment
+   xx tail_call, ignore_comment
 
 size$jojo_area = 1024 * 1024 * jo_size
 
@@ -3695,7 +3695,7 @@ define_function "find-rule,loop", find_rule__loop
    xx V__jo_size, subtraction
    xx V__jo_size, subtraction
    xx literal, cursor$find_rule, save
-   xx taca, find_rule__loop
+   xx tail_call, find_rule__loop
 
 size$rule_set__make_jojo = 1024 * jo_size
 
@@ -4045,7 +4045,7 @@ define_function "make-jojo,loop", make_jojo__loop
    xx string_head__word
    ;; << tail[address, length], head[address, length] >>
    xx make_jojo__dispatch_syntax_word
-   xx taca, make_jojo__loop
+   xx tail_call, make_jojo__loop
 
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__string_area
@@ -4372,7 +4372,7 @@ define_function "local-variable-table,find,loop", local_variable_table__find__lo
    xx V__jo_size, addition
    xx V__jo_size, addition
    xx literal, cursor$local_variable_table, add_save
-   xx taca, local_variable_table__find__loop
+   xx tail_call, local_variable_table__find__loop
 
 define_function "count-front-colon", count_front_colon
    ;; << string[address, length] -- number >>
@@ -4391,7 +4391,7 @@ define_function "count-front-colon,loop", count_front_colon__loop
    xx   end
    xx add1, xxswapx
    xx string_tail__byte, xswapxx
-   xx taca, count_front_colon__loop
+   xx tail_call, count_front_colon__loop
 
 define_function "local-variable-fetch-string?", local_variable_fetch_string?
    ;; << string[address, length] -- bool >>
