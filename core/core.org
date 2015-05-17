@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* new way to do data-structure
 * un-named function
   * 我發現我已經可以使用 map 了
     爲了實現 un-named function
@@ -31,7 +32,6 @@
     需要回顧一下 cicada-language 的筆記
     調和一下兩個語義的差異
 * scope of named-local-variable in function
-* better syntax for low-level structure [C structure]
 * loading-stack
 * todo
 ** little-tester [於命令行工具還有 load 相結合] :needed:
@@ -478,8 +478,7 @@
    ; define-variable,with-tos
 
    *name-hash-table,size*
-   *name-hash-table,unit* mul
-   allocate-memory
+   *name-hash-table,unit* mul allocate-memory
    : *name-hash-table*
    ; define-variable,with-tos
 
@@ -1257,7 +1256,57 @@
     thus
     it usage is not limited to help to form the concept about data-structure
 * 記 數據結構總結
-** >< <string>
+** <jo>
+   execute {execute-jo}
+   size {*jo-size*}
+   ->name
+   ->link
+   ->pre-jo
+   ->type
+   {primitive-function-jo?}
+   {function-jo?}
+   {exception-jo?}
+   {variable-jo?}
+   last-jo? {last-jo,jotionary?}
+** <string-area>
+   size {*size,string-area*}
+   {address->string}
+   save-into {save-into,string-area}
+** <jotionary>
+   list-by-jo-predicate
+   report
+** <buffer>
+   {compare-buffer}
+   {cursor->next-matching-byte}
+** <string>
+   write {write-string}
+   pretty-write {pretty-write-string}
+   empty? {empty-string?}
+   equal? {string-equal?}
+   tail,byte {string-tail,byte}
+   head,byte {string-head,byte}
+   ->buffer!
+   reverse! {string-reverse!}
+   {char-string?}
+   {zero-string?}
+   {digit-string?}
+   {integer-string?}
+   {digit-string->number}
+   ->integer
+   find-char
+   {space-string?}
+   tail,word {string-tail,word}
+   head,word {string-head,word}
+** <word>
+   {read-word->buffer}
+   {read-word}
+   {read-word-for-REPL}
+   {find-jo,through-jo-link}
+   execute {execute-word}
+** <jojo-area>
+   size {*size,jojo-area*}
+   current-free-address {*current-free-address,jojo-area*}
+   save-into {save-into,jojo-area}
 ** <syntax-stack>
    push pop
    tos drop
@@ -1268,6 +1317,14 @@
    add-rule sub-rule
    find-rule
    list-rule
+** <local-jo>
+   local-data-allocate,jo
+   n-fetch,local-jo
+   n-save,local-jo
+** <local-variable-table>
+   clear insert find
+** <local-byte>
+   allocate-local-memory
 ** <name-hash-table>
    size unit couter
    hash search insert report
@@ -5599,4 +5656,493 @@
    report-syntax
    jotionary,report
    #+end_src
+* ===================================
+* all primitive-function in jotionary :
+  1. syscall
+  2. allocate-local-memory
+  3. n-save,local-jo
+  4. n-fetch,local-jo
+  5. local-data-allocate,jo
+  6. string-reverse!
+  7. string->buffer!
+  8. compare-buffer
+  9. read-line-from-stdin
+  10. tos-reading-stack
+  11. drop-reading-stack
+  12. pop-reading-stack
+  13. push-reading-stack
+  14. write-byte
+  15. find-highest-set-bit
+  16. find-lowest-set-bit
+  17. invert-bit
+  18. clear-bit
+  19. set-bit
+  20. get-bit
+  21. bit-right,sign
+  22. bit-right
+  23. bit-left
+  24. bit-invert
+  25. bit-xor
+  26. bit-or
+  27. bit-and
+  28. clear-memory
+  29. sub-save
+  30. add-save
+  31. n-save
+  32. save-four-bytes
+  33. save-two-bytes
+  34. save-byte
+  35. save
+  36. n-fetch
+  37. fetch-four-bytes
+  38. fetch-two-bytes
+  39. fetch-byte
+
+  64. snapshot-the-stack-pointer
+
+  91. instruction,exception-head
+  92. instruction,prepare-for
+  93. instruction,false?branch
+  94. instruction,branch
+  95. instruction,address
+  96. instruction,literal
+  97. bye
+  98. reset-top-level-REPL
+  99. report-return-stack-is-empty-and-exit
+  100. tail-call
+  101. end
+  102. execute-jo
+  103. instruction,exception-reset-stack
+* all function in jotionary :
+  1. the-story-begin
+  2. command-line-dispatcher
+  3. command-line,no-function
+  4. command-line,poi
+  5. command-line,basic-REPL
+  6. command-line,stack-REPL
+  7. command-line,unknow-function
+  8. help
+  9. hi
+  10. hi,say
+  11. hi,random
+  12. welcome
+  13. initial-report
+  14. report-syntax
+  15. report-machine-word-size
+  16. report-jo-size
+  17. report-platform
+  18. report-memory
+  19. syntax,path:,basic-REPL
+  20. syntax,path:,basic-REPL,loop
+  21. path-syntax-word->path
+  22. bad-path-syntax-word,loop
+  23. word:path:?
+  24. +name+->name
+  25. +name+?
+  26. poi,help
+  27. poi,list
+  28. poi,list,lister
+  29. poi,up
+  30. poi,sub
+  31. poi,add
+  32. poi,find
+  33. full-path?
+  34. relative-path?
+  35. path,directory?
+  36. path,file?
+  37. path,nothing?
+  38. init,stat
+  39. change-work-directory
+  40. get-work-directory
+  41. report-command-line
+  42. report-command-line,loop
+  43. report-environment-variable
+  44. report-environment-variable,loop
+  45. find-environment-variable
+  46. find-environment-variable,loop
+  47. get-environment-variable-list
+  48. init-environment-variable-list
+  49. get-command-line
+  50. init-command-line
+  51. get-pid
+  52. init-pid
+  53. directory,find-directory
+  54. directory,find-directory,finder
+  55. directory,find-file
+  56. directory,find-file,finder
+  57. directory,list-directory
+  58. directory,list-directory,lister
+  59. directory,list-file
+  60. directory,list-file,lister
+  61. directory,map
+  62. directory,map,loop
+  63. directory,map,loop,execute
+  64. empty-directory?
+  65. init,getdents64
+  66. directory,remove
+  67. directory,creat
+  68. file,remove
+  69. file,read
+  70. file,write
+  71. file,creat
+  72. port,write
+  73. port,read
+  74. port,close
+  75. output-port,update
+  76. output-port,creat
+  77. input-port,open
+  78. n-string->buffer!
+  79. n-string->buffer!,loop
+  80. jotionary,report
+  81. jotionary,list-by-jo-predicate
+  82. jotionary,list-by-jo-predicate,loop
+  83. file-type-code->string
+  84. error-code->string
+  85. define-variable
+  86. syntax,double-quote,define-variable
+  87. syntax,double-quote,define-variable,loop
+  88. eval-string
+  89. eval-string,loop
+  90. sub-rule
+  91. sub-rule,loop
+  92. sub-rule,move
+  93. sub-rule,move-one
+  94. list-rule
+  95. list-rule,loop
+  96. stack-REPL
+  97. stack-REPL,loop
+  98. print-argument-stack,pretty
+  99. print-argument-stack
+  100. print-argument-stack,loop
+  101. syntax,save-to,basic-REPL
+  102. syntax,address,basic-REPL
+  103. syntax,double-quote,basic-REPL
+  104. syntax,double-quote,basic-REPL,loop
+  105. save-into,circular-string-area
+  106. syntax,if,basic-REPL
+  107. syntax,if,basic-REPL,meet-false
+  108. syntax,if,basic-REPL,meet-false,else
+  109. syntax,if,basic-REPL,meet-true
+  110. syntax,if,basic-REPL,meet-true,else
+  111. init,rule-set,basic-REPL
+  112. syntax,jo,basic-REPL
+  113. word:jo?
+  114. basic-REPL
+  115. basic-REPL,loop
+  116. syntax,bye,basic-REPL
+  117. word:bye?
+  118. execute-word
+  119. more,rule-set,make-jojo
+  120. syntax,base#wild-integer-string,make-jojo
+  121. gamber->number
+  122. gamber->number,loop
+  123. number->gamber
+  124. .#16
+  125. .#8
+  126. .#2
+  127. .#
+  128. .#,loop
+  129. base#wild-integer-string->integer
+  130. wild-integer-string->integer,with-base
+  131. wild-integer-string->integer,with-base,loop
+  132. base#wild-integer-string->wild-integer-string
+  133. base#wild-integer-string->base-string
+  134. base#wild-integer-string?
+  135. wild-integer-string?
+  136. wild-digit-string?
+  137. number->latin-char
+  138. latin-char->number
+  139. latin-char?
+  140. remove-char!
+  141. remove-char!,loop
+  142. define-function
+  143. define-exception
+  144. define-variable,with-tos
+  145. init,name-hash-table,nymph-jo
+  146. init,name-hash-table,nymph-jo,loop
+  147. make-jojo
+  148. make-jojo,loop
+  149. make-jojo,dispatch-syntax-word
+  150. find-jo
+  151. jo,save-into,name-hash-table
+  152. more,rule-set,make-jojo
+  153. syntax,name,make-jojo
+  154. word:name?
+  155. name-hash-table,report
+  156. name-hash-table,report,loop
+  157. name-hash-table,report,orbit
+  158. name->string
+  159. string->name
+  160. name-hash-table,insert
+  161. name-hash-table,insert,loop
+  162. name-hash-table,search
+  163. name-hash-table,search,loop
+  164. string->finite-carry-sum
+  165. string->finite-carry-sum,loop
+  166. name-hash-table,hash
+  167. name,no-collision?
+  168. name,save-nymph-jo
+  169. name,save-orbiton
+  170. name,save-orbit-length
+  171. name,save-title-index
+  172. name,save-string
+  173. name,fetch-nymph-jo
+  174. name,fetch-orbiton
+  175. name,fetch-orbit-length
+  176. name,fetch-title-index
+  177. name,fetch-string
+  178. name,used-as-nymph-jo?
+  179. name,used-as-title?
+  180. name,used?
+  181. name->address
+  182. allocate-memory
+  183. more,rule-set,make-jojo
+  184. syntax,recur,make-jojo
+  185. word:recur?
+  186. syntax,loop,make-jojo
+  187. word:loop?
+  188. syntax,save-to,make-jojo
+  189. word:save-to?
+  190. syntax,exception-reset-stack,make-jojo
+  191. word:exception-reset-stack?
+  192. syntax,prepare-for,make-jojo
+  193. word:prepare-for?
+  194. syntax,then,make-jojo
+  195. syntax,else,make-jojo
+  196. syntax,if,make-jojo
+  197. word:then?
+  198. word:else?
+  199. word:if?
+  200. .b
+  201. .i
+  202. .l
+  203. platform
+  204. string->syscall-string-2
+  205. string->syscall-string
+  206. syntax,local-variable-save,make-jojo
+  207. local-variable-save-string?
+  208. write-local-variable-not-bound-report
+  209. syntax,local-variable-fetch,make-jojo
+  210. local-variable-fetch-string?
+  211. count-front-colon,loop
+  212. count-front-colon
+  213. local-variable-table,find,loop
+  214. local-variable-table,find
+  215. local-variable-table,insert
+  216. local-variable-table,clear
+  217. define-variable,with-tos
+  218. define-exception
+  219. define-function
+  220. make-jojo,loop
+  221. make-jojo
+  222. write-undefined-word-report,for-make-jojo
+  223. make-jojo,dispatch-syntax-word
+  224. write-not-integer-string-report,for-double-quote
+  225. syntax,double-quote,make-jojo
+  226. word:double-quote?
+  227. write-not-integer-string-report,for-false?branch
+  228. syntax,false?branch,make-jojo
+  229. word:false?branch?
+  230. write-not-integer-string-report,for-branch
+  231. syntax,branch,make-jojo
+  232. word:branch?
+  233. write-undefined-word-report,for-jo
+  234. syntax,jo,make-jojo
+  235. word:jo?
+  236. write-undefined-word-report,for-address
+  237. syntax,address,make-jojo
+  238. word:address?
+  239. syntax,integer-string,make-jojo
+  240. init,rule-set,make-jojo
+  241. find-rule,loop
+  242. find-rule
+  243. add-rule
+  244. cursor->function
+  245. cursor->predicate
+  246. cursor->rule
+  247. rule-set,save-border
+  248. rule-set,fetch-border
+  249. find-syntax
+  250. syntax-stack-empty?
+  251. drop-syntax-stack
+  252. tos-syntax-stack
+  253. pop-syntax-stack
+  254. push-syntax-stack
+  255. save-into,jojo-area
+  256. save-into,string-area
+  257. <<
+  258.   unnamed
+  259.   unnamed
+  260.   unnamed
+  261.   unnamed
+  262. :
+  263. comment-end-string?
+  264. comment-begin-string?
+  265. semicolon-string?
+  266. colon-string?
+  267. current-defining-body
+  268. current-defining-word
+  269. basic-REPL
+  270. write-undefined-word-report,for-execute-word
+  271. execute-word
+  272. find-jo,through-jo-link,loop
+  273. find-jo,through-jo-link
+  274. string-tail,word
+  275. string-head,word
+  276. help,string->word-end
+  277. string->word-end
+  278. string->word-begin
+  279. space-string?
+  280. read-word-for-REPL
+  281. read-word
+  282. read-word->buffer
+  283. read-word-begin-char
+  284. .
+  285. pretty-write-integer
+  286. write-integer
+  287. write-number,loop
+  288. write-number,fill-buffer
+  289. write-number
+  290. string,find-char
+  291. string->integer
+  292. help,digit-string->number
+  293. digit-string->number
+  294. integer-string?
+  295. digit-string?
+  296. zero-string?
+  297. char-string?
+  298. string-tail,byte
+  299. string-head,byte
+  300. string-equal?
+  301. empty-string?
+  302. pretty-write-string
+  303. .s
+  304. write-string
+  305. cursor->next-matching-byte
+  306. number->digit-char
+  307. digit-char->number
+  308. digit-char?
+  309. bar-ket-char?
+  310. space-char?
+  311. load-core-file
+  312. read-byte
+  313. reading-stack-empty?
+  314. positive?
+  315. negative?
+  316. equal2?
+  317. mod
+  318. div
+  319. divmod
+  320. power,loop
+  321. power
+  322. negate
+  323. one?
+  324. zero?
+  325. xor
+  326. or
+  327. and
+  328. not
+  329. true?
+  330. false?
+  331. little_test
+  332. initialization
+  333. variable-jo?
+  334. exception-jo?
+  335. function-jo?
+  336. primitive-function-jo?
+  337. address->string
+  338. jo->type
+  339. jo->pre-jo
+  340. last-jo,jotionary?
+  341. jo->link
+  342. jo->name
+* all exception in jotionary :
+  1. !bad-path-syntax-word
+  2. !bye,basic-REPL
+  3. !undo-make-jojo
+* all variable in jotionary :
+  1. *hi,random-base*
+  2. *poi-directory*
+  3. *poi-directory,user,address*
+  4. +stat,length+
+  5. +stat,end+
+  6. +stat,__unused5+
+  7. +stat,__unused4+
+  8. +stat,st_ctime_nsec+
+  9. +stat,st_ctime+
+  10. +stat,st_mtime_nsec+
+  11. +stat,st_mtime+
+  12. +stat,st_atime_nsec+
+  13. +stat,st_atime+
+  14. +stat,st_blocks+
+  15. +stat,st_blksize+
+  16. +stat,st_size+
+  17. +stat,st_rdev+
+  18. +stat,st_gid+
+  19. +stat,st_uid+
+  20. +stat,st_nlink+
+  21. +stat,st_mode+
+  22. +stat,st_ino+
+  23. +stat,st_dev+
+  24. *buffer,work-directory*
+  25. *home-directory*
+  26. *length,environment-variable-list*
+  27. *address,environment-variable-list*
+  28. *length,command-line*
+  29. *address,command-line*
+  30. *pid*
+  31. +getdents64,length+
+  32. +getdents64,end+
+  33. +getdents64,d_name+
+  34. +getdents64,d_type+
+  35. +getdents64,d_reclen+
+  36. +getdents64,d_off+
+  37. +getdents64,d_ino+
+  38. :syscall-number,chdir:
+  39. :syscall-number,getcwd:
+  40. :syscall-number,getpid:
+  41. :syscall-number,times:
+  42. :syscall-number,exit:
+  43. :syscall-number,stat:
+  44. :syscall-number,getdents64:
+  45. :syscall-number,getdents:
+  46. :syscall-number,rmdir:
+  47. :syscall-number,mkdir:
+  48. :syscall-number,unlink:
+  49. :syscall-number,link:
+  50. :syscall-number,write:
+  51. :syscall-number,read:
+  52. :syscall-number,close:
+  53. :syscall-number,open:
+  54. *syntax,address,basic-REPL,stack-balancer*
+  55. *current-free-address,circular-string-area*
+  56. *circular-string-area*
+  57. *circular-string-area,size*
+  58. *rule-set,basic-REPL*
+  59. *size,rule-set,basic-REPL*
+  60. *max-carry-position*
+  61. *name-hash-table,counter*
+  62. *name-hash-table*
+  63. *name-hash-table,unit*
+  64. *name-hash-table,size*
+  65. *current-free-address,string-area*
+  66. *current-free-address,un-initialized-memory*
+  67. *size,un-initialized-memory*
+  68. *un-initialized-memory*
+  69. *explainer,variable*
+  70. *explainer,exception*
+  71. *explainer,function*
+  72. *rule-set,make-jojo*
+  73. *pointer-syntax-stack*
+  74. *current-free-address,jojo-area*
+  75. *size,jojo-area*
+  76. *jojo-area*
+  77. *first-jo-in-jotionary*
+  78. *the-stack-pointer-snapshot*
+  79. *the-stack*
+  80.   unnamed
+  81. *size,string-area*
+  82. *string-area*
+  83. *jo-size*
+  84. *lost-exception-REPL*
 * ===================================

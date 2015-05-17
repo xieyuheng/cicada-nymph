@@ -669,22 +669,6 @@ define_function "jo->type", jo_to_type
    xx fetch
    xx end
 
-define_variable "*string-area*", V__string_area
-   xx address$string_area
-
-define_variable "*size,string-area*", V__size__string_area
-   xx (end$string_area - address$string_area)
-
-;; *current-free-address,string-area*
-;; is at epilog
-
-define_function "address->string", address_to_string
-   ;; << address -- string[address, length] >>
-   xx dup
-   xx literal, 2, addition  ;; address
-   xx swap, fetch_two_bytes ;; length
-   xx end
-
 define_function "primitive-function-jo?", primitive_function_jo?
    ;; << jo -- bool >>
    xx jo_to_type
@@ -710,6 +694,39 @@ define_function "variable-jo?", variable_jo?
    xx jo_to_type
    xx literal, explain$variable
    xx equal?
+   xx end
+
+define_variable "*string-area*", V__string_area
+   xx address$string_area
+
+define_variable "*size,string-area*", V__size__string_area
+   xx (end$string_area - address$string_area)
+
+;; *current-free-address,string-area*
+;; is at epilog
+
+define_function "address->string", address_to_string
+   ;; << address -- string[address, length] >>
+   xx dup
+   xx literal, 2, addition  ;; address
+   xx swap, fetch_two_bytes ;; length
+   xx end
+
+define_function "save-into,string-area", save_into__string_area
+   ;; << string[address, length] -- >>
+   xx dup, V__current_free_address__string_area
+   xx save_two_bytes
+
+   xx literal, 2
+   xx address, V__current_free_address__string_area
+   xx add_save
+
+   xx tuck
+   xx V__current_free_address__string_area
+   xx string_to_buffer!
+
+   xx address, V__current_free_address__string_area
+   xx add_save
    xx end
 
 define_primitive_function "end", end
@@ -3060,6 +3077,68 @@ define_function "string,find-char", string__find_char
   xx xswapxx
   xx tail_call, string__find_char
 
+define_function "space-string?", space_string?
+   ;; << string[address, length] -- bool >>
+   xx dup, zero?, false?branch, 4
+   xx   drop2, true
+   xx   end
+   xx dup2, string_head__byte, space_char?, false?branch, 4
+   xx   string_tail__byte
+   xx   tail_call, space_string?
+   xx drop2, false
+   xx end
+
+define_function "string->word-begin", string_to_word_begin
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup, zero?, false?branch, 2
+   ;;   no error handling
+   xx   end
+   xx dup2, string_head__byte
+   xx space_char?, false?, false?branch, 2
+   xx   end
+   xx string_tail__byte
+   xx tail_call, string_to_word_begin
+
+define_function "string->word-end", string_to_word_end
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup, zero?, false?branch, 2
+   ;;   no error handling
+   xx   end
+   xx dup2, string_head__byte
+   xx bar_ket_char?, false?branch, 3
+   xx   string_tail__byte
+   xx   end
+   xx help__string_to_word_end
+   xx end
+
+define_function "help,string->word-end", help__string_to_word_end
+   ;; << string[address, length] -- address >>
+   xx dup, zero?, false?branch, 2
+   ;;   no error handling
+   xx   end
+   xx dup2, string_head__byte
+   xx space_char?, false?branch, 2
+   xx   end
+   xx dup2, string_head__byte
+   xx bar_ket_char?, false?branch, 2
+   xx   end
+   xx string_tail__byte
+   xx tail_call, help__string_to_word_end
+
+define_function "string-head,word", string_head__word
+   ;; << string[address, length] -- word[address, length] >>
+   xx string_to_word_begin
+   xx dup2, string_to_word_end
+   xx swap, drop
+   xx subtraction
+   xx end
+
+define_function "string-tail,word", string_tail__word
+   ;; << string[address, length] -- string[address, length] >>
+   xx string_to_word_begin
+   xx string_to_word_end
+   xx end
+
 ;; 2 ^ 64 = 18446744073709551616
 ;; which is of length 20
 ;; so
@@ -3205,68 +3284,6 @@ define_function "read-word", read_word
 define_function "read-word-for-REPL", read_word_for_REPL
    ;; << -- word[address of buffer$read_word_for_REPL, length] >>
    xx literal, buffer$read_word_for_REPL, read_word_to_buffer
-   xx end
-
-define_function "space-string?", space_string?
-   ;; << string[address, length] -- bool >>
-   xx dup, zero?, false?branch, 4
-   xx   drop2, true
-   xx   end
-   xx dup2, string_head__byte, space_char?, false?branch, 4
-   xx   string_tail__byte
-   xx   tail_call, space_string?
-   xx drop2, false
-   xx end
-
-define_function "string->word-begin", string_to_word_begin
-   ;; << string[address, length] -- string[address, length] >>
-   xx dup, zero?, false?branch, 2
-   ;;   no error handling
-   xx   end
-   xx dup2, string_head__byte
-   xx space_char?, false?, false?branch, 2
-   xx   end
-   xx string_tail__byte
-   xx tail_call, string_to_word_begin
-
-define_function "string->word-end", string_to_word_end
-   ;; << string[address, length] -- string[address, length] >>
-   xx dup, zero?, false?branch, 2
-   ;;   no error handling
-   xx   end
-   xx dup2, string_head__byte
-   xx bar_ket_char?, false?branch, 3
-   xx   string_tail__byte
-   xx   end
-   xx help__string_to_word_end
-   xx end
-
-define_function "help,string->word-end", help__string_to_word_end
-   ;; << string[address, length] -- address >>
-   xx dup, zero?, false?branch, 2
-   ;;   no error handling
-   xx   end
-   xx dup2, string_head__byte
-   xx space_char?, false?branch, 2
-   xx   end
-   xx dup2, string_head__byte
-   xx bar_ket_char?, false?branch, 2
-   xx   end
-   xx string_tail__byte
-   xx tail_call, help__string_to_word_end
-
-define_function "string-head,word", string_head__word
-   ;; << string[address, length] -- word[address, length] >>
-   xx string_to_word_begin
-   xx dup2, string_to_word_end
-   xx swap, drop
-   xx subtraction
-   xx end
-
-define_function "string-tail,word", string_tail__word
-   ;; << string[address, length] -- string[address, length] >>
-   xx string_to_word_begin
-   xx string_to_word_end
    xx end
 
 define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
@@ -3527,23 +3544,6 @@ address$jojo_area labeling
 
 define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
    xx address$jojo_area
-
-define_function "save-into,string-area", save_into__string_area
-   ;; << string[address, length] -- >>
-   xx dup, V__current_free_address__string_area
-   xx save_two_bytes
-
-   xx literal, 2
-   xx address, V__current_free_address__string_area
-   xx add_save
-
-   xx tuck
-   xx V__current_free_address__string_area
-   xx string_to_buffer!
-
-   xx address, V__current_free_address__string_area
-   xx add_save
-   xx end
 
 define_function "save-into,jojo-area", save_into__jojo_area
    ;; << number -- >>

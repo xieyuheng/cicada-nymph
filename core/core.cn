@@ -203,8 +203,7 @@ more,rule-set,make-jojo
 ; define-variable,with-tos
 
 *name-hash-table,size*
-*name-hash-table,unit* mul
-allocate-memory
+*name-hash-table,unit* mul allocate-memory
 : *name-hash-table*
 ; define-variable,with-tos
 

@@ -1038,8 +1038,7 @@
       }
    #+end_src
 * -----------------------------------
-* execute-jo & structure of jo
-** ----------------------------------
+* jo
 ** execute-jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -1061,7 +1060,6 @@
 
    }
    #+end_src
-** ----------------------------------
 ** *jo-size*
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*jo-size*", V__jo_size
@@ -1128,36 +1126,8 @@
       xx fetch
       xx end
    #+end_src
-** ----------------------------------
-* string-area
-** note interface
-   * the interface of string-area is not good
-     one can NOT use n-fetch and n-save
-     to fetch and save value from the address
-** *string-area*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*string-area*", V__string_area
-      xx address$string_area
-
-   define_variable "*size,string-area*", V__size__string_area
-      xx (end$string_area - address$string_area)
-
-   ;; *current-free-address,string-area*
-   ;; is at epilog
-   #+end_src
-** address->string
-   * under the address there is
-     | length : 2 bytes |
-     | string : n bytes |
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "address->string", address_to_string
-      ;; << address -- string[address, length] >>
-      xx dup
-      xx literal, 2, addition  ;; address
-      xx swap, fetch_two_bytes ;; length
-      xx end
-   #+end_src
-* type of jo
+** note type of jo
+   * denoted by explainers
 ** primitive-function-jo?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "primitive-function-jo?", primitive_function_jo?
@@ -1191,6 +1161,53 @@
       xx jo_to_type
       xx literal, explain$variable
       xx equal?
+      xx end
+   #+end_src
+* string-area
+** note interface
+   * the interface of string-area is not good
+     one can NOT use n-fetch and n-save
+     to fetch and save value from the address
+** *string-area*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*string-area*", V__string_area
+      xx address$string_area
+
+   define_variable "*size,string-area*", V__size__string_area
+      xx (end$string_area - address$string_area)
+
+   ;; *current-free-address,string-area*
+   ;; is at epilog
+   #+end_src
+** address->string
+   * under the address there is
+     | length : 2 bytes |
+     | string : n bytes |
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "address->string", address_to_string
+      ;; << address -- string[address, length] >>
+      xx dup
+      xx literal, 2, addition  ;; address
+      xx swap, fetch_two_bytes ;; length
+      xx end
+   #+end_src
+** save-into,string-area
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "save-into,string-area", save_into__string_area
+      ;; << string[address, length] -- >>
+      xx dup, V__current_free_address__string_area
+      xx save_two_bytes
+
+      xx literal, 2
+      xx address, V__current_free_address__string_area
+      xx add_save
+
+      xx tuck
+      xx V__current_free_address__string_area
+      xx string_to_buffer!
+
+      xx address, V__current_free_address__string_area
+      xx add_save
       xx end
    #+end_src
 * -----------------------------------
@@ -4131,6 +4148,86 @@
    fetch-byte . << 32 >>
    #+end_src
 ** ----------------------------------
+** note
+   * one should use space-string? to make sure
+     that the string is not space-string
+     before apply string-[head|tail],word onto the string
+** space-string?
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "space-string?", space_string?
+      ;; << string[address, length] -- bool >>
+      xx dup, zero?, false?branch, 4
+      xx   drop2, true
+      xx   end
+      xx dup2, string_head__byte, space_char?, false?branch, 4
+      xx   string_tail__byte
+      xx   tail_call, space_string?
+      xx drop2, false
+      xx end
+   #+end_src
+** string->word-[begin|end]
+   * the error is not handled
+     so
+     before calling (string->word-begin)
+     one should make sure that
+     the argument is not a space-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string->word-begin", string_to_word_begin
+      ;; << string[address, length] -- string[address, length] >>
+      xx dup, zero?, false?branch, 2
+      ;;   no error handling
+      xx   end
+      xx dup2, string_head__byte
+      xx space_char?, false?, false?branch, 2
+      xx   end
+      xx string_tail__byte
+      xx tail_call, string_to_word_begin
+
+   define_function "string->word-end", string_to_word_end
+      ;; << string[address, length] -- string[address, length] >>
+      xx dup, zero?, false?branch, 2
+      ;;   no error handling
+      xx   end
+      xx dup2, string_head__byte
+      xx bar_ket_char?, false?branch, 3
+      xx   string_tail__byte
+      xx   end
+      xx help__string_to_word_end
+      xx end
+
+   define_function "help,string->word-end", help__string_to_word_end
+      ;; << string[address, length] -- address >>
+      xx dup, zero?, false?branch, 2
+      ;;   no error handling
+      xx   end
+      xx dup2, string_head__byte
+      xx space_char?, false?branch, 2
+      xx   end
+      xx dup2, string_head__byte
+      xx bar_ket_char?, false?branch, 2
+      xx   end
+      xx string_tail__byte
+      xx tail_call, help__string_to_word_end
+   #+end_src
+** string-[head|tail],word
+   * note that
+     the following functions do not create new strings
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-head,word", string_head__word
+      ;; << string[address, length] -- word[address, length] >>
+      xx string_to_word_begin
+      xx dup2, string_to_word_end
+      xx swap, drop
+      xx subtraction
+      xx end
+
+   define_function "string-tail,word", string_tail__word
+      ;; << string[address, length] -- string[address, length] >>
+      xx string_to_word_begin
+      xx string_to_word_end
+      xx end
+   #+end_src
+** ----------------------------------
 * write number
 ** write-number
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4209,12 +4306,12 @@
       xx pretty_write_integer
       xx end
    #+end_src
-* note word
-** io about word
+* word
+** note io about word
    * words are separated by spaces
    * a bar-ket is a word
      even when there are no spaces around it
-** bar-ket
+** note bar-ket
    * (read-word) is not implemented by (read-byte)
      instead it is implemented directly by side-effect on reading-stack
      [just like (read-byte)]
@@ -4226,7 +4323,6 @@
      these two functions are maintaining the "bar-ket as word" feature
    * otherwise
      the implementation of (eval-string) will meet problems
-* read-word->buffer & read-word & read-word-for-REPL
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    max_word_length = 512
@@ -4314,88 +4410,7 @@
       xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx end
    #+end_src
-* string-[head|tail],word
-** note
-   * one should use space-string? to make sure
-     that the string is not space-string
-     before apply string-[head|tail],word onto the string
-** space-string?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "space-string?", space_string?
-      ;; << string[address, length] -- bool >>
-      xx dup, zero?, false?branch, 4
-      xx   drop2, true
-      xx   end
-      xx dup2, string_head__byte, space_char?, false?branch, 4
-      xx   string_tail__byte
-      xx   tail_call, space_string?
-      xx drop2, false
-      xx end
-   #+end_src
-** string->word-[begin|end]
-   * the error is not handled
-     so
-     before calling (string->word-begin)
-     one should make sure that
-     the argument is not a space-string
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string->word-begin", string_to_word_begin
-      ;; << string[address, length] -- string[address, length] >>
-      xx dup, zero?, false?branch, 2
-      ;;   no error handling
-      xx   end
-      xx dup2, string_head__byte
-      xx space_char?, false?, false?branch, 2
-      xx   end
-      xx string_tail__byte
-      xx tail_call, string_to_word_begin
-
-   define_function "string->word-end", string_to_word_end
-      ;; << string[address, length] -- string[address, length] >>
-      xx dup, zero?, false?branch, 2
-      ;;   no error handling
-      xx   end
-      xx dup2, string_head__byte
-      xx bar_ket_char?, false?branch, 3
-      xx   string_tail__byte
-      xx   end
-      xx help__string_to_word_end
-      xx end
-
-   define_function "help,string->word-end", help__string_to_word_end
-      ;; << string[address, length] -- address >>
-      xx dup, zero?, false?branch, 2
-      ;;   no error handling
-      xx   end
-      xx dup2, string_head__byte
-      xx space_char?, false?branch, 2
-      xx   end
-      xx dup2, string_head__byte
-      xx bar_ket_char?, false?branch, 2
-      xx   end
-      xx string_tail__byte
-      xx tail_call, help__string_to_word_end
-   #+end_src
-** string-[head|tail],word
-   * note that
-     the following functions do not create new strings
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string-head,word", string_head__word
-      ;; << string[address, length] -- word[address, length] >>
-      xx string_to_word_begin
-      xx dup2, string_to_word_end
-      xx swap, drop
-      xx subtraction
-      xx end
-
-   define_function "string-tail,word", string_tail__word
-      ;; << string[address, length] -- string[address, length] >>
-      xx string_to_word_begin
-      xx string_to_word_end
-      xx end
-   #+end_src
-* jotionary
-** note
+** note jotionary
    * the jotionary is a single-linked-list
      of word-jo-jojo
    * a jojo is an vector of jo
@@ -4761,25 +4776,6 @@
 
    define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
       xx address$jojo_area
-   #+end_src
-** save-into,string-area
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "save-into,string-area", save_into__string_area
-      ;; << string[address, length] -- >>
-      xx dup, V__current_free_address__string_area
-      xx save_two_bytes
-
-      xx literal, 2
-      xx address, V__current_free_address__string_area
-      xx add_save
-
-      xx tuck
-      xx V__current_free_address__string_area
-      xx string_to_buffer!
-
-      xx address, V__current_free_address__string_area
-      xx add_save
-      xx end
    #+end_src
 ** save-into,jojo-area
    #+begin_src fasm :tangle cicada-nymph.fasm
