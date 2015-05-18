@@ -640,7 +640,7 @@ define_function "jo->link", jo_to_link
    xx subtraction
    xx end
 
-define_function "last-jo,jotionary?", last_jo__jotionary?
+define_function "last-jo,jo-link?", last_jo__jo_link?
    ;; << jo -- bool >>
    xx jo_to_link
    xx fetch
@@ -3286,14 +3286,14 @@ define_function "read-word-for-REPL", read_word_for_REPL
    xx literal, buffer$read_word_for_REPL, read_word_to_buffer
    xx end
 
-define_variable "*first-jo-in-jotionary*", V__first_jo_in_jotionary
+define_variable "*first-jo,jo-link*", V__first_jo__jo_link
    xx (last_link + jo_size)
 
 define_function "find-jo,through-jo-link", find_jo__through_jo_link
    ;; << word[address, length]
    ;;    -- jo, true
    ;;    -- false >>
-   xx V__first_jo_in_jotionary
+   xx V__first_jo__jo_link
    xx find_jo__through_jo_link__loop
    xx end
 
@@ -3319,7 +3319,7 @@ define_function "find-jo,through-jo-link,loop", find_jo__through_jo_link__loop
    xx   drop2, true
    xx   end
    xx xswapxx
-   xx dup, last_jo__jotionary?, false?branch, 5
+   xx dup, last_jo__jo_link?, false?branch, 5
    xx   drop, drop2
    xx   false
    xx   end
@@ -4050,7 +4050,7 @@ define_function "make-jojo,loop", make_jojo__loop
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo_in_jotionary
+   ;;    old V__first_jo__jo_link
    ;;    string[address, length]
    ;;    -- >>
    xx exception_reset_stack, !undo_make_jojo
@@ -4066,7 +4066,7 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx literal, ';', write_byte
    xx literal, 10, write_byte
 
-   xx address, V__first_jo_in_jotionary, save
+   xx address, V__first_jo__jo_link, save
    xx address, V__current_free_address__jojo_area, save
    xx address, V__current_free_address__string_area
    xx save
@@ -4083,10 +4083,10 @@ define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
    xx V__current_free_address__string_area, xxswapx
    xx V__current_free_address__jojo_area, xxswapx
-   xx V__first_jo_in_jotionary, xxswapx
+   xx V__first_jo__jo_link, xxswapx
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo_in_jotionary
+   ;;    old V__first_jo__jo_link
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4099,12 +4099,12 @@ define_function "define-function", CICADA__define_function
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo_in_jotionary
+   xx V__first_jo__jo_link
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo_in_jotionary
+   xx address, V__first_jo__jo_link
    xx save
 
    xx literal, explain$function
@@ -4124,10 +4124,10 @@ define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
    xx V__current_free_address__string_area, xxswapx
    xx V__current_free_address__jojo_area, xxswapx
-   xx V__first_jo_in_jotionary, xxswapx
+   xx V__first_jo__jo_link, xxswapx
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo_in_jotionary
+   ;;    old V__first_jo__jo_link
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4140,12 +4140,12 @@ define_function "define-exception", CICADA__define_exception
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo_in_jotionary
+   xx V__first_jo__jo_link
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo_in_jotionary
+   xx address, V__first_jo__jo_link
    xx save
 
    xx literal, explain$exception
@@ -4171,12 +4171,12 @@ define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo_in_jotionary
+   xx V__first_jo__jo_link
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo_in_jotionary
+   xx address, V__first_jo__jo_link
    xx save
 
    xx literal, explain$variable

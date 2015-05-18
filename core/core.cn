@@ -626,7 +626,7 @@ more,rule-set,make-jojo
   dup jo->name
   name-hash-table,search if
     name,used-as-nymph-jo? if
-      dup last-jo,jotionary? if
+      dup last-jo,jo-link? if
         drop
         end
       then
@@ -639,7 +639,7 @@ more,rule-set,make-jojo
 
   dup jo,save-into,name-hash-table
 
-  dup last-jo,jotionary? if
+  dup last-jo,jo-link? if
     drop
     end
   then
@@ -649,7 +649,7 @@ more,rule-set,make-jojo
 
 : init,name-hash-table,nymph-jo
   << -- >>
-  *first-jo-in-jotionary*
+  *first-jo,jo-link*
   init,name-hash-table,nymph-jo,loop
   end
 ; define-function
@@ -663,13 +663,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo-in-jotionary*
+  *first-jo,jo-link*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo-in-jotionary*
+  save-to *first-jo,jo-link*
 
   *explainer,variable*
     save-into,jojo-area
@@ -683,10 +683,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *current-free-address,string-area* xx|swap|x
   *current-free-address,jojo-area* xx|swap|x
-  *first-jo-in-jotionary* xx|swap|x
+  *first-jo,jo-link* xx|swap|x
   << *current-free-address,string-area*
      *current-free-address,jojo-area*
-     *first-jo-in-jotionary*
+     *first-jo,jo-link*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -699,13 +699,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo-in-jotionary*
+  *first-jo,jo-link*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo-in-jotionary*
+  save-to *first-jo,jo-link*
 
   *explainer,exception*
     save-into,jojo-area
@@ -725,10 +725,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *current-free-address,string-area* xx|swap|x
   *current-free-address,jojo-area* xx|swap|x
-  *first-jo-in-jotionary* xx|swap|x
+  *first-jo,jo-link* xx|swap|x
   << *current-free-address,string-area*
      *current-free-address,jojo-area*
-     *first-jo-in-jotionary*
+     *first-jo,jo-link*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -739,13 +739,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo-in-jotionary*
+  *first-jo,jo-link*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo-in-jotionary*
+  save-to *first-jo,jo-link*
 
   *explainer,function*
     save-into,jojo-area
@@ -762,6 +762,26 @@ more,rule-set,make-jojo
 ; define-function
 
 init,name-hash-table,nymph-jo
+
+: define-title
+  << string[address, length] -- >>
+
+  end
+; define-function
+
+: new
+  << string[address, length] -- >>
+
+  end
+; define-function
+
+: mix
+  << string[address, length] -- >>
+
+  end
+; define-function
+
+
 
 : remove-char!,loop
   << cursor, length, char -- cursor >>
@@ -1734,13 +1754,13 @@ jo stack-REPL save-to *lost-exception-REPL*
   ::variable-name
     save-into,string-area
 
-  *first-jo-in-jotionary*
+  *first-jo,jo-link*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo-in-jotionary*
+  save-to *first-jo,jo-link*
 
   *explainer,variable*
     save-into,jojo-area
@@ -1849,7 +1869,7 @@ then
   end
 ; define-function
 
-: jotionary,list-by-jo-predicate,loop
+: jo-link,list-by-jo-predicate,loop
   << jo-predicate, counter, jo -- total >>
   dup zero? if
     drop
@@ -1875,27 +1895,27 @@ then
   loop
 ; define-function
 
-: jotionary,list-by-jo-predicate
+: jo-link,list-by-jo-predicate
   << jo-predicate -- total >>
-  0 *first-jo-in-jotionary*
-  jotionary,list-by-jo-predicate,loop
+  0 *first-jo,jo-link*
+  jo-link,list-by-jo-predicate,loop
   end
 ; define-function
 
-: jotionary,report
+: jo-link,report
   << -- >>
-  "* all primitive-function in jotionary :" .s .l
+  "* all primitive-function in jo-link :" .s .l
   jo primitive-function-jo?
-  jotionary,list-by-jo-predicate
-  "* all function in jotionary :" .s .l
+  jo-link,list-by-jo-predicate
+  "* all function in jo-link :" .s .l
   jo function-jo?
-  jotionary,list-by-jo-predicate add
-  "* all exception in jotionary :" .s .l
+  jo-link,list-by-jo-predicate add
+  "* all exception in jo-link :" .s .l
   jo exception-jo?
-  jotionary,list-by-jo-predicate add
-  "* all variable in jotionary :" .s .l
+  jo-link,list-by-jo-predicate add
+  "* all variable in jo-link :" .s .l
   jo variable-jo?
-  jotionary,list-by-jo-predicate add
+  jo-link,list-by-jo-predicate add
   "* totally : " .s
   .i .l
   end
