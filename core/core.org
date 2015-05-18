@@ -2,7 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* let the interface of jo-link be general
 * 在 姓 的概念的衝擊下 對整個系統的理解都有所改變了
 * 很多術語都用亂了 需要整理
   * 比如 "語義" "語法"
@@ -35,6 +34,10 @@
     cicada-nymph 就足夠了 ?
     需要回顧一下 cicada-language 的筆記
     調和一下兩個語義的差異
+* always do not use jo quote, but to use jojo quote i.e. unnamed function
+  * remove the jo quote
+  * 因爲
+    否則 帶有 <title> 的 jo 就不好辦了
 * scope of named-local-variable in function
 * loading-stack
 * todo
@@ -286,7 +289,7 @@
      drop2
      jo instruction,exception-reset-stack
        save-into,jojo-area
-     current-defining-word find-jo,through-jo-link
+     current-defining-word *jo-link,core* jo-link,find-jo
      drop
        save-into,jojo-area
      end
@@ -334,7 +337,7 @@
      drop2
      jo tail-call
        save-into,jojo-area
-     current-defining-word find-jo,through-jo-link
+     current-defining-word *jo-link,core* jo-link,find-jo
      drop
        save-into,jojo-area
      end
@@ -355,7 +358,7 @@
      << string[address, length], word:recur --
         string[address, length] >>
      drop2
-     current-defining-word find-jo,through-jo-link
+     current-defining-word *jo-link,core* jo-link,find-jo
      drop
        save-into,jojo-area
      end
@@ -932,54 +935,6 @@
 
    name-hash-table,report
    #+end_src
-* *rule-set,make-jojo* : name
-** word:name?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:name?
-     << word[address, length] -- bool >>
-     "name" string-equal?
-     end
-   ; define-function
-   #+end_src
-** syntax,name,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : syntax,name,make-jojo
-     << string[address, length], word[address, length] --
-        string[address, length] >>
-     drop2
-     jo instruction,literal
-       save-into,jojo-area
-     dup2
-     string-head,word
-     string->name
-       save-into,jojo-area
-     string-tail,word
-     end
-   ; define-function
-   #+end_src
-** more,rule-set,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : more,rule-set,make-jojo
-     << -- >>
-     jo word:name?
-     jo syntax,name,make-jojo
-     *rule-set,make-jojo* add-rule
-     end
-   ; define-function
-
-   more,rule-set,make-jojo
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test,syntax,name,make-jojo
-     << -- >>
-     name test-test-test name->string .s
-     end
-   ; define-function
-   test,syntax,name,make-jojo
-   #+end_src
-* -----------------------------------
-* jo in name-hash-table
 ** jo,save-into,name-hash-table
    #+begin_src cicada-nymph :tangle core.cn
    : jo,save-into,name-hash-table
@@ -990,10 +945,9 @@
      end
    ; define-function
    #+end_src
-** find-jo
-   * as find-jo in name-hash-table
+** name-hash-table,find-jo
    #+begin_src cicada-nymph :tangle core.cn
-   : find-jo
+   : name-hash-table,find-jo
      << word[address, length]
         -- jo, true
         -- false >>
@@ -1015,7 +969,7 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "add" find-jo
+   "add" name-hash-table,find-jo
    #+end_src
 * make-jojo                           :redefine:
 ** make-jojo,dispatch-syntax-word
@@ -1027,7 +981,7 @@
        execute-jo
        end
      then
-     dup2 find-jo if
+     dup2 name-hash-table,find-jo if
        xx|swap|x drop2
        save-into,jojo-area
        end
@@ -1079,7 +1033,7 @@
      dup jo->name
      name-hash-table,search if
        name,used-as-nymph-jo? if
-         dup last-jo,jo-link? if
+         dup jo-link,last-jo? if
            drop
            end
          then
@@ -1092,7 +1046,7 @@
 
      dup jo,save-into,name-hash-table
 
-     dup last-jo,jo-link? if
+     dup jo-link,last-jo? if
        drop
        end
      then
@@ -1102,7 +1056,7 @@
 
    : init,name-hash-table,nymph-jo
      << -- >>
-     *first-jo,jo-link*
+     *jo-link,core*
      init,name-hash-table,nymph-jo,loop
      end
    ; define-function
@@ -1119,13 +1073,13 @@
      dup2 string-head,word
        save-into,string-area
 
-     *first-jo,jo-link*
+     *jo-link,core*
      jo->link
        save-into,jojo-area
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *first-jo,jo-link*
+     save-to *jo-link,core*
 
      *explainer,variable*
        save-into,jojo-area
@@ -1141,10 +1095,10 @@
      << string[address, length] -- >>
      *current-free-address,string-area* xx|swap|x
      *current-free-address,jojo-area* xx|swap|x
-     *first-jo,jo-link* xx|swap|x
+     *jo-link,core* xx|swap|x
      << *current-free-address,string-area*
         *current-free-address,jojo-area*
-        *first-jo,jo-link*
+        *jo-link,core*
         string[address, length] >>
      prepare-for
        !undo-make-jojo
@@ -1157,13 +1111,13 @@
      dup2 string-head,word
        save-into,string-area
 
-     *first-jo,jo-link*
+     *jo-link,core*
      jo->link
        save-into,jojo-area
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *first-jo,jo-link*
+     save-to *jo-link,core*
 
      *explainer,exception*
        save-into,jojo-area
@@ -1185,10 +1139,10 @@
      << string[address, length] -- >>
      *current-free-address,string-area* xx|swap|x
      *current-free-address,jojo-area* xx|swap|x
-     *first-jo,jo-link* xx|swap|x
+     *jo-link,core* xx|swap|x
      << *current-free-address,string-area*
         *current-free-address,jojo-area*
-        *first-jo,jo-link*
+        *jo-link,core*
         string[address, length] >>
      prepare-for
        !undo-make-jojo
@@ -1199,13 +1153,13 @@
      dup2 string-head,word
        save-into,string-area
 
-     *first-jo,jo-link*
+     *jo-link,core*
      jo->link
        save-into,jojo-area
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *first-jo,jo-link*
+     save-to *jo-link,core*
 
      *explainer,function*
        save-into,jojo-area
@@ -1234,6 +1188,52 @@
    k add add .
 
    : k no end ; define-function
+   #+end_src
+* *rule-set,make-jojo* : name
+** word:name?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:name?
+     << word[address, length] -- bool >>
+     "name" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,name,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,name,make-jojo
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     drop2
+     jo instruction,literal
+       save-into,jojo-area
+     dup2
+     string-head,word
+     string->name
+       save-into,jojo-area
+     string-tail,word
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:name?
+     jo syntax,name,make-jojo
+     *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,syntax,name,make-jojo
+     << -- >>
+     name test-test-test name->string .s
+     end
+   ; define-function
+   test,syntax,name,make-jojo
    #+end_src
 * -----------------------------------
 * note data-structure
@@ -1270,14 +1270,16 @@
    {function-jo?}
    {exception-jo?}
    {variable-jo?}
-   last-jo? {last-jo,jo-link?}
+   last-jo? {jo-link,last-jo?}
 ** <string-area>
    size {*size,string-area*}
    {address->string}
    save-into {save-into,string-area}
 ** <jo-link>
+   last-jo?
    list-by-jo-predicate
    report
+   find-jo
 ** <buffer>
    {compare-buffer}
    {cursor->next-matching-byte}
@@ -1304,9 +1306,7 @@
    {read-word->buffer}
    {read-word}
    {read-word-for-REPL}
-   find-jo,through-jo-link
    execute {execute-word}
-   find-jo
 ** <jojo-area>
    size {*size,jojo-area*}
    current-free-address {*current-free-address,jojo-area*}
@@ -1332,6 +1332,7 @@
 ** <name-hash-table>
    size unit couter
    hash search insert report
+   find-jo
 ** <name>
    ->address
    used? used-as-title? used-as-nymph-jo?
@@ -1339,7 +1340,7 @@
    save-string save-title-index save-orbit-length save-orbiton save-nymph-jo
    no-collision
 ** <title>
-   find-jo,
+   find-jo
 * 記 姓
 ** 接口管理器
    * 在 小蟬 中
@@ -1362,6 +1363,15 @@
 ** 英文翻譯
    * 姓 被翻譯成 title
 * title
+** note
+   * a title is a jo-link
+     a name under title can be found
+     by normal jo-link interface
+   * a title also has some special meaning to the name-hash-table
+     a name under title can NOT be found
+     by normal name-hash-table interface
+     to be found
+     the name must be prefix by the string "<title> "
 ** 記 接口
    * (define-title)
      把 <title> 入 jo-link
@@ -1386,10 +1396,11 @@
      execute a jo
 ** 記 注意
    * <title> 本身做爲 word 而被尋找到的 jo
-     並不等同與 <title> 出現在
-     make-jojo 中
-     或 basic-REPL
+     並不等同與 <title> 出現在 make-jojo 或 basic-REPL 中
      時所觸發的語法擴展
+   * 上面這一點說明了
+     此處對語法的設計需要很小心
+     因爲它已經偏離了簡單的模型了
 ** define-title
    * a variable under which is a *current-free-address*
    #+begin_src cicada-nymph :tangle core.cn
@@ -1435,7 +1446,7 @@
    #+begin_src cicada-nymph
 
    #+end_src
-* data-structure
+* >< data-structure
   #+begin_src cicada-nymph :tangle core.cn
 
   #+end_src
@@ -2280,7 +2291,7 @@
    : execute-word
      << word[address, length] -- unknown >>
      dup2
-     find-jo if
+     name-hash-table,find-jo if
        dup exception-jo? if
          drop
          "* (execute-word) can not execute exception directly : " .s
@@ -2428,7 +2439,7 @@
      drop2
      read-word-for-REPL
      >::word
-     ::word find-jo if
+     ::word name-hash-table,find-jo if
        end
      then
      "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -2656,7 +2667,7 @@
      drop2
      read-word-for-REPL
      >::word
-     ::word find-jo if
+     ::word name-hash-table,find-jo if
      else
        "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
        address *syntax,address,basic-REPL,stack-balancer*
@@ -2695,7 +2706,7 @@
      drop2
      read-word-for-REPL
      >::word
-     ::word find-jo if
+     ::word name-hash-table,find-jo if
      else
        "* (syntax,save-to,basic-REPL) meet undefined word : " .s ::word .s .l
        "  the value " .s .i " is saved to no where" .s .l
@@ -3083,13 +3094,13 @@
      ::variable-name
        save-into,string-area
 
-     *first-jo,jo-link*
+     *jo-link,core*
      jo->link
        save-into,jojo-area
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *first-jo,jo-link*
+     save-to *jo-link,core*
 
      *explainer,variable*
        save-into,jojo-area
@@ -3262,8 +3273,10 @@
    ; define-function
 
    : jo-link,list-by-jo-predicate
-     << jo-predicate -- total >>
-     0 *first-jo,jo-link*
+     << first-jo, jo-predicate -- total >>
+     swap
+     0
+     swap
      jo-link,list-by-jo-predicate,loop
      end
    ; define-function
@@ -3272,7 +3285,9 @@
    #+begin_src cicada-nymph
    : test,jo-link,list-by-jo-predicate
      << -- >>
-     jo primitive-function-jo? jo-link,list-by-jo-predicate
+     *jo-link,core*
+     jo primitive-function-jo?
+     jo-link,list-by-jo-predicate
      end
    ; define-function
    test,jo-link,list-by-jo-predicate
@@ -3284,16 +3299,16 @@
    : jo-link,report
      << -- >>
      "* all primitive-function in jo-link :" .s .l
-     jo primitive-function-jo?
+     *jo-link,core* jo primitive-function-jo?
      jo-link,list-by-jo-predicate
      "* all function in jo-link :" .s .l
-     jo function-jo?
+     *jo-link,core* jo function-jo?
      jo-link,list-by-jo-predicate add
      "* all exception in jo-link :" .s .l
-     jo exception-jo?
+     *jo-link,core* jo exception-jo?
      jo-link,list-by-jo-predicate add
      "* all variable in jo-link :" .s .l
-     jo variable-jo?
+     *jo-link,core* jo variable-jo?
      jo-link,list-by-jo-predicate add
      "* totally : " .s
      .i .l
@@ -5750,11 +5765,10 @@
   the-story-begin
   #+end_src
 * ===================================
-* test
-** report
-   #+begin_src cicada-nymph
-   report-memory
-   report-syntax
-   jo-link,report
-   #+end_src
+* test report
+  #+begin_src cicada-nymph
+  report-memory
+  report-syntax
+  jo-link,report
+  #+end_src
 * ===================================

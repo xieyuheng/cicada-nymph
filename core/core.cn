@@ -101,7 +101,7 @@
   drop2
   jo instruction,exception-reset-stack
     save-into,jojo-area
-  current-defining-word find-jo,through-jo-link
+  current-defining-word *jo-link,core* jo-link,find-jo
   drop
     save-into,jojo-area
   end
@@ -139,7 +139,7 @@
   drop2
   jo tail-call
     save-into,jojo-area
-  current-defining-word find-jo,through-jo-link
+  current-defining-word *jo-link,core* jo-link,find-jo
   drop
     save-into,jojo-area
   end
@@ -155,7 +155,7 @@
   << string[address, length], word:recur --
      string[address, length] >>
   drop2
-  current-defining-word find-jo,through-jo-link
+  current-defining-word *jo-link,core* jo-link,find-jo
   drop
     save-into,jojo-area
   end
@@ -523,36 +523,6 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: word:name?
-  << word[address, length] -- bool >>
-  "name" string-equal?
-  end
-; define-function
-
-: syntax,name,make-jojo
-  << string[address, length], word[address, length] --
-     string[address, length] >>
-  drop2
-  jo instruction,literal
-    save-into,jojo-area
-  dup2
-  string-head,word
-  string->name
-    save-into,jojo-area
-  string-tail,word
-  end
-; define-function
-
-: more,rule-set,make-jojo
-  << -- >>
-  jo word:name?
-  jo syntax,name,make-jojo
-  *rule-set,make-jojo* add-rule
-  end
-; define-function
-
-more,rule-set,make-jojo
-
 : jo,save-into,name-hash-table
   << jo -- >>
   >:jo
@@ -561,7 +531,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: find-jo
+: name-hash-table,find-jo
   << word[address, length]
      -- jo, true
      -- false >>
@@ -588,7 +558,7 @@ more,rule-set,make-jojo
     execute-jo
     end
   then
-  dup2 find-jo if
+  dup2 name-hash-table,find-jo if
     xx|swap|x drop2
     save-into,jojo-area
     end
@@ -626,7 +596,7 @@ more,rule-set,make-jojo
   dup jo->name
   name-hash-table,search if
     name,used-as-nymph-jo? if
-      dup last-jo,jo-link? if
+      dup jo-link,last-jo? if
         drop
         end
       then
@@ -639,7 +609,7 @@ more,rule-set,make-jojo
 
   dup jo,save-into,name-hash-table
 
-  dup last-jo,jo-link? if
+  dup jo-link,last-jo? if
     drop
     end
   then
@@ -649,7 +619,7 @@ more,rule-set,make-jojo
 
 : init,name-hash-table,nymph-jo
   << -- >>
-  *first-jo,jo-link*
+  *jo-link,core*
   init,name-hash-table,nymph-jo,loop
   end
 ; define-function
@@ -663,13 +633,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo,jo-link*
+  *jo-link,core*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo,jo-link*
+  save-to *jo-link,core*
 
   *explainer,variable*
     save-into,jojo-area
@@ -683,10 +653,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *current-free-address,string-area* xx|swap|x
   *current-free-address,jojo-area* xx|swap|x
-  *first-jo,jo-link* xx|swap|x
+  *jo-link,core* xx|swap|x
   << *current-free-address,string-area*
      *current-free-address,jojo-area*
-     *first-jo,jo-link*
+     *jo-link,core*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -699,13 +669,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo,jo-link*
+  *jo-link,core*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo,jo-link*
+  save-to *jo-link,core*
 
   *explainer,exception*
     save-into,jojo-area
@@ -725,10 +695,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *current-free-address,string-area* xx|swap|x
   *current-free-address,jojo-area* xx|swap|x
-  *first-jo,jo-link* xx|swap|x
+  *jo-link,core* xx|swap|x
   << *current-free-address,string-area*
      *current-free-address,jojo-area*
-     *first-jo,jo-link*
+     *jo-link,core*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -739,13 +709,13 @@ more,rule-set,make-jojo
   dup2 string-head,word
     save-into,string-area
 
-  *first-jo,jo-link*
+  *jo-link,core*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo,jo-link*
+  save-to *jo-link,core*
 
   *explainer,function*
     save-into,jojo-area
@@ -762,6 +732,36 @@ more,rule-set,make-jojo
 ; define-function
 
 init,name-hash-table,nymph-jo
+
+: word:name?
+  << word[address, length] -- bool >>
+  "name" string-equal?
+  end
+; define-function
+
+: syntax,name,make-jojo
+  << string[address, length], word[address, length] --
+     string[address, length] >>
+  drop2
+  jo instruction,literal
+    save-into,jojo-area
+  dup2
+  string-head,word
+  string->name
+    save-into,jojo-area
+  string-tail,word
+  end
+; define-function
+
+: more,rule-set,make-jojo
+  << -- >>
+  jo word:name?
+  jo syntax,name,make-jojo
+  *rule-set,make-jojo* add-rule
+  end
+; define-function
+
+more,rule-set,make-jojo
 
 : define-title
   << string[address, length] -- >>
@@ -1222,7 +1222,7 @@ save
 : execute-word
   << word[address, length] -- unknown >>
   dup2
-  find-jo if
+  name-hash-table,find-jo if
     dup exception-jo? if
       drop
       "* (execute-word) can not execute exception directly : " .s
@@ -1293,7 +1293,7 @@ basic-REPL
   drop2
   read-word-for-REPL
   >::word
-  ::word find-jo if
+  ::word name-hash-table,find-jo if
     end
   then
   "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
@@ -1455,7 +1455,7 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
   drop2
   read-word-for-REPL
   >::word
-  ::word find-jo if
+  ::word name-hash-table,find-jo if
   else
     "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
     address *syntax,address,basic-REPL,stack-balancer*
@@ -1481,7 +1481,7 @@ jo syntax,address,basic-REPL
   drop2
   read-word-for-REPL
   >::word
-  ::word find-jo if
+  ::word name-hash-table,find-jo if
   else
     "* (syntax,save-to,basic-REPL) meet undefined word : " .s ::word .s .l
     "  the value " .s .i " is saved to no where" .s .l
@@ -1754,13 +1754,13 @@ jo stack-REPL save-to *lost-exception-REPL*
   ::variable-name
     save-into,string-area
 
-  *first-jo,jo-link*
+  *jo-link,core*
   jo->link
     save-into,jojo-area
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *first-jo,jo-link*
+  save-to *jo-link,core*
 
   *explainer,variable*
     save-into,jojo-area
@@ -1896,8 +1896,10 @@ then
 ; define-function
 
 : jo-link,list-by-jo-predicate
-  << jo-predicate -- total >>
-  0 *first-jo,jo-link*
+  << first-jo, jo-predicate -- total >>
+  swap
+  0
+  swap
   jo-link,list-by-jo-predicate,loop
   end
 ; define-function
@@ -1905,16 +1907,16 @@ then
 : jo-link,report
   << -- >>
   "* all primitive-function in jo-link :" .s .l
-  jo primitive-function-jo?
+  *jo-link,core* jo primitive-function-jo?
   jo-link,list-by-jo-predicate
   "* all function in jo-link :" .s .l
-  jo function-jo?
+  *jo-link,core* jo function-jo?
   jo-link,list-by-jo-predicate add
   "* all exception in jo-link :" .s .l
-  jo exception-jo?
+  *jo-link,core* jo exception-jo?
   jo-link,list-by-jo-predicate add
   "* all variable in jo-link :" .s .l
-  jo variable-jo?
+  *jo-link,core* jo variable-jo?
   jo-link,list-by-jo-predicate add
   "* totally : " .s
   .i .l

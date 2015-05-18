@@ -640,13 +640,6 @@ define_function "jo->link", jo_to_link
    xx subtraction
    xx end
 
-define_function "last-jo,jo-link?", last_jo__jo_link?
-   ;; << jo -- bool >>
-   xx jo_to_link
-   xx fetch
-   xx zero?
-   xx end
-
 define_function "jo->pre-jo", jo_to_pre_jo
    ;; << jo -- pre-jo >>
    xx jo_to_link
@@ -1106,10 +1099,10 @@ define_function "little_test", little_test
    ;; xx exit_with_TOS
    ;;;; 2 1 4 3 2 1
 
-   ;;;; find_jo__through_jo_link
+   ;;;; jo_link__find_jo
    ;; xx read_word, string_to_integer ;; number
    ;; xx read_word, string_to_integer ;; number
-   ;; xx read_word, find_jo__through_jo_link ;; add
+   ;; xx read_word, V__jo_link__core, jo_link__find_jo ;; add
    ;; xx drop ;; true
    ;; xx execute_jo
    ;; xx write_integer
@@ -3286,45 +3279,32 @@ define_function "read-word-for-REPL", read_word_for_REPL
    xx literal, buffer$read_word_for_REPL, read_word_to_buffer
    xx end
 
-define_variable "*first-jo,jo-link*", V__first_jo__jo_link
+define_variable "*jo-link,core*", V__jo_link__core
    xx (last_link + jo_size)
 
-define_function "find-jo,through-jo-link", find_jo__through_jo_link
-   ;; << word[address, length]
-   ;;    -- jo, true
-   ;;    -- false >>
-   xx V__first_jo__jo_link
-   xx find_jo__through_jo_link__loop
+define_function "jo-link,last-jo?", jo_link__last_jo?
+   ;; << jo -- bool >>
+   xx jo_to_link
+   xx fetch
+   xx zero?
    xx end
 
-define_function "find-jo,through-jo-link,loop", find_jo__through_jo_link__loop
+define_function "jo-link,find-jo", jo_link__find_jo
    ;; << word[address, length], jo
    ;;    -- jo, true
    ;;    -- false >>
    xx xxtuckx
-
    xx jo_to_name, xxoverxx
-
-   ;; for debug
-   ;; xx jo_to_name
-   ;; xx   dup2
-   ;; xx   dup, write_integer, literal, 32, write_byte
-   ;; xx   write_string, literal, 10, write_byte
-   ;; xx xxoverxx
-   ;; xx   dup2
-   ;; xx   dup, write_integer, literal, 32, write_byte
-   ;; xx   write_string, literal, 10, write_byte
-
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end
    xx xswapxx
-   xx dup, last_jo__jo_link?, false?branch, 5
+   xx dup, jo_link__last_jo?, false?branch, 5
    xx   drop, drop2
    xx   false
    xx   end
    xx jo_to_pre_jo
-   xx tail_call, find_jo__through_jo_link__loop
+   xx tail_call, jo_link__find_jo
 
 define_function "execute-word", execute_word
    ;; << word[address, length] -- unknown >>
@@ -3334,8 +3314,8 @@ define_function "execute-word", execute_word
    ;; maybe more
 
    xx dup2 ;; for to report undefined word
-
-   xx find_jo__through_jo_link, false?branch, 5
+   xx V__jo_link__core
+   xx jo_link__find_jo, false?branch, 5
    xx   xxswapx, drop2
    xx   execute_jo
    xx   end
@@ -3774,7 +3754,8 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
 
    xx dup2
    xx string_head__word
-   xx find_jo__through_jo_link, false?branch, 4
+   xx V__jo_link__core
+   xx jo_link__find_jo, false?branch, 4
    xx   save_into__jojo_area
    xx   string_tail__word
    xx   end
@@ -3819,7 +3800,8 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
 
    xx dup2
    xx string_head__word
-   xx find_jo__through_jo_link, false?branch, 4
+   xx V__jo_link__core
+   xx jo_link__find_jo, false?branch, 4
    xx   save_into__jojo_area
    xx   string_tail__word
    xx   end
@@ -4005,7 +3987,8 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx   execute_jo
    xx   end
    xx dup2
-   xx find_jo__through_jo_link, false?branch, 5
+   xx V__jo_link__core
+   xx jo_link__find_jo, false?branch, 5
    xx   xxswapx, drop2 ;; drop word
    xx   save_into__jojo_area
    xx   end
@@ -4050,7 +4033,7 @@ define_function "make-jojo,loop", make_jojo__loop
 define_exception "!undo-make-jojo", !undo_make_jojo
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo__jo_link
+   ;;    old V__jo_link__core
    ;;    string[address, length]
    ;;    -- >>
    xx exception_reset_stack, !undo_make_jojo
@@ -4066,7 +4049,7 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx literal, ';', write_byte
    xx literal, 10, write_byte
 
-   xx address, V__first_jo__jo_link, save
+   xx address, V__jo_link__core, save
    xx address, V__current_free_address__jojo_area, save
    xx address, V__current_free_address__string_area
    xx save
@@ -4083,10 +4066,10 @@ define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
    xx V__current_free_address__string_area, xxswapx
    xx V__current_free_address__jojo_area, xxswapx
-   xx V__first_jo__jo_link, xxswapx
+   xx V__jo_link__core, xxswapx
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo__jo_link
+   ;;    old V__jo_link__core
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4099,12 +4082,12 @@ define_function "define-function", CICADA__define_function
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo__jo_link
+   xx V__jo_link__core
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo__jo_link
+   xx address, V__jo_link__core
    xx save
 
    xx literal, explain$function
@@ -4124,10 +4107,10 @@ define_function "define-exception", CICADA__define_exception
    ;; << string[address, length] -- >>
    xx V__current_free_address__string_area, xxswapx
    xx V__current_free_address__jojo_area, xxswapx
-   xx V__first_jo__jo_link, xxswapx
+   xx V__jo_link__core, xxswapx
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
-   ;;    old V__first_jo__jo_link
+   ;;    old V__jo_link__core
    ;;    string[address, length] >>
 
    xx prepare_for
@@ -4140,12 +4123,12 @@ define_function "define-exception", CICADA__define_exception
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo__jo_link
+   xx V__jo_link__core
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo__jo_link
+   xx address, V__jo_link__core
    xx save
 
    xx literal, explain$exception
@@ -4171,12 +4154,12 @@ define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    xx dup2, string_head__word
    xx   save_into__string_area
 
-   xx V__first_jo__jo_link
+   xx V__jo_link__core
    xx jo_to_link
    xx   save_into__jojo_area
 
    xx V__current_free_address__jojo_area
-   xx address, V__first_jo__jo_link
+   xx address, V__jo_link__core
    xx save
 
    xx literal, explain$variable
