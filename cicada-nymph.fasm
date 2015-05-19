@@ -705,7 +705,7 @@ define_function "address->string", address_to_string
    xx swap, fetch_two_bytes ;; length
    xx end
 
-define_function "save-into,string-area", save_into__string_area
+define_function "string-area,stay", string_area__stay
    ;; << string[address, length] -- >>
    xx dup, V__current_free_address__string_area
    xx save_two_bytes
@@ -3345,20 +3345,6 @@ define_function "basic-REPL", basic_REPL
    xx execute_word
    xx tail_call, basic_REPL
 
-define_function "current-defining-word", current_defining_word
-   ;; << -- word[address, length] >>
-   xx literal, buffer$colon
-   xx literal, length$colon, fetch
-   xx string_head__word
-   xx end
-
-define_function "current-defining-body", current_defining_body
-   ;; << -- word[address, length] >>
-   xx literal, buffer$colon
-   xx literal, length$colon, fetch
-   xx string_tail__word
-   xx end
-
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
    xx literal, ':'
@@ -3525,7 +3511,7 @@ address$jojo_area labeling
 define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
    xx address$jojo_area
 
-define_function "save-into,jojo-area", save_into__jojo_area
+define_function "jojo-area,stay", jojo_area__stay
    ;; << number -- >>
    xx V__current_free_address__jojo_area
    xx save
@@ -3727,9 +3713,9 @@ define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx literal, literal
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx string_to_integer
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx end
 
 string$word_is_address?:
@@ -3750,13 +3736,13 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
    xx drop2
 
    xx literal, address
-   xx save_into__jojo_area
+   xx jojo_area__stay
 
    xx dup2
    xx string_head__word
    xx V__jo_link__core
    xx jo_link__find_jo, false?branch, 4
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3796,13 +3782,13 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
    xx drop2
 
    xx literal, literal
-   xx save_into__jojo_area
+   xx jojo_area__stay
 
    xx dup2
    xx string_head__word
    xx V__jo_link__core
    xx jo_link__find_jo, false?branch, 4
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3842,13 +3828,13 @@ define_function "syntax,branch,make-jojo", syntax__branch__make_jojo
    xx drop2
 
    xx literal, branch
-   xx save_into__jojo_area
+   xx jojo_area__stay
 
    xx dup2
    xx string_head__word
    xx dup2, integer_string?, false?branch, 5
    xx   string_to_integer
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3888,13 +3874,13 @@ define_function "syntax,false?branch,make-jojo", syntax__false?branch__make_jojo
    xx drop2
 
    xx literal, false?branch
-   xx save_into__jojo_area
+   xx jojo_area__stay
 
    xx dup2
    xx string_head__word
    xx dup2, integer_string?, false?branch, 5
    xx   string_to_integer
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3941,17 +3927,17 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
 
    ;; address
    xx   literal, literal
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx   V__current_free_address__string_area, add2
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx   xoverxx, over
-   xx     save_into__string_area
+   xx     string_area__stay
 
    ;; length
    xx   literal, literal
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx   dup
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
 
    xx   tuck, subtraction
    xx   xxswapx
@@ -3980,8 +3966,8 @@ string$not_integer_string_report__for_double_quote:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
 define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
-   ;; << string[address, length], word[address, length] --
-   ;;    string[address, length] >>
+   ;; << jo, string[address, length], word[address, length] --
+   ;;    jo, string[address, length] >>
    xx dup2
    xx find_syntax, false?branch, 3
    xx   execute_jo
@@ -3990,7 +3976,7 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx V__jo_link__core
    xx jo_link__find_jo, false?branch, 5
    xx   xxswapx, drop2 ;; drop word
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx   end
    xx write_undefined_word_report__for_make_jojo
    xx write_string
@@ -4010,7 +3996,7 @@ string$undefined_word_report__for_make_jojo:
 length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
 
 define_function "make-jojo", make_jojo
-   ;; << string[address, length] -- >>
+   ;; << jo, string[address, length] -- >>
    xx local_variable_table__clear
    xx V__rule_set__make_jojo, push_syntax_stack
    xx make_jojo__loop
@@ -4018,9 +4004,9 @@ define_function "make-jojo", make_jojo
    xx end
 
 define_function "make-jojo,loop", make_jojo__loop
-   ;; << string[address, length] -- >>
-   xx dup2, space_string?, false?branch, 3
-   xx   drop2
+   ;; << jo, string[address, length] -- >>
+   xx dup2, space_string?, false?branch, 4
+   xx   drop2, drop
    xx   end
    xx dup2
    xx string_tail__word
@@ -4031,12 +4017,12 @@ define_function "make-jojo,loop", make_jojo__loop
    xx tail_call, make_jojo__loop
 
 define_exception "!undo-make-jojo", !undo_make_jojo
+   xx exception_reset_stack, !undo_make_jojo
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
    ;;    old V__jo_link__core
    ;;    string[address, length]
    ;;    -- >>
-   xx exception_reset_stack, !undo_make_jojo
 
    xx drop_syntax_stack
 
@@ -4078,22 +4064,21 @@ define_function "define-function", CICADA__define_function
    xx   end
 
    xx V__current_free_address__string_area
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx dup2, string_head__word
-   xx   save_into__string_area
+   xx   string_area__stay
 
    xx V__jo_link__core
    xx jo_to_link
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
    xx V__current_free_address__jojo_area
-   xx address, V__jo_link__core
-   xx save
+   xx dup, address, V__jo_link__core, save
 
    xx literal, explain$function
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
-   xx dup2
+   xx xxoverx
    xx string_tail__word
    xx make_jojo
 
@@ -4119,22 +4104,21 @@ define_function "define-exception", CICADA__define_exception
    xx   end
 
    xx V__current_free_address__string_area
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx dup2, string_head__word
-   xx   save_into__string_area
+   xx   string_area__stay
 
    xx V__jo_link__core
    xx jo_to_link
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
    xx V__current_free_address__jojo_area
-   xx address, V__jo_link__core
-   xx save
+   xx dup, address, V__jo_link__core, save
 
    xx literal, explain$exception
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
-   xx dup2
+   xx xxoverx
    xx string_tail__word
    xx make_jojo
 
@@ -4147,26 +4131,26 @@ define_function "define-exception", CICADA__define_exception
 define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    ;; << variable, string[address, length] -- >>
    xx literal, 1
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
    xx V__current_free_address__string_area
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
    xx dup2, string_head__word
-   xx   save_into__string_area
+   xx   string_area__stay
 
    xx V__jo_link__core
    xx jo_to_link
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
    xx V__current_free_address__jojo_area
    xx address, V__jo_link__core
    xx save
 
    xx literal, explain$variable
-   xx   save_into__jojo_area
+   xx   jojo_area__stay
 
    xx drop2
-   xx save_into__jojo_area
+   xx jojo_area__stay
    xx end
 
 size$local_jo = 1024 * 1024 * jo_size
@@ -4402,16 +4386,16 @@ define_function "syntax,local-variable-fetch,make-jojo", syntax__local_variable_
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
    ;;   literal, <offese>, literal, n, n_fetch__local_jo
    xx     literal, literal
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    ;;     offset
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx     literal, literal
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    ;;     n
    xx     count_front_colon
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx     literal, n_fetch__local_jo
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx   end
 .not_found:
    xx write_local_variable_not_bound_report
@@ -4462,16 +4446,16 @@ define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_s
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
    ;;   literal, <offese>, literal, n, n_save__local_jo
    xx     literal, literal
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    ;;     offset
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx     literal, literal
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    ;;     n
    xx     count_front_colon
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx     literal, n_save__local_jo
-   xx       save_into__jojo_area
+   xx       jojo_area__stay
    xx   end
 .not_found:
    xx dup2
@@ -4480,23 +4464,23 @@ define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_s
    xx count_front_colon
    ;; literal, <number>, local_data_allocate__jo
    xx   literal, literal
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    ;;   number of jo
-   xx     dup, save_into__jojo_area
+   xx     dup, jojo_area__stay
    xx   literal, local_data_allocate__jo
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    ;; literal, <offese>, literal, n, save_local_data
    xx   literal, literal
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    ;;   offset
    xx   swap
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx   literal, literal
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    ;;   n
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx   literal, n_save__local_jo
-   xx     save_into__jojo_area
+   xx     jojo_area__stay
    xx end
 
 size$local_byte = 1024 * 1024 * 6

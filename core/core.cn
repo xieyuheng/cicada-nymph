@@ -35,25 +35,25 @@
 ; define-function
 
 : syntax,if,make-jojo
-  << string[address, length], word:if --
-     address, string[address, length] >>
+  << jo, string[address, length], word:if --
+     address, jo, string[address, length] >>
   drop2
   jo instruction,false?branch
-    save-into,jojo-area
-  *current-free-address,jojo-area* xx|swap|x
-  0 save-into,jojo-area
+    jojo-area,stay
+  *current-free-address,jojo-area* xxx|swap|x
+  0 jojo-area,stay
   end
 ; define-function
 
 : syntax,else,make-jojo
-  << address, string[address, length], word:else --
-     address, string[address, length] >>
+  << address, jo, string[address, length], word:else --
+     address, jo, string[address, length] >>
   drop2
   jo instruction,branch
-     save-into,jojo-area
-  x|swap|xx
-  *current-free-address,jojo-area* xxx|swap|x
-  0 save-into,jojo-area
+     jojo-area,stay
+  x|swap|xxx
+  *current-free-address,jojo-area* xxxx|swap|x
+  0 jojo-area,stay
   << address, string[address, length], address >>
   *current-free-address,jojo-area*
   over sub *jo-size* div
@@ -62,10 +62,10 @@
 ; define-function
 
 : syntax,then,make-jojo
-  << address, string[address, length], word:then --
-     string[address, length] >>
+  << address, jo, string[address, length], word:then --
+     jo, string[address, length] >>
   drop2
-  x|swap|xx
+  x|swap|xxx
   *current-free-address,jojo-area*
   over sub *jo-size* div
   swap save
@@ -83,9 +83,9 @@
      string[address, length] >>
   drop2
   jo instruction,prepare-for
-    save-into,jojo-area
+    jojo-area,stay
   jo instruction,exception-head
-    save-into,jojo-area
+    jojo-area,stay
   end
 ; define-function
 
@@ -96,14 +96,13 @@
 ; define-function
 
 : syntax,exception-reset-stack,make-jojo
-  << string[address, length], word:exception-reset-stack --
-     string[address, length] >>
+  << jo, string[address, length], word:exception-reset-stack --
+     jo, string[address, length] >>
   drop2
   jo instruction,exception-reset-stack
-    save-into,jojo-area
-  current-defining-word *jo-link,core* jo-link,find-jo
-  drop
-    save-into,jojo-area
+    jojo-area,stay
+  x|over|xx
+    jojo-area,stay
   end
 ; define-function
 
@@ -123,7 +122,7 @@
   >>
   syntax,address,make-jojo
   jo save
-    save-into,jojo-area
+    jojo-area,stay
   end
 ; define-function
 
@@ -134,14 +133,13 @@
 ; define-function
 
 : syntax,loop,make-jojo
-  << string[address, length], word:loop --
-     string[address, length] >>
+  << jo, string[address, length], word:loop --
+     jo, string[address, length] >>
   drop2
   jo tail-call
-    save-into,jojo-area
-  current-defining-word *jo-link,core* jo-link,find-jo
-  drop
-    save-into,jojo-area
+    jojo-area,stay
+  x|over|xx
+    jojo-area,stay
   end
 ; define-function
 
@@ -152,12 +150,11 @@
 ; define-function
 
 : syntax,recur,make-jojo
-  << string[address, length], word:recur --
-     string[address, length] >>
+  << jo, string[address, length], word:recur --
+     jo, string[address, length] >>
   drop2
-  current-defining-word *jo-link,core* jo-link,find-jo
-  drop
-    save-into,jojo-area
+  x|over|xx
+    jojo-area,stay
   end
 ; define-function
 
@@ -285,7 +282,7 @@ more,rule-set,make-jojo
   << string[address, length], name -- >>
   *current-free-address,string-area*
   xx|swap|xx
-  save-into,string-area
+  string-area,stay
   swap
   name->address
   save
@@ -552,15 +549,15 @@ more,rule-set,make-jojo
 ; define-function
 
 : make-jojo,dispatch-syntax-word
-  << string[address, length], word[address, length] --
-     string[address, length] >>
+  << jo, string[address, length], word[address, length] --
+     jo, string[address, length] >>
   dup2 find-syntax if
     execute-jo
     end
   then
   dup2 name-hash-table,find-jo if
     xx|swap|x drop2
-    save-into,jojo-area
+    jojo-area,stay
     end
   then
   "* (make-jojo) meets undefined word : " .s .s .l
@@ -568,9 +565,10 @@ more,rule-set,make-jojo
 ; define-function
 
 : make-jojo,loop
-  << string[address, length] -- >>
+  << jo, string[address, length] -- >>
   dup2 space-string? if
     drop2
+    drop
     end
   then
   dup2
@@ -582,7 +580,7 @@ more,rule-set,make-jojo
 ; define-function
 
 : make-jojo
-  << string[address, length] -- >>
+  << jo, string[address, length] -- >>
   local-variable-table,clear
   *rule-set,make-jojo*
   push-syntax-stack
@@ -626,26 +624,26 @@ more,rule-set,make-jojo
 
 : define-variable,with-tos
   << variable, string[address, length] -- >>
-  1 save-into,jojo-area
+  1 jojo-area,stay
 
   *current-free-address,string-area*
-    save-into,jojo-area
+    jojo-area,stay
   dup2 string-head,word
-    save-into,string-area
+    string-area,stay
 
   *jo-link,core*
   jo->link
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
   save-to *jo-link,core*
 
   *explainer,variable*
-    save-into,jojo-area
+    jojo-area,stay
 
   drop2
-  save-into,jojo-area
+  jojo-area,stay
   end
 ; define-function
 
@@ -662,25 +660,25 @@ more,rule-set,make-jojo
     !undo-make-jojo
     end
 
-  0 save-into,jojo-area
+  0 jojo-area,stay
 
   *current-free-address,string-area*
-    save-into,jojo-area
+    jojo-area,stay
   dup2 string-head,word
-    save-into,string-area
+    string-area,stay
 
   *jo-link,core*
   jo->link
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *jo-link,core*
+  dup save-to *jo-link,core*
 
   *explainer,exception*
-    save-into,jojo-area
+    jojo-area,stay
 
-  dup2
+  xx|over|x
   string-tail,word
   make-jojo
 
@@ -705,22 +703,22 @@ more,rule-set,make-jojo
     end
 
   *current-free-address,string-area*
-    save-into,jojo-area
+    jojo-area,stay
   dup2 string-head,word
-    save-into,string-area
+    string-area,stay
 
   *jo-link,core*
   jo->link
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
-  save-to *jo-link,core*
+  dup save-to *jo-link,core*
 
   *explainer,function*
-    save-into,jojo-area
+    jojo-area,stay
 
-  dup2
+  xx|over|x
   string-tail,word
   make-jojo
 
@@ -744,11 +742,11 @@ init,name-hash-table,nymph-jo
      string[address, length] >>
   drop2
   jo instruction,literal
-    save-into,jojo-area
+    jojo-area,stay
   dup2
   string-head,word
   string->name
-    save-into,jojo-area
+    jojo-area,stay
   string-tail,word
   end
 ; define-function
@@ -763,19 +761,13 @@ init,name-hash-table,nymph-jo
 
 more,rule-set,make-jojo
 
-: define-title
+: define-function,with-title
   << string[address, length] -- >>
 
   end
 ; define-function
 
-: new
-  << string[address, length] -- >>
-
-  end
-; define-function
-
-: mix
+: define-alias,with-title
   << string[address, length] -- >>
 
   end
@@ -1187,9 +1179,9 @@ more,rule-set,make-jojo
   << string[address, length], word[address, length] --
      string[address, length] >>
   jo instruction,literal
-    save-into,jojo-area
+    jojo-area,stay
   base#wild-integer-string->integer
-    save-into,jojo-area
+    jojo-area,stay
   end
 ; define-function
 
@@ -1396,7 +1388,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
 : *current-free-address,circular-string-area*
 ; define-variable,with-tos
 
-: save-into,circular-string-area
+: circular-string-area,stay
   << string[address, length] -- >>
   dup *current-free-address,circular-string-area* add
   *circular-string-area,size* *circular-string-area* add
@@ -1438,7 +1430,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   *current-free-address,circular-string-area* >:address
   :buffer
   :cursor :buffer sub dup >:length
-  save-into,circular-string-area
+  circular-string-area,stay
   :address
   :length
   end
@@ -1702,7 +1694,7 @@ jo stack-REPL save-to *lost-exception-REPL*
   *current-free-address,string-area* add2 >:address
   :buffer
   :cursor :buffer sub dup >:length
-  save-into,string-area
+  string-area,stay
   :address
   :length
   end
@@ -1747,23 +1739,23 @@ jo stack-REPL save-to *lost-exception-REPL*
   *jo-size* div >:variable-length
 
   :variable-length
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,string-area*
-    save-into,jojo-area
+    jojo-area,stay
   ::variable-name
-    save-into,string-area
+    string-area,stay
 
   *jo-link,core*
   jo->link
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,jojo-area*
   dup jo,save-into,name-hash-table
   save-to *jo-link,core*
 
   *explainer,variable*
-    save-into,jojo-area
+    jojo-area,stay
 
   *current-free-address,jojo-area*
   :variable-length
@@ -3034,7 +3026,7 @@ init-environment-variable-list
   >:path-address
 
   :read-buffer :read-length
-  save-into,circular-string-area
+  circular-string-area,stay
 
   :path-address
   :read-length
@@ -3340,7 +3332,7 @@ init-environment-variable-list
 
   :buffer
   :length
-  save-into,circular-string-area
+  circular-string-area,stay
 
   :address
   :length

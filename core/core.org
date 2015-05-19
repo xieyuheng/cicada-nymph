@@ -3,6 +3,9 @@
 #+EMAIL:  xyheme@gmail.com
 
 * 在 姓 的概念的衝擊下 對整個系統的理解都有所改變了
+  尤其是關於函數的命名
+* 在 link 方面 增加一層間接 以實現別名機制
+  也就是說 又要改變 jo 的結構了
 * 很多術語都用亂了 需要整理
   * 比如 "語義" "語法"
 * new way to do data-structure
@@ -34,6 +37,7 @@
     cicada-nymph 就足夠了 ?
     需要回顧一下 cicada-language 的筆記
     調和一下兩個語義的差異
+* 匿名的 jojo 前面是包含 詮釋者的
 * always do not use jo quote, but to use jojo quote i.e. unnamed function
   * remove the jo quote
   * 因爲
@@ -137,25 +141,25 @@
 ** syntax,[if|else|then],make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,if,make-jojo
-     << string[address, length], word:if --
-        address, string[address, length] >>
+     << jo, string[address, length], word:if --
+        address, jo, string[address, length] >>
      drop2
      jo instruction,false?branch
-       save-into,jojo-area
-     *current-free-address,jojo-area* xx|swap|x
-     0 save-into,jojo-area
+       jojo-area,stay
+     *current-free-address,jojo-area* xxx|swap|x
+     0 jojo-area,stay
      end
    ; define-function
 
    : syntax,else,make-jojo
-     << address, string[address, length], word:else --
-        address, string[address, length] >>
+     << address, jo, string[address, length], word:else --
+        address, jo, string[address, length] >>
      drop2
      jo instruction,branch
-        save-into,jojo-area
-     x|swap|xx
-     *current-free-address,jojo-area* xxx|swap|x
-     0 save-into,jojo-area
+        jojo-area,stay
+     x|swap|xxx
+     *current-free-address,jojo-area* xxxx|swap|x
+     0 jojo-area,stay
      << address, string[address, length], address >>
      *current-free-address,jojo-area*
      over sub *jo-size* div
@@ -164,10 +168,10 @@
    ; define-function
 
    : syntax,then,make-jojo
-     << address, string[address, length], word:then --
-        string[address, length] >>
+     << address, jo, string[address, length], word:then --
+        jo, string[address, length] >>
      drop2
-     x|swap|xx
+     x|swap|xxx
      *current-free-address,jojo-area*
      over sub *jo-size* div
      swap save
@@ -267,9 +271,9 @@
         string[address, length] >>
      drop2
      jo instruction,prepare-for
-       save-into,jojo-area
+       jojo-area,stay
      jo instruction,exception-head
-       save-into,jojo-area
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -284,14 +288,13 @@
 ** syntax,exception-reset-stack,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,exception-reset-stack,make-jojo
-     << string[address, length], word:exception-reset-stack --
-        string[address, length] >>
+     << jo, string[address, length], word:exception-reset-stack --
+        jo, string[address, length] >>
      drop2
      jo instruction,exception-reset-stack
-       save-into,jojo-area
-     current-defining-word *jo-link,core* jo-link,find-jo
-     drop
-       save-into,jojo-area
+       jojo-area,stay
+     x|over|xx
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -316,7 +319,7 @@
      >>
      syntax,address,make-jojo
      jo save
-       save-into,jojo-area
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -332,14 +335,13 @@
 ** syntax,loop,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,loop,make-jojo
-     << string[address, length], word:loop --
-        string[address, length] >>
+     << jo, string[address, length], word:loop --
+        jo, string[address, length] >>
      drop2
      jo tail-call
-       save-into,jojo-area
-     current-defining-word *jo-link,core* jo-link,find-jo
-     drop
-       save-into,jojo-area
+       jojo-area,stay
+     x|over|xx
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -355,12 +357,11 @@
 ** syntax,recur,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,recur,make-jojo
-     << string[address, length], word:recur --
-        string[address, length] >>
+     << jo, string[address, length], word:recur --
+        jo, string[address, length] >>
      drop2
-     current-defining-word *jo-link,core* jo-link,find-jo
-     drop
-       save-into,jojo-area
+     x|over|xx
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -617,7 +618,7 @@
      << string[address, length], name -- >>
      *current-free-address,string-area*
      xx|swap|xx
-     save-into,string-area
+     string-area,stay
      swap
      name->address
      save
@@ -975,15 +976,15 @@
 ** make-jojo,dispatch-syntax-word
    #+begin_src cicada-nymph :tangle core.cn
    : make-jojo,dispatch-syntax-word
-     << string[address, length], word[address, length] --
-        string[address, length] >>
+     << jo, string[address, length], word[address, length] --
+        jo, string[address, length] >>
      dup2 find-syntax if
        execute-jo
        end
      then
      dup2 name-hash-table,find-jo if
        xx|swap|x drop2
-       save-into,jojo-area
+       jojo-area,stay
        end
      then
      "* (make-jojo) meets undefined word : " .s .s .l
@@ -993,9 +994,10 @@
 ** make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : make-jojo,loop
-     << string[address, length] -- >>
+     << jo, string[address, length] -- >>
      dup2 space-string? if
        drop2
+       drop
        end
      then
      dup2
@@ -1007,7 +1009,7 @@
    ; define-function
 
    : make-jojo
-     << string[address, length] -- >>
+     << jo, string[address, length] -- >>
      local-variable-table,clear
      *rule-set,make-jojo*
      push-syntax-stack
@@ -1066,26 +1068,26 @@
    #+begin_src cicada-nymph :tangle core.cn
    : define-variable,with-tos
      << variable, string[address, length] -- >>
-     1 save-into,jojo-area
+     1 jojo-area,stay
 
      *current-free-address,string-area*
-       save-into,jojo-area
+       jojo-area,stay
      dup2 string-head,word
-       save-into,string-area
+       string-area,stay
 
      *jo-link,core*
      jo->link
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
      save-to *jo-link,core*
 
      *explainer,variable*
-       save-into,jojo-area
+       jojo-area,stay
 
      drop2
-     save-into,jojo-area
+     jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -1104,25 +1106,25 @@
        !undo-make-jojo
        end
 
-     0 save-into,jojo-area
+     0 jojo-area,stay
 
      *current-free-address,string-area*
-       save-into,jojo-area
+       jojo-area,stay
      dup2 string-head,word
-       save-into,string-area
+       string-area,stay
 
      *jo-link,core*
      jo->link
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *jo-link,core*
+     dup save-to *jo-link,core*
 
      *explainer,exception*
-       save-into,jojo-area
+       jojo-area,stay
 
-     dup2
+     xx|over|x
      string-tail,word
      make-jojo
 
@@ -1149,22 +1151,22 @@
        end
 
      *current-free-address,string-area*
-       save-into,jojo-area
+       jojo-area,stay
      dup2 string-head,word
-       save-into,string-area
+       string-area,stay
 
      *jo-link,core*
      jo->link
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
-     save-to *jo-link,core*
+     dup save-to *jo-link,core*
 
      *explainer,function*
-       save-into,jojo-area
+       jojo-area,stay
 
-     dup2
+     xx|over|x
      string-tail,word
      make-jojo
 
@@ -1205,11 +1207,11 @@
         string[address, length] >>
      drop2
      jo instruction,literal
-       save-into,jojo-area
+       jojo-area,stay
      dup2
      string-head,word
      string->name
-       save-into,jojo-area
+       jojo-area,stay
      string-tail,word
      end
    ; define-function
@@ -1274,7 +1276,7 @@
 ** <string-area>
    size {*size,string-area*}
    {address->string}
-   save-into {save-into,string-area}
+   stay
 ** <jo-link>
    last-jo?
    list-by-jo-predicate
@@ -1310,7 +1312,9 @@
 ** <jojo-area>
    size {*size,jojo-area*}
    current-free-address {*current-free-address,jojo-area*}
-   save-into {save-into,jojo-area}
+   stay
+** <jojo>
+   execute
 ** <syntax-stack>
    push pop
    tos drop
@@ -1341,8 +1345,8 @@
    no-collision
 ** <title>
    find-jo
-* 記 姓
-** 接口管理器
+* title
+** 記 目的
    * 在 小蟬 中
      姓 可以被理解爲 接口管理器
      或者 名字管理器
@@ -1356,13 +1360,30 @@
      才能實現
    * 接口管理器 可以用來建立 數據結構的概念
      但是 接口管理器 本身的機制是與 數據結構的機制相互分離的
-   * 就 name-hash-table 而言在兩個 word 之間加一個空格
-   * 就 jo-link 而言
-     每個 <title> 在全局的 jo-link 中
-     每個 <title> 有一個新的鏈表 用於記錄註冊在其下的函數
-** 英文翻譯
-   * 姓 被翻譯成 title
-* title
+** 記 實現
+   * 每個 <title> 在全局的 jo-link 中
+     做爲一個 variable-jo 而存在
+     其中保存一個 jo-link
+   * 這個 jo-link 中的 jo 就是登記在 這個 <title> 下的 jo
+     同時也會在 name-hash-table 中登記
+     此時
+     比如 function 會被登記到 "<title> function" 這個 name 下
+** 記 接口
+   * (define-function,with-title)
+     直接製作新的東西
+     並註冊新的 function 到 <title> 下
+     與 (define-function) 完全類似
+     當第一次遇到某個 <title> 時
+     初始化這個 <title> 做爲 variable-jo 的存在
+   * (define-alias,with-title)
+     把已有舊的東西
+     給一個 name 以註冊到 <title> 下
+     可以讓它處理一個列表的東西
+     同樣初的版本可以是最簡單的
+   * 在着兩個底層函數之後
+     應該重新定義 (define-function)
+     和 (define-alias)
+     使得他們能夠處理 帶有 <title> 的情形
 ** note
    * a title is a jo-link
      a name under title can be found
@@ -1372,21 +1393,6 @@
      by normal name-hash-table interface
      to be found
      the name must be prefix by the string "<title> "
-** 記 接口
-   * (define-title)
-     把 <title> 入 jo-link
-     可以把被處理的 字符串的格式 設計的複雜一些
-     以承載 各種 data-structure 所固有的複雜度
-     可以先去實現最簡單的只有一個詞的情形
-   * (new)
-     直接製作新的東西
-     並註冊新的 name 到 <title> 下
-     與 (define-function) 完全類似
-   * (mix)
-     把已有舊的東西
-     給一個 name 以註冊到 <title> 下
-     可以讓它處理一個列表的東西
-     同樣初的版本可以是最簡單的
 ** note syntax
    * <title> in *rule-set,make-jojo*
      <title> name
@@ -1394,33 +1400,17 @@
    * <title> in *rule-set,basic-REPL*
      <title> name
      execute a jo
-** 記 注意
-   * <title> 本身做爲 word 而被尋找到的 jo
-     並不等同與 <title> 出現在 make-jojo 或 basic-REPL 中
-     時所觸發的語法擴展
-   * 上面這一點說明了
-     此處對語法的設計需要很小心
-     因爲它已經偏離了簡單的模型了
-** define-title
-   * a variable under which is a *current-free-address*
+** define-function,with-title
    #+begin_src cicada-nymph :tangle core.cn
-   : define-title
+   : define-function,with-title
      << string[address, length] -- >>
 
      end
    ; define-function
    #+end_src
-** new
+** define-alias,with-title
    #+begin_src cicada-nymph :tangle core.cn
-   : new
-     << string[address, length] -- >>
-
-     end
-   ; define-function
-   #+end_src
-** mix
-   #+begin_src cicada-nymph :tangle core.cn
-   : mix
+   : define-alias,with-title
      << string[address, length] -- >>
 
      end
@@ -1428,23 +1418,13 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : <test-title>
-   ; define-title
-
    : <test-title> test-name
      << -- >>
      end
-   ; new
+   ; define-function,with-title
 
    : <test-title> test-name
-   ; mix
-   #+end_src
-** 記 接口管理器管理自身的接口
-   * 接口管理器 可以用來管理自身的接口
-     是以測試
-** test self title
-   #+begin_src cicada-nymph
-
+   ; define-alias
    #+end_src
 * >< data-structure
   #+begin_src cicada-nymph :tangle core.cn
@@ -2177,9 +2157,9 @@
      << string[address, length], word[address, length] --
         string[address, length] >>
      jo instruction,literal
-       save-into,jojo-area
+       jojo-area,stay
      base#wild-integer-string->integer
-       save-into,jojo-area
+       jojo-area,stay
      end
    ; define-function
    #+end_src
@@ -2586,9 +2566,9 @@
    ; define-variable,with-tos
    #+end_src
 * *rule-set,basic-REPL* : double-quote
-** save-into,circular-string-area
+** circular-string-area,stay
    #+begin_src cicada-nymph :tangle core.cn
-   : save-into,circular-string-area
+   : circular-string-area,stay
      << string[address, length] -- >>
      dup *current-free-address,circular-string-area* add
      *circular-string-area,size* *circular-string-area* add
@@ -2633,7 +2613,7 @@
      *current-free-address,circular-string-area* >:address
      :buffer
      :cursor :buffer sub dup >:length
-     save-into,circular-string-area
+     circular-string-area,stay
      :address
      :length
      end
@@ -3040,7 +3020,7 @@
      *current-free-address,string-area* add2 >:address
      :buffer
      :cursor :buffer sub dup >:length
-     save-into,string-area
+     string-area,stay
      :address
      :length
      end
@@ -3087,23 +3067,23 @@
      *jo-size* div >:variable-length
 
      :variable-length
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,string-area*
-       save-into,jojo-area
+       jojo-area,stay
      ::variable-name
-       save-into,string-area
+       string-area,stay
 
      *jo-link,core*
      jo->link
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,jojo-area*
      dup jo,save-into,name-hash-table
      save-to *jo-link,core*
 
      *explainer,variable*
-       save-into,jojo-area
+       jojo-area,stay
 
      *current-free-address,jojo-area*
      :variable-length
@@ -5004,7 +4984,7 @@
      >:path-address
 
      :read-buffer :read-length
-     save-into,circular-string-area
+     circular-string-area,stay
 
      :path-address
      :read-length
@@ -5395,7 +5375,7 @@
 
      :buffer
      :length
-     save-into,circular-string-area
+     circular-string-area,stay
 
      :address
      :length
@@ -5423,7 +5403,7 @@
    "library" poi,sub
    path: +library+ hi.cn ;
    #+end_src
-* load & need
+* >< load & need
 ** note usage
    * no library code will be auto loaded
      you need to configure path by (poi)
