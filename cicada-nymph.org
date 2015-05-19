@@ -3,8 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** (within?)
-   0 1 2 3 are within 0 3
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
 ** change the interface of *string-area* :maybe:
@@ -2814,6 +2812,35 @@
       xx zero, greater_than?
       xx end
    #+end_src
+** within?
+   0 1 2 3 are within 0 3
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "within?", within?
+      ;; << x, a, b -- bool >>
+      xx xoverxx
+      xx greater_or_equal?, CICADA__not, false?branch, 4
+      xx   drop2
+      xx   false
+      xx   end
+      xx greater_or_equal?
+      xx end
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,within?
+     << -- >>
+     0 0 3 within? .
+     1 0 3 within? .
+     2 0 3 within? .
+     3 0 3 within? .
+     .l
+     4 0 3  within? .
+     -1 0 3 within? .
+     .l
+     end
+   ; define-function
+   test,within?
+   #+end_src
 ** ----------------------------------
 * memory
 ** note fetch & save
@@ -3604,8 +3631,9 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "space-char?", space_char?
       ;; << char -- bool >>
+      xx literal, 0
       xx literal, 32
-      xx less_or_equal?
+      xx within?
       xx end
    #+end_src
 ** bar-ket-char?
@@ -3643,13 +3671,9 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "digit-char?", digit_char?
       ;; << char -- bool >>
-      xx dup, literal, '0', less_than?, false?branch, 4
-      xx   drop, false
-      xx   end
-      xx dup, literal, '9', less_or_equal?, false?branch, 4
-      xx   drop, true
-      xx   end
-      xx drop, false
+      xx literal, '0'
+      xx literal, '9'
+      xx within?
       xx end
    #+end_src
 ** digit-char->number & number->digit-char
@@ -5204,45 +5228,45 @@
       xx make_jojo__dispatch_syntax_word
       xx tail_call, make_jojo__loop
    #+end_src
-* define-[function|exception|variable]
+* !undo-make-jojo
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_exception "!undo-make-jojo", !undo_make_jojo
+     xx exception_reset_stack, !undo_make_jojo
+     ;; << old V__current_free_address__string_area
+     ;;    old V__current_free_address__jojo_area
+     ;;    old V__jo_link__core
+     ;;    string[address, length]
+     ;;    -- >>
+
+     xx drop_syntax_stack
+
+     xx literal, string$undo_make_jojo_report
+     xx literal, length$undo_make_jojo_report
+     xx write_string
+
+     xx write_string
+     xx literal, 10, write_byte
+     xx literal, ';', write_byte
+     xx literal, 10, write_byte
+
+     xx address, V__jo_link__core, save
+     xx address, V__current_free_address__jojo_area, save
+     xx address, V__current_free_address__string_area
+     xx save
+     xx end
+
+  string$undo_make_jojo_report:
+     db "  the following jojo is not made :"
+     db 10
+     db ": "
+  .end:
+  length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
+  #+end_src
+* define-function
 ** note
    * for the following function
      I add the "CICADA__" as prefix
      to distinguish from their assembly code version
-** !undo-make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_exception "!undo-make-jojo", !undo_make_jojo
-      xx exception_reset_stack, !undo_make_jojo
-      ;; << old V__current_free_address__string_area
-      ;;    old V__current_free_address__jojo_area
-      ;;    old V__jo_link__core
-      ;;    string[address, length]
-      ;;    -- >>
-
-      xx drop_syntax_stack
-
-      xx literal, string$undo_make_jojo_report
-      xx literal, length$undo_make_jojo_report
-      xx write_string
-
-      xx write_string
-      xx literal, 10, write_byte
-      xx literal, ';', write_byte
-      xx literal, 10, write_byte
-
-      xx address, V__jo_link__core, save
-      xx address, V__current_free_address__jojo_area, save
-      xx address, V__current_free_address__string_area
-      xx save
-      xx end
-
-   string$undo_make_jojo_report:
-      db "  the following jojo is not made :"
-      db 10
-      db ": "
-   .end:
-   length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-   #+end_src
 ** define-function
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
@@ -5286,6 +5310,18 @@
       xx drop
       xx end
    #+end_src
+** test define-function
+   #+begin_src cicada-nymph
+   : addadd add add end ; define-function
+   1 2 3 addadd . << 6 >>
+
+   : add1 1 add end ; define-function
+   1 add1 . << 2 >>
+
+   : negate 0 swap sub end ; define-function
+   1 negate . << -1 >>
+   #+end_src
+* define-variable,with-tos
 ** define-variable,with-tos
    * not undo is needed for define-variable,with-tos
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5313,17 +5349,6 @@
       xx drop2
       xx jojo_area__stay
       xx end
-   #+end_src
-** test define-function
-   #+begin_src cicada-nymph
-   : addadd add add end ; define-function
-   1 2 3 addadd . << 6 >>
-
-   : add1 1 add end ; define-function
-   1 add1 . << 2 >>
-
-   : negate 0 swap sub end ; define-function
-   1 negate . << -1 >>
    #+end_src
 ** test define-variable,with-tos
    #+begin_src cicada-nymph

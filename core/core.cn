@@ -765,11 +765,18 @@ init,name-hash-table,nymph-jo
 
 more,rule-set,make-jojo
 
+: <word>?
+  << string[address, length] -- bool >>
+  dup 
+  end
+; define-function
+
 : define-function,with-title
   << string[address, length] -- >>
   *current-free-address,string-area* xx|swap|x
   *current-free-address,jojo-area* xx|swap|x
   *jo-link,core* xx|swap|x
+  dup2
   << *current-free-address,string-area*
      *current-free-address,jojo-area*
      *jo-link,core*
@@ -777,6 +784,13 @@ more,rule-set,make-jojo
   prepare-for
     !undo-make-jojo
     end
+
+  >::string
+  ::string string-head,word >::title
+  ::string string-tail,word string-head,word >::name
+  ::string string-tail,word string-tail,word >::body
+
+
 
   *current-free-address,string-area*
     jojo-area,stay
@@ -794,8 +808,7 @@ more,rule-set,make-jojo
   *explainer,function*
     jojo-area,stay
 
-  xx|over|x
-  string-tail,word
+  ::body
   make-jojo
 
   drop2
@@ -3246,7 +3259,7 @@ init-environment-variable-list
   end
 ; define-function
 
-: +name+?
+: +word+?
   << string[address, length] -- bool >>
   dup 1 less-or-equal? if
     drop2
@@ -3264,8 +3277,8 @@ init-environment-variable-list
   end
 ; define-function
 
-: +name+->name
-  << +name+[address, length] -- name[address, length] >>
+: +word+->word
+  << +word+[address, length] -- name[address, length] >>
   sub2 swap
   add1 swap
   end
@@ -3318,11 +3331,11 @@ init-environment-variable-list
     ".."
     end
   then
-  ::word +name+? not if
+  ::word +word+? not if
     ::word
     end
   then
-  ::word +name+->name poi,find if
+  ::word +word+->word poi,find if
     end
   then
   ::word

@@ -1998,6 +1998,16 @@ define_function "positive?", positive?
    xx zero, greater_than?
    xx end
 
+define_function "within?", within?
+   ;; << x, a, b -- bool >>
+   xx xoverxx
+   xx greater_or_equal?, CICADA__not, false?branch, 4
+   xx   drop2
+   xx   false
+   xx   end
+   xx greater_or_equal?
+   xx end
+
 match =64bit, machine {
 
 define_primitive_function "fetch", fetch
@@ -2602,8 +2612,9 @@ define_function "load-core-file", load_core_file
 
 define_function "space-char?", space_char?
    ;; << char -- bool >>
+   xx literal, 0
    xx literal, 32
-   xx less_or_equal?
+   xx within?
    xx end
 
 define_function "bar-ket-char?", bar_ket_char?
@@ -2634,13 +2645,9 @@ define_function "bar-ket-char?", bar_ket_char?
 
 define_function "digit-char?", digit_char?
    ;; << char -- bool >>
-   xx dup, literal, '0', less_than?, false?branch, 4
-   xx   drop, false
-   xx   end
-   xx dup, literal, '9', less_or_equal?, false?branch, 4
-   xx   drop, true
-   xx   end
-   xx drop, false
+   xx literal, '0'
+   xx literal, '9'
+   xx within?
    xx end
 
 define_function "digit-char->number", digit_char_to_number

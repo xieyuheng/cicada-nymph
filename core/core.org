@@ -1018,183 +1018,182 @@
      end
    ; define-function
    #+end_src
-* define-[function|exception]         :redefine:
-** init,name-hash-table,nymph-jo
-   * the function should be executed right after
-     (define-function) is redefined
-   * the function loads a nymph-jo into a entry in the name-hash-table
-     only when the entry is not already used as nymph-jo
-     thus
-     it should only be called once
-   * you can see
-     how the features above
-     make the re-definition of (define-function) hard to test
-   #+begin_src cicada-nymph :tangle core.cn
-   : init,name-hash-table,nymph-jo,loop
-     << jo -- >>
-     dup jo->name
-     name-hash-table,search if
-       name,used-as-nymph-jo? if
-         dup jo-link,last-jo? if
-           drop
-           end
-         then
-         jo->pre-jo
-         loop
-       then
-     else
-       drop
-     then
+* init,name-hash-table,nymph-jo
+  * the function should be executed right after
+    (define-function) is redefined
+  * the function loads a nymph-jo into a entry in the name-hash-table
+    only when the entry is not already used as nymph-jo
+    thus
+    it should only be called once
+  * you can see
+    how the features above
+    make the re-definition of (define-function) hard to test
+  #+begin_src cicada-nymph :tangle core.cn
+  : init,name-hash-table,nymph-jo,loop
+    << jo -- >>
+    dup jo->name
+    name-hash-table,search if
+      name,used-as-nymph-jo? if
+        dup jo-link,last-jo? if
+          drop
+          end
+        then
+        jo->pre-jo
+        loop
+      then
+    else
+      drop
+    then
 
-     dup jo,save-into,name-hash-table
+    dup jo,save-into,name-hash-table
 
-     dup jo-link,last-jo? if
-       drop
-       end
-     then
-     jo->pre-jo
-     loop
-   ; define-function
+    dup jo-link,last-jo? if
+      drop
+      end
+    then
+    jo->pre-jo
+    loop
+  ; define-function
 
-   : init,name-hash-table,nymph-jo
-     << -- >>
-     *jo-link,core*
-     init,name-hash-table,nymph-jo,loop
-     end
-   ; define-function
-   #+end_src
-** define-variable,with-tos
-   * not undo is needed for define-variable,with-tos
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-variable,with-tos
-     << variable, string[address, length] -- >>
-     1 jojo-area,stay
+  : init,name-hash-table,nymph-jo
+    << -- >>
+    *jo-link,core*
+    init,name-hash-table,nymph-jo,loop
+    end
+  ; define-function
+  #+end_src
+* define-variable,with-tos            :redefine:
+  * not undo is needed for define-variable,with-tos
+  #+begin_src cicada-nymph :tangle core.cn
+  : define-variable,with-tos
+    << variable, string[address, length] -- >>
+    1 jojo-area,stay
 
-     *current-free-address,string-area*
-       jojo-area,stay
-     dup2 string-head,word
-       string-area,stay
+    *current-free-address,string-area*
+      jojo-area,stay
+    dup2 string-head,word
+      string-area,stay
 
-     *jo-link,core*
-     jo->link
-       jojo-area,stay
+    *jo-link,core*
+    jo->link
+      jojo-area,stay
 
-     *current-free-address,jojo-area*
-     dup jo,save-into,name-hash-table
-     save-to *jo-link,core*
+    *current-free-address,jojo-area*
+    dup jo,save-into,name-hash-table
+    save-to *jo-link,core*
 
-     *explainer,variable*
-       jojo-area,stay
+    *explainer,variable*
+      jojo-area,stay
 
-     drop2
-     jojo-area,stay
-     end
-   ; define-function
-   #+end_src
-** define-exception
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-exception
-     << string[address, length] -- >>
-     *current-free-address,string-area* xx|swap|x
-     *current-free-address,jojo-area* xx|swap|x
-     *jo-link,core* xx|swap|x
-     dup2
-     << *current-free-address,string-area*
-        *current-free-address,jojo-area*
-        *jo-link,core*
-        string[address, length] >>
-     prepare-for
-       !undo-make-jojo
-       end
+    drop2
+    jojo-area,stay
+    end
+  ; define-function
+  #+end_src
+* define-exception
+  #+begin_src cicada-nymph :tangle core.cn
+  : define-exception
+    << string[address, length] -- >>
+    *current-free-address,string-area* xx|swap|x
+    *current-free-address,jojo-area* xx|swap|x
+    *jo-link,core* xx|swap|x
+    dup2
+    << *current-free-address,string-area*
+       *current-free-address,jojo-area*
+       *jo-link,core*
+       string[address, length] >>
+    prepare-for
+      !undo-make-jojo
+      end
 
-     << string[address, length] >>
-     0 jojo-area,stay
+    << string[address, length] >>
+    0 jojo-area,stay
 
-     *current-free-address,string-area*
-       jojo-area,stay
-     dup2 string-head,word
-       string-area,stay
+    *current-free-address,string-area*
+      jojo-area,stay
+    dup2 string-head,word
+      string-area,stay
 
-     *jo-link,core*
-     jo->link
-       jojo-area,stay
+    *jo-link,core*
+    jo->link
+      jojo-area,stay
 
-     *current-free-address,jojo-area*
-     dup jo,save-into,name-hash-table
-     dup save-to *jo-link,core*
+    *current-free-address,jojo-area*
+    dup jo,save-into,name-hash-table
+    dup save-to *jo-link,core*
 
-     *explainer,exception*
-       jojo-area,stay
+    *explainer,exception*
+      jojo-area,stay
 
-     xx|swap|x
-     string-tail,word
-     make-jojo
+    xx|swap|x
+    string-tail,word
+    make-jojo
 
-     drop2
-     drop
-     drop
-     drop
-     end
-   ; define-function
-   #+end_src
-** define-function
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-function
-     << string[address, length] -- >>
-     *current-free-address,string-area* xx|swap|x
-     *current-free-address,jojo-area* xx|swap|x
-     *jo-link,core* xx|swap|x
-     dup2
-     << *current-free-address,string-area*
-        *current-free-address,jojo-area*
-        *jo-link,core*
-        string[address, length] >>
-     prepare-for
-       !undo-make-jojo
-       end
+    drop2
+    drop
+    drop
+    drop
+    end
+  ; define-function
+  #+end_src
+* define-function                     :redefine:
+  #+begin_src cicada-nymph :tangle core.cn
+  : define-function
+    << string[address, length] -- >>
+    *current-free-address,string-area* xx|swap|x
+    *current-free-address,jojo-area* xx|swap|x
+    *jo-link,core* xx|swap|x
+    dup2
+    << *current-free-address,string-area*
+       *current-free-address,jojo-area*
+       *jo-link,core*
+       string[address, length] >>
+    prepare-for
+      !undo-make-jojo
+      end
 
-     << string[address, length] >>
-     *current-free-address,string-area*
-       jojo-area,stay
-     dup2 string-head,word
-       string-area,stay
+    << string[address, length] >>
+    *current-free-address,string-area*
+      jojo-area,stay
+    dup2 string-head,word
+      string-area,stay
 
-     *jo-link,core*
-     jo->link
-       jojo-area,stay
+    *jo-link,core*
+    jo->link
+      jojo-area,stay
 
-     *current-free-address,jojo-area*
-     dup jo,save-into,name-hash-table
-     dup save-to *jo-link,core*
+    *current-free-address,jojo-area*
+    dup jo,save-into,name-hash-table
+    dup save-to *jo-link,core*
 
-     *explainer,function*
-       jojo-area,stay
+    *explainer,function*
+      jojo-area,stay
 
-     xx|swap|x
-     string-tail,word
-     make-jojo
+    xx|swap|x
+    string-tail,word
+    make-jojo
 
-     drop2
-     drop
-     drop
-     drop
-     end
-   ; define-function
-   #+end_src
-** to load jo-link into name-hash-table
-   #+begin_src cicada-nymph :tangle core.cn
-   init,name-hash-table,nymph-jo
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : k 1 2 3 add add . end ; define-function
-   k
+    drop2
+    drop
+    drop
+    drop
+    end
+  ; define-function
+  #+end_src
+* to load jo-link into name-hash-table
+  #+begin_src cicada-nymph :tangle core.cn
+  init,name-hash-table,nymph-jo
+  #+end_src
+* test
+  #+begin_src cicada-nymph
+  : k 1 2 3 add add . end ; define-function
+  k
 
-   : k 1 2 3 end ; define-function
-   k add add .
+  : k 1 2 3 end ; define-function
+  k add add .
 
-   : k no end ; define-function
-   #+end_src
+  : k no end ; define-function
+  #+end_src
 * *rule-set,make-jojo* : name
 ** word:name?
    #+begin_src cicada-nymph :tangle core.cn
@@ -1404,6 +1403,14 @@
    * <title> in *rule-set,basic-REPL*
      <title> name
      execute a jo
+** <word>?
+   #+begin_src cicada-nymph :tangle core.cn
+   : <word>?
+     << string[address, length] -- bool >>
+     dup 
+     end
+   ; define-function
+   #+end_src
 ** define-function,with-title
    #+begin_src cicada-nymph :tangle core.cn
    : define-function,with-title
@@ -1411,6 +1418,7 @@
      *current-free-address,string-area* xx|swap|x
      *current-free-address,jojo-area* xx|swap|x
      *jo-link,core* xx|swap|x
+     dup2
      << *current-free-address,string-area*
         *current-free-address,jojo-area*
         *jo-link,core*
@@ -1418,6 +1426,13 @@
      prepare-for
        !undo-make-jojo
        end
+
+     >::string
+     ::string string-head,word >::title
+     ::string string-tail,word string-head,word >::name
+     ::string string-tail,word string-tail,word >::body
+
+
 
      *current-free-address,string-area*
        jojo-area,stay
@@ -1435,8 +1450,7 @@
      *explainer,function*
        jojo-area,stay
 
-     xx|over|x
-     string-tail,word
+     ::body
      make-jojo
 
      drop2
@@ -5214,9 +5228,9 @@
      end
    ; define-function
    #+end_src
-** +name+?
+** +word+?
    #+begin_src cicada-nymph :tangle core.cn
-   : +name+?
+   : +word+?
      << string[address, length] -- bool >>
      dup 1 less-or-equal? if
        drop2
@@ -5234,10 +5248,10 @@
      end
    ; define-function
    #+end_src
-** +name+->name
+** +word+->word
    #+begin_src cicada-nymph :tangle core.cn
-   : +name+->name
-     << +name+[address, length] -- name[address, length] >>
+   : +word+->word
+     << +word+[address, length] -- name[address, length] >>
      sub2 swap
      add1 swap
      end
@@ -5273,8 +5287,8 @@
 
    poi,help
 
-   "+work+" +name+? .
-   "work" +name+? .
+   "+work+" +word+? .
+   "work" +word+? .
    #+end_src
 * path syntax
 ** note
@@ -5359,11 +5373,11 @@
        ".."
        end
      then
-     ::word +name+? not if
+     ::word +word+? not if
        ::word
        end
      then
-     ::word +name+->name poi,find if
+     ::word +word+->word poi,find if
        end
      then
      ::word
