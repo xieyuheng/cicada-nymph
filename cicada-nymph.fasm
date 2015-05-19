@@ -27,6 +27,7 @@ rax equ eax
 rbx equ ebx
 rcx equ ecx
 rdx equ edx
+
 rsp equ esp
 rbp equ ebp
 rsi equ esi
@@ -1446,21 +1447,19 @@ define_primitive_function "xxx|tuck|x", xxxtuckx
    push_argument_stack rdx
    next
 
-match =64bit, machine {
-
 define_primitive_function "swap", swap
    ;; << a b -- b a >>
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rbx
    push_argument_stack rax
    next
 
 define_primitive_function "x|swap|xx", xswapxx
    ;; << a | b c -- b c | a >>
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rbx
    push_argument_stack rcx
    push_argument_stack rax
@@ -1468,9 +1467,9 @@ define_primitive_function "x|swap|xx", xswapxx
 
 define_primitive_function "xx|swap|x", xxswapx
    ;; << a b | c -- c | a b >>
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rcx
    push_argument_stack rax
    push_argument_stack rbx
@@ -1478,10 +1477,10 @@ define_primitive_function "xx|swap|x", xxswapx
 
 define_primitive_function "x|swap|xxx", xswapxxx
    ;; << a | b c d -- b c d | a >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rbx
    push_argument_stack rcx
    push_argument_stack rdx
@@ -1490,10 +1489,10 @@ define_primitive_function "x|swap|xxx", xswapxxx
 
 define_primitive_function "xxx|swap|x", xxxswapx
    ;; << a b c | d -- d | a b c >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rdx
    push_argument_stack rax
    push_argument_stack rbx
@@ -1502,10 +1501,10 @@ define_primitive_function "xxx|swap|x", xxxswapx
 
 define_primitive_function "xx|swap|xx", xxswapxx
    ;; << a b | c d -- c d | a b >>
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rcx
    push_argument_stack rdx
    push_argument_stack rax
@@ -1515,26 +1514,26 @@ define_primitive_function "xx|swap|xx", xxswapxx
 
 define_primitive_function "x|swap|xxxx", xswapxxxx
    ;; << a | b c d e -- b c d e | a >>
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rsi ;; e
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rbx
    push_argument_stack rcx
    push_argument_stack rdx
-   push_argument_stack r8 ;; e
+   push_argument_stack rsi ;; e
    push_argument_stack rax
    next
 
 define_primitive_function "xxxx|swap|x", xxxxswapx
    ;; << a b c d | e --  e | a b c d >>
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack r8 ;; e
+   pop_argument_stack  rsi ;; e
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
+   push_argument_stack rsi ;; e
    push_argument_stack rax
    push_argument_stack rbx
    push_argument_stack rcx
@@ -1544,195 +1543,35 @@ define_primitive_function "xxxx|swap|x", xxxxswapx
 
 define_primitive_function "xx|swap|xxxx", xxswapxxxx
    ;; << a b | c d e f -- c d e f | a b >>
-   pop_argument_stack r9 ;; f
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
+   pop_argument_stack  rsi ;; f
+   pop_argument_stack  rdi ;; e
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
    push_argument_stack rcx
    push_argument_stack rdx
-   push_argument_stack r8 ;; e
-   push_argument_stack r9 ;; f
+   push_argument_stack rdi ;; e
+   push_argument_stack rsi ;; f
    push_argument_stack rax
    push_argument_stack rbx
    next
 
 define_primitive_function "xxxx|swap|xx", xxxxswapxx
    ;; << a b c d | e f --  e f | a b c d >>
-   pop_argument_stack r9 ;; f
-   pop_argument_stack r8 ;; e
-   pop_argument_stack rdx
-   pop_argument_stack rcx
-   pop_argument_stack rbx
-   pop_argument_stack rax
-   push_argument_stack r8 ;; e
-   push_argument_stack r9 ;; f
+   pop_argument_stack  rsi ;; f
+   pop_argument_stack  rdi ;; e
+   pop_argument_stack  rdx
+   pop_argument_stack  rcx
+   pop_argument_stack  rbx
+   pop_argument_stack  rax
+   push_argument_stack rdi ;; e
+   push_argument_stack rsi ;; f
    push_argument_stack rax
    push_argument_stack rbx
    push_argument_stack rcx
    push_argument_stack rdx
    next
-
-}
-
-match =32bit, machine {
-
-define_primitive_function "swap", swap
-   ;; << a b -- b a >>
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack eax
-   next
-
-define_primitive_function "x|swap|xx", xswapxx
-   ;; << a | b c -- b c | a >>
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   push_argument_stack eax
-   next
-
-define_primitive_function "xx|swap|x", xxswapx
-   ;; << a b | c -- c | a b >>
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ecx
-   push_argument_stack eax
-   push_argument_stack ebx
-   next
-
-define_primitive_function "x|swap|xxx", xswapxxx
-   ;; << a | b c d -- b c d | a >>
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   push_argument_stack edx
-   push_argument_stack eax
-   next
-
-define_primitive_function "xxx|swap|x", xxxswapx
-   ;; << a b c | d -- d | a b c >>
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack edx
-   push_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   next
-
-define_primitive_function "xx|swap|xx", xxswapxx
-   ;; << a b | c d -- c d | a b >>
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ecx
-   push_argument_stack edx
-   push_argument_stack eax
-   push_argument_stack ebx
-   next
-
-
-define_primitive_function "x|swap|xxxx", xswapxxxx
-   ;; << a | b c d e -- b c d e | a >>
-   pop_argument_stack eax ;; e
-   push eax
-
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   push_argument_stack edx
-
-   pop eax
-   push_argument_stack eax ;; e
-
-   push_argument_stack eax
-   next
-
-define_primitive_function "xxxx|swap|x", xxxxswapx
-   ;; << a b c d | e --  e | a b c d >>
-   pop_argument_stack eax ;; e
-   push eax
-
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-
-   pop eax
-   push_argument_stack eax ;; e
-
-   push_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   push_argument_stack edx
-   next
-
-
-define_primitive_function "xx|swap|xxxx", xxswapxxxx
-   ;; << a b | c d e f -- c d e f | a b >>
-   pop_argument_stack eax ;; f
-   push eax
-
-   pop_argument_stack eax ;; e
-   push eax
-
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-   push_argument_stack ecx
-   push_argument_stack edx
-
-   pop eax
-   push_argument_stack eax ;; e
-
-   pop eax
-   push_argument_stack eax ;; f
-
-   push_argument_stack eax
-   push_argument_stack ebx
-   next
-
-define_primitive_function "xxxx|swap|xx", xxxxswapxx
-   ;; << a b c d | e f --  e f | a b c d >>
-   pop_argument_stack eax ;; f
-   push eax
-
-   pop_argument_stack eax ;; e
-   push eax
-
-   pop_argument_stack edx
-   pop_argument_stack ecx
-   pop_argument_stack ebx
-   pop_argument_stack eax
-
-   pop eax
-   push_argument_stack eax ;; e
-
-   pop eax
-   push_argument_stack eax ;; f
-
-   push_argument_stack eax
-   push_argument_stack ebx
-   push_argument_stack ecx
-   push_argument_stack edx
-   next
-
-}
 
 define_variable "*the-stack*", V__the_stack
    xx address$argument_stack
@@ -4053,16 +3892,17 @@ define_function "define-function", CICADA__define_function
    xx V__current_free_address__string_area, xxswapx
    xx V__current_free_address__jojo_area, xxswapx
    xx V__jo_link__core, xxswapx
+   xx dup2
    ;; << old V__current_free_address__string_area
    ;;    old V__current_free_address__jojo_area
    ;;    old V__jo_link__core
    ;;    string[address, length] >>
-
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
    xx   end
 
+   ;; << string[address, length] >>
    xx V__current_free_address__string_area
    xx   jojo_area__stay
    xx dup2, string_head__word
@@ -4078,47 +3918,7 @@ define_function "define-function", CICADA__define_function
    xx literal, explain$function
    xx   jojo_area__stay
 
-   xx xxoverx
-   xx string_tail__word
-   xx make_jojo
-
-   xx drop2
-   xx drop
-   xx drop
-   xx drop
-   xx end
-
-define_function "define-exception", CICADA__define_exception
-   ;; << string[address, length] -- >>
-   xx V__current_free_address__string_area, xxswapx
-   xx V__current_free_address__jojo_area, xxswapx
-   xx V__jo_link__core, xxswapx
-   ;; << old V__current_free_address__string_area
-   ;;    old V__current_free_address__jojo_area
-   ;;    old V__jo_link__core
-   ;;    string[address, length] >>
-
-   xx prepare_for
-   xx   exception_head
-   xx   !undo_make_jojo
-   xx   end
-
-   xx V__current_free_address__string_area
-   xx   jojo_area__stay
-   xx dup2, string_head__word
-   xx   string_area__stay
-
-   xx V__jo_link__core
-   xx jo_to_link
-   xx   jojo_area__stay
-
-   xx V__current_free_address__jojo_area
-   xx dup, address, V__jo_link__core, save
-
-   xx literal, explain$exception
-   xx   jojo_area__stay
-
-   xx xxoverx
+   xx xxswapx
    xx string_tail__word
    xx make_jojo
 

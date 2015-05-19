@@ -1098,6 +1098,7 @@
      *current-free-address,string-area* xx|swap|x
      *current-free-address,jojo-area* xx|swap|x
      *jo-link,core* xx|swap|x
+     dup2
      << *current-free-address,string-area*
         *current-free-address,jojo-area*
         *jo-link,core*
@@ -1106,6 +1107,7 @@
        !undo-make-jojo
        end
 
+     << string[address, length] >>
      0 jojo-area,stay
 
      *current-free-address,string-area*
@@ -1124,7 +1126,7 @@
      *explainer,exception*
        jojo-area,stay
 
-     xx|over|x
+     xx|swap|x
      string-tail,word
      make-jojo
 
@@ -1142,6 +1144,7 @@
      *current-free-address,string-area* xx|swap|x
      *current-free-address,jojo-area* xx|swap|x
      *jo-link,core* xx|swap|x
+     dup2
      << *current-free-address,string-area*
         *current-free-address,jojo-area*
         *jo-link,core*
@@ -1150,6 +1153,7 @@
        !undo-make-jojo
        end
 
+     << string[address, length] >>
      *current-free-address,string-area*
        jojo-area,stay
      dup2 string-head,word
@@ -1166,7 +1170,7 @@
      *explainer,function*
        jojo-area,stay
 
-     xx|over|x
+     xx|swap|x
      string-tail,word
      make-jojo
 
@@ -1404,7 +1408,41 @@
    #+begin_src cicada-nymph :tangle core.cn
    : define-function,with-title
      << string[address, length] -- >>
+     *current-free-address,string-area* xx|swap|x
+     *current-free-address,jojo-area* xx|swap|x
+     *jo-link,core* xx|swap|x
+     << *current-free-address,string-area*
+        *current-free-address,jojo-area*
+        *jo-link,core*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
 
+     *current-free-address,string-area*
+       jojo-area,stay
+     dup2 string-head,word
+       string-area,stay
+
+     *jo-link,core*
+     jo->link
+       jojo-area,stay
+
+     *current-free-address,jojo-area*
+     dup jo,save-into,name-hash-table
+     dup save-to *jo-link,core*
+
+     *explainer,function*
+       jojo-area,stay
+
+     xx|over|x
+     string-tail,word
+     make-jojo
+
+     drop2
+     drop
+     drop
+     drop
      end
    ; define-function
    #+end_src
