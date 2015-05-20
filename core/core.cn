@@ -40,7 +40,7 @@
   drop2
   jo instruction,false?branch
     jojo-area,stay
-  *current-free-address,jojo-area* xxx|swap|x
+  *jojo-area,current-free-address* xxx|swap|x
   0 jojo-area,stay
   end
 ; define-function
@@ -52,10 +52,10 @@
   jo instruction,branch
      jojo-area,stay
   x|swap|xxx
-  *current-free-address,jojo-area* xxxx|swap|x
+  *jojo-area,current-free-address* xxxx|swap|x
   0 jojo-area,stay
   << address, string[address, length], address >>
-  *current-free-address,jojo-area*
+  *jojo-area,current-free-address*
   over sub *jo-size* div
   swap save
   end
@@ -66,7 +66,7 @@
      jo, string[address, length] >>
   drop2
   x|swap|xxx
-  *current-free-address,jojo-area*
+  *jojo-area,current-free-address*
   over sub *jo-size* div
   swap save
   end
@@ -222,15 +222,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name,used-as-title?
-  << name -- bool >>
-  name->address
-  *jo-size* add
-  fetch zero? not
-  end
-; define-function
-
-: name,used-as-nymph-jo?
+: name,used-as-jo?
   << name -- bool >>
   name->address
   *jo-size* 4 mul add
@@ -238,19 +230,10 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name,fetch-string
+: name->string
   << name -- string[address, length] >>
   name->address
-  fetch
-  address->string
-  end
-; define-function
-
-: name,fetch-title-index
-  << name -- title-index >>
-  name->address
-  *jo-size* add
-  fetch
+  2 n-fetch
   end
 ; define-function
 
@@ -270,8 +253,8 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name,fetch-nymph-jo
-  << name -- nymph-jo >>
+: name,fetch-jo
+  << name -- jo >>
   name->address
   *jo-size* 4 mul add
   fetch
@@ -280,20 +263,17 @@ more,rule-set,make-jojo
 
 : name,save-string
   << string[address, length], name -- >>
-  *current-free-address,string-area*
-  xx|swap|xx
-  string-area,stay
-  swap
-  name->address
-  save
+  >:name
+  make-string
+  :name name->address
+  2 n-save
   end
 ; define-function
 
-: name,save-title-index
-  << title-index, name -- >>
+: name,save-string,share
+  << string[address, length], name -- >>
   name->address
-  *jo-size* add
-  save
+  2 n-save
   end
 ; define-function
 
@@ -313,8 +293,8 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name,save-nymph-jo
-  << nymph-jo, name -- >>
+: name,save-jo
+  << jo, name -- >>
   name->address
   *jo-size* 4 mul add
   save
@@ -378,7 +358,7 @@ more,rule-set,make-jojo
     :name false
     end
   then
-  :name name,fetch-string
+  :name name->string
   ::string string-equal? if
     :name true
     end
@@ -422,7 +402,7 @@ more,rule-set,make-jojo
     :name true
     end
   then
-  :name name,fetch-string
+  :name name->string
   ::string string-equal? if
     :name true
     end
@@ -432,11 +412,56 @@ more,rule-set,make-jojo
     end
   then
   ::string
-  :number :counter add1
+  :number
+  :counter add1
   loop
 ; define-function
 
 : name-hash-table,insert
+  << string[address, length]
+     -- name, true
+     -- name, false >>
+  dup2 string->finite-carry-sum
+  0 name-hash-table,insert,loop
+  end
+; define-function
+
+: name-hash-table,insert,share,loop
+  << string[address, length], number, counter
+     -- name, true
+     -- name, false >>
+  >:counter >:number >::string
+  :number :counter name-hash-table,hash
+  >:name
+  :number 0 name-hash-table,hash
+  >:orbit
+  :name name,used? false? if
+    ::string :name
+    name,save-string,share
+    :orbit :name
+    name,save-orbiton
+    :counter :orbit
+    name,save-orbit-length
+    1 address *name-hash-table,counter* add-save
+    :name true
+    end
+  then
+  :name name->string
+  ::string string-equal? if
+    :name true
+    end
+  then
+  :counter *name-hash-table,size* equal? if
+    :name false
+    end
+  then
+  ::string
+  :number
+  :counter add1
+  loop
+; define-function
+
+: name-hash-table,insert,share
   << string[address, length]
      -- name, true
      -- name, false >>
@@ -455,9 +480,13 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name->string
-  << name -- string[address, length]] >>
-  name,fetch-string
+: string->name,share
+  << string[address, length] -- name >>
+  name-hash-table,insert,share
+  false? if
+    "* (string->name) *name-hash-table* is full!" .s .l
+    end
+  then
   end
 ; define-function
 
@@ -468,17 +497,17 @@ more,rule-set,make-jojo
     drop2
     end
   then
-  over name,fetch-string string->finite-carry-sum
+  over name->string string->finite-carry-sum
   over name-hash-table,hash
   dup name,fetch-orbiton
   << name, counter, new-name, orbiton >>
-  x|over|xxx name,fetch-string string->finite-carry-sum
+  x|over|xxx name->string string->finite-carry-sum
   0 name-hash-table,hash
   equal? if
     "  {" .s
     dup write-number
     "} " .s
-    name,fetch-string .s
+    name->string .s
     .l
   else
     drop
@@ -499,7 +528,7 @@ more,rule-set,make-jojo
     "* {" .s
     dup write-number
     "} " .s
-    dup name,fetch-string .s
+    dup name->string .s
     " # " .s
     dup name,fetch-orbit-length
     write-number
@@ -520,11 +549,11 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: jo,save-into,name-hash-table
+: name-hash-table,save-jo
   << jo -- >>
   >:jo
-  :jo jo->name string->name >:name
-  :jo :name name,save-nymph-jo
+  :jo jo->name-string string->name >:name
+  :jo :name name,save-jo
   end
 ; define-function
 
@@ -538,8 +567,8 @@ more,rule-set,make-jojo
     false
     end
   then
-  dup name,used-as-nymph-jo? if
-    name,fetch-nymph-jo
+  dup name,used-as-jo? if
+    name,fetch-jo
     true
     end
   then
@@ -548,7 +577,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: make-jojo,dispatch-syntax-word
+: make-jojo,dispatch-word
   << jo, string[address, length], word[address, length] --
      jo, string[address, length] >>
   dup2 find-syntax if
@@ -575,7 +604,7 @@ more,rule-set,make-jojo
   string-tail,word
   xx|swap|xx
   string-head,word
-  make-jojo,dispatch-syntax-word
+  make-jojo,dispatch-word
   loop
 ; define-function
 
@@ -589,100 +618,84 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: init,name-hash-table,nymph-jo,loop
-  << jo -- >>
-  dup jo->name
-  name-hash-table,search if
-    name,used-as-nymph-jo? if
-      dup jo-link,last-jo? if
-        drop
-        end
-      then
-      jo->pre-jo
-      loop
-    then
-  else
-    drop
-  then
-
-  dup jo,save-into,name-hash-table
-
-  dup jo-link,last-jo? if
-    drop
+: init,name-hash-table,by-link
+  << link -- >>
+  >:link
+  :link zero? if
     end
   then
-  jo->pre-jo
+  :link link->name-string >::name-string
+  ::name-string name-hash-table,search swap >:name if
+    :name name,used-as-jo? if
+      :link link->next-link
+      loop
+    then
+  then
+  :link link->jo name-hash-table,save-jo
+  :link link->next-link
   loop
 ; define-function
 
-: init,name-hash-table,nymph-jo
-  << -- >>
-  *jo-link,core*
-  init,name-hash-table,nymph-jo,loop
-  end
-; define-function
-
 : define-variable,with-tos
-  << variable, string[address, length] -- >>
-  1 jojo-area,stay
+  << value, string[address, length] -- >>
+  string-head,word make-string >::name
+  >:value
 
-  *current-free-address,string-area*
-    jojo-area,stay
-  dup2 string-head,word
-    string-area,stay
+  ::name *link,core* 0
+  make-link >:link
 
-  *jo-link,core*
-  jo->link
-    jojo-area,stay
+  :link save-to *link,core*
 
-  *current-free-address,jojo-area*
-  dup jo,save-into,name-hash-table
-  save-to *jo-link,core*
+  ::name *explainer,variable* 0
+  make-jo-head >:jo
 
-  *explainer,variable*
-    jojo-area,stay
+  :jo :link link,save-jo
 
-  drop2
-  jojo-area,stay
+  :jo name-hash-table,save-jo
+
+  1 :jo jo,save-length
+
+  :value jojo-area,stay
   end
 ; define-function
 
 : define-exception
   << string[address, length] -- >>
-  *current-free-address,string-area* xx|swap|x
-  *current-free-address,jojo-area* xx|swap|x
-  *jo-link,core* xx|swap|x
-  dup2
-  << *current-free-address,string-area*
-     *current-free-address,jojo-area*
-     *jo-link,core*
+  *string-area,current-free-address* xx|swap|x
+  *jojo-area,current-free-address* xx|swap|x
+  *link,core* xx|swap|x
+  << *string-area,current-free-address*
+     *jojo-area,current-free-address*
+     *link,core*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
     end
 
-  << string[address, length] >>
-  0 jojo-area,stay
+  dup2 string-head,word >::name
+  dup2 string-tail,word >::body
 
-  *current-free-address,string-area*
-    jojo-area,stay
-  dup2 string-head,word
-    string-area,stay
+  ::name make-string >::name
 
-  *jo-link,core*
-  jo->link
-    jojo-area,stay
+  ::name *link,core* 0
+  make-link >:link
 
-  *current-free-address,jojo-area*
-  dup jo,save-into,name-hash-table
-  dup save-to *jo-link,core*
+  :link save-to *link,core*
 
-  *explainer,exception*
-    jojo-area,stay
+  ::name *explainer,exception* 0
+  make-jo-head >:jo
 
-  xx|swap|x
-  string-tail,word
-  make-jojo
+  :jo :link link,save-jo
+
+  :jo name-hash-table,save-jo
+
+  *jojo-area,current-free-address* >:old-address
+
+  :jo ::body make-jojo
+
+  *jojo-area,current-free-address*
+  :old-address sub *jo-size* div
+  :jo jo,save-length
 
   drop2
   drop
@@ -693,38 +706,41 @@ more,rule-set,make-jojo
 
 : define-function
   << string[address, length] -- >>
-  *current-free-address,string-area* xx|swap|x
-  *current-free-address,jojo-area* xx|swap|x
-  *jo-link,core* xx|swap|x
-  dup2
-  << *current-free-address,string-area*
-     *current-free-address,jojo-area*
-     *jo-link,core*
+  *string-area,current-free-address* xx|swap|x
+  *jojo-area,current-free-address* xx|swap|x
+  *link,core* xx|swap|x
+  << *string-area,current-free-address*
+     *jojo-area,current-free-address*
+     *link,core*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
     end
 
-  << string[address, length] >>
-  *current-free-address,string-area*
-    jojo-area,stay
-  dup2 string-head,word
-    string-area,stay
+  dup2 string-head,word >::name
+  dup2 string-tail,word >::body
 
-  *jo-link,core*
-  jo->link
-    jojo-area,stay
+  ::name make-string >::name
 
-  *current-free-address,jojo-area*
-  dup jo,save-into,name-hash-table
-  dup save-to *jo-link,core*
+  ::name *link,core* 0
+  make-link >:link
 
-  *explainer,function*
-    jojo-area,stay
+  :link save-to *link,core*
 
-  xx|swap|x
-  string-tail,word
-  make-jojo
+  ::name *explainer,function* 0
+  make-jo-head >:jo
+
+  :jo :link link,save-jo
+
+  :jo name-hash-table,save-jo
+
+  *jojo-area,current-free-address* >:old-address
+
+  :jo ::body make-jojo
+
+  *jojo-area,current-free-address*
+  :old-address sub *jo-size* div
+  :jo jo,save-length
 
   drop2
   drop
@@ -733,7 +749,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-init,name-hash-table,nymph-jo
+*link,core* init,name-hash-table,by-link
 
 : word:name?
   << word[address, length] -- bool >>
@@ -767,54 +783,43 @@ more,rule-set,make-jojo
 
 : <word>?
   << string[address, length] -- bool >>
-  dup 
+  dup 2 less-or-equal? if
+    drop2
+    false
+    end
+  then
+  dup2 string-end,byte
+  ">" string-end,byte equal? not if
+    drop2
+    false
+    end
+  then
+  string-head,byte
+  "<" string-head,byte equal?
   end
 ; define-function
 
-: define-function,with-title
+: make-title
   << string[address, length] -- >>
-  *current-free-address,string-area* xx|swap|x
-  *current-free-address,jojo-area* xx|swap|x
-  *jo-link,core* xx|swap|x
-  dup2
-  << *current-free-address,string-area*
-     *current-free-address,jojo-area*
-     *jo-link,core*
-     string[address, length] >>
-  prepare-for
-    !undo-make-jojo
-    end
+  1 jojo-area,stay
 
-  >::string
-  ::string string-head,word >::title
-  ::string string-tail,word string-head,word >::name
-  ::string string-tail,word string-tail,word >::body
-
-
-
-  *current-free-address,string-area*
+  *string-area,current-free-address*
     jojo-area,stay
   dup2 string-head,word
     string-area,stay
 
-  *jo-link,core*
-  jo->link
+  *link,core*
     jojo-area,stay
 
-  *current-free-address,jojo-area*
-  dup jo,save-into,name-hash-table
-  dup save-to *jo-link,core*
+  *jojo-area,current-free-address*
+  dup name-hash-table,save-jo
+  save-to *link,core*
 
-  *explainer,function*
+  *explainer,variable*
     jojo-area,stay
-
-  ::body
-  make-jojo
 
   drop2
-  drop
-  drop
-  drop
+  0 jojo-area,stay
   end
 ; define-function
 
@@ -1634,9 +1639,9 @@ jo stack-REPL save-to *lost-exception-REPL*
   ")" .s .l
   swap
     dup cursor->predicate
-    "    " .s jo->name .s .l
+    "    " .s jo->name-string .s .l
     dup cursor->function
-    "    " .s jo->name .s .l
+    "    " .s jo->name-string .s .l
     *jo-size* sub *jo-size* sub
   swap
   loop
@@ -1742,80 +1747,79 @@ jo stack-REPL save-to *lost-exception-REPL*
   :buffer
   syntax,double-quote,define-variable,loop
   >:cursor
-  *current-free-address,string-area* add2 >:address
   :buffer
-  :cursor :buffer sub dup >:length
-  string-area,stay
-  :address
-  :length
+  :cursor :buffer sub
+  make-string
   end
 ; define-function
 
 : define-variable
   << string[address, length] -- >>
   >::string
-  ::string string-head,word >::variable-name
-  ::string string-tail,word >::variable-body
+  ::string string-head,word >::name
+  ::string string-tail,word >::body
 
   snapshot-the-stack-pointer
-  *the-stack-pointer-snapshot*
-  >:old-snapshot
-  jo word:double-quote? jo syntax,double-quote,define-variable *rule-set,basic-REPL* add-rule
-  ::variable-body eval-string
-  jo word:double-quote? jo syntax,double-quote,define-variable *rule-set,basic-REPL* sub-rule
+  *the-stack-pointer-snapshot* >:old-snapshot
+
+  jo word:double-quote?
+  jo syntax,double-quote,define-variable
+  *rule-set,basic-REPL* add-rule
+
+  ::body eval-string
+
+  jo word:double-quote?
+  jo syntax,double-quote,define-variable
+  *rule-set,basic-REPL* sub-rule
 
   snapshot-the-stack-pointer
-  *the-stack-pointer-snapshot*
-  >:new-snapshot
+  *the-stack-pointer-snapshot* >:new-snapshot
 
   :new-snapshot :old-snapshot sub
 
   dup negative? if
     negate *jo-size* div
-    "* (define-variable) fail to define variable : " .s ::variable-name .s .l
-    "  because after eval the following variable-body" .s .l
+    "* (define-variable) fail to define variable : " .s ::name .s .l
+    "  because after eval the following body" .s .l
     "  the stack is " .s .i " below what it use to be" .s .l
-    ::variable-body .s .l
+    ::body .s .l
     end
   then
   dup zero? if
     drop
-    "* (define-variable) fail to define variable : " .s ::variable-name .s .l
-    "  because after eval the following variable-body" .s .l
+    "* (define-variable) fail to define variable : " .s ::name .s .l
+    "  because after eval the following body" .s .l
     "  the stack is still where it use to be" .s .l
-    ::variable-body .s .l
+    ::body .s .l
     end
   then
 
-  *jo-size* div >:variable-length
+  *jo-size* div >:length
 
-  :variable-length
-    jojo-area,stay
+  ::name make-string >::name
 
-  *current-free-address,string-area*
-    jojo-area,stay
-  ::variable-name
-    string-area,stay
+  ::name *link,core* 0
+  make-link >:link
 
-  *jo-link,core*
-  jo->link
-    jojo-area,stay
+  :link save-to *link,core*
 
-  *current-free-address,jojo-area*
-  dup jo,save-into,name-hash-table
-  save-to *jo-link,core*
+  ::name *explainer,variable* 0
+  make-jo-head >:jo
 
-  *explainer,variable*
-    jojo-area,stay
+  :jo :link link,save-jo
 
-  *current-free-address,jojo-area*
-  :variable-length
+  :jo name-hash-table,save-jo
+
+  :length
+  :jo jo,save-length
+
+  *jojo-area,current-free-address*
+  :length
   n-save
 
-  :variable-length *jo-size* mul
-  address *current-free-address,jojo-area*
+  :length *jo-size* mul
+  address *jojo-area,current-free-address*
   add-save
-
   end
 ; define-function
 
@@ -1912,55 +1916,55 @@ then
   end
 ; define-function
 
-: jo-link,list-by-jo-predicate,loop
-  << jo-predicate, counter, jo -- total >>
+: link,list-by-jo-predicate,loop
+  << jo-predicate, counter, link -- total >>
   dup zero? if
     drop
     swap drop
     end
   then
   dup x|over|xxx execute-jo false? if
-    jo->pre-jo
+    link->next-link
     loop
   then
   swap
     "  " .s
     add1 dup .i ". " .s
   swap
-  dup jo->name
+  dup jo->name-string
   dup2 space-string? if
     drop2
     "  unnamed" .s .l
   else
     .s .l
   then
-  jo->pre-jo
+  link->next-link
   loop
 ; define-function
 
-: jo-link,list-by-jo-predicate
-  << first-jo, jo-predicate -- total >>
+: link,list-by-jo-predicate
+  << link, jo-predicate -- total >>
   swap
   0
   swap
-  jo-link,list-by-jo-predicate,loop
+  link,list-by-jo-predicate,loop
   end
 ; define-function
 
-: jo-link,report
+: link,report
   << -- >>
-  "* all primitive-function in jo-link :" .s .l
-  *jo-link,core* jo primitive-function-jo?
-  jo-link,list-by-jo-predicate
-  "* all function in jo-link :" .s .l
-  *jo-link,core* jo function-jo?
-  jo-link,list-by-jo-predicate add
-  "* all exception in jo-link :" .s .l
-  *jo-link,core* jo exception-jo?
-  jo-link,list-by-jo-predicate add
-  "* all variable in jo-link :" .s .l
-  *jo-link,core* jo variable-jo?
-  jo-link,list-by-jo-predicate add
+  "* all primitive-function in link :" .s .l
+  *link,core* jo primitive-function-jo?
+  link,list-by-jo-predicate
+  "* all function in link :" .s .l
+  *link,core* jo function-jo?
+  link,list-by-jo-predicate add
+  "* all exception in link :" .s .l
+  *link,core* jo exception-jo?
+  link,list-by-jo-predicate add
+  "* all variable in link :" .s .l
+  *link,core* jo variable-jo?
+  link,list-by-jo-predicate add
   "* totally : " .s
   .i .l
   end
@@ -3411,27 +3415,27 @@ jo syntax,path:,basic-REPL
        sub sub . .l
   "* *string-area*" .s .l
   "  * size : " .s
-       *size,string-area*
+       *string-area,size*
        . .l
   "  * used : " .s
-       *current-free-address,string-area*
+       *string-area,current-free-address*
        *string-area*
        sub . .l
   "  * free : " .s
-       *size,string-area*
-       *current-free-address,string-area*
+       *string-area,size*
+       *string-area,current-free-address*
        *string-area*
        sub sub . .l
   "* *jojo-area*" .s .l
   "  * size : " .s
-       *size,jojo-area* . .l
+       *jojo-area,size* . .l
   "  * used : " .s
-       *current-free-address,jojo-area*
+       *jojo-area,current-free-address*
        *jojo-area*
        sub . .l
   "  * free : " .s
-       *size,jojo-area*
-       *current-free-address,jojo-area*
+       *jojo-area,size*
+       *jojo-area,current-free-address*
        *jojo-area*
        sub sub . .l
   end

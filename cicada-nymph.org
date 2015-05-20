@@ -2,11 +2,13 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* add length field into jo
+* implement comment by syntax extension
+* refine exception-jo [make good use of local-jo]
+* (define-alias)
 * todo
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
-** change the interface of *string-area* :maybe:
-** tail-call can be optimized to branch
 * ===================================
 * note
 ** notation
@@ -260,7 +262,7 @@
   * note that another style is that
     under the stack-pointer
     there always stores the value of the-top-of-the-stack
-* argument_stack
+* argument-stack
 ** ----------------------------------
 ** memory allocation
    * for we do not build border-check
@@ -354,7 +356,7 @@
    }
    #+end_src
 ** ----------------------------------
-* return_stack
+* return-stack
 ** 記
    * jo 的詮釋者
      決定了 如何入這個棧
@@ -557,12 +559,60 @@
       ^-^
       is it not ?
 * -----------------------------------
-* link
+* note jo
+  * jo as data-structure
+    |----+----------------|
+    |    | length         |
+    |    | string-address |
+    |    | string-length  |
+    |----+----------------|
+    | jo | explainer      |
+    |----+----------------|
+    |    | body           |
+    |----+----------------|
+  * the body for
+    * primitive-function-jo
+      assembly code
+    * function-jo
+      jojo
+    * exception-jo
+      jojo
+    * variable-jo
+      value-list
+  * for exception-jo
+    the [other] is a pointer into argument-stack
+* offset of jo
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  offset__jo$other          = - (jo_size * 4)
+  offset__jo$length         = - (jo_size * 3)
+  offset__jo$string_address = - (jo_size * 2)
+  offset__jo$string_length  = - (jo_size * 1)
+  offset__jo$body           = (jo_size * 1)
+  #+end_src
+* note link
+  * link as data-structure
+    |------+----------------|
+    | link | link           |
+    |------+----------------|
+    |      | jo             |
+    |      | string-address |
+    |      | string-length  |
+    |------+----------------|
+  * if the link field of a link is 0
+    the link is the last-link
+* offset of link
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  offset__link$jo             = (jo_size * 1)
+  offset__link$string_address = (jo_size * 2)
+  offset__link$string_length  = (jo_size * 3)
+  #+end_src
+* -----------------------------------
+* null link
   #+begin_src fasm :tangle cicada-nymph.fasm
   ;; initial link to point to 0 (as null)
   link = 0
   #+end_src
-* string_area
+* *string-area*
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    address$string_area:
@@ -576,12 +626,9 @@
 
    current_free_address$string_area = address$string_area
    #+end_src
-** make_name_string
-   * 2 bytes for length of name_string
-   * note that
-     the following is using local label
+** ASSEMBLY__length_string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   macro make_name_string string {
+   macro ASSEMBLY__length_string string {
 
    virtual at 0
    .start$string:
@@ -590,9 +637,14 @@
       dw (.end$string - .start$string)
       load .length word from (.end$string)
    finish virtual
-   store word .length at (current_free_address$string_area)
 
-   current_free_address$string_area = current_free_address$string_area + 2
+   }
+   #+end_src
+** ASSEMBLY__make_string
+   * note that
+     the following is using local label
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro ASSEMBLY__make_string string {
 
    repeat .length
       virtual at 0
@@ -602,7 +654,8 @@
       store byte .char at (current_free_address$string_area)
       current_free_address$string_area = current_free_address$string_area + 1
    finish repeat
-
+      store byte 0 at (current_free_address$string_area)
+      current_free_address$string_area = current_free_address$string_area + 1
    }
    #+end_src
 * function-jo
@@ -616,20 +669,34 @@
    * explain$function is used as jojo-head
      and explains the meaning of the jojo as function
    * a jojo-head identifies one type of jo
+** define_end
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   macro define_end jo {
+      end__#jo:
+   }
+   #+end_src
 ** define_function
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_function string, jo {
 
-   define_function__#jo:
-
-   name__#jo:
-      xx current_free_address$string_area
-
-      make_name_string string
-
    link__#jo:
       xx link
       link = link__#jo
+
+      xx jo
+
+      ASSEMBLY__length_string string
+      .address = current_free_address$string_area
+      xx .address
+      xx .length
+      ASSEMBLY__make_string string
+
+
+      ;; xx (end__#jo - jo)/jo_size
+      xx 0
+
+      xx .address
+      xx .length
 
    jo:
       xx explain$function
@@ -663,16 +730,24 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_primitive_function string, jo {
 
-   define_primitive_function__#jo:
-
-   name__#jo:
-      xx current_free_address$string_area
-
-      make_name_string string
-
    link__#jo:
       xx link
       link = link__#jo
+
+      xx jo
+
+      ASSEMBLY__length_string string
+      .address = current_free_address$string_area
+      xx .address
+      xx .length
+      ASSEMBLY__make_string string
+
+
+      ;; xx (end__#jo - jo)
+      xx 0
+
+      xx .address
+      xx .length
 
    jo:
       xx assembly_code__#jo
@@ -693,23 +768,27 @@
    * when wish to change a variable's value
      use key_word "address" to get the address of the variable
 ** define_variable
-   * length__#jo = [jo - jo_size * 3]
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_variable string, jo {
-
-   define_variable__#jo:
-
-   length__#jo:
-      xx 1
-
-   name__#jo:
-      xx current_free_address$string_area
-
-      make_name_string string
 
    link__#jo:
       xx link
       link = link__#jo
+
+      xx jo
+
+      ASSEMBLY__length_string string
+      .address = current_free_address$string_area
+      xx .address
+      xx .length
+      ASSEMBLY__make_string string
+
+
+      ;; length
+      xx 1
+
+      xx .address
+      xx .length
 
    jo:
       xx explain$variable
@@ -728,7 +807,7 @@
    match =64bit, machine {
 
    explain$variable:
-      mov rcx, [rax - (jo_size * 3)]
+      mov rcx, [rax + offset__jo$length]
       add rax, jo_size
    .loop:
       mov rdx, qword [rax]
@@ -748,7 +827,7 @@
    match =32bit, machine {
 
    explain$variable:
-      mov rcx, [rax - (jo_size * 3)]
+      mov rcx, [rax + offset__jo$length]
       add rax, jo_size
    .loop:
       mov rdx, dword [rax]
@@ -787,18 +866,24 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_exception string, jo {
 
-   define_exception__#jo:
-
-      xx 0
-
-   name__#jo:
-      xx current_free_address$string_area
-
-      make_name_string string
-
    link__#jo:
       xx link
       link = link__#jo
+
+      xx jo
+
+      ASSEMBLY__length_string string
+      .address = current_free_address$string_area
+      xx .address
+      xx .length
+      ASSEMBLY__make_string string
+
+
+      ;; xx (end__#jo - jo)/jo_size
+      xx 0
+
+      xx .address
+      xx .length
 
    jo:
       xx explain$exception
@@ -883,7 +968,7 @@
       ;; << -- >>
       pop_return_stack rbx
         mov rax, [rbx]
-        sub rax, (jo_size * 3)
+        add rax, offset__jo$other
         mov pointer$argument_stack, [rax]
       add rbx, jo_size
       push_return_stack rbx
@@ -899,7 +984,7 @@
       ;; << -- >>
       pop_return_stack rbx
         mov rax, [rbx]
-        sub rax, (jo_size * 3)
+        add rax, offset__jo$other
         mov rax, [rax]
         mov [pointer$argument_stack], rax
       add rbx, jo_size
@@ -946,7 +1031,7 @@
       pop_return_stack rax
       ;; mov pointer$argument_stack, rax
       mov rbx, rsi
-      sub rbx, (jo_size * 3)
+      add rbx, offset__jo$other
       mov [rbx], rax
 
       mov rbx, [current_free_address$local_jo]
@@ -1011,7 +1096,7 @@
       pop_return_stack rax
       ;; mov [pointer$argument_stack], rax
       mov rbx, rsi
-      sub rbx, (jo_size * 3)
+      add rbx, offset__jo$other
       mov [rbx], rax
 
       mov rbx, [current_free_address$local_jo]
@@ -1065,45 +1150,22 @@
    define_variable "*jo-size*", V__jo_size
       xx jo_size
    #+end_src
-** jo->name
+** jo->name-string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo->name", jo_to_name
+   define_function "jo->name-string", jo_to_name_string
       ;; << jo -- string[address, length] >>
-      xx literal, jo_size, subtraction
-      xx literal, jo_size, subtraction
-      xx fetch
-      xx address_to_string
+      xx literal, offset__jo$string_address, addition
+      xx literal, 2
+      xx n_fetch
       xx end
    #+end_src
-** jo->link
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo->link", jo_to_link
-      ;; << jo -- link >>
-      xx literal, jo_size
-      xx subtraction
-      xx end
-   #+end_src
-** jo->pre-jo
-   * treat last-jo,jo-link specially
-     i.e. return zero on that case
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo->pre-jo", jo_to_pre_jo
-      ;; << jo -- pre-jo >>
-      xx jo_to_link
-      xx fetch
-      xx dup, zero?, false?branch, 2
-      xx   end
-      xx literal, jo_size
-      xx addition
-      xx end
-   #+end_src
-** jo->type
+** jo->explainer
    * the type of primitive function jo
      is encoded by 0
    * other types of jo
      are encoded by their explainers
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo->type", jo_to_type
+   define_function "jo->explainer", jo_to_explainer
       ;; << jo -- type >>
       xx dup
 
@@ -1115,13 +1177,27 @@
       xx fetch
       xx end
    #+end_src
-** note type of jo
-   * denoted by explainers
+** jo->length
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->length", jo_to_length
+      ;; << jo -- length >>
+      xx literal, offset__jo$length, addition
+      xx fetch
+      xx end
+   #+end_src
+** jo,save-length
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo,save-length", jo__save_length
+      ;; << length, jo -- >>
+      xx literal, offset__jo$length, addition
+      xx save
+      xx end
+   #+end_src
 ** primitive-function-jo?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "primitive-function-jo?", primitive_function_jo?
       ;; << jo -- bool >>
-      xx jo_to_type
+      xx jo_to_explainer
       xx zero?
       xx end
    #+end_src
@@ -1129,7 +1205,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "function-jo?", function_jo?
       ;; << jo -- bool >>
-      xx jo_to_type
+      xx jo_to_explainer
       xx literal, explain$function
       xx equal?
       xx end
@@ -1138,7 +1214,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "exception-jo?", exception_jo?
       ;; << jo -- bool >>
-      xx jo_to_type
+      xx jo_to_explainer
       xx literal, explain$exception
       xx equal?
       xx end
@@ -1147,7 +1223,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "variable-jo?", variable_jo?
       ;; << jo -- bool >>
-      xx jo_to_type
+      xx jo_to_explainer
       xx literal, explain$variable
       xx equal?
       xx end
@@ -1162,41 +1238,31 @@
    define_variable "*string-area*", V__string_area
       xx address$string_area
 
-   define_variable "*size,string-area*", V__size__string_area
+   define_variable "*string-area,size*", V__string_area__size
       xx (end$string_area - address$string_area)
 
-   ;; *current-free-address,string-area*
+   ;; *string-area,current-free-address*
    ;; is at epilog
-   #+end_src
-** address->string
-   * under the address there is
-     | length : 2 bytes |
-     | string : n bytes |
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "address->string", address_to_string
-      ;; << address -- string[address, length] >>
-      xx dup
-      xx literal, 2, addition  ;; address
-      xx swap, fetch_two_bytes ;; length
-      xx end
    #+end_src
 ** string-area,stay
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-area,stay", string_area__stay
       ;; << string[address, length] -- >>
-      xx dup, V__current_free_address__string_area
-      xx save_two_bytes
-
-      xx literal, 2
-      xx address, V__current_free_address__string_area
-      xx add_save
-
       xx tuck
-      xx V__current_free_address__string_area
+      xx V__string_area__current_free_address
       xx string_to_buffer!
-
-      xx address, V__current_free_address__string_area
+      xx address, V__string_area__current_free_address
       xx add_save
+      xx end
+   #+end_src
+** make-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "make-string", make_string
+      ;; << string[address, length] -- string[address, length] >>
+      xx V__string_area__current_free_address
+      xx xxswapx
+      xx tuck
+      xx string_area__stay
       xx end
    #+end_src
 * -----------------------------------
@@ -1692,14 +1758,14 @@
       ;;;; type 123
       ;;;; exit code 123
 
-      ;;;; use jo_to_name to test the macro make_name_string
-      ;; xx literal, jo_to_name, jo_to_name, write_string
+      ;;;; use jo_to_name_string to test the macro ASSEMBLY__make_string
+      ;; xx literal, jo_to_name_string, jo_to_name_string, write_string
       ;; xx literal, 10, write_byte
-      ;; xx literal, addition, jo_to_name, write_string
+      ;; xx literal, addition, jo_to_name_string, write_string
       ;; xx literal, 10, write_byte
       ;; xx zero
       ;; xx exit_with_TOS
-      ;;;; print "jo->name"
+      ;;;; print "jo->name-string"
       ;;;; print "add"
 
       ;;;; xxoverxx
@@ -1718,11 +1784,12 @@
       ;; xx exit_with_TOS
       ;;;; 2 1 4 3 2 1
 
-      ;;;; jo_link__find_jo
+      ;;;; find_link
       ;; xx read_word, string_to_integer ;; number
       ;; xx read_word, string_to_integer ;; number
-      ;; xx read_word, V__jo_link__core, jo_link__find_jo ;; add
+      ;; xx read_word, V__link__core, find_link ;; add
       ;; xx drop ;; true
+      ;; xx link_to_jo
       ;; xx execute_jo
       ;; xx write_integer
       ;; xx zero
@@ -2211,6 +2278,21 @@
       push_argument_stack rbx
       push_argument_stack rcx
       push_argument_stack rdx
+      next
+
+   define_primitive_function "xxxx|tuck|x", xxxxtuckx
+      ;; << a b c d | e -- e | a b c d | e >>
+      pop_argument_stack rdi ;; e
+      pop_argument_stack rdx
+      pop_argument_stack rcx
+      pop_argument_stack rbx
+      pop_argument_stack rax
+      push_argument_stack rdi ;; e
+      push_argument_stack rax
+      push_argument_stack rbx
+      push_argument_stack rcx
+      push_argument_stack rdx
+      push_argument_stack rdi ;; e
       next
    #+end_src
 ** swap
@@ -3998,6 +4080,13 @@
    32 string,find-char . << 1 >>
    fetch-byte . << 32 >>
    #+end_src
+** string-end,byte
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "string-end,byte", string_end__byte
+      ;; << string[address, length] -- char >>
+      xx addition, sub1, fetch_byte
+      xx end
+   #+end_src
 ** ----------------------------------
 ** note
    * one should use space-string? to make sure
@@ -4157,6 +4246,7 @@
       xx pretty_write_integer
       xx end
    #+end_src
+* -----------------------------------
 * word
 ** note io about word
    * words are separated by spaces
@@ -4261,26 +4351,55 @@
       xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx end
    #+end_src
-* jo-link
-** note
-   * a jo-link is a variable that
-     stores the first jo in the jo-link
-   * one jo can only be in one jo-link
-** *jo-link,core*
+* link
+** last-link?
+   * fatal error on zero
+   * the last-link is not zero
+     but is a link of which the link field is zero
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*jo-link,core*", V__jo_link__core
-      xx (last_link + jo_size)
-   #+end_src
-** jo-link,last-jo?
-   * first jo in assembly code
-     is the last jo in jo-link
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo-link,last-jo?", jo_link__last_jo?
-      ;; << jo -- bool >>
-      xx jo_to_link
-      xx fetch
-      xx zero?
+   define_function "last-link?", last_link?
+      ;; << link -- bool >>
+      xx fetch, zero?
       xx end
+   #+end_src
+** link->next-link
+   * fatal error on zero
+   * the test of zero? is for less core dump
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "link->next-link", link_to_next_link
+     ;; << link -- next-link >>
+     xx fetch
+     xx end
+   #+end_src
+** link->name-string
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "link->name-string", link_to_name_string
+      ;; << link -- string[address, length] >>
+      xx literal, offset__link$string_address, addition
+      xx literal, 2
+      xx n_fetch
+      xx end
+   #+end_src
+** link->jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "link->jo", link_to_jo
+      ;; << link -- jo >>
+      xx literal, offset__link$jo, addition, fetch
+      xx end
+   #+end_src
+** link,save-jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "link,save-jo", link__save_jo
+      ;; << jo, link -- >>
+      xx literal, offset__link$jo, addition
+      xx save
+      xx end
+   #+end_src
+** *link,core*
+   * a link is the first jo in the link
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*link,core*", V__link__core
+      xx the_last_link_in_assembly_code
    #+end_src
 ** note about find
    * a function whoes name is prefixed by "find"
@@ -4296,26 +4415,32 @@
           退出
         * 如果不是
           取下一個 jo 以循環
-** jo-link,find-jo
-   * find jo in jo-link by word
+** find-link
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo-link,find-jo", jo_link__find_jo
-      ;; << word[address, length], jo
-      ;;    -- jo, true
+   define_function "find-link", find_link
+      ;; << word[address, length], link
+      ;;    -- link, true
       ;;    -- false >>
       xx xxtuckx
-      xx jo_to_name, xxoverxx
+      xx link_to_name_string, xxoverxx
+
+      ;; xx xxoverxx
+      ;; xx xxoverxx
+      ;; xx write_string, literal, 32, write_byte
+      ;; xx write_string, literal, 10, write_byte
+
       xx string_equal?, false?branch, 4
       xx   drop2, true
       xx   end
       xx xswapxx
-      xx dup, jo_link__last_jo?, false?branch, 5
+      xx dup, last_link?, false?branch, 5
       xx   drop, drop2
       xx   false
       xx   end
-      xx jo_to_pre_jo
-      xx tail_call, jo_link__find_jo
+      xx link_to_next_link
+      xx tail_call, find_link
    #+end_src
+* basic-REPL
 ** execute-word
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "execute-word", execute_word
@@ -4326,10 +4451,10 @@
       ;; maybe more
 
       xx dup2 ;; for to report undefined word
-      xx V__jo_link__core
-      xx jo_link__find_jo, false?branch, 5
+      xx V__link__core
+      xx find_link, false?branch, 6
       xx   xxswapx, drop2
-      xx   execute_jo
+      xx   link_to_jo, execute_jo
       xx   end
 
       xx write_undefined_word_report__for_execute_word
@@ -4351,14 +4476,14 @@
    .end:
    length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
    #+end_src
-* basic-REPL
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_function "basic-REPL", basic_REPL
-     ;; << unknown -- unknown >>
-     xx read_word_for_REPL
-     xx execute_word
-     xx tail_call, basic_REPL
-  #+end_src
+** basic-REPL
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "basic-REPL", basic_REPL
+      ;; << unknown -- unknown >>
+      xx read_word_for_REPL
+      xx execute_word
+      xx tail_call, basic_REPL
+   #+end_src
 * -----------------------------------
 * colon semicolon
 ** note
@@ -4569,6 +4694,7 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
+* -----------------------------------
 * jojo-area
 ** note
    * you can see how the naming convention is used
@@ -4580,28 +4706,74 @@
    define_variable "*jojo-area*", V__jojo_area
      xx address$jojo_area
 
-   define_variable "*size,jojo-area*", V__size__jojo_area
+   define_variable "*jojo-area,size*", V__jojo_area__size
      xx size$jojo_area
 
 
    address$jojo_area labeling
       preserve size$jojo_area
 
-   define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
+   define_variable "*jojo-area,current-free-address*", V__jojo_area__current_free_address
       xx address$jojo_area
    #+end_src
 ** jojo-area,stay
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "jojo-area,stay", jojo_area__stay
       ;; << number -- >>
-      xx V__current_free_address__jojo_area
+      xx V__jojo_area__current_free_address
       xx save
-
       xx literal, jo_size
-      xx address, V__current_free_address__jojo_area
+      xx address, V__jojo_area__current_free_address
       xx add_save
       xx end
    #+end_src
+* make-link
+  * link as data-structure
+    |------+----------------|
+    | link | next-link      |
+    |------+----------------|
+    |      | jo             |
+    |      | string-address |
+    |      | string-length  |
+    |------+----------------|
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "make-link", make_link
+     ;; << string[address, length], next-link, jo -- link >>
+     xx V__jojo_area__current_free_address
+     xx xxxxswapx
+     xx swap
+     xx   jojo_area__stay
+     xx   jojo_area__stay
+     xx swap
+     xx   jojo_area__stay
+     xx   jojo_area__stay
+     xx end
+  #+end_src
+* make-jo-head
+  * jo as data-structure
+    |----+----------------|
+    |    | length         |
+    |    | string-address |
+    |    | string-length  |
+    |----+----------------|
+    | jo | explainer      |
+    |----+----------------|
+    |    | body           |
+    |----+----------------|
+  #+begin_src fasm :tangle cicada-nymph.fasm
+  define_function "make-jo-head", make_jo_head
+     ;; << string[address, length], explainer, length -- jo >>
+     xx   jojo_area__stay
+     xx xxswapx
+     xx swap
+     xx   jojo_area__stay
+     xx   jojo_area__stay
+     xx V__jojo_area__current_free_address
+     xx swap
+     xx   jojo_area__stay
+     xx end
+  #+end_src
+* -----------------------------------
 * syntax-stack
 ** 記
    * 用 *syntax-stack* 來進行語境轉換
@@ -4915,9 +5087,9 @@
 
       xx dup2
       xx string_head__word
-      xx V__jo_link__core
-      xx jo_link__find_jo, false?branch, 4
-      xx   jojo_area__stay
+      xx V__link__core
+      xx find_link, false?branch, 5
+      xx   link_to_jo, jojo_area__stay
       xx   string_tail__word
       xx   end
 
@@ -4966,9 +5138,9 @@
 
       xx dup2
       xx string_head__word
-      xx V__jo_link__core
-      xx jo_link__find_jo, false?branch, 4
-      xx   jojo_area__stay
+      xx V__link__core
+      xx find_link, false?branch, 5
+      xx   link_to_jo, jojo_area__stay
       xx   string_tail__word
       xx   end
 
@@ -5121,27 +5293,28 @@
       xx literal, '"', string__find_char
       xx false?branch, (.not_found-$)/jo_size
       xx   xoverxx, subtraction
-      ;;   << string[address, length], length >>
-
-      ;; address
+      ;;   << string[address, length], new-length >>
+      xx   xxtuckx
+      xx   xoverxx, swap
+      xx   make_string
+      ;;   << new-length
+      ;;      string[address, length]
+      ;;      string[address, new-length] >>
+      xx   swap
+      ;;   address
       xx   literal, literal
       xx     jojo_area__stay
-      xx   V__current_free_address__string_area, add2
       xx     jojo_area__stay
-      xx   xoverxx, over
-      xx     string_area__stay
-
-      ;; length
+      ;;   new-length
       xx   literal, literal
       xx     jojo_area__stay
-      xx   dup
       xx     jojo_area__stay
-
-      xx   tuck, subtraction
+      ;;   << new-length
+      ;;      string[address, length] >>
+      xx   xoverxx, subtraction
       xx   xxswapx
       xx   addition
       xx   swap
-
       xx   string_tail__byte ;; over the ending double-quote
       xx   end
 
@@ -5173,9 +5346,9 @@
      make-jojo can be viewed as the "compiler" of the cicada-nymph
      it does NOT (can not) compile file to file
      but creates structured data directly into memory
-** make-jojo,dispatch-syntax-word
+** make-jojo,dispatch-word
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
+   define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
       ;; << jo, string[address, length], word[address, length] --
       ;;    jo, string[address, length] >>
       xx dup2
@@ -5183,9 +5356,10 @@
       xx   execute_jo
       xx   end
       xx dup2
-      xx V__jo_link__core
-      xx jo_link__find_jo, false?branch, 5
-      xx   xxswapx, drop2 ;; drop word
+      xx V__link__core
+      xx find_link, false?branch, 6
+      xx   xxswapx, drop2
+      xx   link_to_jo
       xx   jojo_area__stay
       xx   end
       xx write_undefined_word_report__for_make_jojo
@@ -5225,16 +5399,16 @@
       xx xxswapxx
       xx string_head__word
       ;; << tail[address, length], head[address, length] >>
-      xx make_jojo__dispatch_syntax_word
+      xx make_jojo__dispatch_word
       xx tail_call, make_jojo__loop
    #+end_src
 * !undo-make-jojo
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_exception "!undo-make-jojo", !undo_make_jojo
      xx exception_reset_stack, !undo_make_jojo
-     ;; << old V__current_free_address__string_area
-     ;;    old V__current_free_address__jojo_area
-     ;;    old V__jo_link__core
+     ;; << old V__string_area__current_free_address
+     ;;    old V__jojo_area__current_free_address
+     ;;    old V__link__core
      ;;    string[address, length]
      ;;    -- >>
 
@@ -5249,9 +5423,9 @@
      xx literal, ';', write_byte
      xx literal, 10, write_byte
 
-     xx address, V__jo_link__core, save
-     xx address, V__current_free_address__jojo_area, save
-     xx address, V__current_free_address__string_area
+     xx address, V__link__core, save
+     xx address, V__jojo_area__current_free_address, save
+     xx address, V__string_area__current_free_address
      xx save
      xx end
 
@@ -5262,6 +5436,7 @@
   .end:
   length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
   #+end_src
+* -----------------------------------
 * define-function
 ** note
    * for the following function
@@ -5271,38 +5446,77 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
-      xx V__current_free_address__string_area, xxswapx
-      xx V__current_free_address__jojo_area, xxswapx
-      xx V__jo_link__core, xxswapx
-      xx dup2
-      ;; << old V__current_free_address__string_area
-      ;;    old V__current_free_address__jojo_area
-      ;;    old V__jo_link__core
+      xx V__string_area__current_free_address, xxswapx
+      xx V__jojo_area__current_free_address, xxswapx
+      xx V__link__core, xxswapx
+      ;; << old V__string_area__current_free_address
+      ;;    old V__jojo_area__current_free_address
+      ;;    old V__link__core
       ;;    string[address, length] >>
       xx prepare_for
       xx   exception_head
       xx   !undo_make_jojo
       xx   end
 
-      ;; << string[address, length] >>
-      xx V__current_free_address__string_area
-      xx   jojo_area__stay
+      xx dup2
+
       xx dup2, string_head__word
-      xx   string_area__stay
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
+      xx make_string
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
 
-      xx V__jo_link__core
-      xx jo_to_link
-      xx   jojo_area__stay
+      xx dup2
+      xx V__link__core
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    name-string[address, length], next-link, jo >>
+      xx make_link
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    link >>
 
-      xx V__current_free_address__jojo_area
-      xx dup, address, V__jo_link__core, save
-
+      xx xxtuckx
+      xx address, V__link__core, save
       xx literal, explain$function
-      xx   jojo_area__stay
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    link
+      ;;    name-string[address, length], explainer, 0 >>
+      xx make_jo_head
+      ;; << string[address, length]
+      ;;    link
+      ;;    jo >>
 
-      xx xxswapx
+      xx tuck
+      xx swap
+      ;; << string[address, length]
+      ;;    jo
+      ;;    jo
+      ;;    link >>
+      xx link__save_jo
+      ;; << string[address, length]
+      ;;    jo >>
+
+      xx dup
+      xx xxswapxx
       xx string_tail__word
+      xx V__jojo_area__current_free_address
+      xx xxxswapx
+      ;; << jo
+      ;;    V__jojo_area__current_free_address
+      ;;    jo
+      ;;    body[address, length] >>
       xx make_jojo
+      ;; << jo
+      ;;    V__jojo_area__current_free_address >>
+
+      xx V__jojo_area__current_free_address
+      xx swap, subtraction
+      xx V__jo_size, division
+      xx swap, jo__save_length
 
       xx drop2
       xx drop
@@ -5310,10 +5524,14 @@
       xx drop
       xx end
    #+end_src
-** test define-function
+** test
    #+begin_src cicada-nymph
    : addadd add add end ; define-function
    1 2 3 addadd . << 6 >>
+
+   : addadd ; string-head,word *link,core* find-link drop
+   link->jo dup jo->length . << 3 >>
+   1 2 3 x|swap|xxx execute-jo . << 6 >>
 
    : add1 1 add end ; define-function
    1 add1 . << 2 >>
@@ -5321,36 +5539,78 @@
    : negate 0 swap sub end ; define-function
    1 negate . << -1 >>
    #+end_src
+** test double-quote
+   #+begin_src cicada-nymph
+   : test,double-quote
+     << -- >>
+     "test,double-quote"
+     write-string
+     end
+   ; define-function
+   test,double-quote
+   #+end_src
 * define-variable,with-tos
 ** define-variable,with-tos
    * not undo is needed for define-variable,with-tos
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-variable,with-tos", CICADA__define_variable__with_tos
-      ;; << variable, string[address, length] -- >>
-      xx literal, 1
-      xx   jojo_area__stay
+      ;; << value, string[address, length] -- >>
 
-      xx V__current_free_address__string_area
-      xx   jojo_area__stay
       xx dup2, string_head__word
-      xx   string_area__stay
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
+      xx make_string
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
 
-      xx V__jo_link__core
-      xx jo_to_link
-      xx   jojo_area__stay
+      xx dup2
+      xx V__link__core
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    name-string[address, length], next-link, jo >>
+      xx make_link
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    link >>
 
-      xx V__current_free_address__jojo_area
-      xx address, V__jo_link__core
-      xx save
-
+      xx xxtuckx
+      xx address, V__link__core, save
       xx literal, explain$variable
-      xx   jojo_area__stay
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    link
+      ;;    name-string[address, length], explainer, 0 >>
+      xx make_jo_head
+      ;; << string[address, length]
+      ;;    link
+      ;;    jo >>
+
+      xx tuck
+      xx swap
+      ;; << string[address, length]
+      ;;    jo
+      ;;    jo
+      ;;    link >>
+      xx link__save_jo
+      ;; << string[address, length]
+      ;;    jo >>
+
+      xx literal, 1
+      xx swap
+      ;; << string[address, length]
+      ;;    1
+      ;;    jo >>
+      xx jo__save_length
+      ;; << string[address, length] >>
 
       xx drop2
+
       xx jojo_area__stay
+
       xx end
    #+end_src
-** test define-variable,with-tos
+** test
    #+begin_src cicada-nymph
    233 : *three* ; define-variable,with-tos
    : add-three *three* add end ; define-function
@@ -5584,7 +5844,7 @@
    }
    #+end_src
 ** note example result
-   * with >::name
+   * example
      #+begin_src cicada-nymph
      : example
        << number1, number2, number3, number4
@@ -5595,7 +5855,7 @@
        end
      ; define-function
      #+end_src
-     ----------------
+   * result
      #+begin_src fasm
      define_function "example", example
 
@@ -5645,7 +5905,7 @@
    ; define-function
    1 2 4 local-variable,test,3 << 6 >> .
    #+end_src
-** test nested
+** test nested call
    #+begin_src cicada-nymph
    : k1
      9 >:k
@@ -5662,6 +5922,61 @@
    ; define-function
    k2 << 9 10 >>
    #+end_src
+* 記 問題
+** nested block
+   * 因爲使用全局的 local-variable-table
+     所以沒法在 nested block 中使用 local-variable
+** branch
+   * example
+     #+begin_src cicada-nymph
+     : example
+       << number1, number2, number3, number4
+          -- number1, number2 >>
+       >::var2
+       >::var2
+       ::var2
+       end
+     ; define-function
+     #+end_src
+   * result
+     #+begin_src fasm
+     define_function "example", example
+
+        ;; >::var2
+        xx literal, 2, local_data_allocate__jo
+        xx literal, 0, literal, 2, n_save__local_jo
+
+        ;; >::var2
+        xx literal, 0, literal, 2, n_save__local_jo
+
+        ;; ::var2
+        xx literal, 0, literal, 2, n_fetch__local_jo
+
+        xx end
+     #+end_src
+   * 看上面的例子
+     可以發現
+     #+begin_src cicada-nymph
+     : example
+       if
+         >::var2
+       else
+         >::var2
+       then
+       ::var2
+       end
+     ; define-function
+     #+end_src
+     之中
+     第一個是
+     ;; >::var2
+     xx literal, 2, local_data_allocate__jo
+     xx literal, 0, literal, 2, n_save__local_jo
+     第二個是
+     ;; >::var2
+     xx literal, 0, literal, 2, n_save__local_jo
+     也就是說 不同分支下
+     局部變元的編譯效果不等同了
 * local-variable-table
 ** 記
    * 只有一個 local-variable-table
@@ -5674,21 +5989,21 @@
      * address-of-string
    * 並且每次在定義一個新的函數體的時候
      這個 local-variable-table 會被初始化
-   * 基本的接口是
-     * clear
-       清空 offset 和 border
-     * insert
-       插入字符串 和 offset-in-local-jo
-     * find
-       通過字符串尋找 offset-in-local-jo
-     有兩個全局變量幫助實現這些接口
-     * cursor
+** 記 接口
+   * (clear)
+     清空 offset 和 border
+   * (insert)
+     插入字符串 和 offset-in-local-jo
+   * (find)
+     通過字符串尋找 offset-in-local-jo
+   * 有兩個全局變量幫助實現這些接口
+     * (cursor)
        每次 find 的時候使用一個新的 cursor 來做循環
-     * border
+     * (border)
        insert 會擴大 border
        find 以 border 爲邊界
-     另外 還有一個全局變量
-     * offset
+   * 另外 還有一個全局變量
+     * (offset)
        用以計算 offset-in-local-jo
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -6299,17 +6614,17 @@
    define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
      xx current_free_address$un_initialized_memory
    #+end_src
-** *current-free-address,string-area*
+** *string-area,current-free-address*
    * the last_name_string_in_assembly
-     is just "*current-free-address,string-area*"
+     is just "*string-area,current-free-address*"
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*current-free-address,string-area*", V__current_free_address__string_area
+   define_variable "*string-area,current-free-address*", V__string_area__current_free_address
       xx current_free_address$string_area
    #+end_src
-** last_link
-   * this word helps to initialize V__jo_link__core
+** the_last_link_in_assembly_code
+   * this word helps to initialize V__link__core
    #+begin_src fasm :tangle cicada-nymph.fasm
-   last_link = link
+   the_last_link_in_assembly_code = link
    #+end_src
 ** un_initialized_memory              :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm

@@ -278,6 +278,16 @@ macro next \{
 
 }
 
+offset__jo$other          = - (jo_size * 4)
+offset__jo$length         = - (jo_size * 3)
+offset__jo$string_address = - (jo_size * 2)
+offset__jo$string_length  = - (jo_size * 1)
+offset__jo$body           = (jo_size * 1)
+
+offset__link$jo             = (jo_size * 1)
+offset__link$string_address = (jo_size * 2)
+offset__link$string_length  = (jo_size * 3)
+
 ;; initial link to point to 0 (as null)
 link = 0
 
@@ -292,7 +302,7 @@ end$string_area:
 
 current_free_address$string_area = address$string_area
 
-macro make_name_string string {
+macro ASSEMBLY__length_string string {
 
 virtual at 0
 .start$string:
@@ -301,9 +311,10 @@ virtual at 0
    dw (.end$string - .start$string)
    load .length word from (.end$string)
 finish virtual
-store word .length at (current_free_address$string_area)
 
-current_free_address$string_area = current_free_address$string_area + 2
+}
+
+macro ASSEMBLY__make_string string {
 
 repeat .length
    virtual at 0
@@ -313,21 +324,34 @@ repeat .length
    store byte .char at (current_free_address$string_area)
    current_free_address$string_area = current_free_address$string_area + 1
 finish repeat
+   store byte 0 at (current_free_address$string_area)
+   current_free_address$string_area = current_free_address$string_area + 1
+}
 
+macro define_end jo {
+   end__#jo:
 }
 
 macro define_function string, jo {
 
-define_function__#jo:
-
-name__#jo:
-   xx current_free_address$string_area
-
-   make_name_string string
-
 link__#jo:
    xx link
    link = link__#jo
+
+   xx jo
+
+   ASSEMBLY__length_string string
+   .address = current_free_address$string_area
+   xx .address
+   xx .length
+   ASSEMBLY__make_string string
+
+
+   ;; xx (end__#jo - jo)/jo_size
+   xx 0
+
+   xx .address
+   xx .length
 
 jo:
    xx explain$function
@@ -347,16 +371,24 @@ explain$function:
 
 macro define_primitive_function string, jo {
 
-define_primitive_function__#jo:
-
-name__#jo:
-   xx current_free_address$string_area
-
-   make_name_string string
-
 link__#jo:
    xx link
    link = link__#jo
+
+   xx jo
+
+   ASSEMBLY__length_string string
+   .address = current_free_address$string_area
+   xx .address
+   xx .length
+   ASSEMBLY__make_string string
+
+
+   ;; xx (end__#jo - jo)
+   xx 0
+
+   xx .address
+   xx .length
 
 jo:
    xx assembly_code__#jo
@@ -370,19 +402,24 @@ assembly_code__#jo:
 
 macro define_variable string, jo {
 
-define_variable__#jo:
-
-length__#jo:
-   xx 1
-
-name__#jo:
-   xx current_free_address$string_area
-
-   make_name_string string
-
 link__#jo:
    xx link
    link = link__#jo
+
+   xx jo
+
+   ASSEMBLY__length_string string
+   .address = current_free_address$string_area
+   xx .address
+   xx .length
+   ASSEMBLY__make_string string
+
+
+   ;; length
+   xx 1
+
+   xx .address
+   xx .length
 
 jo:
    xx explain$variable
@@ -395,7 +432,7 @@ jo:
 match =64bit, machine {
 
 explain$variable:
-   mov rcx, [rax - (jo_size * 3)]
+   mov rcx, [rax + offset__jo$length]
    add rax, jo_size
 .loop:
    mov rdx, qword [rax]
@@ -409,7 +446,7 @@ explain$variable:
 match =32bit, machine {
 
 explain$variable:
-   mov rcx, [rax - (jo_size * 3)]
+   mov rcx, [rax + offset__jo$length]
    add rax, jo_size
 .loop:
    mov rdx, dword [rax]
@@ -422,18 +459,24 @@ explain$variable:
 
 macro define_exception string, jo {
 
-define_exception__#jo:
-
-   xx 0
-
-name__#jo:
-   xx current_free_address$string_area
-
-   make_name_string string
-
 link__#jo:
    xx link
    link = link__#jo
+
+   xx jo
+
+   ASSEMBLY__length_string string
+   .address = current_free_address$string_area
+   xx .address
+   xx .length
+   ASSEMBLY__make_string string
+
+
+   ;; xx (end__#jo - jo)/jo_size
+   xx 0
+
+   xx .address
+   xx .length
 
 jo:
    xx explain$exception
@@ -459,7 +502,7 @@ define_primitive_function "instruction,exception-reset-stack", exception_reset_s
    ;; << -- >>
    pop_return_stack rbx
      mov rax, [rbx]
-     sub rax, (jo_size * 3)
+     add rax, offset__jo$other
      mov pointer$argument_stack, [rax]
    add rbx, jo_size
    push_return_stack rbx
@@ -473,7 +516,7 @@ define_primitive_function "instruction,exception-reset-stack", exception_reset_s
    ;; << -- >>
    pop_return_stack rbx
      mov rax, [rbx]
-     sub rax, (jo_size * 3)
+     add rax, offset__jo$other
      mov rax, [rax]
      mov [pointer$argument_stack], rax
    add rbx, jo_size
@@ -517,7 +560,7 @@ explain$exception:
    pop_return_stack rax
    ;; mov pointer$argument_stack, rax
    mov rbx, rsi
-   sub rbx, (jo_size * 3)
+   add rbx, offset__jo$other
    mov [rbx], rax
 
    mov rbx, [current_free_address$local_jo]
@@ -579,7 +622,7 @@ explain$exception:
    pop_return_stack rax
    ;; mov [pointer$argument_stack], rax
    mov rbx, rsi
-   sub rbx, (jo_size * 3)
+   add rbx, offset__jo$other
    mov [rbx], rax
 
    mov rbx, [current_free_address$local_jo]
@@ -627,31 +670,14 @@ define_primitive_function "execute-jo", execute_jo
 define_variable "*jo-size*", V__jo_size
    xx jo_size
 
-define_function "jo->name", jo_to_name
+define_function "jo->name-string", jo_to_name_string
    ;; << jo -- string[address, length] >>
-   xx literal, jo_size, subtraction
-   xx literal, jo_size, subtraction
-   xx fetch
-   xx address_to_string
+   xx literal, offset__jo$string_address, addition
+   xx literal, 2
+   xx n_fetch
    xx end
 
-define_function "jo->link", jo_to_link
-   ;; << jo -- link >>
-   xx literal, jo_size
-   xx subtraction
-   xx end
-
-define_function "jo->pre-jo", jo_to_pre_jo
-   ;; << jo -- pre-jo >>
-   xx jo_to_link
-   xx fetch
-   xx dup, zero?, false?branch, 2
-   xx   end
-   xx literal, jo_size
-   xx addition
-   xx end
-
-define_function "jo->type", jo_to_type
+define_function "jo->explainer", jo_to_explainer
    ;; << jo -- type >>
    xx dup
 
@@ -663,29 +689,41 @@ define_function "jo->type", jo_to_type
    xx fetch
    xx end
 
+define_function "jo->length", jo_to_length
+   ;; << jo -- length >>
+   xx literal, offset__jo$length, addition
+   xx fetch
+   xx end
+
+define_function "jo,save-length", jo__save_length
+   ;; << length, jo -- >>
+   xx literal, offset__jo$length, addition
+   xx save
+   xx end
+
 define_function "primitive-function-jo?", primitive_function_jo?
    ;; << jo -- bool >>
-   xx jo_to_type
+   xx jo_to_explainer
    xx zero?
    xx end
 
 define_function "function-jo?", function_jo?
    ;; << jo -- bool >>
-   xx jo_to_type
+   xx jo_to_explainer
    xx literal, explain$function
    xx equal?
    xx end
 
 define_function "exception-jo?", exception_jo?
    ;; << jo -- bool >>
-   xx jo_to_type
+   xx jo_to_explainer
    xx literal, explain$exception
    xx equal?
    xx end
 
 define_function "variable-jo?", variable_jo?
    ;; << jo -- bool >>
-   xx jo_to_type
+   xx jo_to_explainer
    xx literal, explain$variable
    xx equal?
    xx end
@@ -693,34 +731,27 @@ define_function "variable-jo?", variable_jo?
 define_variable "*string-area*", V__string_area
    xx address$string_area
 
-define_variable "*size,string-area*", V__size__string_area
+define_variable "*string-area,size*", V__string_area__size
    xx (end$string_area - address$string_area)
 
-;; *current-free-address,string-area*
+;; *string-area,current-free-address*
 ;; is at epilog
-
-define_function "address->string", address_to_string
-   ;; << address -- string[address, length] >>
-   xx dup
-   xx literal, 2, addition  ;; address
-   xx swap, fetch_two_bytes ;; length
-   xx end
 
 define_function "string-area,stay", string_area__stay
    ;; << string[address, length] -- >>
-   xx dup, V__current_free_address__string_area
-   xx save_two_bytes
-
-   xx literal, 2
-   xx address, V__current_free_address__string_area
-   xx add_save
-
    xx tuck
-   xx V__current_free_address__string_area
+   xx V__string_area__current_free_address
    xx string_to_buffer!
-
-   xx address, V__current_free_address__string_area
+   xx address, V__string_area__current_free_address
    xx add_save
+   xx end
+
+define_function "make-string", make_string
+   ;; << string[address, length] -- string[address, length] >>
+   xx V__string_area__current_free_address
+   xx xxswapx
+   xx tuck
+   xx string_area__stay
    xx end
 
 define_primitive_function "end", end
@@ -1074,14 +1105,14 @@ define_function "little_test", little_test
    ;;;; type 123
    ;;;; exit code 123
 
-   ;;;; use jo_to_name to test the macro make_name_string
-   ;; xx literal, jo_to_name, jo_to_name, write_string
+   ;;;; use jo_to_name_string to test the macro ASSEMBLY__make_string
+   ;; xx literal, jo_to_name_string, jo_to_name_string, write_string
    ;; xx literal, 10, write_byte
-   ;; xx literal, addition, jo_to_name, write_string
+   ;; xx literal, addition, jo_to_name_string, write_string
    ;; xx literal, 10, write_byte
    ;; xx zero
    ;; xx exit_with_TOS
-   ;;;; print "jo->name"
+   ;;;; print "jo->name-string"
    ;;;; print "add"
 
    ;;;; xxoverxx
@@ -1100,11 +1131,12 @@ define_function "little_test", little_test
    ;; xx exit_with_TOS
    ;;;; 2 1 4 3 2 1
 
-   ;;;; jo_link__find_jo
+   ;;;; find_link
    ;; xx read_word, string_to_integer ;; number
    ;; xx read_word, string_to_integer ;; number
-   ;; xx read_word, V__jo_link__core, jo_link__find_jo ;; add
+   ;; xx read_word, V__link__core, find_link ;; add
    ;; xx drop ;; true
+   ;; xx link_to_jo
    ;; xx execute_jo
    ;; xx write_integer
    ;; xx zero
@@ -1445,6 +1477,21 @@ define_primitive_function "xxx|tuck|x", xxxtuckx
    push_argument_stack rbx
    push_argument_stack rcx
    push_argument_stack rdx
+   next
+
+define_primitive_function "xxxx|tuck|x", xxxxtuckx
+   ;; << a b c d | e -- e | a b c d | e >>
+   pop_argument_stack rdi ;; e
+   pop_argument_stack rdx
+   pop_argument_stack rcx
+   pop_argument_stack rbx
+   pop_argument_stack rax
+   push_argument_stack rdi ;; e
+   push_argument_stack rax
+   push_argument_stack rbx
+   push_argument_stack rcx
+   push_argument_stack rdx
+   push_argument_stack rdi ;; e
    next
 
 define_primitive_function "swap", swap
@@ -2916,6 +2963,11 @@ define_function "string,find-char", string__find_char
   xx xswapxx
   xx tail_call, string__find_char
 
+define_function "string-end,byte", string_end__byte
+   ;; << string[address, length] -- char >>
+   xx addition, sub1, fetch_byte
+   xx end
+
 define_function "space-string?", space_string?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
@@ -3125,32 +3177,59 @@ define_function "read-word-for-REPL", read_word_for_REPL
    xx literal, buffer$read_word_for_REPL, read_word_to_buffer
    xx end
 
-define_variable "*jo-link,core*", V__jo_link__core
-   xx (last_link + jo_size)
-
-define_function "jo-link,last-jo?", jo_link__last_jo?
-   ;; << jo -- bool >>
-   xx jo_to_link
-   xx fetch
-   xx zero?
+define_function "last-link?", last_link?
+   ;; << link -- bool >>
+   xx fetch, zero?
    xx end
 
-define_function "jo-link,find-jo", jo_link__find_jo
-   ;; << word[address, length], jo
-   ;;    -- jo, true
+define_function "link->next-link", link_to_next_link
+  ;; << link -- next-link >>
+  xx fetch
+  xx end
+
+define_function "link->name-string", link_to_name_string
+   ;; << link -- string[address, length] >>
+   xx literal, offset__link$string_address, addition
+   xx literal, 2
+   xx n_fetch
+   xx end
+
+define_function "link->jo", link_to_jo
+   ;; << link -- jo >>
+   xx literal, offset__link$jo, addition, fetch
+   xx end
+
+define_function "link,save-jo", link__save_jo
+   ;; << jo, link -- >>
+   xx literal, offset__link$jo, addition
+   xx save
+   xx end
+
+define_variable "*link,core*", V__link__core
+   xx the_last_link_in_assembly_code
+
+define_function "find-link", find_link
+   ;; << word[address, length], link
+   ;;    -- link, true
    ;;    -- false >>
    xx xxtuckx
-   xx jo_to_name, xxoverxx
+   xx link_to_name_string, xxoverxx
+
+   ;; xx xxoverxx
+   ;; xx xxoverxx
+   ;; xx write_string, literal, 32, write_byte
+   ;; xx write_string, literal, 10, write_byte
+
    xx string_equal?, false?branch, 4
    xx   drop2, true
    xx   end
    xx xswapxx
-   xx dup, jo_link__last_jo?, false?branch, 5
+   xx dup, last_link?, false?branch, 5
    xx   drop, drop2
    xx   false
    xx   end
-   xx jo_to_pre_jo
-   xx tail_call, jo_link__find_jo
+   xx link_to_next_link
+   xx tail_call, find_link
 
 define_function "execute-word", execute_word
    ;; << word[address, length] -- unknown >>
@@ -3160,10 +3239,10 @@ define_function "execute-word", execute_word
    ;; maybe more
 
    xx dup2 ;; for to report undefined word
-   xx V__jo_link__core
-   xx jo_link__find_jo, false?branch, 5
+   xx V__link__core
+   xx find_link, false?branch, 6
    xx   xxswapx, drop2
-   xx   execute_jo
+   xx   link_to_jo, execute_jo
    xx   end
 
    xx write_undefined_word_report__for_execute_word
@@ -3347,24 +3426,47 @@ size$jojo_area = 1024 * 1024 * jo_size
 define_variable "*jojo-area*", V__jojo_area
   xx address$jojo_area
 
-define_variable "*size,jojo-area*", V__size__jojo_area
+define_variable "*jojo-area,size*", V__jojo_area__size
   xx size$jojo_area
 
 
 address$jojo_area labeling
    preserve size$jojo_area
 
-define_variable "*current-free-address,jojo-area*", V__current_free_address__jojo_area
+define_variable "*jojo-area,current-free-address*", V__jojo_area__current_free_address
    xx address$jojo_area
 
 define_function "jojo-area,stay", jojo_area__stay
    ;; << number -- >>
-   xx V__current_free_address__jojo_area
+   xx V__jojo_area__current_free_address
    xx save
-
    xx literal, jo_size
-   xx address, V__current_free_address__jojo_area
+   xx address, V__jojo_area__current_free_address
    xx add_save
+   xx end
+
+define_function "make-link", make_link
+   ;; << string[address, length], next-link, jo -- link >>
+   xx V__jojo_area__current_free_address
+   xx xxxxswapx
+   xx swap
+   xx   jojo_area__stay
+   xx   jojo_area__stay
+   xx swap
+   xx   jojo_area__stay
+   xx   jojo_area__stay
+   xx end
+
+define_function "make-jo-head", make_jo_head
+   ;; << string[address, length], explainer, length -- jo >>
+   xx   jojo_area__stay
+   xx xxswapx
+   xx swap
+   xx   jojo_area__stay
+   xx   jojo_area__stay
+   xx V__jojo_area__current_free_address
+   xx swap
+   xx   jojo_area__stay
    xx end
 
 preserve jo_size * 64
@@ -3586,9 +3688,9 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
 
    xx dup2
    xx string_head__word
-   xx V__jo_link__core
-   xx jo_link__find_jo, false?branch, 4
-   xx   jojo_area__stay
+   xx V__link__core
+   xx find_link, false?branch, 5
+   xx   link_to_jo, jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3632,9 +3734,9 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
 
    xx dup2
    xx string_head__word
-   xx V__jo_link__core
-   xx jo_link__find_jo, false?branch, 4
-   xx   jojo_area__stay
+   xx V__link__core
+   xx find_link, false?branch, 5
+   xx   link_to_jo, jojo_area__stay
    xx   string_tail__word
    xx   end
 
@@ -3769,27 +3871,28 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    xx literal, '"', string__find_char
    xx false?branch, (.not_found-$)/jo_size
    xx   xoverxx, subtraction
-   ;;   << string[address, length], length >>
-
-   ;; address
+   ;;   << string[address, length], new-length >>
+   xx   xxtuckx
+   xx   xoverxx, swap
+   xx   make_string
+   ;;   << new-length
+   ;;      string[address, length]
+   ;;      string[address, new-length] >>
+   xx   swap
+   ;;   address
    xx   literal, literal
    xx     jojo_area__stay
-   xx   V__current_free_address__string_area, add2
    xx     jojo_area__stay
-   xx   xoverxx, over
-   xx     string_area__stay
-
-   ;; length
+   ;;   new-length
    xx   literal, literal
    xx     jojo_area__stay
-   xx   dup
    xx     jojo_area__stay
-
-   xx   tuck, subtraction
+   ;;   << new-length
+   ;;      string[address, length] >>
+   xx   xoverxx, subtraction
    xx   xxswapx
    xx   addition
    xx   swap
-
    xx   string_tail__byte ;; over the ending double-quote
    xx   end
 
@@ -3811,7 +3914,7 @@ string$not_integer_string_report__for_double_quote:
 .end:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
-define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_word
+define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    ;; << jo, string[address, length], word[address, length] --
    ;;    jo, string[address, length] >>
    xx dup2
@@ -3819,9 +3922,10 @@ define_function "make-jojo,dispatch-syntax-word", make_jojo__dispatch_syntax_wor
    xx   execute_jo
    xx   end
    xx dup2
-   xx V__jo_link__core
-   xx jo_link__find_jo, false?branch, 5
-   xx   xxswapx, drop2 ;; drop word
+   xx V__link__core
+   xx find_link, false?branch, 6
+   xx   xxswapx, drop2
+   xx   link_to_jo
    xx   jojo_area__stay
    xx   end
    xx write_undefined_word_report__for_make_jojo
@@ -3859,14 +3963,14 @@ define_function "make-jojo,loop", make_jojo__loop
    xx xxswapxx
    xx string_head__word
    ;; << tail[address, length], head[address, length] >>
-   xx make_jojo__dispatch_syntax_word
+   xx make_jojo__dispatch_word
    xx tail_call, make_jojo__loop
 
 define_exception "!undo-make-jojo", !undo_make_jojo
    xx exception_reset_stack, !undo_make_jojo
-   ;; << old V__current_free_address__string_area
-   ;;    old V__current_free_address__jojo_area
-   ;;    old V__jo_link__core
+   ;; << old V__string_area__current_free_address
+   ;;    old V__jojo_area__current_free_address
+   ;;    old V__link__core
    ;;    string[address, length]
    ;;    -- >>
 
@@ -3881,9 +3985,9 @@ define_exception "!undo-make-jojo", !undo_make_jojo
    xx literal, ';', write_byte
    xx literal, 10, write_byte
 
-   xx address, V__jo_link__core, save
-   xx address, V__current_free_address__jojo_area, save
-   xx address, V__current_free_address__string_area
+   xx address, V__link__core, save
+   xx address, V__jojo_area__current_free_address, save
+   xx address, V__string_area__current_free_address
    xx save
    xx end
 
@@ -3896,38 +4000,77 @@ length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
-   xx V__current_free_address__string_area, xxswapx
-   xx V__current_free_address__jojo_area, xxswapx
-   xx V__jo_link__core, xxswapx
-   xx dup2
-   ;; << old V__current_free_address__string_area
-   ;;    old V__current_free_address__jojo_area
-   ;;    old V__jo_link__core
+   xx V__string_area__current_free_address, xxswapx
+   xx V__jojo_area__current_free_address, xxswapx
+   xx V__link__core, xxswapx
+   ;; << old V__string_area__current_free_address
+   ;;    old V__jojo_area__current_free_address
+   ;;    old V__link__core
    ;;    string[address, length] >>
    xx prepare_for
    xx   exception_head
    xx   !undo_make_jojo
    xx   end
 
-   ;; << string[address, length] >>
-   xx V__current_free_address__string_area
-   xx   jojo_area__stay
+   xx dup2
+
    xx dup2, string_head__word
-   xx   string_area__stay
+   ;; << string[address, length]
+   ;;    name-string[address, length] >>
+   xx make_string
+   ;; << string[address, length]
+   ;;    name-string[address, length] >>
 
-   xx V__jo_link__core
-   xx jo_to_link
-   xx   jojo_area__stay
+   xx dup2
+   xx V__link__core
+   xx literal, 0
+   ;; << string[address, length]
+   ;;    name-string[address, length]
+   ;;    name-string[address, length], next-link, jo >>
+   xx make_link
+   ;; << string[address, length]
+   ;;    name-string[address, length]
+   ;;    link >>
 
-   xx V__current_free_address__jojo_area
-   xx dup, address, V__jo_link__core, save
-
+   xx xxtuckx
+   xx address, V__link__core, save
    xx literal, explain$function
-   xx   jojo_area__stay
+   xx literal, 0
+   ;; << string[address, length]
+   ;;    link
+   ;;    name-string[address, length], explainer, 0 >>
+   xx make_jo_head
+   ;; << string[address, length]
+   ;;    link
+   ;;    jo >>
 
-   xx xxswapx
+   xx tuck
+   xx swap
+   ;; << string[address, length]
+   ;;    jo
+   ;;    jo
+   ;;    link >>
+   xx link__save_jo
+   ;; << string[address, length]
+   ;;    jo >>
+
+   xx dup
+   xx xxswapxx
    xx string_tail__word
+   xx V__jojo_area__current_free_address
+   xx xxxswapx
+   ;; << jo
+   ;;    V__jojo_area__current_free_address
+   ;;    jo
+   ;;    body[address, length] >>
    xx make_jojo
+   ;; << jo
+   ;;    V__jojo_area__current_free_address >>
+
+   xx V__jojo_area__current_free_address
+   xx swap, subtraction
+   xx V__jo_size, division
+   xx swap, jo__save_length
 
    xx drop2
    xx drop
@@ -3936,28 +4079,60 @@ define_function "define-function", CICADA__define_function
    xx end
 
 define_function "define-variable,with-tos", CICADA__define_variable__with_tos
-   ;; << variable, string[address, length] -- >>
-   xx literal, 1
-   xx   jojo_area__stay
+   ;; << value, string[address, length] -- >>
 
-   xx V__current_free_address__string_area
-   xx   jojo_area__stay
    xx dup2, string_head__word
-   xx   string_area__stay
+   ;; << string[address, length]
+   ;;    name-string[address, length] >>
+   xx make_string
+   ;; << string[address, length]
+   ;;    name-string[address, length] >>
 
-   xx V__jo_link__core
-   xx jo_to_link
-   xx   jojo_area__stay
+   xx dup2
+   xx V__link__core
+   xx literal, 0
+   ;; << string[address, length]
+   ;;    name-string[address, length]
+   ;;    name-string[address, length], next-link, jo >>
+   xx make_link
+   ;; << string[address, length]
+   ;;    name-string[address, length]
+   ;;    link >>
 
-   xx V__current_free_address__jojo_area
-   xx address, V__jo_link__core
-   xx save
-
+   xx xxtuckx
+   xx address, V__link__core, save
    xx literal, explain$variable
-   xx   jojo_area__stay
+   xx literal, 0
+   ;; << string[address, length]
+   ;;    link
+   ;;    name-string[address, length], explainer, 0 >>
+   xx make_jo_head
+   ;; << string[address, length]
+   ;;    link
+   ;;    jo >>
+
+   xx tuck
+   xx swap
+   ;; << string[address, length]
+   ;;    jo
+   ;;    jo
+   ;;    link >>
+   xx link__save_jo
+   ;; << string[address, length]
+   ;;    jo >>
+
+   xx literal, 1
+   xx swap
+   ;; << string[address, length]
+   ;;    1
+   ;;    jo >>
+   xx jo__save_length
+   ;; << string[address, length] >>
 
    xx drop2
+
    xx jojo_area__stay
+
    xx end
 
 size$local_jo = 1024 * 1024 * jo_size
@@ -4538,10 +4713,10 @@ define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
 define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
   xx current_free_address$un_initialized_memory
 
-define_variable "*current-free-address,string-area*", V__current_free_address__string_area
+define_variable "*string-area,current-free-address*", V__string_area__current_free_address
    xx current_free_address$string_area
 
-last_link = link
+the_last_link_in_assembly_code = link
 
 size$un_initialized_memory = 88 * 1024 * 1024 ;; (byte)
 
