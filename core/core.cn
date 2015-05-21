@@ -935,7 +935,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: define-function
+: define-function,without-title
   << string[address, length] -- >>
   *string-area,current-free-address* xx|swap|x
   *jojo-area,current-free-address* xx|swap|x
@@ -977,6 +977,17 @@ more,rule-set,make-jojo
   drop
   drop
   drop
+  end
+; define-function
+
+: define-function
+  << string[address, length] -- >>
+  dup2 string-head,word >::head
+  ::head <word>? if
+    define-function,with-title
+    end
+  then
+  define-function,without-title
   end
 ; define-function
 

@@ -2,6 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* more (define*) about with-title
 * new way to do data-structure
 * un-named function
   * 我發現我已經可以使用 map 了
@@ -1722,9 +1723,9 @@
    ; define-function
    #+end_src
 * define-function                     :redefine:
-** define-function
+** define-function,without-title
    #+begin_src cicada-nymph :tangle core.cn
-   : define-function
+   : define-function,without-title
      << string[address, length] -- >>
      *string-area,current-free-address* xx|swap|x
      *jojo-area,current-free-address* xx|swap|x
@@ -1769,6 +1770,19 @@
      end
    ; define-function
    #+end_src
+** define-function
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-function
+     << string[address, length] -- >>
+     dup2 string-head,word >::head
+     ::head <word>? if
+       define-function,with-title
+       end
+     then
+     define-function,without-title
+     end
+   ; define-function
+   #+end_src
 ** to load link into name-hash-table
    #+begin_src cicada-nymph :tangle core.cn
    *link,core* init,name-hash-table,by-link
@@ -1783,6 +1797,38 @@
 
    << error >>
    : k no end ; define-function
+   #+end_src
+** test with-title
+   #+begin_src cicada-nymph
+   : <test-title> test-name
+     << -- >>
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : test,syntax,<title>,make-jojo
+     << -- >>
+     <test-title> test-name
+     end
+   ; define-function
+
+   test,syntax,<title>,make-jojo
+
+
+   : <test-title> test-name,testing-undefine
+     << -- >>
+     testing-undefine
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : test,syntax,<title>,make-jojo,testing-undefine
+     << -- >>
+     <test-title> test-name,testing-undefine
+     end
+   ; define-function
+
+   test,syntax,<title>,make-jojo,testing-undefine
    #+end_src
 * *rule-set,make-jojo* : name
 ** word:name?
