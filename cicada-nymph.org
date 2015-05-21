@@ -2,7 +2,7 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* add length field into jo
+* add length field into jo in assembly code :maybe:
 * implement comment by syntax extension
 * refine exception-jo [make good use of local-jo]
 * (define-alias)
@@ -1193,6 +1193,14 @@
       xx save
       xx end
    #+end_src
+** jo->body
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "jo->body", jo_to_body
+      ;; << jo -- body >>
+      xx literal, offset__jo$body
+      xx addition
+      xx end
+   #+end_src
 ** primitive-function-jo?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "primitive-function-jo?", primitive_function_jo?
@@ -1226,6 +1234,14 @@
       xx jo_to_explainer
       xx literal, explain$variable
       xx equal?
+      xx end
+   #+end_src
+** variable-jo->address
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "variable-jo->address", variable_jo_to_address
+      ;; << jo -- body >>
+      xx literal, offset__jo$body
+      xx addition
       xx end
    #+end_src
 * string-area

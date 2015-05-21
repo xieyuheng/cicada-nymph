@@ -701,6 +701,12 @@ define_function "jo,save-length", jo__save_length
    xx save
    xx end
 
+define_function "jo->body", jo_to_body
+   ;; << jo -- body >>
+   xx literal, offset__jo$body
+   xx addition
+   xx end
+
 define_function "primitive-function-jo?", primitive_function_jo?
    ;; << jo -- bool >>
    xx jo_to_explainer
@@ -726,6 +732,12 @@ define_function "variable-jo?", variable_jo?
    xx jo_to_explainer
    xx literal, explain$variable
    xx equal?
+   xx end
+
+define_function "variable-jo->address", variable_jo_to_address
+   ;; << jo -- body >>
+   xx literal, offset__jo$body
+   xx addition
    xx end
 
 define_variable "*string-area*", V__string_area
