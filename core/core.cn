@@ -466,7 +466,7 @@ more,rule-set,make-jojo
      -- name, true
      -- name, false >>
   dup2 string->finite-carry-sum
-  0 name-hash-table,insert,loop
+  0 name-hash-table,insert,share,loop
   end
 ; define-function
 

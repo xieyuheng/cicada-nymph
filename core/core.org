@@ -2,14 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* 在 (name-hash-table,save-jo) 中使用 share 與否 用 report-memory 查看 並沒有效果
-  * 單純對 (name->string,share) 的測試 用 report-memory 查看 是有效果的
-* update (!undo-make-jojo) for name-hash-table
 * new way to do data-structure
 * un-named function
   * 我發現我已經可以使用 map 了
     爲了實現 un-named function
-    有一下兩種方法
+    有以下兩種方法
     1. 去實現 GC
        同時 還能停止使用 *circular-string-area*
        * 要知道不論如何 爲了實現 cicada-language GC 都是需要的
@@ -30,11 +27,8 @@
     即
     局部變量一定要能夠在 匿名的 jojo 中被使用
   * (loop) 和 (recur) 也要能夠在 匿名的 jojo 中被使用
-  * cicada-language 還是必要的嘛 ?
-    cicada-nymph 就足夠了 ?
-    需要回顧一下 cicada-language 的筆記
-    調和一下兩個語義的差異
-* 匿名的 jojo 前面是包含 詮釋者的
+  * 匿名的 jojo 前面是包含 詮釋者的 ???
+* update (!undo-make-jojo) for name-hash-table
 * always do not use jo quote, but to use jojo quote i.e. unnamed function :maybe:
   * remove the jo quote
   * 因爲
@@ -827,7 +821,7 @@
         -- name, true
         -- name, false >>
      dup2 string->finite-carry-sum
-     0 name-hash-table,insert,loop
+     0 name-hash-table,insert,share,loop
      end
    ; define-function
    #+end_src
@@ -856,6 +850,14 @@
      then
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   *string-area,current-free-address* .
+   "12345,share" string->name,share .
+   *string-area,current-free-address* .
+   "12345,no-share" string->name .
+   *string-area,current-free-address* .
    #+end_src
 ** note about report
    * report point orbit by orbit
@@ -959,35 +961,35 @@
 
    : test,name-hash-table,share
      << -- >>
-     "a-000" string->name,share . .l
-     "a-111" string->name,share . .l
-     "a-222" string->name,share . .l
-     "a-333" string->name,share . .l
-     "a-444" string->name,share . .l
-     "a-555" string->name,share . .l
-     "a-666" string->name,share . .l
-     "a-777" string->name,share . .l
-     "a-888" string->name,share . .l
-     "a-999" string->name,share . .l
-     "b-000" string->name,share . .l
-     "b-111" string->name,share . .l
-     "b-222" string->name,share . .l
-     "b-333" string->name,share . .l
-     "b-444" string->name,share . .l
-     "b-555" string->name,share . .l
-     "b-666" string->name,share . .l
-     "b-777" string->name,share . .l
-     "b-888" string->name,share . .l
-     "b-999" string->name,share . .l
+     "a-000,share" string->name,share . .l
+     "a-111,share" string->name,share . .l
+     "a-222,share" string->name,share . .l
+     "a-333,share" string->name,share . .l
+     "a-444,share" string->name,share . .l
+     "a-555,share" string->name,share . .l
+     "a-666,share" string->name,share . .l
+     "a-777,share" string->name,share . .l
+     "a-888,share" string->name,share . .l
+     "a-999,share" string->name,share . .l
+     "b-000,share" string->name,share . .l
+     "b-111,share" string->name,share . .l
+     "b-222,share" string->name,share . .l
+     "b-333,share" string->name,share . .l
+     "b-444,share" string->name,share . .l
+     "b-555,share" string->name,share . .l
+     "b-666,share" string->name,share . .l
+     "b-777,share" string->name,share . .l
+     "b-888,share" string->name,share . .l
+     "b-999,share" string->name,share . .l
      end
    ; define-function
 
    report-memory
 
-   test,name-hash-table
+   test,name-hash-table,share
    report-memory
 
-   test,name-hash-table,share
+   test,name-hash-table
    report-memory
 
    name-hash-table,report
@@ -1720,7 +1722,7 @@
    #+begin_src cicada-nymph
    : <test-title> test-name-1
      << -- >>
-     1 .
+     "TEST" .s .l
      end
    ; define-function,with-title
    "<test-title> test-name-1" execute-word
@@ -1729,7 +1731,7 @@
 
    : <test-title> test-name-2
      << -- >>
-     2 .
+     "TEST TEST" .s .l
      end
    ; define-function,with-title
    "<test-title> test-name-2" execute-word
@@ -1738,7 +1740,7 @@
 
    : <test-title> test-name-3
      << -- >>
-     3 .
+     "TEST TEST TEST" .s .l
      end
    ; define-function,with-title
    "<test-title> test-name-3" execute-word
@@ -1787,15 +1789,15 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : <test-title> test-name-1
+   : <test-title> test-name
      << -- >>
-     1 .
+     "TEST" .s .l
      end
    ; define-function,with-title
 
    : test,syntax,<title>,make-jojo
      << -- >>
-     <test-title> test-name-1
+     <test-title> test-name
      end
    ; define-function
 
