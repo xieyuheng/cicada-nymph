@@ -2,11 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* add length field into jo in assembly code :maybe:
 * implement comment by syntax extension
 * refine exception-jo [make good use of local-jo]
 * (define-alias)
 * todo
+** add length field into jo in assembly code :maybe:
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
 * ===================================
@@ -5564,6 +5564,89 @@
      end
    ; define-function
    test,double-quote
+   #+end_src
+* define-exception
+** define-exception
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "define-exception", CICADA__define_exception
+      ;; << string[address, length] -- >>
+      xx V__string_area__current_free_address, xxswapx
+      xx V__jojo_area__current_free_address, xxswapx
+      xx V__link__core, xxswapx
+      ;; << old V__string_area__current_free_address
+      ;;    old V__jojo_area__current_free_address
+      ;;    old V__link__core
+      ;;    string[address, length] >>
+      xx prepare_for
+      xx   exception_head
+      xx   !undo_make_jojo
+      xx   end
+
+      xx dup2
+
+      xx dup2, string_head__word
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
+      xx make_string
+      ;; << string[address, length]
+      ;;    name-string[address, length] >>
+
+      xx dup2
+      xx V__link__core
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    name-string[address, length], next-link, jo >>
+      xx make_link
+      ;; << string[address, length]
+      ;;    name-string[address, length]
+      ;;    link >>
+
+      xx xxtuckx
+      xx address, V__link__core, save
+      xx literal, explain$exception
+      xx literal, 0
+      ;; << string[address, length]
+      ;;    link
+      ;;    name-string[address, length], explainer, 0 >>
+      xx make_jo_head
+      ;; << string[address, length]
+      ;;    link
+      ;;    jo >>
+
+      xx tuck
+      xx swap
+      ;; << string[address, length]
+      ;;    jo
+      ;;    jo
+      ;;    link >>
+      xx link__save_jo
+      ;; << string[address, length]
+      ;;    jo >>
+
+      xx dup
+      xx xxswapxx
+      xx string_tail__word
+      xx V__jojo_area__current_free_address
+      xx xxxswapx
+      ;; << jo
+      ;;    V__jojo_area__current_free_address
+      ;;    jo
+      ;;    body[address, length] >>
+      xx make_jojo
+      ;; << jo
+      ;;    V__jojo_area__current_free_address >>
+
+      xx V__jojo_area__current_free_address
+      xx swap, subtraction
+      xx V__jo_size, division
+      xx swap, jo__save_length
+
+      xx drop2
+      xx drop
+      xx drop
+      xx drop
+      xx end
    #+end_src
 * define-variable,with-tos
 ** define-variable,with-tos

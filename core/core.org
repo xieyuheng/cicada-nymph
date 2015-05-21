@@ -28,7 +28,6 @@
     局部變量一定要能夠在 匿名的 jojo 中被使用
   * (loop) 和 (recur) 也要能夠在 匿名的 jojo 中被使用
   * 匿名的 jojo 前面是包含 詮釋者的 ???
-* update (!undo-make-jojo) for name-hash-table
 * always do not use jo quote, but to use jojo quote i.e. unnamed function :maybe:
   * remove the jo quote
   * 因爲
@@ -1026,319 +1025,19 @@
      end
    ; define-function
    #+end_src
+** name-hash-table,delete-jo
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,delete-jo
+     << jo -- >>
+     >:jo
+     :jo jo->name-string string->name,share >:name
+     0 :name name,save-jo
+     end
+   ; define-function
+   #+end_src
 ** test
    #+begin_src cicada-nymph
    "add" name-hash-table,find-jo
-   #+end_src
-* -----------------------------------
-* make-jojo                           :redefine:
-** make-jojo,dispatch-word
-   #+begin_src cicada-nymph :tangle core.cn
-   : make-jojo,dispatch-word
-     << jo, string[address, length], word[address, length] --
-        jo, string[address, length] >>
-     dup2 find-syntax if
-       execute-jo
-       end
-     then
-     dup2 name-hash-table,find-jo if
-       xx|swap|x drop2
-       jojo-area,stay
-       end
-     then
-     "* (make-jojo) meets undefined word : " .s .s .l
-     !undo-make-jojo
-   ; define-function
-   #+end_src
-** make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : make-jojo,loop
-     << jo, string[address, length] -- >>
-     dup2 space-string? if
-       drop2
-       drop
-       end
-     then
-     dup2
-     string-tail,word
-     xx|swap|xx
-     string-head,word
-     make-jojo,dispatch-word
-     loop
-   ; define-function
-
-   : make-jojo
-     << jo, string[address, length] -- >>
-     local-variable-table,clear
-     *rule-set,make-jojo*
-     push-syntax-stack
-     make-jojo,loop
-     drop-syntax-stack
-     end
-   ; define-function
-   #+end_src
-* init,name-hash-table,jo
-  * the function should be executed right after
-    (define-function) is redefined
-  * the function loads a jo into a entry in the name-hash-table
-    only when the entry is not already used as jo
-  * thus
-    if a jo is redefined in the link
-    only the newist get saved into name-hash-table
-  * you can see
-    how the features above
-    make the re-definition of (define-function) hard to test
-  * note that
-    the interface of (name-hash-table,search)
-    is not as usual find
-  #+begin_src cicada-nymph :tangle core.cn
-  : init,name-hash-table,by-link
-    << link -- >>
-    >:link
-    :link zero? if
-      end
-    then
-    :link link->name-string >::name-string
-    ::name-string name-hash-table,search swap >:name if
-      :name name,used-as-jo? if
-        :link link->next-link
-        loop
-      then
-    then
-    :link link->jo name-hash-table,save-jo
-    :link link->next-link
-    loop
-  ; define-function
-  #+end_src
-* >< !undo-make-jojo                  :redefine:
-  #+begin_src fasm
-  define_exception "!undo-make-jojo", !undo_make_jojo
-     xx exception_reset_stack, !undo_make_jojo
-     ;; << old V__current_free_address__string_area
-     ;;    old V__current_free_address__jojo_area
-     ;;    old V__jo_link__core
-     ;;    string[address, length]
-     ;;    -- >>
-
-     xx drop_syntax_stack
-
-     xx literal, string$undo_make_jojo_report
-     xx literal, length$undo_make_jojo_report
-     xx write_string
-
-     xx write_string
-     xx literal, 10, write_byte
-     xx literal, ';', write_byte
-     xx literal, 10, write_byte
-
-     xx address, V__jo_link__core, save
-     xx address, V__current_free_address__jojo_area, save
-     xx address, V__current_free_address__string_area
-     xx save
-     xx end
-
-  string$undo_make_jojo_report:
-     db "  the following jojo is not made :"
-     db 10
-     db ": "
-  .end:
-  length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-  #+end_src
-* define-variable,with-tos            :redefine:
-** define-variable,with-tos
-   * not undo is needed for define-variable,with-tos
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-variable,with-tos
-     << value, string[address, length] -- >>
-     string-head,word make-string >::name
-     >:value
-
-     ::name *link,core* 0
-     make-link >:link
-
-     :link save-to *link,core*
-
-     ::name *explainer,variable* 0
-     make-jo-head >:jo
-
-     :jo :link link,save-jo
-
-     :jo name-hash-table,save-jo
-
-     1 :jo jo,save-length
-
-     :value jojo-area,stay
-     end
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   233 : *three* ; define-variable,with-tos
-   : add-three *three* add end ; define-function
-   1 add-three . << 234 >>
-
-   << you get the address of the variable *three*
-      by add "address" in front of it >>
-   : fix-*three* 3 address *three* save end ; define-function
-   fix-*three*
-   1 add-three . << 4 >>
-   #+end_src
-* define-exception
-** define-exception
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-exception
-     << string[address, length] -- >>
-     *string-area,current-free-address* xx|swap|x
-     *jojo-area,current-free-address* xx|swap|x
-     *link,core* xx|swap|x
-     << *string-area,current-free-address*
-        *jojo-area,current-free-address*
-        *link,core*
-        string[address, length] >>
-     prepare-for
-       !undo-make-jojo
-       end
-
-     dup2 string-head,word >::name
-     dup2 string-tail,word >::body
-
-     ::name make-string >::name
-
-     ::name *link,core* 0
-     make-link >:link
-
-     :link save-to *link,core*
-
-     ::name *explainer,exception* 0
-     make-jo-head >:jo
-
-     :jo :link link,save-jo
-
-     :jo name-hash-table,save-jo
-
-     *jojo-area,current-free-address* >:old-address
-
-     :jo ::body make-jojo
-
-     *jojo-area,current-free-address*
-     :old-address sub *jo-size* div
-     :jo jo,save-length
-
-     drop2
-     drop
-     drop
-     drop
-     end
-   ; define-function
-   #+end_src
-* define-function                     :redefine:
-** define-function
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-function
-     << string[address, length] -- >>
-     *string-area,current-free-address* xx|swap|x
-     *jojo-area,current-free-address* xx|swap|x
-     *link,core* xx|swap|x
-     << *string-area,current-free-address*
-        *jojo-area,current-free-address*
-        *link,core*
-        string[address, length] >>
-     prepare-for
-       !undo-make-jojo
-       end
-
-     dup2 string-head,word >::name
-     dup2 string-tail,word >::body
-
-     ::name make-string >::name
-
-     ::name *link,core* 0
-     make-link >:link
-
-     :link save-to *link,core*
-
-     ::name *explainer,function* 0
-     make-jo-head >:jo
-
-     :jo :link link,save-jo
-
-     :jo name-hash-table,save-jo
-
-     *jojo-area,current-free-address* >:old-address
-
-     :jo ::body make-jojo
-
-     *jojo-area,current-free-address*
-     :old-address sub *jo-size* div
-     :jo jo,save-length
-
-     drop2
-     drop
-     drop
-     drop
-     end
-   ; define-function
-   #+end_src
-** to load link into name-hash-table
-   #+begin_src cicada-nymph :tangle core.cn
-   *link,core* init,name-hash-table,by-link
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : k 1 2 3 add add . end ; define-function
-   k
-
-   : k 1 2 3 end ; define-function
-   k add add .
-
-   << error >>
-   : k no end ; define-function
-   #+end_src
-* *rule-set,make-jojo* : name
-** word:name?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:name?
-     << word[address, length] -- bool >>
-     "name" string-equal?
-     end
-   ; define-function
-   #+end_src
-** syntax,name,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : syntax,name,make-jojo
-     << string[address, length], word[address, length] --
-        string[address, length] >>
-     drop2
-     jo instruction,literal
-       jojo-area,stay
-     dup2
-     string-head,word
-     string->name
-       jojo-area,stay
-     string-tail,word
-     end
-   ; define-function
-   #+end_src
-** more,rule-set,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : more,rule-set,make-jojo
-     << -- >>
-     jo word:name?
-     jo syntax,name,make-jojo
-     *rule-set,make-jojo* add-rule
-     end
-   ; define-function
-
-   more,rule-set,make-jojo
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test,syntax,name,make-jojo
-     << -- >>
-     name test-test-test name->string .s
-     end
-   ; define-function
-   test,syntax,name,make-jojo
    #+end_src
 * -----------------------------------
 * string
@@ -1762,6 +1461,7 @@
         jo, string[address, length] >>
      >::title
      >::string
+     >:jo
      ::title ::string string-head,word
      name-hash-table,find-jo,with-title if
        jojo-area,stay
@@ -1769,8 +1469,10 @@
        "* (syntax,<title>,make-jojo) meet undefined" .s .l
        "  title : " .s ::title .s .l
        "  name  : " .s ::string string-head,word .s .l
+       :jo name-hash-table,delete-jo
        !undo-make-jojo
      then
+     :jo
      ::string string-tail,word
      end
    ; define-function
@@ -1802,6 +1504,22 @@
    ; define-function
 
    test,syntax,<title>,make-jojo
+
+
+   : <test-title> test-name,testing-undefine
+     << -- >>
+     testing-undefine
+     "TEST" .s .l
+     end
+   ; define-function,with-title
+
+   : test,syntax,<title>,make-jojo,testing-undefine
+     << -- >>
+     <test-title> test-name,testing-undefine
+     end
+   ; define-function
+
+   test,syntax,<title>,make-jojo,testing-undefine
    #+end_src
 * >< define-alias,with-title
 ** define-alias,with-title
@@ -1821,6 +1539,297 @@
   #+begin_src cicada-nymph :tangle core.cn
 
   #+end_src
+* -----------------------------------
+* make-jojo                           :redefine:
+** 記 ad hoc
+   * 這裏對 name-hash-table 的 undo 是 ad hoc
+     因爲沒法重新定義 (!undo-make-jojo)
+     因爲有太多的函數調用它了
+   * 只有當有自己的匯編器的時候 才能解除這個 ad hoc
+   * 並且
+     此時只有對 *link,core* 的 undo
+     但是沒有對 (define-function,with-title) 中的
+     :address,link,title 的 undo
+     這是錯誤的 這導致 :address,link,title 在不必要地增長
+     但是這不是知名的錯誤
+     因爲
+     在調用的時候 用的是 name-hash-table 來做查找
+     而不是用 link 來查找
+** make-jojo,dispatch-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,dispatch-word
+     << jo, string[address, length], word[address, length] --
+        jo, string[address, length] >>
+     dup2 find-syntax if
+       execute-jo
+       end
+     then
+     dup2 name-hash-table,find-jo if
+       xx|swap|x drop2
+       jojo-area,stay
+       end
+     then
+     "* (make-jojo) meets undefined word : " .s .s .l
+     x|over|xx name-hash-table,delete-jo
+     !undo-make-jojo
+   ; define-function
+   #+end_src
+** make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,loop
+     << jo, string[address, length] -- >>
+     dup2 space-string? if
+       drop2
+       drop
+       end
+     then
+     dup2
+     string-tail,word
+     xx|swap|xx
+     string-head,word
+     make-jojo,dispatch-word
+     loop
+   ; define-function
+
+   : make-jojo
+     << jo, string[address, length] -- >>
+     local-variable-table,clear
+     *rule-set,make-jojo*
+     push-syntax-stack
+     make-jojo,loop
+     drop-syntax-stack
+     end
+   ; define-function
+   #+end_src
+* init,name-hash-table,jo
+  * the function should be executed right after
+    (define-function) is redefined
+  * the function loads a jo into a entry in the name-hash-table
+    only when the entry is not already used as jo
+  * thus
+    if a jo is redefined in the link
+    only the newist get saved into name-hash-table
+  * you can see
+    how the features above
+    make the re-definition of (define-function) hard to test
+  * note that
+    the interface of (name-hash-table,search)
+    is not as usual find
+  #+begin_src cicada-nymph :tangle core.cn
+  : init,name-hash-table,by-link
+    << link -- >>
+    >:link
+    :link zero? if
+      end
+    then
+    :link link->name-string >::name-string
+    ::name-string name-hash-table,search swap >:name if
+      :name name,used-as-jo? if
+        :link link->next-link
+        loop
+      then
+    then
+    :link link->jo name-hash-table,save-jo
+    :link link->next-link
+    loop
+  ; define-function
+  #+end_src
+* define-variable,with-tos            :redefine:
+** define-variable,with-tos
+   * not undo is needed for define-variable,with-tos
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-variable,with-tos
+     << value, string[address, length] -- >>
+     string-head,word make-string >::name
+     >:value
+
+     ::name *link,core* 0
+     make-link >:link
+
+     :link save-to *link,core*
+
+     ::name *explainer,variable* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :jo name-hash-table,save-jo
+
+     1 :jo jo,save-length
+
+     :value jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   233 : *three* ; define-variable,with-tos
+   : add-three *three* add end ; define-function
+   1 add-three . << 234 >>
+
+   << you get the address of the variable *three*
+      by add "address" in front of it >>
+   : fix-*three* 3 address *three* save end ; define-function
+   fix-*three*
+   1 add-three . << 4 >>
+   #+end_src
+* define-exception
+** define-exception
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-exception
+     << string[address, length] -- >>
+     *string-area,current-free-address* xx|swap|x
+     *jojo-area,current-free-address* xx|swap|x
+     *link,core* xx|swap|x
+     << *string-area,current-free-address*
+        *jojo-area,current-free-address*
+        *link,core*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     dup2 string-head,word >::name
+     dup2 string-tail,word >::body
+
+     ::name make-string >::name
+
+     ::name *link,core* 0
+     make-link >:link
+
+     :link save-to *link,core*
+
+     ::name *explainer,exception* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :jo name-hash-table,save-jo
+
+     *jojo-area,current-free-address* >:old-address
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :old-address sub *jo-size* div
+     :jo jo,save-length
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+* define-function                     :redefine:
+** define-function
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-function
+     << string[address, length] -- >>
+     *string-area,current-free-address* xx|swap|x
+     *jojo-area,current-free-address* xx|swap|x
+     *link,core* xx|swap|x
+     << *string-area,current-free-address*
+        *jojo-area,current-free-address*
+        *link,core*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     dup2 string-head,word >::name
+     dup2 string-tail,word >::body
+
+     ::name make-string >::name
+
+     ::name *link,core* 0
+     make-link >:link
+
+     :link save-to *link,core*
+
+     ::name *explainer,function* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :jo name-hash-table,save-jo
+
+     *jojo-area,current-free-address* >:old-address
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :old-address sub *jo-size* div
+     :jo jo,save-length
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+** to load link into name-hash-table
+   #+begin_src cicada-nymph :tangle core.cn
+   *link,core* init,name-hash-table,by-link
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : k 1 2 3 add add . end ; define-function
+   k
+
+   : k 1 2 3 end ; define-function
+   k add add .
+
+   << error >>
+   : k no end ; define-function
+   #+end_src
+* *rule-set,make-jojo* : name
+** word:name?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:name?
+     << word[address, length] -- bool >>
+     "name" string-equal?
+     end
+   ; define-function
+   #+end_src
+** syntax,name,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,name,make-jojo
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     drop2
+     jo instruction,literal
+       jojo-area,stay
+     dup2
+     string-head,word
+     string->name
+       jojo-area,stay
+     string-tail,word
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:name?
+     jo syntax,name,make-jojo
+     *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test,syntax,name,make-jojo
+     << -- >>
+     name test-test-test name->string .s
+     end
+   ; define-function
+   test,syntax,name,make-jojo
+   #+end_src
 * -----------------------------------
 * number with base
 ** 記 原理
