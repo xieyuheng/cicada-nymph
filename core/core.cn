@@ -184,9 +184,9 @@ more,rule-set,make-jojo
 
 : allocate-memory
   << size -- address >>
-  dup *current-free-address,un-initialized-memory* clear-memory
-  *current-free-address,un-initialized-memory* swap << address as return value >>
-  address *current-free-address,un-initialized-memory* add-save
+  dup *un-initialized-memory,current-free-address* clear-memory
+  *un-initialized-memory,current-free-address* swap << address as return value >>
+  address *un-initialized-memory,current-free-address* add-save
   end
 ; define-function
 
@@ -624,6 +624,26 @@ more,rule-set,make-jojo
      -- length >>
   over n-string->buffer!,loop
   end
+; define-function
+
+: string,find-word
+  << string[address, length], word[address, length]
+     -- sub-string[address, length], true
+     -- false >>
+  xx|over|xx space-string? if
+    drop2 drop2
+    false
+    end
+  then
+  xx|over|xx string-head,word
+  xx|over|xx string-equal? if
+    drop2
+    true
+    end
+  then
+  xx|swap|xx string-tail,word
+  xx|swap|xx
+  loop
 ; define-function
 
 : <word>?
@@ -1633,25 +1653,25 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
 ; define-variable,with-tos
 
 *circular-string-area*
-: *current-free-address,circular-string-area*
+: *circular-string-area,current-free-address*
 ; define-variable,with-tos
 
 : circular-string-area,stay
   << string[address, length] -- >>
-  dup *current-free-address,circular-string-area* add
+  dup *circular-string-area,current-free-address* add
   *circular-string-area,size* *circular-string-area* add
   greater-or-equal? if
     *circular-string-area*
-    save-to *current-free-address,circular-string-area*
+    save-to *circular-string-area,current-free-address*
   then
   tuck
-  *current-free-address,circular-string-area*
+  *circular-string-area,current-free-address*
   string->buffer!
-  address *current-free-address,circular-string-area*
+  address *circular-string-area,current-free-address*
   add-save
-  0 *current-free-address,circular-string-area*
+  0 *circular-string-area,current-free-address*
   save-byte
-  1 address *current-free-address,circular-string-area*
+  1 address *circular-string-area,current-free-address*
   add-save
   end
 ; define-function
@@ -1675,7 +1695,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   :buffer
   syntax,double-quote,basic-REPL,loop
   >:cursor
-  *current-free-address,circular-string-area* >:address
+  *circular-string-area,current-free-address* >:address
   :buffer
   :cursor :buffer sub dup >:length
   circular-string-area,stay
@@ -2014,6 +2034,69 @@ jo stack-REPL save-to *lost-exception-REPL*
   add-save
   end
 ; define-function
+
+: word:square-bar?
+  << word[address, length] -- bool >>
+  "[" string-equal?
+  end
+; define-function
+
+: word:square-ket?
+  << word[address, length] -- bool >>
+  "]" string-equal?
+  end
+; define-function
+
+: syntax,square-bar,make-jojo
+  << jo, string[address, length], word:square-bar --
+     jo, string[address, length] >>
+  drop2
+  >::string
+
+  jo instruction,branch
+    jojo-area,stay
+  *jojo-area,current-free-address* >:address,offset
+  0 jojo-area,stay
+
+  "" *explainer,function* 0
+  make-jo-head >:jo
+
+  ::string "]" string,find-word if
+  else
+    end
+  then
+  ::string swap drop over sub >:length
+  >::string,found
+  ::string drop :length >::body
+
+     ::body .s .l
+     ::string,found .s .l
+
+  :jo ::body make-jojo
+
+  *jojo-area,current-free-address*
+  :address,offset sub
+
+     dup .i .l
+
+  *jo-size* div
+
+     dup .i .l
+
+  :address,offset save
+
+  jo instruction,literal
+    jojo-area,stay
+  :jo
+    jojo-area,stay
+
+  ::string,found string-tail,word
+  end
+; define-function
+
+jo word:square-bar?
+jo syntax,square-bar,make-jojo
+*rule-set,make-jojo* add-rule
 
 *jo-size* 4 equal? if
   5   : :syscall-number,open:       ; define-variable,with-tos
@@ -3228,7 +3311,7 @@ init-environment-variable-list
   :buffer :length
   file,read >:read-length
 
-  *current-free-address,circular-string-area*
+  *circular-string-area,current-free-address*
   >:path-address
 
   :read-buffer :read-length
@@ -3533,7 +3616,7 @@ init-environment-variable-list
 
   :cursor :buffer sub >:length
 
-  *current-free-address,circular-string-area*
+  *circular-string-area,current-free-address*
   >:address
 
   :buffer
@@ -3553,15 +3636,15 @@ jo syntax,path:,basic-REPL
   << -- >>
   "* *un-initialized-memory*" .s .l
   "  * size : " .s
-       *size,un-initialized-memory*
+       *un-initialized-memory,size*
        . .l
   "  * used : " .s
-       *current-free-address,un-initialized-memory*
+       *un-initialized-memory,current-free-address*
        *un-initialized-memory*
        sub . .l
   "  * free : " .s
-       *size,un-initialized-memory*
-       *current-free-address,un-initialized-memory*
+       *un-initialized-memory,size*
+       *un-initialized-memory,current-free-address*
        *un-initialized-memory*
        sub sub . .l
   "* *string-area*" .s .l

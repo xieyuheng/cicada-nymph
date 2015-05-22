@@ -2676,7 +2676,7 @@ define_function "space-char?", space_char?
    xx within?
    xx end
 
-define_function "bar-ket-char?", bar_ket_char?
+define_function "bar-ket-byte?", bar_ket_byte?
    ;; << char -- bool >>
    xx dup, literal, '(', equal?, false?branch, 4
    xx   drop, true
@@ -3008,7 +3008,7 @@ define_function "string->word-end", string_to_word_end
    ;;   no error handling
    xx   end
    xx dup2, string_head__byte
-   xx bar_ket_char?, false?branch, 3
+   xx bar_ket_byte?, false?branch, 3
    xx   string_tail__byte
    xx   end
    xx help__string_to_word_end
@@ -3023,7 +3023,7 @@ define_function "help,string->word-end", help__string_to_word_end
    xx space_char?, false?branch, 2
    xx   end
    xx dup2, string_head__byte
-   xx bar_ket_char?, false?branch, 2
+   xx bar_ket_byte?, false?branch, 2
    xx   end
    xx string_tail__byte
    xx tail_call, help__string_to_word_end
@@ -4799,10 +4799,10 @@ length$platform = (.end - string$platform)
 define_variable "*un-initialized-memory*", V__un_initialized_memory
   xx address$un_initialized_memory
 
-define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+define_variable "*un-initialized-memory,size*", V__un_initialized_memory__size
   xx size$un_initialized_memory
 
-define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+define_variable "*un-initialized-memory,current-free-address*", V__un_initialized_memory__current_free_address
   xx current_free_address$un_initialized_memory
 
 define_variable "*string-area,current-free-address*", V__string_area__current_free_address

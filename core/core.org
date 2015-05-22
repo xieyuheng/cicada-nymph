@@ -2,50 +2,29 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* more (define*) about with-title
-* new way to do data-structure
-* un-named function
-  * 我發現我已經可以使用 map 了
-    爲了實現 un-named function
-    有以下兩種方法
-    1. 去實現 GC
-       同時 還能停止使用 *circular-string-area*
-       * 要知道不論如何 爲了實現 cicada-language GC 都是需要的
-         而
-         就像 現在 *name-hash-table*
-         被 cicada-language 和 cicada-nymph 共用一樣
-         GC 也是可以被共用的
-       * 但是這其實是不可能的
-         因爲 cicada-nymph 是沒有數據類型的
-    2. 使用 *circular-jojo-area*
-       要知道現在的效果是
-       string 在 REPL 中出現時 就用 *circular-string-area*
-       string 在 make-jojo 中出現時 就用 *string-area*
-       這種設計對於函數可能也同樣適用
-  * 我使用第二種方式來實現我需要的性狀
-    這樣我就能在 cicada-nymph 中實驗 joy 中的組合邏輯語義了
-  * 關於具體實現有以下問題需要注意
-    即
-    局部變量一定要能夠在 匿名的 jojo 中被使用
-  * (loop) 和 (recur) 也要能夠在 匿名的 jojo 中被使用
-  * 匿名的 jojo 前面是包含 詮釋者的 ???
-* always do not use jo quote, but to use jojo quote i.e. unnamed function :maybe:
-  * remove the jo quote
-  * 因爲
-    否則 帶有 <title> 的 jo 就不好辦了
-* scope of named-local-variable in function
-* loading-stack
 * todo
+** 基礎設施 之 匿名函數 之 *circular-jojo-area*
+** 基礎設施 之 加載與依賴
+*** loading-stack
+** 基礎設施 之 測試框架
+*** little-tester [於命令行工具還有 load 相結合] :needed:
+** 基礎設施 之 代碼生成
+*** new way to do data-structure
+*** more (define*) about with-title
+** 基礎設施 之 除錯模式
+*** debug-REPL                        :maybe:
+** 整理結構 之 分組命名
+** 整理結構 之 匿名函數的使用
+** 整理結構 之 良好測試
+** 整理結構 之 分散文件
 ** "語義" "語法"                      :關於術語:
    * 在語法擴展的時候 每個 rule-set 中保存的是 謂詞 和 函數
      這裏的 謂詞 好像代表語法
      而 函數 好像代表語義
      但是 在命名時 函數 是以 "syntax," 爲前綴的
-** little-tester [於命令行工具還有 load 相結合] :needed:
 ** design a way to remove magic numbers [not variable, but file by file like erlang ?]
 ** need more lib functions about string processing and better factoring for string processing
 ** only one error-code->string is not enough :maybe:
-** debug-REPL                         :maybe:
 ** language-level support for creating and managing processes :maybe:
 * ===================================
 * note
@@ -448,9 +427,9 @@
    #+begin_src cicada-nymph :tangle core.cn
    : allocate-memory
      << size -- address >>
-     dup *current-free-address,un-initialized-memory* clear-memory
-     *current-free-address,un-initialized-memory* swap << address as return value >>
-     address *current-free-address,un-initialized-memory* add-save
+     dup *un-initialized-memory,current-free-address* clear-memory
+     *un-initialized-memory,current-free-address* swap << address as return value >>
+     address *un-initialized-memory,current-free-address* add-save
      end
    ; define-function
    #+end_src
@@ -1097,6 +1076,42 @@
    3 n-string->buffer!
    *test,buffer* swap
    .s
+   #+end_src
+** string,find-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : string,find-word
+     << string[address, length], word[address, length]
+        -- sub-string[address, length], true
+        -- false >>
+     xx|over|xx space-string? if
+       drop2 drop2
+       false
+       end
+     then
+     xx|over|xx string-head,word
+     xx|over|xx string-equal? if
+       drop2
+       true
+       end
+     then
+     xx|swap|xx string-tail,word
+     xx|swap|xx
+     loop
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "111 222 333" "222" string,find-word if
+     string-head,word .s
+   then
+
+   "111 222 333" "444" string,find-word if
+     string-head,word .s
+   then
+
+   "111 222 [] 333" "[" string,find-word if
+     string-head,word .s
+   then
    #+end_src
 * -----------------------------------
 * note data-structure
@@ -3008,7 +3023,7 @@
    ; define-variable,with-tos
 
    *circular-string-area*
-   : *current-free-address,circular-string-area*
+   : *circular-string-area,current-free-address*
    ; define-variable,with-tos
    #+end_src
 * *rule-set,basic-REPL* : double-quote
@@ -3016,20 +3031,20 @@
    #+begin_src cicada-nymph :tangle core.cn
    : circular-string-area,stay
      << string[address, length] -- >>
-     dup *current-free-address,circular-string-area* add
+     dup *circular-string-area,current-free-address* add
      *circular-string-area,size* *circular-string-area* add
      greater-or-equal? if
        *circular-string-area*
-       save-to *current-free-address,circular-string-area*
+       save-to *circular-string-area,current-free-address*
      then
      tuck
-     *current-free-address,circular-string-area*
+     *circular-string-area,current-free-address*
      string->buffer!
-     address *current-free-address,circular-string-area*
+     address *circular-string-area,current-free-address*
      add-save
-     0 *current-free-address,circular-string-area*
+     0 *circular-string-area,current-free-address*
      save-byte
-     1 address *current-free-address,circular-string-area*
+     1 address *circular-string-area,current-free-address*
      add-save
      end
    ; define-function
@@ -3056,7 +3071,7 @@
      :buffer
      syntax,double-quote,basic-REPL,loop
      >:cursor
-     *current-free-address,circular-string-area* >:address
+     *circular-string-area,current-free-address* >:address
      :buffer
      :cursor :buffer sub dup >:length
      circular-string-area,stay
@@ -3564,6 +3579,147 @@
    : kkk
      . . .
    ; define-variable
+   #+end_src
+* -----------------------------------
+* un-named function
+** note scope of named-local-variable
+   * in named function or un-named function
+     the scope of named-local-variable is linear
+** word:square-bar?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-bar?
+     << word[address, length] -- bool >>
+     "[" string-equal?
+     end
+   ; define-function
+   #+end_src
+** word:square-ket?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-ket?
+     << word[address, length] -- bool >>
+     "]" string-equal?
+     end
+   ; define-function
+   #+end_src
+** note memory usage
+   * for the array can be nested
+     we must allocate the memory in place
+     a branch is there helping us to achieve this
+   * [dup drop end]
+     |-------------------|
+     | branch            |
+     | offset to jo      |
+     |-------------------|
+     | <jo-head>         |
+     |-------------------|
+     | dup               |
+     | drop              |
+     | end               |
+     |-------------------|
+     | literal           |
+     | address of the jo |
+     |-------------------|
+** syntax,square-bar,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,square-bar,make-jojo
+     << jo, string[address, length], word:square-bar --
+        jo, string[address, length] >>
+     drop2
+     >::string
+
+     jo instruction,branch
+       jojo-area,stay
+     *jojo-area,current-free-address* >:address,offset
+     0 jojo-area,stay
+
+     "" *explainer,function* 0
+     make-jo-head >:jo
+
+     ::string "]" string,find-word if
+     else
+       end
+     then
+     ::string swap drop over sub >:length
+     >::string,found
+     ::string drop :length >::body
+
+        ::body .s .l
+        ::string,found .s .l
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :address,offset sub
+
+        dup .i .l
+
+     *jo-size* div
+
+        dup .i .l
+
+     :address,offset save
+
+     jo instruction,literal
+       jojo-area,stay
+     :jo
+       jojo-area,stay
+
+     ::string,found string-tail,word
+     end
+   ; define-function
+   #+end_src
+** add-rule to *rule-set,basic-REPL*
+   #+begin_src cicada-nymph :tangle core.cn
+   jo word:square-bar?
+   jo syntax,square-bar,make-jojo
+   *rule-set,make-jojo* add-rule
+   #+end_src
+** test [by factorial]
+   #+begin_src cicada-nymph
+   : test,un-named-function
+     << -- >>
+     [1 2 3 . . . "here here" .s .l end]
+     end
+   ; define-function
+   test,un-named-function execute-jo
+
+   : factorial
+     << number -- number >>
+     [dup
+      one? if
+        end
+      then
+      dup sub1 recur
+      mul
+      end] execute-jo
+     end
+   ; define-function
+
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+   factorial,test
    #+end_src
 * -----------------------------------
 * constant for linux                  :linux:
@@ -5370,7 +5526,7 @@
      :buffer :length
      file,read >:read-length
 
-     *current-free-address,circular-string-area*
+     *circular-string-area,current-free-address*
      >:path-address
 
      :read-buffer :read-length
@@ -5760,7 +5916,7 @@
 
      :cursor :buffer sub >:length
 
-     *current-free-address,circular-string-area*
+     *circular-string-area,current-free-address*
      >:address
 
      :buffer
@@ -5823,15 +5979,15 @@
      << -- >>
      "* *un-initialized-memory*" .s .l
      "  * size : " .s
-          *size,un-initialized-memory*
+          *un-initialized-memory,size*
           . .l
      "  * used : " .s
-          *current-free-address,un-initialized-memory*
+          *un-initialized-memory,current-free-address*
           *un-initialized-memory*
           sub . .l
      "  * free : " .s
-          *size,un-initialized-memory*
-          *current-free-address,un-initialized-memory*
+          *un-initialized-memory,size*
+          *un-initialized-memory,current-free-address*
           *un-initialized-memory*
           sub sub . .l
      "* *string-area*" .s .l

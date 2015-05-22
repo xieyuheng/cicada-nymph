@@ -2,10 +2,9 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* implement comment by syntax extension
-* refine exception-jo [make good use of local-jo]
-* (define-alias)
 * todo
+** implement comment by syntax extension
+** refine exception-jo [make good use of local-jo]
 ** add length field into jo in assembly code :maybe:
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
@@ -3734,12 +3733,12 @@
       xx within?
       xx end
    #+end_src
-** bar-ket-char?
+** bar-ket-byte?
    * () [] {}
      but not <>
-   * double-quote is viewed as special bar-ket-char
+   * double-quote is viewed as special bar-ket-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "bar-ket-char?", bar_ket_char?
+   define_function "bar-ket-byte?", bar_ket_byte?
       ;; << char -- bool >>
       xx dup, literal, '(', equal?, false?branch, 4
       xx   drop, true
@@ -4145,7 +4144,7 @@
       ;;   no error handling
       xx   end
       xx dup2, string_head__byte
-      xx bar_ket_char?, false?branch, 3
+      xx bar_ket_byte?, false?branch, 3
       xx   string_tail__byte
       xx   end
       xx help__string_to_word_end
@@ -4160,7 +4159,7 @@
       xx space_char?, false?branch, 2
       xx   end
       xx dup2, string_head__byte
-      xx bar_ket_char?, false?branch, 2
+      xx bar_ket_byte?, false?branch, 2
       xx   end
       xx string_tail__byte
       xx tail_call, help__string_to_word_end
@@ -6707,10 +6706,10 @@
    define_variable "*un-initialized-memory*", V__un_initialized_memory
      xx address$un_initialized_memory
 
-   define_variable "*size,un-initialized-memory*", V__size__un_initialized_memory
+   define_variable "*un-initialized-memory,size*", V__un_initialized_memory__size
      xx size$un_initialized_memory
 
-   define_variable "*current-free-address,un-initialized-memory*", V__current_free_address__un_initialized_memory
+   define_variable "*un-initialized-memory,current-free-address*", V__un_initialized_memory__current_free_address
      xx current_free_address$un_initialized_memory
    #+end_src
 ** *string-area,current-free-address*
