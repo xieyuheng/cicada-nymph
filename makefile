@@ -77,6 +77,10 @@ uninstall:
 	rm $(BINDIR)/cn
 	rm $(BINDIR)/cn32
 
+run:
+	@
+	rlwrap ./cn
+
 clean:
 	@
 	echo -e "\e[33;1m"

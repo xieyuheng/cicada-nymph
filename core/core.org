@@ -3,20 +3,24 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** 基礎設施 之 匿名函數 之 *circular-jojo-area*
 ** 基礎設施 之 加載與依賴
-*** loading-stack
 ** 基礎設施 之 測試框架
-*** little-tester [於命令行工具還有 load 相結合] :needed:
+   * little-tester [於命令行工具還有 load 相結合]
 ** 基礎設施 之 代碼生成
-*** new way to do data-structure
-*** more (define*) about with-title
-** 基礎設施 之 除錯模式
-*** debug-REPL                        :maybe:
+   * new way to do data-structure
+   * more (define*) about with-title
+** 基礎設施 之 除錯模式               :maybe:
+   * debug-REPL
 ** 整理結構 之 分組命名
 ** 整理結構 之 匿名函數的使用
 ** 整理結構 之 良好測試
 ** 整理結構 之 分散文件
+** 基礎設施 之 匿名函數 之 *circular-jojo-area* :maybe:
+   * 需要重新定義 mmake-jojo 的接口使得它更加一般
+   * 也許 make-jojo make-link make-jo-head
+     這一系列函數的名字都應該重新做
+     因爲他們的名字
+     已經越來越不能展示他們的接口了
 ** "語義" "語法"                      :關於術語:
    * 在語法擴展的時候 每個 rule-set 中保存的是 謂詞 和 函數
      這裏的 謂詞 好像代表語法
@@ -1138,7 +1142,7 @@
     it usage is not limited to help to form the concept about data-structure
 * 記 數據結構總結
 ** <jo>
-   execute {execute-jo}
+   apply
    size {*jo-size*}
    ->name
    ->link
@@ -1182,7 +1186,7 @@
    {read-word->buffer}
    {read-word}
    {read-word-for-REPL}
-   execute {execute-word}
+   eval
 ** <jojo-area>
    size {*jojo-area,size*}
    current-free-address {*jojo-area,current-free-address*}
@@ -1440,27 +1444,27 @@
      "TEST" .s .l
      end
    ; define-function,with-title
-   "<test-title> test-name-1" execute-word
-   "<test-title>" "test-name-1" name-hash-table,find-jo,with-title drop execute-jo
-   <test-title> link->jo execute-jo
+   "<test-title> test-name-1" eval-word
+   "<test-title>" "test-name-1" name-hash-table,find-jo,with-title drop apply
+   <test-title> link->jo apply
 
    : <test-title> test-name-2
      << -- >>
      "TEST TEST" .s .l
      end
    ; define-function,with-title
-   "<test-title> test-name-2" execute-word
-   "<test-title>" "test-name-2" name-hash-table,find-jo,with-title drop execute-jo
-   <test-title> link->jo execute-jo
+   "<test-title> test-name-2" eval-word
+   "<test-title>" "test-name-2" name-hash-table,find-jo,with-title drop apply
+   <test-title> link->jo apply
 
    : <test-title> test-name-3
      << -- >>
      "TEST TEST TEST" .s .l
      end
    ; define-function,with-title
-   "<test-title> test-name-3" execute-word
-   "<test-title>" "test-name-3" name-hash-table,find-jo,with-title drop execute-jo
-   <test-title> link->jo execute-jo
+   "<test-title> test-name-3" eval-word
+   "<test-title>" "test-name-3" name-hash-table,find-jo,with-title drop apply
+   <test-title> link->jo apply
    #+end_src
 * *rule-set,make-jojo* : <title>
 ** note
@@ -1577,7 +1581,7 @@
      << jo, string[address, length], word[address, length] --
         jo, string[address, length] >>
      dup2 find-syntax if
-       execute-jo
+       apply
        end
      then
      dup2 name-hash-table,find-jo if
@@ -1618,38 +1622,43 @@
    ; define-function
    #+end_src
 * init,name-hash-table,jo
-  * the function should be executed right after
-    (define-function) is redefined
-  * the function loads a jo into a entry in the name-hash-table
-    only when the entry is not already used as jo
-  * thus
-    if a jo is redefined in the link
-    only the newist get saved into name-hash-table
-  * you can see
-    how the features above
-    make the re-definition of (define-function) hard to test
-  * note that
-    the interface of (name-hash-table,search)
-    is not as usual find
-  #+begin_src cicada-nymph :tangle core.cn
-  : init,name-hash-table,by-link
-    << link -- >>
-    >:link
-    :link zero? if
-      end
-    then
-    :link link->name-string >::name-string
-    ::name-string name-hash-table,search swap >:name if
-      :name name,used-as-jo? if
-        :link link->next-link
-        loop
-      then
-    then
-    :link link->jo name-hash-table,save-jo
-    :link link->next-link
-    loop
-  ; define-function
-  #+end_src
+** note
+   * the function should be executed right after
+     (define-function) is redefined
+   * the function loads a jo into a entry in the name-hash-table
+     only when the entry is not already used as jo
+   * thus
+     if a jo is redefined in the link
+     only the newist get saved into name-hash-table
+   * you can see
+     how the features above
+     make the re-definition of (define-function) hard to test
+   * note that
+     the interface of (name-hash-table,search)
+     is not as usual find
+** 記
+   * 注意這個初始化函數
+     並不處理帶有 <title> 的函數
+** init,name-hash-table,by-link
+   #+begin_src cicada-nymph :tangle core.cn
+   : init,name-hash-table,by-link
+     << link -- >>
+     >:link
+     :link zero? if
+       end
+     then
+     :link link->name-string >::name-string
+     ::name-string name-hash-table,search swap >:name if
+       :name name,used-as-jo? if
+         :link link->next-link
+         loop
+       then
+     then
+     :link link->jo name-hash-table,save-jo
+     :link link->next-link
+     loop
+   ; define-function
+   #+end_src
 * define-variable,with-tos            :redefine:
 ** define-variable,with-tos
    * not undo is needed for define-variable,with-tos
@@ -2726,25 +2735,29 @@
    *rule-set,basic-REPL* *jo-size* sub
    save
    #+end_src
-** execute-word
+** eval-word
    * to protect exception-jo from be called from basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   : execute-word
+   : eval-word
      << word[address, length] -- unknown >>
+     dup2 find-syntax if
+       apply
+       end
+     then
      dup2
      name-hash-table,find-jo if
        dup exception-jo? if
          drop
-         "* (execute-word) can not execute exception directly : " .s
+         "* (eval-word) can not execute exception directly : " .s
          .s .l
          end
        then
        << function & primitive-function & variable >>
        xx|swap|x drop2
-       execute-jo
+       apply
        end
      else
-     "* (execute-word) meets undefined word : " .s
+     "* (eval-word) meets undefined word : " .s
      .s .l
      then
      end
@@ -2780,11 +2793,7 @@
    : basic-REPL,loop
      << unknown -- unknown >>
      read-word-for-REPL
-     dup2 find-syntax if
-       execute-jo
-     else
-       execute-word
-     then
+     eval-word
      loop
    ; define-function
 
@@ -2911,9 +2920,9 @@
 ** note executing (end) in REPL
    * when executing (end) in REPL
      nothing will happen
-     this is because (execute-word) calls (end)
-     and the jojo (execute-word) is pop out of return-stack
-     just like meet (end) in the function-body of (execute-word)
+     this is because (eval-word) calls (end)
+     and the jojo (eval-word) is pop out of return-stack
+     just like meet (end) in the function-body of (eval-word)
 ** syntax,if,basic-REPL,meet-true
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,if,basic-REPL,meet-true,else
@@ -2937,11 +2946,7 @@
        syntax,if,basic-REPL,meet-true,else
        end
      then
-     dup2 find-syntax if
-       execute-jo
-     else
-       execute-word
-     then
+     eval-word
      loop
    ; define-function
    #+end_src
@@ -2954,11 +2959,7 @@
        drop2
        end
      then
-     dup2 find-syntax if
-       execute-jo
-     else
-       execute-word
-     then
+     eval-word
      loop
    ; define-function
 
@@ -3243,11 +3244,7 @@
    : stack-REPL,loop
      << unknown -- unknown >>
      read-word-for-REPL
-     dup2 find-syntax if
-       execute-jo
-     else
-       execute-word
-     then
+     eval-word
      print-argument-stack,pretty
      loop
    ; define-function
@@ -3428,11 +3425,7 @@
        end
      then
      read-word-for-REPL
-     dup2 find-syntax if
-       execute-jo
-     else
-       execute-word
-     then
+     eval-word
      loop
    ; define-function
 
@@ -3582,6 +3575,10 @@
    #+end_src
 * -----------------------------------
 * un-named function
+** note side-effect
+   * side-effect on function [un-named or named] is actually not so needed
+     for function is mainly used to encode algorithm
+   * but side-effect on function is always possible when needed
 ** note scope of named-local-variable
    * in named function or un-named function
      the scope of named-local-variable is linear
@@ -3681,7 +3678,7 @@
      [1 2 3 . . . "here here" .s .l end]
      end
    ; define-function
-   test,un-named-function execute-jo
+   test,un-named-function apply
 
    : factorial
      << number -- number >>
@@ -3691,7 +3688,7 @@
       then
       dup sub1 recur
       mul
-      end] execute-jo
+      end] apply
      end
    ; define-function
 
@@ -3836,7 +3833,7 @@
        swap drop
        end
      then
-     dup x|over|xxx execute-jo false? if
+     dup x|over|xxx apply false? if
        link->next-link
        loop
      then
@@ -4590,7 +4587,7 @@
      >:cursor
      >:end
      :cursor init,getdents64
-     :function execute-jo
+     :function apply
      :end
      :cursor +getdents64,d_reclen+ fetch-two-bytes add
      :function
@@ -5949,15 +5946,37 @@
    "library" poi,sub
    path: +library+ hi.cn ;
    #+end_src
-* >< load & need
-** note usage
+* -----------------------------------
+* note loading
+** no auto load
    * no library code will be auto loaded
      you need to configure path by (poi)
-     then load the code you want by using path-syntax
-** note loading-stack
+     then load the code you want using path-syntax
+** loading-stack & unload
    * by a loading-stack
      (load) is able to maintain a list of loaded files
-     also be able to un-load code by the loading-order
+   * values in the loading-stack
+     are used to help to remember a variety of global states
+     these values are used to implement unload
+   * unload is expensive
+     1. delete jo of a link
+     2. re-hash all link to name-hash-table
+** terminology
+   * meta-code
+     #+begin_src cicada-nymph
+     :::::::::
+
+     author:   XIE Yuheng ;
+
+     =========
+     #+end_src
+   * code
+* 記 加載
+** meta-code
+   * 有關於文件的謂詞來根據文件的內容來判斷它是否爲 code
+     只有帶有 meta-code 的文件才被認爲是 code
+* load & need
+** loading-stack
 ** load
    #+begin_src cicada-nymph
    : load

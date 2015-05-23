@@ -650,7 +650,7 @@ explain$exception:
 
 match =64bit, machine {
 
-define_primitive_function "execute-jo", execute_jo
+define_primitive_function "apply", apply
    ;; << jo -- unknown >>
    pop_argument_stack rax
    jmp qword [rax]
@@ -660,7 +660,7 @@ define_primitive_function "execute-jo", execute_jo
 
 match =32bit, machine {
 
-define_primitive_function "execute-jo", execute_jo
+define_primitive_function "apply", apply
    ;; << jo -- unknown >>
    pop_argument_stack eax
    jmp dword [eax]
@@ -1149,7 +1149,7 @@ define_function "little_test", little_test
    ;; xx read_word, V__link__core, find_link ;; add
    ;; xx drop ;; true
    ;; xx link_to_jo
-   ;; xx execute_jo
+   ;; xx apply
    ;; xx write_integer
    ;; xx zero
    ;; xx exit_with_TOS
@@ -3243,7 +3243,7 @@ define_function "find-link", find_link
    xx link_to_next_link
    xx tail_call, find_link
 
-define_function "execute-word", execute_word
+define_function "eval-word", eval_word
    ;; << word[address, length] -- unknown >>
    xx dup2, integer_string?, false?branch, 3
    xx   string_to_integer
@@ -3254,32 +3254,32 @@ define_function "execute-word", execute_word
    xx V__link__core
    xx find_link, false?branch, 6
    xx   xxswapx, drop2
-   xx   link_to_jo, execute_jo
+   xx   link_to_jo, apply
    xx   end
 
-   xx write_undefined_word_report__for_execute_word
+   xx write_undefined_word_report__for_eval_word
    xx write_string
    xx literal, 10
    xx write_byte
    xx end
 
 
-define_function "write-undefined-word-report,for-execute-word", write_undefined_word_report__for_execute_word
+define_function "write-undefined-word-report,for-eval-word", write_undefined_word_report__for_eval_word
    ;; << -- >>
-   xx literal, string$undefined_word_report__for_execute_word
-   xx literal, length$undefined_word_report__for_execute_word
+   xx literal, string$undefined_word_report__for_eval_word
+   xx literal, length$undefined_word_report__for_eval_word
    xx write_string
    xx end
 
-string$undefined_word_report__for_execute_word:
-   db "* (execute-word) meets undefined word : "
+string$undefined_word_report__for_eval_word:
+   db "* (eval-word) meets undefined word : "
 .end:
-length$undefined_word_report__for_execute_word = (.end - string$undefined_word_report__for_execute_word)
+length$undefined_word_report__for_eval_word = (.end - string$undefined_word_report__for_eval_word)
 
 define_function "basic-REPL", basic_REPL
    ;; << unknown -- unknown >>
    xx read_word_for_REPL
-   xx execute_word
+   xx eval_word
    xx tail_call, basic_REPL
 
 define_function "colon-string?", colon_string?
@@ -3610,7 +3610,7 @@ define_function "find-rule,loop", find_rule__loop
    xx xxoverx
    xx literal, cursor$find_rule, fetch
    xx cursor_to_predicate
-   xx execute_jo, false?branch, (.not_found-$)/jo_size
+   xx apply, false?branch, (.not_found-$)/jo_size
    xx   drop, drop2
    xx   literal, cursor$find_rule, fetch
    xx   cursor_to_function
@@ -3931,7 +3931,7 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    ;;    jo, string[address, length] >>
    xx dup2
    xx find_syntax, false?branch, 3
-   xx   execute_jo
+   xx   apply
    xx   end
    xx dup2
    xx V__link__core

@@ -831,7 +831,7 @@ more,rule-set,make-jojo
   << jo, string[address, length], word[address, length] --
      jo, string[address, length] >>
   dup2 find-syntax if
-    execute-jo
+    apply
     end
   then
   dup2 name-hash-table,find-jo if
@@ -1479,22 +1479,26 @@ allocate-memory
 *rule-set,basic-REPL* *jo-size* sub
 save
 
-: execute-word
+: eval-word
   << word[address, length] -- unknown >>
+  dup2 find-syntax if
+    apply
+    end
+  then
   dup2
   name-hash-table,find-jo if
     dup exception-jo? if
       drop
-      "* (execute-word) can not execute exception directly : " .s
+      "* (eval-word) can not execute exception directly : " .s
       .s .l
       end
     then
     << function & primitive-function & variable >>
     xx|swap|x drop2
-    execute-jo
+    apply
     end
   else
-  "* (execute-word) meets undefined word : " .s
+  "* (eval-word) meets undefined word : " .s
   .s .l
   then
   end
@@ -1522,11 +1526,7 @@ save
 : basic-REPL,loop
   << unknown -- unknown >>
   read-word-for-REPL
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
+  eval-word
   loop
 ; define-function
 
@@ -1592,11 +1592,7 @@ init,rule-set,basic-REPL
     syntax,if,basic-REPL,meet-true,else
     end
   then
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
+  eval-word
   loop
 ; define-function
 
@@ -1607,11 +1603,7 @@ init,rule-set,basic-REPL
     drop2
     end
   then
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
+  eval-word
   loop
 ; define-function
 
@@ -1818,11 +1810,7 @@ jo syntax,save-to,basic-REPL
 : stack-REPL,loop
   << unknown -- unknown >>
   read-word-for-REPL
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
+  eval-word
   print-argument-stack,pretty
   loop
 ; define-function
@@ -1924,11 +1912,7 @@ jo stack-REPL save-to *lost-exception-REPL*
     end
   then
   read-word-for-REPL
-  dup2 find-syntax if
-    execute-jo
-  else
-    execute-word
-  then
+  eval-word
   loop
 ; define-function
 
@@ -2198,7 +2182,7 @@ then
     swap drop
     end
   then
-  dup x|over|xxx execute-jo false? if
+  dup x|over|xxx apply false? if
     link->next-link
     loop
   then
@@ -2628,7 +2612,7 @@ then
   >:cursor
   >:end
   :cursor init,getdents64
-  :function execute-jo
+  :function apply
   :end
   :cursor +getdents64,d_reclen+ fetch-two-bytes add
   :function
