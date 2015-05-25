@@ -1,2 +1,2 @@
-*.fasm linguist-language=asm
-*.org linguist-language=org
+*.fasm linguist-language=ASM
+*.org linguist-language=Org-mode
