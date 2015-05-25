@@ -3,9 +3,20 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** 重新實現關於局部變元的語法 使得可以在匿名函數中使用 並增加語法
+   * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
+     注意
+     被代入的東西 其實是在 *local-jo* 中的
+     如果想要形成兩端函數的 concatenate
+     那麼就必須在 複製的時候去處理這種 concatenate
+     也就是說
+     代入的方式可以各種各樣
+     一套設計良好的標記語言語法 就能完成這個特性
+   * 還有 各種返回方式的實現
+** better names for (make-*)
+** 基礎設施 之 撤銷
 ** 基礎設施 之 加載與依賴
 ** 基礎設施 之 測試框架
-   * little-tester [於命令行工具還有 load 相結合]
 ** 基礎設施 之 代碼生成
    * new way to do data-structure
    * more (define*) about with-title
@@ -21,32 +32,180 @@
      這一系列函數的名字都應該重新做
      因爲他們的名字
      已經越來越不能展示他們的接口了
-** "語義" "語法"                      :關於術語:
-   * 在語法擴展的時候 每個 rule-set 中保存的是 謂詞 和 函數
-     這裏的 謂詞 好像代表語法
-     而 函數 好像代表語義
-     但是 在命名時 函數 是以 "syntax," 爲前綴的
 ** design a way to remove magic numbers [not variable, but file by file like erlang ?]
 ** need more lib functions about string processing and better factoring for string processing
 ** only one error-code->string is not enough :maybe:
 ** language-level support for creating and managing processes :maybe:
 * ===================================
-* note
-** 注意 目前儘量只寫 就實現 cicada-language 而言有用的函數[特性]
-   * 也就是說 很多有趣的程序我都推遲再寫
-     在這個準則下不被實現的有趣函數[特性]
-     1. big number
-     2. 同餘方程
-     3. data section
-   * 而所需要的函數如下
-     1. 練習實現匯編器 爲蟬語的 VM 設計做準備
-     2. 簡單的將代碼模塊化的系統
-     3. GC 和 hash-table 的實驗
-** 動態內存管理
-   * 我發現不用 GC
-     我也能實現對結構化數據的有限的處理
-     只要我設計好接口
-     那麼 所得到的結構將是很不錯的
+* *小蟬記*
+* 特點
+  * no type
+    * no type inference
+    * no dynamic type tag
+    * no static type declaration
+  * no dynamic-memory-management
+    * no garbage-collector
+  * no inited local argument
+  * no mixfix-notation
+    * function call is "function" instead of "(function)"
+    * no such thing like
+      1 2 (add) = 1 (add 2) = (add 1 2)
+  * no title-name-table
+    * thus in this implementation
+      we only use single name space
+  * about comment
+    * the comment of the argument & return value of function
+      is allowed to be written in free style normal comment
+  * 其實最本質的特點是
+    1. 沒有類型
+    2. 沒有動態內存管理
+* 術語
+  * 一個機制 實現 一個性狀
+    一組機制 可以被成爲 一組性狀的實現
+* 匯編
+** 能夠編譯自己之後之後才能實現的性狀
+   * jotionary 中 jojo 的長度
+   * 把對 棧註釋 處理成 元數據
+     利用這些元數據 就能夠實現簡單的類型推導
+   * 一個 debug 模式
+     在其中 對所有的基本的 棧的接口加上保護
+   * jojo 的頭部 和 jojo 本身的分離
+     這樣就能在 link 方面增加一層間接
+     而實現別名機制
+** 對匯編器的需要
+   * 爲了實現上面的性狀
+     把 cicada-nymph 編譯到任何一個語言都是可以的
+     [比如 Fasm]
+   * 但是我還是需要自己實現匯編器
+     因爲就工作量而言 二者相當
+     就所形成的實現策略的靈活性而言
+     根據 自己的匯編器 所制定的實現策略 要靈活很多
+** 小蟬 與 蟬語
+   * 關係如下
+     #+begin_src return-stack
+     (machine) -> (cicada-nymph) ->
+     (assembler) & (vm) -> (cicada-language)
+     #+end_src
+   * 可移植性由小蟬的易實現性來維護
+   * (vm) 是
+     實現與 cicada-nymph 中的
+     對底層機器的特殊屬性依賴很弱的
+     線串碼解釋器
+   * (assembler) 是
+     以 cicada-nymph 所提供的交叉匯編器框架爲基礎的
+** >< 交叉匯編器構架
+   * cross assembler framework
+   * 目的 爲了寫 cicada-language 的 VM 的 匯編器
+   * byte buffer editor
+     bit buffer editor
+     * cursor = 1 cursor
+     * buffer = 2 cursor
+     * xxxxxx = 3 cursor
+   * like line editor with modes ?
+   * hash-table for naming
+     各種 ?
+* 沒有類型
+  * 沒有類型推導
+    沒有動態的類型標籤
+    沒有靜態的類型聲明
+* 沒有動態的內存管理
+  * 沒有垃圾回收器
+* 語境
+  * reading-stack
+  * syntax-stack
+  * rule-set
+* 函數體內的結構化數據
+** 不能用來做返回值的結構化數據
+   * 在一個函數體內
+     它盡可以 通過 (allocate-local-memory)
+     來分配 *local-byte*
+     然後自己製作結構化的數據
+     但是這裏所製作的數據並不能用來做返回值
+     因爲函數退出的時候
+     所分配的局部內存就被回收了
+** 函數返回 靜態的 結構化數據
+   * 函數能夠返回結構化數據
+     但是由於沒有動態的內存管理
+     所以保存函數內結構化數據的內存
+     都是在定義函數的時候分配的
+     對這些函數的返回值進行副作用將是危險的
+   * 比如
+     | string | *string-area* |
+     | jojo   | *jojo-area*   |
+** 函數返回 動態的 結構化數據
+   * 這裏簡陋的實現動態內存分配的方式是
+     使用 circular
+     所達到的效果是 讓人們不能依賴這裏的數據
+     數據分配到了這裏 就得儘快使用掉
+     否則一個週期之後 數據就被覆蓋了
+   * 比如
+     | string | *circular-string-area* |
+     | jojo   | *circular-jojo-area*   |
+* 數據結構
+** 計劃
+   * 這裏其實是把 蟬語 中所設想的 姓 的機制
+     變成 數據結構接口管理器
+     也就是 實現 姓 做爲 數據結構
+** 實現
+   * 既然已經有了 name-hash-table 那麼這些就都是可能實現的了
+   * 可以用語法擴展來實現編譯時期對 jo 的查找
+   * 接口方面 有兩種方式
+     1. 完全與 已有的 查找 jo 的機制相互分離
+     2. 重用已有的機制
+     已有的機制有兩種
+     一個是 利用單項鏈接的鏈表
+     一個是 利用 name-hash-table 中的 nymph-jo 域
+   * 使用分離的 title-table 和 data-structure-table
+     都是爲了 減輕 name-hash-table 的負載
+     但是 也許這種負載對於 name-hash-table 是微乎其微的
+   * 我使用這樣一種方式來重用 name-hash-table
+     利用的特性是 如果做爲名字的字符串中帶有空格
+     那麼它就不可能被 以正常的方式找到
+     而利用這種 空格所形成的名字的 層次結構
+     我可以實現我所需要的性狀
+   * 在 name-hash-table 之外
+     我還需要像 jo 的全局鏈表一樣的鏈表來實現 每個 data-structure
+* 命名 與 分解 與 匿名
+  * 命名
+    命名有兩種
+    1. 局部的
+    2. 全局的
+  * 分解
+    分解有兩種
+    1. 利用函數作用的
+       這種分解利用了局部的名
+    2. 利用函數複合的
+       這種分解利用了全局的名
+  * 許多 forth 所崇尚的分解
+    其實是單純爲了緩解 置換棧 的壓力的
+  * 匿名
+    緩解命名壓力的方式是匿名
+    實現匿名的方式有兩種
+    1. lambda
+       其實是一種標記語言
+       lambda 的參數名字 是用來標記代入點用的
+       這裏
+       理解上的壓力來源於
+       對標記的分析
+    2. 組合子
+       每個組合子都是一個全局的名字
+       從 lambda 的角度看
+       每個組合子捕捉某種代入模式
+       然後給這種代入模式一個名字
+       這裏
+       理解上的壓力來源於
+       對名字所捕捉的模式的熟悉
+* -----------------------------------
+* global states
+  * *jojo-area,current-free-address*
+  * *string-area,current-free-address*
+  * name-hash-table
+  * syntax-stack
+    and rule-set in it
+* terminology
+  * one mechanism implements one feature
+    a set of mechanisms can be called
+    the implementation of a set of features
 * ===================================
 * writers
 ** note name of writers
@@ -378,7 +537,50 @@
      20 factorial . .l
      end
    ; define-function
+   factorial,test
 
+
+   : factorial,loop
+     << counter, product -- product >>
+     over one? if
+       swap drop
+       end
+     then
+     over mul
+     swap sub1 swap
+     loop
+   ; define-function
+
+   : factorial
+     << number -- number >>
+     1 factorial,loop
+     end
+   ; define-function
+
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
    factorial,test
    #+end_src
 * more,rule-set,make-jojo
@@ -1559,6 +1761,80 @@
   #+begin_src cicada-nymph :tangle core.cn
 
   #+end_src
+* -----------------------------------
+* 記 根局部變元有關的語法擴展
+  * joy 中的匿名謂詞
+    在作用於棧中的值的時候
+    不必複製它所作用的值
+  * 而 cicada-nymph 必須以明顯的方式複製棧中的值
+    如果每一組函數對棧中的值的消耗都能夠被編譯器計算出來
+    那麼就可以省略這些明顯的複製了
+    這些是可能實現的
+    只要把註釋信息設計成 良好的 可以被自動處理的 格式 就可以了
+  * 然而
+    在沒有對棧的註釋的自動推演的情況下
+    我也可以通過設計特殊的語法來實現比較好的效果
+  * a macro to pickup values from stack by index
+    index starts from 0
+    #+begin_src cicada-nymph
+    :0 :1 :2 :3
+    ::0 ::1
+
+    :0 as dup
+    ::0 as dup2
+    #+end_src
+  * a macro to pickup values from stack by name
+    #+begin_src cicada-nymph
+    << string[address, length], counter -- >>
+
+    << do not eat >>
+    :2 :1 >::string :0 >:counter
+    ::2 >::string :0 >:counter
+    =>[::string :counter]
+
+    << eat >>
+    >:counter >::string
+    >[::string :counter]
+    #+end_src
+  * by the above example
+    we know that
+    we also need
+    #+begin_src cicada-nymph
+    =>::name
+    #+end_src
+    to replace
+    #+begin_src cicada-nymph
+    dup2 >::name
+    #+end_src
+* 記 結構化數據的初始化語法
+  * [ ] 是 匿名的 jo 這種結構化數據的初始化語法
+    然而
+    別的結構化的數據應該如何呢 ?
+  * 比如 path: directory-name file-name ;
+    是一種用來初始化 特殊的[代表 path 的]字符串的語法
+  * 需要類似的語法的地方還有
+    1. vector of name
+    2. vector of string
+    注意這裏的 vector 都是類型良好的
+    必須是這樣
+    因爲我根本沒有對類型編碼
+  * 對於上面所欠缺的兩種語法
+    我可以很容易想出很多設計方式
+    但是要知道
+    語法是可以靈活轉換的
+    所以可以先實現幾個語法試試效果
+* 記 局部變元代入嵌套的無名函數
+  * 局部變元代入嵌套的無名函數 是可以實現的
+    可以實現特殊的標記語法來支持這個特性
+    並且
+    當些無名函數需要被做爲返回值返回時
+    去返回無名函數的複製
+    而不返回在大函數體內的無名函數本身 就行了
+    此時的複製有兩種
+    1. 複製到圈狀內存中
+       此時所返回的值必須在短時間內被用掉
+    2. 複製到靜態內存中
+       這樣就提供了一種生成函數的方式了
 * -----------------------------------
 * make-jojo                           :redefine:
 ** 記 ad hoc
@@ -5947,6 +6223,30 @@
    path: +library+ hi.cn ;
    #+end_src
 * -----------------------------------
+* 記 undo
+  * 因爲 name-hash-table 的存在
+    導致我實現 undo 這個特性的機制
+    必須是去記錄差別 而不能是記錄歷史
+  * 具體地
+    在每個 undo point 之後
+    所有對 jo 的 redefine 都需要被記錄
+    在需要退回到這個 undo point 之時
+    恢復這些被從 name-hash-table 中踢出去的 jo
+  * 這樣
+    每一個 jo 被踢出 name-hash-table 時
+    會存入 name jo 的對子在 undo-stack 中
+  * 注意
+    每一次重新定義都對應一次恢復
+    * 缺點是
+      這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
+      就帶來了一些沒必要的恢復
+    * 優點是
+      這樣就避免了對 多次重複定義的 jo 的特殊處理
+      不論是在效率上
+      還是實現的簡潔性上
+      這種實現方式都是更優的
+* >< undo-stack
+* -----------------------------------
 * note loading
 ** no auto load
    * no library code will be auto loaded
@@ -5975,8 +6275,18 @@
 ** meta-code
    * 有關於文件的謂詞來根據文件的內容來判斷它是否爲 code
      只有帶有 meta-code 的文件才被認爲是 code
-* load & need
 ** loading-stack
+   * 爲了恢復 name-hash-table 到之前的狀態
+     我需要在 loading-stack 中保存類似 diff 的數據
+   * 爲了實現 (need)
+     meta-code 需要被做爲字符串而保存在 loading-stack 中
+   * 上面這兩個性狀
+     也可以幫助實現詳細的 report
+* >< load & need
+** *loading-stack*
+   #+begin_src cicada-nymph
+
+   #+end_src
 ** load
    #+begin_src cicada-nymph
    : load
@@ -5988,8 +6298,26 @@
 ** need
    * (need) is as (load-when-not-loaded)
    #+begin_src cicada-nymph
+   : need
+     << library[address, length] -- >>
 
+     end
+   ; define-function
    #+end_src
+* -----------------------------------
+* 記 test
+  * 測試是被條件執行的代碼
+  * 它們定義一些函數穿插在被加載的代碼之中
+    並且有一些頂層的代碼來執行這些測試
+  * load 一個 code 的時候 可以指明是否帶有 test
+    如果不帶有 test
+    那麼上面所定義的函數會被忽略 並且頂層的代碼也被忽略
+  * 測試做爲函數的特點還在於
+    它們需要以適合閱讀的格式打印出報告以說明測試的效果
+    有一組輔助函數幫助完成這種打印
+  * 上面的這些特性組合在一起就形成了測試框架
+  * 在命令行接口中
+    會提供與測試有關的設計
 * -----------------------------------
 * report
 ** report-memory
@@ -6168,9 +6496,9 @@
    #+begin_src cicada-nymph :tangle core.cn
    : command-line,stack-REPL
      << -- >>
-     welcome
-     hi
-     initial-report
+     .l
+     welcome hi .l
+     initial-report .l
      "* you are in the (stack-REPL)" .s .l
      "  every time after a word is executed" .s .l
      "  the argument-stack get printed" .s .l
@@ -6183,9 +6511,9 @@
    #+begin_src cicada-nymph :tangle core.cn
    : command-line,basic-REPL
      << -- >>
-     welcome
-     hi
-     initial-report
+     .l
+     welcome hi .l
+     initial-report .l
      "* you are in the (basic-REPL)" .s .l
      "  this REPL does not print any thing automaticly" .s .l
      jo basic-REPL

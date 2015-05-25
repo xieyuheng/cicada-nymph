@@ -3767,9 +3767,9 @@ jo syntax,path:,basic-REPL
 
 : command-line,stack-REPL
   << -- >>
-  welcome
-  hi
-  initial-report
+  .l
+  welcome hi .l
+  initial-report .l
   "* you are in the (stack-REPL)" .s .l
   "  every time after a word is executed" .s .l
   "  the argument-stack get printed" .s .l
@@ -3780,9 +3780,9 @@ jo syntax,path:,basic-REPL
 
 : command-line,basic-REPL
   << -- >>
-  welcome
-  hi
-  initial-report
+  .l
+  welcome hi .l
+  initial-report .l
   "* you are in the (basic-REPL)" .s .l
   "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL
