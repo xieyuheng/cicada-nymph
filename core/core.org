@@ -1213,13 +1213,14 @@
 
    name-hash-table,report
    #+end_src
-** name-hash-table,save-jo
+** name-hash-table,save-jo,by-link
    #+begin_src cicada-nymph :tangle core.cn
-   : name-hash-table,save-jo
-     << jo -- >>
-     >:jo
-     :jo jo->name-string string->name,share >:name
-     :jo :name name,save-jo
+   : name-hash-table,save-jo,by-link
+     << link -- >>
+     >:link
+     :link link->jo
+     :link link->name-string string->name,share
+     name,save-jo
      end
    ; define-function
    #+end_src
@@ -1384,14 +1385,13 @@
      與 (define-function) 完全類似
      當第一次遇到某個 <title> 時
      初始化這個 <title> 做爲 variable-jo 的存在
-   * (define-alias,with-title)
+   * (alias)
      把已有舊的東西
      給一個 name 以註冊到 <title> 下
      可以讓它處理一個列表的東西
      同樣初的版本可以是最簡單的
    * 在着兩個底層函數之後
      應該重新定義 (define-function)
-     和 (define-alias)
      使得他們能夠處理 帶有 <title> 的情形
 ** implementation
    * a title is a link
@@ -1497,7 +1497,7 @@
          loop
        then
      then
-     :link link->jo name-hash-table,save-jo
+     :link name-hash-table,save-jo,by-link
      :link link->next-link
      loop
    ; define-function
@@ -1520,7 +1520,7 @@
 
     :jo :link link,save-jo
 
-    :jo name-hash-table,save-jo
+    :link name-hash-table,save-jo,by-link
 
     1 :jo jo,save-length
 
@@ -1570,7 +1570,7 @@
 
     :jo :link link,save-jo
 
-    :jo name-hash-table,save-jo
+    :link name-hash-table,save-jo,by-link
 
     *jojo-area,current-free-address* >:old-address
 
@@ -1678,7 +1678,7 @@
 
      :jo :link link,save-jo
 
-     :jo name-hash-table,save-jo
+     :link name-hash-table,save-jo,by-link
 
      *jojo-area,current-free-address* >:old-address
 
@@ -1751,7 +1751,7 @@
 
     :jo :link link,save-jo
 
-    :jo name-hash-table,save-jo
+    :link name-hash-table,save-jo,by-link
 
     *jojo-area,current-free-address* >:old-address
 
@@ -1950,20 +1950,41 @@
    test,syntax,name,make-jojo
    #+end_src
 * -----------------------------------
-* define-alias,with-title
-** define-alias,with-title
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-alias,with-title
-     << string[address, length] -- >>
+* alias
+  #+begin_src cicada-nymph :tangle core.cn
+  : alias
+    << alias[address, length], name[address, length] -- >>
+    >::name >::alias
+    ::name name-hash-table,find-jo if
+    else
+      "* (alias) fail" .s .l
+      "  because can not find name in name-hash-table" .s .l
+      "  alias : " .s ::alias .s .l
+      "  name : " .s ::name .s .l
+      end
+    then
+    >:jo
+    ::alias *link* :jo
+    make-link >:link
 
-     end
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : <test-title> test-name
-   ; define-alias
-   #+end_src
+    :link save-to *link*
+
+    :link name-hash-table,save-jo,by-link
+    end
+  ; define-function
+  #+end_src
+* test
+  #+begin_src cicada-nymph
+  "adba" "add" alias
+  1 2 adba .
+
+  "<test-title> add" "add" alias
+  : test,alias
+    1 2 <test-title> add .
+    end
+  ; define-function
+  test,alias
+  #+end_src
 * -----------------------------------
 * 記 根局部變元有關的語法擴展
   * joy 中的匿名謂詞
@@ -3793,7 +3814,7 @@
 
      :jo :link link,save-jo
 
-     :jo name-hash-table,save-jo
+     :link name-hash-table,save-jo,by-link
 
      :length
      :jo jo,save-length

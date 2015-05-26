@@ -549,11 +549,12 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name-hash-table,save-jo
-  << jo -- >>
-  >:jo
-  :jo jo->name-string string->name,share >:name
-  :jo :name name,save-jo
+: name-hash-table,save-jo,by-link
+  << link -- >>
+  >:link
+  :link link->jo
+  :link link->name-string string->name,share
+  name,save-jo
   end
 ; define-function
 
@@ -701,7 +702,7 @@ more,rule-set,make-jojo
       loop
     then
   then
-  :link link->jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
   :link link->next-link
   loop
 ; define-function
@@ -721,7 +722,7 @@ more,rule-set,make-jojo
 
   :jo :link link,save-jo
 
-  :jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
 
   1 :jo jo,save-length
 
@@ -757,7 +758,7 @@ more,rule-set,make-jojo
 
   :jo :link link,save-jo
 
-  :jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
 
   *jojo-area,current-free-address* >:old-address
 
@@ -858,7 +859,7 @@ more,rule-set,make-jojo
 
   :jo :link link,save-jo
 
-  :jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
 
   *jojo-area,current-free-address* >:old-address
 
@@ -903,7 +904,7 @@ more,rule-set,make-jojo
 
   :jo :link link,save-jo
 
-  :jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
 
   *jojo-area,current-free-address* >:old-address
 
@@ -994,9 +995,24 @@ more,rule-set,make-jojo
 
 more,rule-set,make-jojo
 
-: define-alias,with-title
-  << string[address, length] -- >>
+: alias
+  << alias[address, length], name[address, length] -- >>
+  >::name >::alias
+  ::name name-hash-table,find-jo if
+  else
+    "* (alias) fail" .s .l
+    "  because can not find name in name-hash-table" .s .l
+    "  alias : " .s ::alias .s .l
+    "  name : " .s ::name .s .l
+    end
+  then
+  >:jo
+  ::alias *link* :jo
+  make-link >:link
 
+  :link save-to *link*
+
+  :link name-hash-table,save-jo,by-link
   end
 ; define-function
 
@@ -1963,7 +1979,7 @@ jo stack-REPL save-to *lost-exception-REPL*
 
   :jo :link link,save-jo
 
-  :jo name-hash-table,save-jo
+  :link name-hash-table,save-jo,by-link
 
   :length
   :jo jo,save-length
