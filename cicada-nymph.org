@@ -1802,7 +1802,7 @@
       ;;;; find_link
       ;; xx read_word, string_to_integer ;; number
       ;; xx read_word, string_to_integer ;; number
-      ;; xx read_word, V__link__core, find_link ;; add
+      ;; xx read_word, V__link, find_link ;; add
       ;; xx drop ;; true
       ;; xx link_to_jo
       ;; xx apply
@@ -4410,10 +4410,10 @@
       xx save
       xx end
    #+end_src
-** *link,core*
+** *link*
    * a link is the first jo in the link
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*link,core*", V__link__core
+   define_variable "*link*", V__link
       xx the_last_link_in_assembly_code
    #+end_src
 ** note about find
@@ -4466,7 +4466,7 @@
       ;; maybe more
 
       xx dup2 ;; for to report undefined word
-      xx V__link__core
+      xx V__link
       xx find_link, false?branch, 6
       xx   xxswapx, drop2
       xx   link_to_jo, apply
@@ -5102,7 +5102,7 @@
 
       xx dup2
       xx string_head__word
-      xx V__link__core
+      xx V__link
       xx find_link, false?branch, 5
       xx   link_to_jo, jojo_area__stay
       xx   string_tail__word
@@ -5153,7 +5153,7 @@
 
       xx dup2
       xx string_head__word
-      xx V__link__core
+      xx V__link
       xx find_link, false?branch, 5
       xx   link_to_jo, jojo_area__stay
       xx   string_tail__word
@@ -5371,7 +5371,7 @@
       xx   apply
       xx   end
       xx dup2
-      xx V__link__core
+      xx V__link
       xx find_link, false?branch, 6
       xx   xxswapx, drop2
       xx   link_to_jo
@@ -5423,7 +5423,7 @@
      xx exception_reset_stack, !undo_make_jojo
      ;; << old V__string_area__current_free_address
      ;;    old V__jojo_area__current_free_address
-     ;;    old V__link__core
+     ;;    old V__link
      ;;    string[address, length]
      ;;    -- >>
 
@@ -5438,7 +5438,7 @@
      xx literal, ';', write_byte
      xx literal, 10, write_byte
 
-     xx address, V__link__core, save
+     xx address, V__link, save
      xx address, V__jojo_area__current_free_address, save
      xx address, V__string_area__current_free_address
      xx save
@@ -5447,7 +5447,7 @@
   string$undo_make_jojo_report:
      db "  the following jojo is not made :"
      db 10
-     db ": "
+     db ":"
   .end:
   length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
   #+end_src
@@ -5463,10 +5463,10 @@
       ;; << string[address, length] -- >>
       xx V__string_area__current_free_address, xxswapx
       xx V__jojo_area__current_free_address, xxswapx
-      xx V__link__core, xxswapx
+      xx V__link, xxswapx
       ;; << old V__string_area__current_free_address
       ;;    old V__jojo_area__current_free_address
-      ;;    old V__link__core
+      ;;    old V__link
       ;;    string[address, length] >>
       xx prepare_for
       xx   exception_head
@@ -5483,7 +5483,7 @@
       ;;    name-string[address, length] >>
 
       xx dup2
-      xx V__link__core
+      xx V__link
       xx literal, 0
       ;; << string[address, length]
       ;;    name-string[address, length]
@@ -5494,7 +5494,7 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link__core, save
+      xx address, V__link, save
       xx literal, explain$function
       xx literal, 0
       ;; << string[address, length]
@@ -5544,7 +5544,7 @@
    : addadd add add end ; define-function
    1 2 3 addadd . << 6 >>
 
-   : addadd ; string-head,word *link,core* find-link drop
+   : addadd ; string-head,word *link* find-link drop
    link->jo dup jo->length . << 3 >>
    1 2 3 x|swap|xxx apply . << 6 >>
 
@@ -5571,10 +5571,10 @@
       ;; << string[address, length] -- >>
       xx V__string_area__current_free_address, xxswapx
       xx V__jojo_area__current_free_address, xxswapx
-      xx V__link__core, xxswapx
+      xx V__link, xxswapx
       ;; << old V__string_area__current_free_address
       ;;    old V__jojo_area__current_free_address
-      ;;    old V__link__core
+      ;;    old V__link
       ;;    string[address, length] >>
       xx prepare_for
       xx   exception_head
@@ -5591,7 +5591,7 @@
       ;;    name-string[address, length] >>
 
       xx dup2
-      xx V__link__core
+      xx V__link
       xx literal, 0
       ;; << string[address, length]
       ;;    name-string[address, length]
@@ -5602,7 +5602,7 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link__core, save
+      xx address, V__link, save
       xx literal, explain$exception
       xx literal, 0
       ;; << string[address, length]
@@ -5662,7 +5662,7 @@
       ;;    name-string[address, length] >>
 
       xx dup2
-      xx V__link__core
+      xx V__link
       xx literal, 0
       ;; << string[address, length]
       ;;    name-string[address, length]
@@ -5673,7 +5673,7 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link__core, save
+      xx address, V__link, save
       xx literal, explain$variable
       xx literal, 0
       ;; << string[address, length]
@@ -6720,7 +6720,7 @@
       xx current_free_address$string_area
    #+end_src
 ** the_last_link_in_assembly_code
-   * this word helps to initialize V__link__core
+   * this word helps to initialize V__link
    #+begin_src fasm :tangle cicada-nymph.fasm
    the_last_link_in_assembly_code = link
    #+end_src

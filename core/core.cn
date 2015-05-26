@@ -646,187 +646,6 @@ more,rule-set,make-jojo
   loop
 ; define-function
 
-: <word>?
-  << string[address, length] -- bool >>
-  dup 2 less-or-equal? if
-    drop2
-    false
-    end
-  then
-  dup2 string-end,byte
-  ">" string-end,byte equal? not if
-    drop2
-    false
-    end
-  then
-  string-head,byte
-  "<" string-head,byte equal?
-  end
-; define-function
-
-: make-title
-  << string[address, length] -- jo >>
-  string-head,word make-string >::name
-  0 >:value
-
-  ::name *link,core* 0
-  make-link >:link
-
-  :link save-to *link,core*
-
-  ::name *explainer,variable* 0
-  make-jo-head >:jo
-
-  :jo :link link,save-jo
-
-  :jo name-hash-table,save-jo
-
-  1 :jo jo,save-length
-
-  :value jojo-area,stay
-
-  :jo
-  end
-; define-function
-
-: name-hash-table,save-jo,with-title
-  << title[address, length], jo -- >>
-  >:jo
-  >::title
-  512 allocate-local-memory >:buffer
-  ::title " " :jo jo->name-string
-  :buffer
-  3 n-string->buffer! >:length
-  :buffer
-  :length
-  string->name >:name
-  :jo :name name,save-jo
-  end
-; define-function
-
-: name-hash-table,find-jo,with-title
-  << title[address, length], word[address, length]
-     -- jo, true
-     -- false >>
-  512 allocate-local-memory >:buffer
-  " " xx|swap|xx
-  :buffer
-  3 n-string->buffer! >:length
-  :buffer
-  :length
-  name-hash-table,search if
-  else
-    drop
-    false
-    end
-  then
-  dup name,used-as-jo? if
-    name,fetch-jo
-    true
-    end
-  then
-  drop
-  false
-  end
-; define-function
-
-: define-function,with-title
-  << string[address, length] -- >>
-  *string-area,current-free-address* xx|swap|x
-  *jojo-area,current-free-address* xx|swap|x
-  *link,core* xx|swap|x
-  << *string-area,current-free-address*
-     *jojo-area,current-free-address*
-     *link,core*
-     string[address, length] >>
-  prepare-for
-    !undo-make-jojo
-    end
-
-  dup2 string-head,word >::title
-  dup2 string-tail,word string-head,word >::name
-  dup2 string-tail,word string-tail,word >::body
-
-  ::title <word>? not if
-    "* (define-function,with-title) the string is not begin with a <title>" .s .l
-    !undo-make-jojo
-  then
-
-  ::title name-hash-table,find-jo not if
-    ::title make-title
-  then
-  variable-jo->address >:address,link,title
-
-  ::name make-string >::name
-
-  ::name
-  :address,link,title fetch
-  0
-  make-link >:link
-
-  :link :address,link,title save
-
-  ::name *explainer,function* 0
-  make-jo-head >:jo
-
-  :jo :link link,save-jo
-
-  ::title :jo name-hash-table,save-jo,with-title
-
-  *jojo-area,current-free-address* >:old-address
-
-  :jo ::body make-jojo
-
-  *jojo-area,current-free-address*
-  :old-address sub *jo-size* div
-  :jo jo,save-length
-
-  drop2
-  drop
-  drop
-  drop
-  end
-; define-function
-
-: syntax,<title>,make-jojo
-  << jo, string[address, length], <title>[address, length] --
-     jo, string[address, length] >>
-  >::title
-  >::string
-  >:jo
-  ::title ::string string-head,word
-  name-hash-table,find-jo,with-title if
-    jojo-area,stay
-  else
-    "* (syntax,<title>,make-jojo) meet undefined" .s .l
-    "  title : " .s ::title .s .l
-    "  name  : " .s ::string string-head,word .s .l
-    :jo name-hash-table,delete-jo
-    !undo-make-jojo
-  then
-  :jo
-  ::string string-tail,word
-  end
-; define-function
-
-: more,rule-set,make-jojo
-  << -- >>
-  jo <word>?
-  jo syntax,<title>,make-jojo
-  *rule-set,make-jojo* add-rule
-  end
-; define-function
-
-more,rule-set,make-jojo
-
-: define-alias,with-title
-  << string[address, length] -- >>
-
-  end
-; define-function
-
-
-
 : make-jojo,dispatch-word
   << jo, string[address, length], word[address, length] --
      jo, string[address, length] >>
@@ -892,10 +711,10 @@ more,rule-set,make-jojo
   string-head,word make-string >::name
   >:value
 
-  ::name *link,core* 0
+  ::name *link* 0
   make-link >:link
 
-  :link save-to *link,core*
+  :link save-to *link*
 
   ::name *explainer,variable* 0
   make-jo-head >:jo
@@ -914,10 +733,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *string-area,current-free-address* xx|swap|x
   *jojo-area,current-free-address* xx|swap|x
-  *link,core* xx|swap|x
+  *link* xx|swap|x
   << *string-area,current-free-address*
      *jojo-area,current-free-address*
-     *link,core*
+     *link*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -928,12 +747,113 @@ more,rule-set,make-jojo
 
   ::name make-string >::name
 
-  ::name *link,core* 0
+  ::name *link* 0
   make-link >:link
 
-  :link save-to *link,core*
+  :link save-to *link*
 
   ::name *explainer,exception* 0
+  make-jo-head >:jo
+
+  :jo :link link,save-jo
+
+  :jo name-hash-table,save-jo
+
+  *jojo-area,current-free-address* >:old-address
+
+  :jo ::body make-jojo
+
+  *jojo-area,current-free-address*
+  :old-address sub *jo-size* div
+  :jo jo,save-length
+
+  drop2
+  drop
+  drop
+  drop
+  end
+; define-function
+
+: <word>?
+  << string[address, length] -- bool >>
+  dup 2 less-or-equal? if
+    drop2
+    false
+    end
+  then
+  dup2 string-end,byte
+  ">" string-end,byte equal? not if
+    drop2
+    false
+    end
+  then
+  string-head,byte
+  "<" string-head,byte equal?
+  end
+; define-function
+
+: name-hash-table,find-jo,with-title
+  << title[address, length], word[address, length]
+     -- jo, true
+     -- false >>
+  512 allocate-local-memory >:buffer
+  " " xx|swap|xx
+  :buffer
+  3 n-string->buffer! >:length
+  :buffer
+  :length
+  name-hash-table,search if
+  else
+    drop
+    false
+    end
+  then
+  dup name,used-as-jo? if
+    name,fetch-jo
+    true
+    end
+  then
+  drop
+  false
+  end
+; define-function
+
+: define-function,with-title
+  << string[address, length] -- >>
+  *string-area,current-free-address* xx|swap|x
+  *jojo-area,current-free-address* xx|swap|x
+  *link* xx|swap|x
+  << *string-area,current-free-address*
+     *jojo-area,current-free-address*
+     *link*
+     string[address, length] >>
+  prepare-for
+    !undo-make-jojo
+    end
+
+  dup2 string-head,word >::title
+  dup2 string-tail,word string-head,word >::name
+  dup2 string-tail,word string-tail,word >::body
+
+  ::title <word>? not if
+    "* (define-function,with-title) the string is not begin with a <title>" .s .l
+    !undo-make-jojo
+  then
+
+  512 allocate-local-memory >:buffer
+  ::title " " ::name
+  :buffer
+  3 n-string->buffer! >:length
+
+  :buffer :length
+  make-string >::title-name
+
+  ::title-name *link* 0
+  make-link >:link
+
+  :link save-to *link*
+
+  ::title-name *explainer,function* 0
   make-jo-head >:jo
 
   :jo :link link,save-jo
@@ -959,10 +879,10 @@ more,rule-set,make-jojo
   << string[address, length] -- >>
   *string-area,current-free-address* xx|swap|x
   *jojo-area,current-free-address* xx|swap|x
-  *link,core* xx|swap|x
+  *link* xx|swap|x
   << *string-area,current-free-address*
      *jojo-area,current-free-address*
-     *link,core*
+     *link*
      string[address, length] >>
   prepare-for
     !undo-make-jojo
@@ -973,10 +893,10 @@ more,rule-set,make-jojo
 
   ::name make-string >::name
 
-  ::name *link,core* 0
+  ::name *link* 0
   make-link >:link
 
-  :link save-to *link,core*
+  :link save-to *link*
 
   ::name *explainer,function* 0
   make-jo-head >:jo
@@ -1011,7 +931,38 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-*link,core* init,name-hash-table,by-link
+*link* init,name-hash-table,by-link
+
+: syntax,<title>,make-jojo
+  << jo, string[address, length], <title>[address, length] --
+     jo, string[address, length] >>
+  >::title
+  >::string
+  >:jo
+  ::title ::string string-head,word
+  name-hash-table,find-jo,with-title if
+    jojo-area,stay
+  else
+    "* (syntax,<title>,make-jojo) meet undefined" .s .l
+    "  title : " .s ::title .s .l
+    "  name  : " .s ::string string-head,word .s .l
+    :jo name-hash-table,delete-jo
+    !undo-make-jojo
+  then
+  :jo
+  ::string string-tail,word
+  end
+; define-function
+
+: more,rule-set,make-jojo
+  << -- >>
+  jo <word>?
+  jo syntax,<title>,make-jojo
+  *rule-set,make-jojo* add-rule
+  end
+; define-function
+
+more,rule-set,make-jojo
 
 : word:name?
   << word[address, length] -- bool >>
@@ -1042,6 +993,14 @@ more,rule-set,make-jojo
 ; define-function
 
 more,rule-set,make-jojo
+
+: define-alias,with-title
+  << string[address, length] -- >>
+
+  end
+; define-function
+
+
 
 : remove-char!,loop
   << cursor, length, char -- cursor >>
@@ -1994,10 +1953,10 @@ jo stack-REPL save-to *lost-exception-REPL*
 
   ::name make-string >::name
 
-  ::name *link,core* 0
+  ::name *link* 0
   make-link >:link
 
-  :link save-to *link,core*
+  :link save-to *link*
 
   ::name *explainer,variable* 0
   make-jo-head >:jo
@@ -2176,13 +2135,15 @@ then
 ; define-function
 
 : link,list-by-jo-predicate,loop
-  << jo-predicate, counter, link -- total >>
+  << jo-predicate, counter, link -- >>
   dup zero? if
     drop
-    swap drop
+    drop
+    drop
     end
   then
-  dup x|over|xxx apply false? if
+  dup link->jo
+  x|over|xxx apply false? if
     link->next-link
     loop
   then
@@ -2190,7 +2151,7 @@ then
     "  " .s
     add1 dup .i ". " .s
   swap
-  dup jo->name-string
+  dup link->jo jo->name-string
   dup2 space-string? if
     drop2
     "  unnamed" .s .l
@@ -2202,30 +2163,11 @@ then
 ; define-function
 
 : link,list-by-jo-predicate
-  << link, jo-predicate -- total >>
+  << link, jo-predicate -- >>
   swap
   0
   swap
   link,list-by-jo-predicate,loop
-  end
-; define-function
-
-: link,report
-  << -- >>
-  "* all primitive-function in link :" .s .l
-  *link,core* jo primitive-function-jo?
-  link,list-by-jo-predicate
-  "* all function in link :" .s .l
-  *link,core* jo function-jo?
-  link,list-by-jo-predicate add
-  "* all exception in link :" .s .l
-  *link,core* jo exception-jo?
-  link,list-by-jo-predicate add
-  "* all variable in link :" .s .l
-  *link,core* jo variable-jo?
-  link,list-by-jo-predicate add
-  "* totally : " .s
-  .i .l
   end
 ; define-function
 
@@ -3616,6 +3558,12 @@ jo word:path:?
 jo syntax,path:,basic-REPL
 *rule-set,basic-REPL* add-rule
 
+: <undo-stack> mark-undo-point
+  << -- >>
+
+  end
+; define-function
+
 : report-memory
   << -- >>
   "* *un-initialized-memory*" .s .l
@@ -3693,6 +3641,26 @@ jo syntax,path:,basic-REPL
    *rule-set,basic-REPL* list-rule
   "* tos-syntax-stack :" .s .l
    tos-syntax-stack list-rule
+  end
+; define-function
+
+: report-link
+  << -- >>
+  "* all primitive-function in link :" .s .l
+  *link* jo primitive-function-jo?
+  link,list-by-jo-predicate
+
+  "* all function in link :" .s .l
+  *link* jo function-jo?
+  link,list-by-jo-predicate
+
+  "* all exception in link :" .s .l
+  *link* jo exception-jo?
+  link,list-by-jo-predicate
+
+  "* all variable in link :" .s .l
+  *link* jo variable-jo?
+  link,list-by-jo-predicate
   end
 ; define-function
 
