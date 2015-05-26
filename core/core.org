@@ -4,7 +4,7 @@
 
 * todo
 ** 利用 alias 來實現中文支持
-** 重新實現關於局部變元的語法 使得可以在匿名函數中使用 並增加語法
+** 重新實現關於局部變元的語法 使得可以在匿名函數中使用 修復 if 的問題 並增加語法
    * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
      注意
      被代入的東西 其實是在 *local-jo* 中的
@@ -81,7 +81,8 @@
    * 語法棧中保存的規則集
      實現對語法動態添加與刪除
 ** 鏈
-   * 記錄函數被定義的線性線性順序
+   * 只有唯一一個鏈
+     記錄函數被定義的線性線性順序
 ** 名散表
    * 實現對函數的快速查找
 ** 姓
@@ -226,20 +227,6 @@
        這裏
        理解上的壓力來源於
        對名字所捕捉的模式的熟悉
-* 鍊
-  * 應該只有唯一一個 鍊
-    如果維持 鍊 的唯一性
-    那麼這個 鍊 做爲定義的順序的代表 就是良好的
-  * 之前想要
-    1. 讓每個 <姓> 有一個自己的 鍊
-    2. 讓每個 被加載的 代碼 都有自己的 鍊
-    爲的是能夠對這些東西進行快速的打印
-    但是其實這種性狀上的犧牲是得不償失的
-* -----------------------------------
-* terminology
-  * one mechanism implements one feature
-    a set of mechanisms can be called
-    the implementation of a set of features
 * ===================================
 * writers
 ** note name of writers
@@ -468,31 +455,6 @@
      end
    ; define-function
    #+end_src
-* *rule-set,make-jojo* : save-to
-** word:save-to?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:save-to?
-     << word[address, length] -- bool >>
-     "save-to" string-equal?
-     end
-   ; define-function
-   #+end_src
-** syntax,save-to,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : syntax,save-to,make-jojo
-     << string[address, length], word:save-to --
-        string[address, length] >>
-     <<
-     note that
-     the following call to (syntax,address,make-jojo)
-     will drop word:save-to
-     >>
-     syntax,address,make-jojo
-     jo save
-       jojo-area,stay
-     end
-   ; define-function
-   #+end_src
 * *rule-set,make-jojo* : loop
 ** word:loop?
    #+begin_src cicada-nymph :tangle core.cn
@@ -630,10 +592,6 @@
     *rule-set,make-jojo* add-rule
     jo word:exception-reset-stack?
     jo syntax,exception-reset-stack,make-jojo
-    *rule-set,make-jojo* add-rule
-
-    jo word:save-to?
-    jo syntax,save-to,make-jojo
     *rule-set,make-jojo* add-rule
 
     jo word:loop?  jo syntax,loop,make-jojo  *rule-set,make-jojo* add-rule
@@ -1203,13 +1161,13 @@
      end
    ; define-function
 
-   report-memory
+   <report> memory
 
    test,name-hash-table,share
-   report-memory
+   <report> memory
 
    test,name-hash-table
-   report-memory
+   <report> memory
 
    name-hash-table,report
    #+end_src
@@ -1318,42 +1276,6 @@
    *test,buffer* swap
    .s
    #+end_src
-** string,find-word
-   #+begin_src cicada-nymph :tangle core.cn
-   : string,find-word
-     << string[address, length], word[address, length]
-        -- sub-string[address, length], true
-        -- false >>
-     xx|over|xx space-string? if
-       drop2 drop2
-       false
-       end
-     then
-     xx|over|xx string-head,word
-     xx|over|xx string-equal? if
-       drop2
-       true
-       end
-     then
-     xx|swap|xx string-tail,word
-     xx|swap|xx
-     loop
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   "111 222 333" "222" string,find-word if
-     string-head,word .s
-   then
-
-   "111 222 333" "444" string,find-word if
-     string-head,word .s
-   then
-
-   "111 222 [] 333" "[" string,find-word if
-     string-head,word .s
-   then
-   #+end_src
 * -----------------------------------
 * 記 姓
 ** 目的
@@ -1402,192 +1324,7 @@
      by normal name-hash-table interface
      to be found
      the name must be prefix by the string "<title> "
-* -----------------------------------
-* make-jojo                           :redefine:
-** 記 ad hoc
-   * 這裏對 name-hash-table 的 undo 是 ad hoc
-     因爲沒法重新定義 (!undo-make-jojo)
-     因爲有太多的函數調用它了
-   * 只有當有自己的匯編器的時候 才能解除這個 ad hoc
-   * 並且
-     此時只有對 *link* 的 undo
-     但是沒有對 (define-function,with-title) 中的
-     :address,link,title 的 undo
-     這是錯誤的 這導致 :address,link,title 在不必要地增長
-     但是這不是知名的錯誤
-     因爲
-     在調用的時候 用的是 name-hash-table 來做查找
-     而不是用 link 來查找
-** make-jojo,dispatch-word
-   #+begin_src cicada-nymph :tangle core.cn
-   : make-jojo,dispatch-word
-     << jo, string[address, length], word[address, length] --
-        jo, string[address, length] >>
-     dup2 find-syntax if
-       apply
-       end
-     then
-     dup2 name-hash-table,find-jo if
-       xx|swap|x drop2
-       jojo-area,stay
-       end
-     then
-     "* (make-jojo) meets undefined word : " .s .s .l
-     x|over|xx name-hash-table,delete-jo
-     !undo-make-jojo
-   ; define-function
-   #+end_src
-** make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : make-jojo,loop
-     << jo, string[address, length] -- >>
-     dup2 space-string? if
-       drop2
-       drop
-       end
-     then
-     dup2
-     string-tail,word
-     xx|swap|xx
-     string-head,word
-     make-jojo,dispatch-word
-     loop
-   ; define-function
-
-   : make-jojo
-     << jo, string[address, length] -- >>
-     local-variable-table,clear
-     *rule-set,make-jojo*
-     push-syntax-stack
-     make-jojo,loop
-     drop-syntax-stack
-     end
-   ; define-function
-   #+end_src
-* init,name-hash-table,jo
-** note
-   * the function should be executed right after
-     (define-function) is redefined
-   * the function loads a jo into a entry in the name-hash-table
-     only when the entry is not already used as jo
-   * thus
-     if a jo is redefined in the link
-     only the newist get saved into name-hash-table
-   * you can see
-     how the features above
-     make the re-definition of (define-function) hard to test
-   * note that
-     the interface of (name-hash-table,search)
-     is not as usual find
-** 記
-   * 注意這個初始化函數
-     並不處理帶有 <title> 的函數
-** init,name-hash-table,by-link
-   #+begin_src cicada-nymph :tangle core.cn
-   : init,name-hash-table,by-link
-     << link -- >>
-     >:link
-     :link zero? if
-       end
-     then
-     :link link->name-string >::name-string
-     ::name-string name-hash-table,search swap >:name if
-       :name name,used-as-jo? if
-         :link link->next-link
-         loop
-       then
-     then
-     :link name-hash-table,save-jo,by-link
-     :link link->next-link
-     loop
-   ; define-function
-   #+end_src
-* define-variable,with-tos            :redefine:
-  * not undo is needed for define-variable,with-tos
-  #+begin_src cicada-nymph :tangle core.cn
-  : define-variable,with-tos
-    << value, string[address, length] -- >>
-    string-head,word make-string >::name
-    >:value
-
-    ::name *link* 0
-    make-link >:link
-
-    :link save-to *link*
-
-    ::name *explainer,variable* 0
-    make-jo-head >:jo
-
-    :jo :link link,save-jo
-
-    :link name-hash-table,save-jo,by-link
-
-    1 :jo jo,save-length
-
-    :value jojo-area,stay
-    end
-  ; define-function
-  #+end_src
-* test define-variable,with-tos
-  #+begin_src cicada-nymph
-  233 : *three* ; define-variable,with-tos
-  : add-three *three* add end ; define-function
-  1 add-three . << 234 >>
-
-  << you get the address of the variable *three*
-     by add "address" in front of it >>
-  : fix-*three* 3 address *three* save end ; define-function
-  fix-*three*
-  1 add-three . << 4 >>
-  #+end_src
-* define-exception
-  #+begin_src cicada-nymph :tangle core.cn
-  : define-exception
-    << string[address, length] -- >>
-    *string-area,current-free-address* xx|swap|x
-    *jojo-area,current-free-address* xx|swap|x
-    *link* xx|swap|x
-    << *string-area,current-free-address*
-       *jojo-area,current-free-address*
-       *link*
-       string[address, length] >>
-    prepare-for
-      !undo-make-jojo
-      end
-
-    dup2 string-head,word >::name
-    dup2 string-tail,word >::body
-
-    ::name make-string >::name
-
-    ::name *link* 0
-    make-link >:link
-
-    :link save-to *link*
-
-    ::name *explainer,exception* 0
-    make-jo-head >:jo
-
-    :jo :link link,save-jo
-
-    :link name-hash-table,save-jo,by-link
-
-    *jojo-area,current-free-address* >:old-address
-
-    :jo ::body make-jojo
-
-    *jojo-area,current-free-address*
-    :old-address sub *jo-size* div
-    :jo jo,save-length
-
-    drop2
-    drop
-    drop
-    drop
-    end
-  ; define-function
-  #+end_src
-* define-function,with-title
+* definers
 ** <word>?
    #+begin_src cicada-nymph :tangle core.cn
    : <word>?
@@ -1608,6 +1345,338 @@
      end
    ; define-function
    #+end_src
+** make-jojo                          :redefine:
+*** 記 ad hoc
+    * 這裏對 name-hash-table 的 undo 是 ad hoc
+      因爲沒法重新定義 (!undo-make-jojo)
+      因爲有太多的函數調用它了
+    * 只有當有自己的匯編器的時候 才能解除這個 ad hoc
+    * 並且
+      此時只有對 *link* 的 undo
+      但是沒有對 (define-function,with-title) 中的
+      :address,link,title 的 undo
+      這是錯誤的 這導致 :address,link,title 在不必要地增長
+      但是這不是知名的錯誤
+      因爲
+      在調用的時候 用的是 name-hash-table 來做查找
+      而不是用 link 來查找
+*** make-jojo,dispatch-word
+    #+begin_src cicada-nymph :tangle core.cn
+    : make-jojo,dispatch-word
+      << jo, string[address, length], word[address, length] --
+         jo, string[address, length] >>
+      dup2 find-syntax if
+        apply
+        end
+      then
+      dup2 name-hash-table,find-jo if
+        xx|swap|x drop2
+        jojo-area,stay
+        end
+      then
+      "* (make-jojo) meets undefined word : " .s .s .l
+      x|over|xx name-hash-table,delete-jo
+      !undo-make-jojo
+    ; define-function
+    #+end_src
+*** make-jojo
+    #+begin_src cicada-nymph :tangle core.cn
+    : make-jojo,loop
+      << jo, string[address, length] -- >>
+      dup2 space-string? if
+        drop2
+        drop
+        end
+      then
+      dup2
+      string-tail,word
+      xx|swap|xx
+      string-head,word
+      make-jojo,dispatch-word
+      loop
+    ; define-function
+
+    : make-jojo
+      << jo, string[address, length] -- >>
+      local-variable-table,clear
+      *rule-set,make-jojo*
+      push-syntax-stack
+      make-jojo,loop
+      drop-syntax-stack
+      end
+    ; define-function
+    #+end_src
+** init,name-hash-table,jo
+*** note
+    * the function should be executed right after
+      (define-function) is redefined
+    * the function loads a jo into a entry in the name-hash-table
+      only when the entry is not already used as jo
+    * thus
+      if a jo is redefined in the link
+      only the newist get saved into name-hash-table
+    * you can see
+      how the features above
+      make the re-definition of (define-function) hard to test
+    * note that
+      the interface of (name-hash-table,search)
+      is not as usual find
+*** 記
+    * 注意這個初始化函數
+      並不處理帶有 <title> 的函數
+*** init,name-hash-table,by-link
+    #+begin_src cicada-nymph :tangle core.cn
+    : init,name-hash-table,by-link
+      << link -- >>
+      >:link
+      :link zero? if
+        end
+      then
+      :link link->name-string >::name-string
+      ::name-string name-hash-table,search swap >:name if
+        :name name,used-as-jo? if
+          :link link->next-link
+          loop
+        then
+      then
+      :link name-hash-table,save-jo,by-link
+      :link link->next-link
+      loop
+    ; define-function
+    #+end_src
+** define-variable,with-tos           :redefine:
+   * not undo is needed for define-variable,with-tos
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-variable,with-tos
+     << value, string[address, length] -- >>
+     >::string
+     >:value
+
+     ::string string-head,word >::title
+     ::string string-tail,word string-head,word >::name
+
+     ::title " " ::name
+     512 allocate-local-memory dup >:buffer
+     3 n-string->buffer! >:length
+     :buffer :length >::name
+     ::title <word>? not if
+       ::title >::name
+     then
+     ::name
+     make-string >::name
+
+     ::name *link* 0
+     make-link >:link
+
+     :link address *link* save
+
+     ::name *explainer,variable* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :link name-hash-table,save-jo,by-link
+
+     1 :jo jo,save-length
+
+     :value jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** define-exception
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-exception
+     << string[address, length] -- >>
+     *string-area,current-free-address* xx|swap|x
+     *jojo-area,current-free-address* xx|swap|x
+     *link* xx|swap|x
+     << *string-area,current-free-address*
+        *jojo-area,current-free-address*
+        *link*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     dup2 >::string
+
+     ::string string-head,word >::title
+     ::string string-tail,word string-head,word >::name
+     ::string string-tail,word string-tail,word >::body
+
+     ::title " " ::name
+     512 allocate-local-memory dup >:buffer
+     3 n-string->buffer! >:length
+
+     :buffer :length >::name
+
+     ::title <word>? not if
+       ::string string-head,word >::name
+       ::string string-tail,word >::body
+     then
+
+     ::name
+     make-string >::name
+
+     ::name *link* 0
+     make-link >:link
+
+     :link address *link* save
+
+     ::name *explainer,exception* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :link name-hash-table,save-jo,by-link
+
+     *jojo-area,current-free-address* >:old-address
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :old-address sub *jo-size* div
+     :jo jo,save-length
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+** define-function                    :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : define-function
+     << string[address, length] -- >>
+     *string-area,current-free-address* xx|swap|x
+     *jojo-area,current-free-address* xx|swap|x
+     *link* xx|swap|x
+     << *string-area,current-free-address*
+        *jojo-area,current-free-address*
+        *link*
+        string[address, length] >>
+     prepare-for
+       !undo-make-jojo
+       end
+
+     dup2 >::string
+
+     ::string string-head,word >::title
+     ::string string-tail,word string-head,word >::name
+     ::string string-tail,word string-tail,word >::body
+
+     ::title " " ::name
+     512 allocate-local-memory dup >:buffer
+     3 n-string->buffer! >:length
+     :buffer :length >::name
+     ::title <word>? not if
+       ::string string-head,word >::name
+       ::string string-tail,word >::body
+     then
+     ::name
+     make-string >::name
+
+     ::name *link* 0
+     make-link >:link
+
+     :link address *link* save
+
+     ::name *explainer,function* 0
+     make-jo-head >:jo
+
+     :jo :link link,save-jo
+
+     :link name-hash-table,save-jo,by-link
+
+     *jojo-area,current-free-address* >:old-address
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :old-address sub *jo-size* div
+     :jo jo,save-length
+
+     drop2
+     drop
+     drop
+     drop
+     end
+   ; define-function
+   #+end_src
+** to load link into name-hash-table
+   #+begin_src cicada-nymph :tangle core.cn
+   *link* init,name-hash-table,by-link
+   #+end_src
+** test variable
+   #+begin_src cicada-nymph
+   233 : *three* ; define-variable,with-tos
+   : add-three *three* add end ; define-function
+   1 add-three . << 234 >>
+
+   << you get the address of the variable *three*
+      by add "address" in front of it >>
+   : fix-*three* 3 address *three* save end ; define-function
+   fix-*three*
+   1 add-three . << 4 >>
+
+   << with-title >>
+   233 : <test-title> *three* ; define-variable,with-tos
+   : add-three <test-title> *three* add end ; define-function
+   1 add-three . << 234 >>
+   #+end_src
+** test function
+   #+begin_src cicada-nymph
+   : k 1 2 3 add add . end ; define-function
+   k
+
+   : k 1 2 3 end ; define-function
+   k add add .
+
+   << error >>
+   : k no end ; define-function
+
+
+   << with-title >>
+   : <test-title> test-name
+     << -- >>
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : test,syntax,<title>,make-jojo
+     << -- >>
+     <test-title> test-name
+     end
+   ; define-function
+
+   test,syntax,<title>,make-jojo
+
+   << error >>
+   : <test-title> test-name,testing-undefine
+     << -- >>
+     testing-undefine
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : test,syntax,<title>,make-jojo,testing-undefine
+     << -- >>
+     <test-title> test-name,testing-undefine
+     end
+   ; define-function
+
+   test,syntax,<title>,make-jojo,testing-undefine
+   #+end_src
+* -----------------------------------
+* *rule-set,make-jojo* : <title>
+** note
+   * <title> in *rule-set,make-jojo*
+     <title> name
+     save a jo into *jojo-area*
+   * <title> in *rule-set,basic-REPL*
+     <title> name
+     execute a jo
 ** name-hash-table,find-jo,with-title
    #+begin_src cicada-nymph :tangle core.cn
    : name-hash-table,find-jo,with-title
@@ -1636,206 +1705,6 @@
      end
    ; define-function
    #+end_src
-** define-function,with-title
-   #+begin_src cicada-nymph :tangle core.cn
-   : define-function,with-title
-     << string[address, length] -- >>
-     *string-area,current-free-address* xx|swap|x
-     *jojo-area,current-free-address* xx|swap|x
-     *link* xx|swap|x
-     << *string-area,current-free-address*
-        *jojo-area,current-free-address*
-        *link*
-        string[address, length] >>
-     prepare-for
-       !undo-make-jojo
-       end
-
-     dup2 string-head,word >::title
-     dup2 string-tail,word string-head,word >::name
-     dup2 string-tail,word string-tail,word >::body
-
-     ::title <word>? not if
-       "* (define-function,with-title) the string is not begin with a <title>" .s .l
-       !undo-make-jojo
-     then
-
-     512 allocate-local-memory >:buffer
-     ::title " " ::name
-     :buffer
-     3 n-string->buffer! >:length
-
-     :buffer :length
-     make-string >::title-name
-
-     ::title-name *link* 0
-     make-link >:link
-
-     :link save-to *link*
-
-     ::title-name *explainer,function* 0
-     make-jo-head >:jo
-
-     :jo :link link,save-jo
-
-     :link name-hash-table,save-jo,by-link
-
-     *jojo-area,current-free-address* >:old-address
-
-     :jo ::body make-jojo
-
-     *jojo-area,current-free-address*
-     :old-address sub *jo-size* div
-     :jo jo,save-length
-
-     drop2
-     drop
-     drop
-     drop
-     end
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   : <test-title> test-name-1
-     << -- >>
-     "TEST" .s .l
-     end
-   ; define-function,with-title
-   "<test-title> test-name-1" eval-word
-   "<test-title>" "test-name-1" name-hash-table,find-jo,with-title drop apply
-
-   : <test-title> test-name-2
-     << -- >>
-     "TEST TEST" .s .l
-     end
-   ; define-function,with-title
-   "<test-title> test-name-2" eval-word
-   "<test-title>" "test-name-2" name-hash-table,find-jo,with-title drop apply
-
-   : <test-title> test-name-3
-     << -- >>
-     "TEST TEST TEST" .s .l
-     end
-   ; define-function,with-title
-   "<test-title> test-name-3" eval-word
-   "<test-title>" "test-name-3" name-hash-table,find-jo,with-title drop apply
-   #+end_src
-* define-function,without-title
-  #+begin_src cicada-nymph :tangle core.cn
-  : define-function,without-title
-    << string[address, length] -- >>
-    *string-area,current-free-address* xx|swap|x
-    *jojo-area,current-free-address* xx|swap|x
-    *link* xx|swap|x
-    << *string-area,current-free-address*
-       *jojo-area,current-free-address*
-       *link*
-       string[address, length] >>
-    prepare-for
-      !undo-make-jojo
-      end
-
-    dup2 string-head,word >::name
-    dup2 string-tail,word >::body
-
-    ::name make-string >::name
-
-    ::name *link* 0
-    make-link >:link
-
-    :link save-to *link*
-
-    ::name *explainer,function* 0
-    make-jo-head >:jo
-
-    :jo :link link,save-jo
-
-    :link name-hash-table,save-jo,by-link
-
-    *jojo-area,current-free-address* >:old-address
-
-    :jo ::body make-jojo
-
-    *jojo-area,current-free-address*
-    :old-address sub *jo-size* div
-    :jo jo,save-length
-
-    drop2
-    drop
-    drop
-    drop
-    end
-  ; define-function
-  #+end_src
-* define-function                     :redefine:
-  #+begin_src cicada-nymph :tangle core.cn
-  : define-function
-    << string[address, length] -- >>
-    dup2 string-head,word >::head
-    ::head <word>? if
-      define-function,with-title
-      end
-    then
-    define-function,without-title
-    end
-  ; define-function
-  #+end_src
-* to load link into name-hash-table
-  #+begin_src cicada-nymph :tangle core.cn
-  *link* init,name-hash-table,by-link
-  #+end_src
-* test define-function
-  #+begin_src cicada-nymph
-  : k 1 2 3 add add . end ; define-function
-  k
-
-  : k 1 2 3 end ; define-function
-  k add add .
-
-  << error >>
-  : k no end ; define-function
-  #+end_src
-* test with-title
-  #+begin_src cicada-nymph
-  : <test-title> test-name
-    << -- >>
-    "TEST" .s .l
-    end
-  ; define-function
-
-  : test,syntax,<title>,make-jojo
-    << -- >>
-    <test-title> test-name
-    end
-  ; define-function
-
-  test,syntax,<title>,make-jojo
-
-  << error >>
-  : <test-title> test-name,testing-undefine
-    << -- >>
-    testing-undefine
-    "TEST" .s .l
-    end
-  ; define-function
-
-  : test,syntax,<title>,make-jojo,testing-undefine
-    << -- >>
-    <test-title> test-name,testing-undefine
-    end
-  ; define-function
-
-  test,syntax,<title>,make-jojo,testing-undefine
-  #+end_src
-* *rule-set,make-jojo* : <title>
-** note
-   * <title> in *rule-set,make-jojo*
-     <title> name
-     save a jo into *jojo-area*
-   * <title> in *rule-set,basic-REPL*
-     <title> name
-     execute a jo
 ** syntax,<title>,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,<title>,make-jojo
@@ -1877,7 +1746,7 @@
      << -- >>
      "TEST" .s .l
      end
-   ; define-function,with-title
+   ; define-function
 
    : test,syntax,<title>,make-jojo
      << -- >>
@@ -1893,7 +1762,7 @@
      testing-undefine
      "TEST" .s .l
      end
-   ; define-function,with-title
+   ; define-function
 
    : test,syntax,<title>,make-jojo,testing-undefine
      << -- >>
@@ -1903,15 +1772,184 @@
 
    test,syntax,<title>,make-jojo,testing-undefine
    #+end_src
-* *rule-set,make-jojo* : name
-** word:name?
+* *rule-set,make-jojo* : un-named function
+** string,find-word
    #+begin_src cicada-nymph :tangle core.cn
-   : word:name?
+   : string,find-word
+     << string[address, length], word[address, length]
+        -- sub-string[address, length], true
+        -- false >>
+     xx|over|xx space-string? if
+       drop2 drop2
+       false
+       end
+     then
+     xx|over|xx string-head,word
+     xx|over|xx string-equal? if
+       drop2
+       true
+       end
+     then
+     xx|swap|xx string-tail,word
+     xx|swap|xx
+     loop
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "111 222 333" "222" string,find-word if
+     string-head,word .s
+   then
+
+   "111 222 333" "444" string,find-word if
+     string-head,word .s
+   then
+
+   "111 222 [] 333" "[" string,find-word if
+     string-head,word .s
+   then
+   #+end_src
+** note side-effect
+   * side-effect on function [un-named or named] is actually not so needed
+     for function is mainly used to encode algorithm
+   * but side-effect on function is always possible when needed
+** note scope of named-local-variable
+   * in named function or un-named function
+     the scope of named-local-variable is linear
+** word:square-bar?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-bar?
      << word[address, length] -- bool >>
-     "name" string-equal?
+     "[" string-equal?
      end
    ; define-function
    #+end_src
+** word:square-ket?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-ket?
+     << word[address, length] -- bool >>
+     "]" string-equal?
+     end
+   ; define-function
+   #+end_src
+** note memory usage
+   * for the array can be nested
+     we must allocate the memory in place
+     a branch is there helping us to achieve this
+   * [dup drop end]
+     |-------------------|
+     | branch            |
+     | offset to jo      |
+     |-------------------|
+     | <jo-head>         |
+     |-------------------|
+     | dup               |
+     | drop              |
+     | end               |
+     |-------------------|
+     | literal           |
+     | address of the jo |
+     |-------------------|
+** syntax,square-bar,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : syntax,square-bar,make-jojo
+     << jo, string[address, length], word:square-bar --
+        jo, string[address, length] >>
+     drop2
+     >::string
+
+     jo instruction,branch
+       jojo-area,stay
+     *jojo-area,current-free-address* >:address,offset
+     0 jojo-area,stay
+
+     "" *explainer,function* 0
+     make-jo-head >:jo
+
+     ::string "]" string,find-word if
+     else
+       end
+     then
+     ::string swap drop over sub >:length
+     >::string,found
+     ::string drop :length >::body
+
+     :jo ::body make-jojo
+
+     *jojo-area,current-free-address*
+     :address,offset sub
+     *jo-size* div
+     :address,offset save
+
+     jo instruction,literal
+       jojo-area,stay
+     :jo
+       jojo-area,stay
+
+     ::string,found string-tail,word
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     jo word:square-bar?
+     jo syntax,square-bar,make-jojo
+     *rule-set,make-jojo* add-rule
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test [by factorial]
+   #+begin_src cicada-nymph
+   : test,un-named-function
+     << -- >>
+     [1 2 3 . . . "here here" .s .l end]
+     end
+   ; define-function
+   test,un-named-function apply
+
+   : factorial
+     << number -- number >>
+     [dup
+      one? if
+        end
+      then
+      dup sub1 recur
+      mul
+      end] apply
+     end
+   ; define-function
+
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+   factorial,test
+   #+end_src
+* *rule-set,make-jojo* : name
 ** syntax,name,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,name,make-jojo
@@ -1932,7 +1970,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
      << -- >>
-     jo word:name?
+     ["name" string-equal? end]
      jo syntax,name,make-jojo
      *rule-set,make-jojo* add-rule
      end
@@ -1967,7 +2005,7 @@
     ::alias *link* :jo
     make-link >:link
 
-    :link save-to *link*
+    :link address *link* save
 
     :link name-hash-table,save-jo,by-link
     end
@@ -1984,201 +2022,9 @@
     end
   ; define-function
   test,alias
-  #+end_src
-* -----------------------------------
-* 記 根局部變元有關的語法擴展
-  * joy 中的匿名謂詞
-    在作用於棧中的值的時候
-    不必複製它所作用的值
-  * 而 cicada-nymph 必須以明顯的方式複製棧中的值
-    如果每一組函數對棧中的值的消耗都能夠被編譯器計算出來
-    那麼就可以省略這些明顯的複製了
-    這些是可能實現的
-    只要把註釋信息設計成 良好的 可以被自動處理的 格式 就可以了
-  * 然而
-    在沒有對棧的註釋的自動推演的情況下
-    我也可以通過設計特殊的語法來實現比較好的效果
-  * a macro to pickup values from stack by index
-    index starts from 0
-    #+begin_src cicada-nymph
-    :0 :1 :2 :3
-    ::0 ::1
 
-    :0 as dup
-    ::0 as dup2
-    #+end_src
-  * a macro to pickup values from stack by name
-    #+begin_src cicada-nymph
-    << string[address, length], counter -- >>
-
-    << do not eat >>
-    :2 :1 >::string :0 >:counter
-    ::2 >::string :0 >:counter
-    =>[::string :counter]
-
-    << eat >>
-    >:counter >::string
-    >[::string :counter]
-    #+end_src
-  * by the above example
-    we know that
-    we also need
-    #+begin_src cicada-nymph
-    =>::name
-    #+end_src
-    to replace
-    #+begin_src cicada-nymph
-    dup2 >::name
-    #+end_src
-* 記 結構化數據的初始化語法
-  * [ ] 是 匿名的 jo 這種結構化數據的初始化語法
-    然而
-    別的結構化的數據應該如何呢 ?
-  * 比如 path: directory-name file-name ;
-    是一種用來初始化 特殊的[代表 path 的]字符串的語法
-  * 需要類似的語法的地方還有
-    1. vector of name
-    2. vector of string
-    注意這裏的 vector 都是類型良好的
-    必須是這樣
-    因爲我根本沒有對類型編碼
-  * 對於上面所欠缺的兩種語法
-    我可以很容易想出很多設計方式
-    但是要知道
-    語法是可以靈活轉換的
-    所以可以先實現幾個語法試試效果
-* 記 局部變元代入嵌套的無名函數
-  * 局部變元代入嵌套的無名函數 是可以實現的
-    可以實現特殊的標記語法來支持這個特性
-    並且
-    當些無名函數需要被做爲返回值返回時
-    去返回無名函數的複製
-    而不返回在大函數體內的無名函數本身 就行了
-    此時的複製有兩種
-    1. 複製到圈狀內存中
-       此時所返回的值必須在短時間內被用掉
-    2. 複製到靜態內存中
-       這樣就提供了一種生成函數的方式了
-* -----------------------------------
-* note data-structure
-  * a data-structure is a pattern of bit [thus byte [thus jo]] in memory
-  * a data-structure is referenced by is address in memory
-  * what a low level programming language should provide
-    is a flexible way [a mechanism]
-    to manage the interfaces of all kinds of data-structures
-    including
-    1. define
-    2. allocate & init
-    3. fetch & save
-    4. equal & copy
-    and other operating functions
-  * that is to say
-    the interface of a data-structure is a set of functions
-    what should be managed are
-    1. how to define these functions
-       maybe to generate these functions group by group
-    2. how to apply these functions on their arguments
-       i.e. to call these functions
-  * the mechanism implemented here is very flexible
-    thus
-    it usage is not limited to help to form the concept about data-structure
-* 記 數據結構總結
-** <jo>
-   apply
-   size {*jo-size*}
-   ->name
-   ->link
-   ->pre-jo
-   ->type
-   {primitive-function-jo?}
-   {function-jo?}
-   {exception-jo?}
-   {variable-jo?}
-** <string-area>
-   size
-   stay
-** <link>
-   last-jo?
-   list-by-jo-predicate
-   report
-   find-jo
-** <buffer>
-   {compare-buffer}
-   {cursor->next-matching-byte}
-** <string>
-   write {write-string}
-   pretty-write {pretty-write-string}
-   empty? {empty-string?}
-   equal? {string-equal?}
-   tail,byte {string-tail,byte}
-   head,byte {string-head,byte}
-   ->buffer!
-   reverse! {string-reverse!}
-   {char-string?}
-   {zero-string?}
-   {digit-string?}
-   {integer-string?}
-   {digit-string->number}
-   ->integer
-   find-char
-   {space-string?}
-   tail,word {string-tail,word}
-   head,word {string-head,word}
-** <word>
-   {read-word->buffer}
-   {read-word}
-   {read-word-for-REPL}
-   eval
-** <jojo-area>
-   size {*jojo-area,size*}
-   current-free-address {*jojo-area,current-free-address*}
-   stay
-** <jojo>
-   execute
-** <syntax-stack>
-   push pop
-   tos drop
-   empty?
-   find-syntax
-** <rule-set>
-   fetch-border save-border
-   add-rule sub-rule
-   find-rule
-   list-rule
-** <local-jo>
-   local-data-allocate,jo
-   n-fetch,local-jo
-   n-save,local-jo
-** <local-variable-table>
-   clear
-   insert
-   find
-** <local-byte>
-   allocate-local-memory
-** <name-hash-table>
-   size unit couter
-   hash search insert report
-   find-jo
-** <name>
-   ->address
-   used?
-   used-as-title?
-   used-as-jo?
-   fetch-string
-   fetch-title-index
-   fetch-orbit-length
-   fetch-jo
-   save-string
-   save-title-index
-   save-orbit-length
-   save-orbiton
-   save-jo
-   no-collision
-** <title>
-   find-jo
-* >< data-structure
-  #+begin_src cicada-nymph :tangle core.cn
-
+  << error >>
+  "ab" "ad" alias
   #+end_src
 * -----------------------------------
 * number with base
@@ -2273,18 +2119,22 @@
    #+begin_src cicada-nymph :tangle core.cn
    : latin-char?
      << char -- bool >>
-     dup "A" string-head,byte less-than? false?branch 4
+     dup "A" string-head,byte less-than? if
        drop false
        end
-     dup "Z" string-head,byte less-or-equal? false?branch 4
+     then
+     dup "Z" string-head,byte less-or-equal? if
        drop true
        end
-     dup "a" string-head,byte less-than? false?branch 4
+     then
+     dup "a" string-head,byte less-than? if
        drop false
        end
-     dup "z" string-head,byte less-or-equal? false?branch 4
+     then
+     dup "z" string-head,byte less-or-equal? if
        drop true
        end
+     then
      drop false
      end
    ; define-function
@@ -3043,14 +2893,6 @@
      end
    ; define-function
    #+end_src
-** word:bye?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:bye?
-     << word[address, length] -- bool >>
-     "bye" string-equal?
-     end
-   ; define-function
-   #+end_src
 ** !bye,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : !bye,basic-REPL
@@ -3154,14 +2996,6 @@
    . .
    #+end_src
 * *rule-set,basic-REPL* : jo
-** word:jo?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:jo?
-     << word[address, length] -- bool >>
-     "jo" string-equal?
-     end
-   ; define-function
-   #+end_src
 ** syntax,jo,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : syntax,jo,basic-REPL
@@ -3180,9 +3014,18 @@
    #+begin_src cicada-nymph :tangle core.cn
    : init,rule-set,basic-REPL
      << -- >>
-     jo integer-string? jo string->integer       *rule-set,basic-REPL* add-rule
-     jo word:bye?       jo syntax,bye,basic-REPL *rule-set,basic-REPL* add-rule
-     jo word:jo?        jo syntax,jo,basic-REPL  *rule-set,basic-REPL* add-rule
+     jo integer-string?
+     jo string->integer
+     *rule-set,basic-REPL* add-rule
+
+     ["bye" string-equal? end]
+     jo syntax,bye,basic-REPL
+     *rule-set,basic-REPL* add-rule
+
+     ["jo" string-equal? end]
+     jo syntax,jo,basic-REPL
+     *rule-set,basic-REPL* add-rule
+
      jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
      end
    ; define-function
@@ -3316,7 +3159,7 @@
      *circular-string-area,size* *circular-string-area* add
      greater-or-equal? if
        *circular-string-area*
-       save-to *circular-string-area,current-free-address*
+       address *circular-string-area,current-free-address* save
      then
      tuck
      *circular-string-area,current-free-address*
@@ -3420,45 +3263,49 @@
 
    address kkk
    #+end_src
-* *rule-set,basic-REPL* : save-to
-** syntax,save-to,basic-REPL
+* *rule-set,basic-REPL* : <title>
+** note
+   * <title> in *rule-set,make-jojo*
+     <title> name
+     save a jo into *jojo-area*
+   * <title> in *rule-set,basic-REPL*
+     <title> name
+     execute a jo
+** syntax,<title>,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   : syntax,save-to,basic-REPL
-     << value, word:address -- address >>
-     drop2
-     read-word-for-REPL
-     >::word
-     ::word name-hash-table,find-jo if
-     else
-       "* (syntax,save-to,basic-REPL) meet undefined word : " .s ::word .s .l
-       "  the value " .s .i " is saved to no where" .s .l
+   : syntax,<title>,basic-REPL
+     << <title>[address, length] -- unknown >>
+     >::title
+     512 allocate-local-memory >:buffer
+     ::title :buffer string->buffer!
+     :buffer ::title swap drop >::title
+
+     read-word-for-REPL >::name
+     ::title ::name
+     name-hash-table,find-jo,with-title if
+       apply
        end
      then
-     >:jo
-     :jo variable-jo? if
-     else
-       "* (syntax,save-to,basic-REPL) meet a not variable-jo : " .s ::word .s .l
-       "  the value " .s .i " is saved to no where" .s .l
-       end
-     then
-     :jo *jo-size* add
-     save
+     "* (syntax,<title>,basic-REPL) meet undefined" .s .l
+     "  title : " .s ::title .s .l
+     "  name  : " .s ::name .s .l
      end
    ; define-function
    #+end_src
 ** add-rule to *rule-set,basic-REPL*
    #+begin_src cicada-nymph :tangle core.cn
-   jo word:save-to?
-   jo syntax,save-to,basic-REPL
+   jo <word>?
+   jo syntax,<title>,basic-REPL
    *rule-set,basic-REPL* add-rule
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   666
-   save-to *syntax,address,basic-REPL,stack-balancer*
-   *syntax,address,basic-REPL,stack-balancer*
-
-   1 save-to kkk
+   : <test-title> test-name
+     << -- >>
+     "TEST" .s .l
+     end
+   ; define-function
+   <test-title> test-name
    #+end_src
 * stack-REPL
 ** note
@@ -3542,7 +3389,7 @@
 * *lost-exception-REPL*
 ** reset *lost-exception-REPL*
    #+begin_src cicada-nymph :tangle core.cn
-   jo stack-REPL save-to *lost-exception-REPL*
+   jo stack-REPL address *lost-exception-REPL* save
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -3551,6 +3398,197 @@
    ; define-function
    function-with-lost-exception
    #+end_src
+* -----------------------------------
+* 記 根局部變元有關的語法擴展
+  * joy 中的匿名謂詞
+    在作用於棧中的值的時候
+    不必複製它所作用的值
+  * 而 cicada-nymph 必須以明顯的方式複製棧中的值
+    如果每一組函數對棧中的值的消耗都能夠被編譯器計算出來
+    那麼就可以省略這些明顯的複製了
+    這些是可能實現的
+    只要把註釋信息設計成 良好的 可以被自動處理的 格式 就可以了
+  * 然而
+    在沒有對棧的註釋的自動推演的情況下
+    我也可以通過設計特殊的語法來實現比較好的效果
+  * a macro to pickup values from stack by index
+    index starts from 0
+    #+begin_src cicada-nymph
+    :0 :1 :2 :3
+    ::0 ::1
+
+    :0 as dup
+    ::0 as dup2
+    #+end_src
+  * a macro to pickup values from stack by name
+    #+begin_src cicada-nymph
+    << string[address, length], counter -- >>
+
+    << do not eat >>
+    :2 :1 >::string :0 >:counter
+    ::2 >::string :0 >:counter
+    =>[::string :counter]
+
+    << eat >>
+    >:counter >::string
+    >[::string :counter]
+    #+end_src
+  * by the above example
+    we know that
+    we also need
+    #+begin_src cicada-nymph
+    =>::name
+    #+end_src
+    to replace
+    #+begin_src cicada-nymph
+    dup2 >::name
+    #+end_src
+* 記 結構化數據的初始化語法
+  * [ ] 是 匿名的 jo 這種結構化數據的初始化語法
+    然而
+    別的結構化的數據應該如何呢 ?
+  * 比如 path: directory-name file-name ;
+    是一種用來初始化 特殊的[代表 path 的]字符串的語法
+  * 需要類似的語法的地方還有
+    1. vector of name
+    2. vector of string
+    注意這裏的 vector 都是類型良好的
+    必須是這樣
+    因爲我根本沒有對類型編碼
+  * 對於上面所欠缺的兩種語法
+    我可以很容易想出很多設計方式
+    但是要知道
+    語法是可以靈活轉換的
+    所以可以先實現幾個語法試試效果
+* 記 局部變元代入嵌套的無名函數
+  * 局部變元代入嵌套的無名函數 是可以實現的
+    可以實現特殊的標記語法來支持這個特性
+    並且
+    當些無名函數需要被做爲返回值返回時
+    去返回無名函數的複製
+    而不返回在大函數體內的無名函數本身 就行了
+    此時的複製有兩種
+    1. 複製到圈狀內存中
+       此時所返回的值必須在短時間內被用掉
+    2. 複製到靜態內存中
+       這樣就提供了一種生成函數的方式了
+* -----------------------------------
+* note data-structure
+  * a data-structure is a pattern of bit [thus byte [thus jo]] in memory
+  * a data-structure is referenced by is address in memory
+  * what a low level programming language should provide
+    is a flexible way [a mechanism]
+    to manage the interfaces of all kinds of data-structures
+    including
+    1. define
+    2. allocate & init
+    3. fetch & save
+    4. equal & copy
+    and other operating functions
+  * that is to say
+    the interface of a data-structure is a set of functions
+    what should be managed are
+    1. how to define these functions
+       maybe to generate these functions group by group
+    2. how to apply these functions on their arguments
+       i.e. to call these functions
+  * the mechanism implemented here is very flexible
+    thus
+    it usage is not limited to help to form the concept about data-structure
+* 記 數據結構總結
+** <jo>
+   apply
+   size {*jo-size*}
+   ->name
+   ->link
+   ->pre-jo
+   ->type
+   {primitive-function-jo?}
+   {function-jo?}
+   {exception-jo?}
+   {variable-jo?}
+** <string-area>
+   size
+   stay
+** <link>
+   last-jo?
+   list-by-jo-predicate
+   report
+   find-jo
+** <buffer>
+   {compare-buffer}
+   {cursor->next-matching-byte}
+** <string>
+   write {write-string}
+   pretty-write {pretty-write-string}
+   empty? {empty-string?}
+   equal? {string-equal?}
+   tail,byte {string-tail,byte}
+   head,byte {string-head,byte}
+   ->buffer!
+   reverse! {string-reverse!}
+   {char-string?}
+   {zero-string?}
+   {digit-string?}
+   {integer-string?}
+   {digit-string->number}
+   ->integer
+   find-char
+   {space-string?}
+   tail,word {string-tail,word}
+   head,word {string-head,word}
+** <word>
+   {read-word->buffer}
+   {read-word}
+   {read-word-for-REPL}
+   eval
+** <jojo-area>
+   size {*jojo-area,size*}
+   current-free-address {*jojo-area,current-free-address*}
+   stay
+** <jojo>
+   execute
+** <syntax-stack>
+   push pop
+   tos drop
+   empty?
+   find-syntax
+** <rule-set>
+   fetch-border save-border
+   add-rule sub-rule
+   find-rule
+   list-rule
+** <local-jo>
+   local-data-allocate,jo
+   n-fetch,local-jo
+   n-save,local-jo
+** <local-variable-table>
+   clear
+   insert
+   find
+** <local-byte>
+   allocate-local-memory
+** <name-hash-table>
+   size unit couter
+   hash search insert report
+   find-jo
+** <name>
+   ->address
+   used?
+   used-as-title?
+   used-as-jo?
+   fetch-string
+   fetch-title-index
+   fetch-orbit-length
+   fetch-jo
+   save-string
+   save-title-index
+   save-orbit-length
+   save-orbiton
+   save-jo
+   no-collision
+** <title>
+   find-jo
 * -----------------------------------
 * test endianness of n-fetch & n-save
   * big-endian is used
@@ -3762,8 +3800,19 @@
    : define-variable
      << string[address, length] -- >>
      >::string
-     ::string string-head,word >::name
-     ::string string-tail,word >::body
+
+     ::string string-head,word >::title
+     ::string string-tail,word string-head,word >::name
+     ::string string-tail,word string-tail,word >::body
+
+     ::title " " ::name
+     512 allocate-local-memory dup >:buffer
+     3 n-string->buffer! >:len
+     :buffer :len >::name
+     ::title <word>? not if
+       ::title >::name
+       ::string string-tail,word >::body
+     then
 
      snapshot-the-stack-pointer
      *the-stack-pointer-snapshot* >:old-snapshot
@@ -3807,7 +3856,7 @@
      ::name *link* 0
      make-link >:link
 
-     :link save-to *link*
+     :link address *link* save
 
      ::name *explainer,variable* 0
      make-jo-head >:jo
@@ -3842,6 +3891,16 @@
    ; define-variable
    *string:define-variable* .s << define-variable >>
 
+   : <test-title> *numbers:define-variable*
+     1 2 3
+   ; define-variable
+   <test-title> *numbers:define-variable* . . . << 3 2 1 >>
+
+   : <test-title> *string:define-variable*
+     "define-variable"
+   ; define-variable
+   <test-title> *string:define-variable* .s << define-variable >>
+
    << error >>
    : kkk
      1 . 2 . 3 .
@@ -3852,151 +3911,6 @@
    : kkk
      . . .
    ; define-variable
-   #+end_src
-* -----------------------------------
-* un-named function
-** note side-effect
-   * side-effect on function [un-named or named] is actually not so needed
-     for function is mainly used to encode algorithm
-   * but side-effect on function is always possible when needed
-** note scope of named-local-variable
-   * in named function or un-named function
-     the scope of named-local-variable is linear
-** word:square-bar?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:square-bar?
-     << word[address, length] -- bool >>
-     "[" string-equal?
-     end
-   ; define-function
-   #+end_src
-** word:square-ket?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:square-ket?
-     << word[address, length] -- bool >>
-     "]" string-equal?
-     end
-   ; define-function
-   #+end_src
-** note memory usage
-   * for the array can be nested
-     we must allocate the memory in place
-     a branch is there helping us to achieve this
-   * [dup drop end]
-     |-------------------|
-     | branch            |
-     | offset to jo      |
-     |-------------------|
-     | <jo-head>         |
-     |-------------------|
-     | dup               |
-     | drop              |
-     | end               |
-     |-------------------|
-     | literal           |
-     | address of the jo |
-     |-------------------|
-** syntax,square-bar,make-jojo
-   #+begin_src cicada-nymph :tangle core.cn
-   : syntax,square-bar,make-jojo
-     << jo, string[address, length], word:square-bar --
-        jo, string[address, length] >>
-     drop2
-     >::string
-
-     jo instruction,branch
-       jojo-area,stay
-     *jojo-area,current-free-address* >:address,offset
-     0 jojo-area,stay
-
-     "" *explainer,function* 0
-     make-jo-head >:jo
-
-     ::string "]" string,find-word if
-     else
-       end
-     then
-     ::string swap drop over sub >:length
-     >::string,found
-     ::string drop :length >::body
-
-        ::body .s .l
-        ::string,found .s .l
-
-     :jo ::body make-jojo
-
-     *jojo-area,current-free-address*
-     :address,offset sub
-
-        dup .i .l
-
-     *jo-size* div
-
-        dup .i .l
-
-     :address,offset save
-
-     jo instruction,literal
-       jojo-area,stay
-     :jo
-       jojo-area,stay
-
-     ::string,found string-tail,word
-     end
-   ; define-function
-   #+end_src
-** add-rule to *rule-set,basic-REPL*
-   #+begin_src cicada-nymph :tangle core.cn
-   jo word:square-bar?
-   jo syntax,square-bar,make-jojo
-   *rule-set,make-jojo* add-rule
-   #+end_src
-** test [by factorial]
-   #+begin_src cicada-nymph
-   : test,un-named-function
-     << -- >>
-     [1 2 3 . . . "here here" .s .l end]
-     end
-   ; define-function
-   test,un-named-function apply
-
-   : factorial
-     << number -- number >>
-     [dup
-      one? if
-        end
-      then
-      dup sub1 recur
-      mul
-      end] apply
-     end
-   ; define-function
-
-   : factorial,test
-     .l
-     1 factorial . .l
-     2 factorial . .l
-     3 factorial . .l
-     4 factorial . .l
-     5 factorial . .l
-     6 factorial . .l
-     7 factorial . .l
-     8 factorial . .l
-     9 factorial . .l
-     10 factorial . .l
-     11 factorial . .l
-     12 factorial . .l
-     13 factorial . .l
-     14 factorial . .l
-     15 factorial . .l
-     16 factorial . .l
-     17 factorial . .l
-     18 factorial . .l
-     19 factorial . .l
-     20 factorial . .l
-     end
-   ; define-function
-   factorial,test
    #+end_src
 * -----------------------------------
 * constant for linux                  :linux:
@@ -4103,10 +4017,10 @@
    #+end_src
 * -----------------------------------
 * link
-** link,list-by-jo-predicate
+** list-by-jo-predicate
    * 最後寫到珠典裏的 被最先打印出來
    #+begin_src cicada-nymph :tangle core.cn
-   : link,list-by-jo-predicate,loop
+   : <link> list-by-jo-predicate,loop
      << jo-predicate, counter, link -- >>
      dup zero? if
        drop
@@ -4134,42 +4048,42 @@
      loop
    ; define-function
 
-   : link,list-by-jo-predicate
+   : <link> list-by-jo-predicate
      << link, jo-predicate -- >>
      swap
      0
      swap
-     link,list-by-jo-predicate,loop
+     <link> list-by-jo-predicate,loop
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,link,list-by-jo-predicate
+   : test
      << -- >>
      *link*
      jo primitive-function-jo?
-     link,list-by-jo-predicate
+     <link> list-by-jo-predicate
      end
    ; define-function
-   test,link,list-by-jo-predicate
+   test
    #+end_src
 * -----------------------------------
-* port
-** note syscall with string arguments
+* note port
+** syscall with string arguments
    * for syscall the arguments in stack look like
      << ..., arg3, arg2, arg1 >>
      so
      for read(port, buffer, size)
      we need
      << size, buffer, port >>
-     but the interface (port,read) in cicada-nymph is
+     but the interface (<port> read) in cicada-nymph is
      << buffer, size, port >>
      thus we need a swap here
      and
      we should be careful
      for other interface functions in cicada-nymph
-** note linux header
+** linux header
    * 8 base number :
      O_ACCMODE          0003
      O_RDONLY             00
@@ -4194,7 +4108,7 @@
      O_PATH        010000000
      O_DSYNC          010000
      O_TMPFILE     020200000
-** 記 關於輸入輸出
+** 關於輸入輸出
    * 接口設計分兩個層次
      1. 底層的以 port 爲基礎的接口
         這裏應該如何設計還不確定
@@ -4203,9 +4117,20 @@
         這裏將抽象掉 port 這個概念
         也就是每次簡單的讀寫都伴隨兩個對 port 的操作
         這樣接口就很簡單 但是速度可能會非常慢
-** input-port,open
+** interface
+   * open to read
+   * create and update to write
+     |--------+-----------------------|
+     | create | fail if already exist |
+     | update | fail if nor exist     |
+     |--------+-----------------------|
+   * one should always know if a file exist or not
+     when open it as output-port
+     predicates are provided to help you to do so
+* port
+** open
    #+begin_src cicada-nymph :tangle core.cn
-   : input-port,open
+   : <port> open
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -4226,17 +4151,9 @@
      end
    ; define-function
    #+end_src
-** output-port,[creat|update]
-   * interface
-     |--------+-----------------------|
-     | creat  | fail if already exist |
-     | update | fail if nor exist     |
-     |--------+-----------------------|
-   * one should always know if a file exist or not
-     when open it as output-port
-     predicates are provided to help you to do so
+** create
    #+begin_src cicada-nymph :tangle core.cn
-   : output-port,creat
+   : <port> create
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -4261,8 +4178,10 @@
      true
      end
    ; define-function
-
-   : output-port,update
+   #+end_src
+** update
+   #+begin_src cicada-nymph :tangle core.cn
+   : <port> update
      << path[address, length]
         -- port, true
         -- error-code, false >>
@@ -4287,9 +4206,9 @@
      end
    ; define-function
    #+end_src
-** port,close
+** close
    #+begin_src cicada-nymph :tangle core.cn
-   : port,close
+   : <port> close
      << port
         -- true
         -- error-code, false >>
@@ -4306,29 +4225,29 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,output-port,creat
+   : test
      << -- >>
-     "kkk~" output-port,creat if
-       port,close if
+     "kkk~" <port> create if
+       <port> close if
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,output-port,creat
+   test
 
-   : test,output-port,update
+   : test
      << -- >>
-     "kkk~" output-port,update if
-       port,close if
+     "kkk~" <port> update if
+       <port> close if
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,output-port,update
+   test
    #+end_src
-** port,read
+** read
    #+begin_src cicada-nymph :tangle core.cn
-   : port,read
+   : <port> read
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -4346,9 +4265,9 @@
      end
    ; define-function
    #+end_src
-** port,write
+** write
    #+begin_src cicada-nymph :tangle core.cn
-   : port,write
+   : <port> write
      << buffer, max-size, port
         -- counter, true
         -- error-code, false >>
@@ -4368,21 +4287,21 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,port,read
+   : test
      << -- >>
      64 allocate-local-memory
      dup
-     "kkk~" input-port,open if
-       64 swap port,read if
+     "kkk~" <port> open if
+       64 swap <port> read if
          .s .l
          end
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test,port,read
+   test
    #+end_src
-* file-tree
-** note interface
+* note file-tree
+** interface
    * file-tree
      two types of nodes
      1. file
@@ -4397,28 +4316,26 @@
        completely removed from the interface
      --------------------------------
      * file
-       1. file,creat
-       2. file,write
-       3. file,read
-       4. file,remove
-     * link
-       1. directory,creat
-       2. directory,remove
-       3. empty-directory?
-     * list
-       1. directory,list-file
-       2. directory,list-directory
-     * find
-       1. directory,find-file
-       2. directory,find-directory
-** 記 錯誤處理
+       1. create
+       2. write
+       3. read
+       4. remove
+     * directory
+       1. create
+       2. remove
+       3. empty?
+       4. list-file
+       5. list-directory
+       6. find-file
+       7. find-directory
+** 錯誤處理
    * 兩種風格
      IO 相關的函數在出錯時
      1. 立即報錯
      2. 返回出錯信息
    * 第一種很簡單
      它假設了所有的錯誤都是不可忽略的
-** 記 元數據
+** 元數據
    * 訪問管理
      1. 誰有權訪問這個文件
      2. 他的權利是什麼
@@ -4427,9 +4344,10 @@
    * 文件大小
    * 文件使用註釋
      [linux 沒有]
-** file,creat
+* file
+** create
    #+begin_src cicada-nymph :tangle core.cn
-   : file,creat
+   : <file> create
      << path[address, length] -- >>
      >::path
      ::path
@@ -4448,23 +4366,23 @@
      3 syscall
      dup
      negative? if
-       "* (file,creat) fail to open port for the following path :" .s .l
+       "* (<file> create) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
-     port,close if
+     <port> close if
        end
      then
-     "* (file,creat) fail to close port for the following path :" .s .l
+     "* (<file> create) fail to close port for the following path :" .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
-** file,write
+** write
    #+begin_src cicada-nymph :tangle core.cn
-   : file,write
+   : <file> write
      << string[address, length], path[address, length] -- >>
      >::path
      >::string
@@ -4483,7 +4401,7 @@
      3 syscall
      dup
      negative? if
-       "* (file,write) fail to open port for the following path :" .s .l
+       "* (<file> write) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -4495,25 +4413,25 @@
      3 syscall
      dup
      negative? if
-       "* (file,write) fail to write port for the following path :" .s .l
+       "* (<file> write) fail to write port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
      then
      >:counter << bytes been written >>
      :port
-     port,close if
+     <port> close if
        end
      then
-     "* (file,write) fail to close port for the following path : " .s .l
+     "* (<file> write) fail to close port for the following path : " .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
    #+end_src
-** file,read
+** read
    #+begin_src cicada-nymph :tangle core.cn
-   : file,read
+   : <file> read
      << string[address, max-length], path[address, length] -- counter >>
      >::path
      >::string
@@ -4528,7 +4446,7 @@
      2 syscall
      dup
      negative? if
-       "* (file,read) fail to open port for the following path :" .s .l
+       "* (<file> read) fail to open port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        0
@@ -4541,7 +4459,7 @@
      3 syscall
      dup
      negative? if
-       "* (file,read) fail to read port for the following path :" .s .l
+       "* (<file> read) fail to read port for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        0
@@ -4549,20 +4467,20 @@
      then
      >:counter << bytes been readed >>
      :port
-     port,close if
+     <port> close if
        :counter
        end
      then
-     "* (file,read) fail to close port for the following path : " .s .l
+     "* (<file> read) fail to close port for the following path : " .s .l
      "  " .s ::path .s .l
      "  " .s error-code->string .s .l
      0
      end
    ; define-function
    #+end_src
-** file,remove
+** remove
    #+begin_src cicada-nymph :tangle core.cn
-   : file,remove
+   : <file> remove
      << path[address, length] -- >>
      >::path
      ::path
@@ -4573,7 +4491,7 @@
      1 syscall
      dup
      negative? if
-       "* (file,remove) fail for the following path :" .s .l
+       "* (<file> remove) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -4584,42 +4502,43 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,file,creat
+   : test
      << -- >>
-     "kkk~" file,creat
-     "core" file,creat
+     "kkk~" <file> create
+     "core" <file> create
      end
    ; define-function
-   test,file,creat
+   test
 
-   : test,file,write
+   : test
      << -- >>
-     "kkk~" file,creat
-     "kkk took my baby away !!!" "kkk~" file,write
+     "kkk~" <file> create
+     "kkk took my baby away !!!" "kkk~" <file> write
      end
    ; define-function
-   test,file,write
+   test
 
-   : test,file,read
+   : test
      << -- >>
      "............................" >::string
-     ::string "kkk~" file,read .i .l
+     ::string "kkk~" <file> read .i .l
      ::string .s
      end
    ; define-function
-   test,file,read
+   test
 
-   : test,file,remove
+   : test
      << -- >>
-     "kkk~" file,remove
-     "play" file,remove
+     "kkk~" <file> remove
+     "play" <file> remove
      end
    ; define-function
-   test,file,remove
+   test
    #+end_src
-** directory,creat
+* directory
+** create
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,creat
+   : <directory> create
      << path[address, length] -- >>
      >::path
      ::path
@@ -4633,7 +4552,7 @@
      2 syscall
      dup
      negative? if
-       "* (directory,creat) fail for the following path :" .s .l
+       "* (<directory> create) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -4642,9 +4561,9 @@
      end
    ; define-function
    #+end_src
-** directory,remove
+** remove
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,remove
+   : <directory> remove
      << path[address, length] -- >>
      >::path
      ::path
@@ -4655,7 +4574,7 @@
      1 syscall
      dup
      negative? if
-       "* (directory,remove) fail for the following path :" .s .l
+       "* (<directory> remove) fail for the following path :" .s .l
        "  " .s ::path .s .l
        "  " .s error-code->string .s .l
        end
@@ -4666,19 +4585,8 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,directory,creat
-     << -- >>
-     "play" directory,creat
-     end
-   ; define-function
-   test,directory,creat
-
-   : test,directory,remove
-     << -- >>
-     "play" directory,remove
-     end
-   ; define-function
-   test,directory,remove
+   "play" <directory> create
+   "play" <directory> remove
    #+end_src
 ** getdents64 structure
    #+begin_src cicada-nymph :tangle core.cn
@@ -4692,21 +4600,21 @@
    : init,getdents64
      << offset -- >>
      *jo-size* 4 equal? if
-       dup save-to +getdents64,d_ino+        8 add
-       dup save-to +getdents64,d_off+        8 add
-       dup save-to +getdents64,d_reclen+     2 add
-       dup save-to +getdents64,d_type+       1 add
-       dup save-to +getdents64,d_name+       256 add
-           save-to +getdents64,end+
+       dup address +getdents64,d_ino+    save    8 add
+       dup address +getdents64,d_off+    save    8 add
+       dup address +getdents64,d_reclen+ save    2 add
+       dup address +getdents64,d_type+   save    1 add
+       dup address +getdents64,d_name+   save    256 add
+           address +getdents64,end+      save
        end
      then
      *jo-size* 8 equal? if
-       dup save-to +getdents64,d_ino+        8 add
-       dup save-to +getdents64,d_off+        8 add
-       dup save-to +getdents64,d_reclen+     2 add
-       dup save-to +getdents64,d_type+       1 add
-       dup save-to +getdents64,d_name+       256 add
-           save-to +getdents64,end+
+       dup address +getdents64,d_ino+    save    8 add
+       dup address +getdents64,d_off+    save    8 add
+       dup address +getdents64,d_reclen+ save    2 add
+       dup address +getdents64,d_type+   save    1 add
+       dup address +getdents64,d_name+   save    256 add
+           address +getdents64,end+      save
        end
      then
      end
@@ -4776,7 +4684,7 @@
    : test,getdents64
      << path[address, length] -- >>
      >::path
-     ::path input-port,open if
+     ::path <port> open if
      else
        "* (test,getdents64) fail to open : " .s ::path .s .l
        "  " .s error-code->string .s .l
@@ -4784,7 +4692,7 @@
      then
      >:port
      :port test,getdents64,loop
-     :port port,close if
+     :port <port> close if
        end
      then
      "* (test,getdents64) fail to close : " .s ::path .s .l
@@ -4797,14 +4705,14 @@
    "." test,getdents64
    "/" test,getdents64
    #+end_src
-** empty-directory?
+** empty?
    #+begin_src cicada-nymph :tangle core.cn
-   : empty-directory?
+   : <directory> empty?
      << path[address, length] -- bool >>
      >::path
-     ::path input-port,open if
+     ::path <port> open if
      else
-       "* (empty-directory?) fail to open : " .s ::path .s .l
+       "* (<directory> empty?) fail to open : " .s ::path .s .l
        "  " .s error-code->string .s .l
        false
        end
@@ -4817,10 +4725,10 @@
      :syscall-number,getdents64:
      3 syscall
      48 equal? << this call to equal? returns the needed bool >>
-     :port port,close if
+     :port <port> close if
        end
      then
-     "* (empty-directory?) fail to close : " .s ::path .s .l
+     "* (<directory> empty?) fail to close : " .s ::path .s .l
      "  " .s error-code->string .s .l
      false
      end
@@ -4828,15 +4736,15 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "play" empty-directory? . .l
-   "play/kkk" empty-directory? . .l
-   "play/aaa" empty-directory? . .l
-   "." empty-directory? . .l
-   "/" empty-directory? . .l
+   "play" <directory> empty? . .l
+   "play/kkk" <directory> empty? . .l
+   "play/aaa" <directory> empty? . .l
+   "." <directory> empty? . .l
+   "/" <directory> empty? . .l
    #+end_src
-** directory,map
+** map
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,map,loop,execute
+   : <directory> map,loop,execute
      << end, cursor, function -- >>
      >:function
      dup2 less-or-equal? if
@@ -4853,7 +4761,7 @@
      loop
    ; define-function
 
-   : directory,map,loop
+   : <directory> map,loop
      << port, function -- >>
      >:function
      >:port
@@ -4864,7 +4772,7 @@
      :syscall-number,getdents64:
      3 syscall
      dup negative? if
-       "* (directory,map,loop) syscall fail" .s .l
+       "* (<directory> map,loop) syscall fail" .s .l
        "  " .s error-code->string .s .l
        end
      then
@@ -4875,31 +4783,31 @@
      :getdents64-structure-list add
      :getdents64-structure-list
      :function
-     directory,map,loop,execute
+     <directory> map,loop,execute
      :port
      :function
      loop
    ; define-function
 
-   : directory,map
+   : <directory> map
      << directory-path[address, length],
         function
         -- true
         -- false >>
      >:function
      >::directory-path
-     ::directory-path input-port,open if
+     ::directory-path <port> open if
      else
-       "* (directory,map) fail to open : " .s ::directory-path .s .l
+       "* (<directory> map) fail to open : " .s ::directory-path .s .l
        "  " .s error-code->string .s .l
        end
      then
      >:port
-     :port :function directory,map,loop
-     :port port,close if
+     :port :function <directory> map,loop
+     :port <port> close if
        end
      then
-     "* (directory,map) fail to close : " .s ::directory-path .s .l
+     "* (<directory> map) fail to close : " .s ::directory-path .s .l
      "  " .s error-code->string .s .l
      end
    ; define-function
@@ -4920,202 +4828,181 @@
      end
    ; define-function
 
-   : test,directory,map
-     << -- >>
-     "play" jo test,function directory,map
-     end
-   ; define-function
-   test,directory,map
+   "play" jo test,function <directory> map
    #+end_src
-** directory,list-file
+** list-file
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,list-file,lister
-     << -- >>
-     +getdents64,d_type+ fetch-byte
-     8 equal? if
-       "  " .s
-       +getdents64,d_name+
-       dup 256
-       0 string,find-char
-       drop  << drop 0 >>
-       over sub .s .l
-     then
-     end
-   ; define-function
-
-   : directory,list-file
+   : <directory> list-file
      << directory-path[address, length] -- >>
-     jo directory,list-file,lister
-     directory,map
+     [ << -- >>
+       +getdents64,d_type+ fetch-byte
+       8 equal? if
+         "  " .s
+         +getdents64,d_name+
+         dup 256
+         0 string,find-char
+         drop  << drop 0 >>
+         over sub .s .l
+       then
+       end ]
+     <directory> map
      end
    ; define-function
    #+end_src
-** directory,list-directory
+** list-directory
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,list-directory,lister
-     << -- >>
-     +getdents64,d_type+ fetch-byte
-     4 equal? if
-       +getdents64,d_name+
-       dup 256
-       0 string,find-char
-       drop  << drop 0 >>
-       over sub >::name
-       ".." ::name string-equal? if
-         end
-       then
-       "." ::name string-equal? if
-         end
-       then
-       "  " .s ::name .s .l
-       end
-     then
-     end
-   ; define-function
-
-   : directory,list-directory
+   : <directory> list-directory
      << directory-path[address, length] -- >>
-     jo directory,list-directory,lister
-     directory,map
+     [ << -- >>
+       +getdents64,d_type+ fetch-byte
+       4 equal? if
+         +getdents64,d_name+
+         dup 256
+         0 string,find-char
+         drop  << drop 0 >>
+         over sub >::name
+         ".." ::name string-equal? if
+           end
+         then
+         "." ::name string-equal? if
+           end
+         then
+         "  " .s ::name .s .l
+         end
+       then
+       end ]
+     <directory> map
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
    "play" dup2
-   directory,list-file
-   directory,list-directory
+   <directory> list-file
+   <directory> list-directory
 
    "play/kkk" dup2
-   directory,list-file
-   directory,list-directory
+   <directory> list-file
+   <directory> list-directory
 
    "." dup2
-   directory,list-file
-   directory,list-directory
+   <directory> list-file
+   <directory> list-directory
 
    "/" dup2
-   directory,list-file
-   directory,list-directory
+   <directory> list-file
+   <directory> list-directory
    #+end_src
-** directory,find-file
+** find-file
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,find-file,finder
-     << file-name[address, length], bool --
-        file-name[address, length], bool >>
-     +getdents64,d_type+ fetch-byte 8 equal? not if
-       end
-     then
-     >:bool
-     >:file-name,lenght
-     >:file-name,address
-     :file-name,lenght +getdents64,d_name+ add
-     fetch-byte zero? not if
-       :file-name,address
-       :file-name,lenght
-       :bool
-       end
-     then
-     :file-name,address :file-name,lenght
-     +getdents64,d_name+ :file-name,lenght
-     string-equal? if
-       :file-name,address
-       :file-name,lenght
-       true
-       end
-     then
-     :file-name,address
-     :file-name,lenght
-     :bool
-     end
-   ; define-function
-
-   : directory,find-file
+   : <directory> find-file
      << directory-path[address, length], file-name[address, length] -- bool >>
      xx|swap|xx
      false
      xx|swap|x
-     jo directory,find-file,finder
-     directory,map
+     [ << file-name[address, length], bool --
+          file-name[address, length], bool >>
+       +getdents64,d_type+ fetch-byte 8 equal? not if
+         end
+       then
+       >:bool
+       >:file-name,lenght
+       >:file-name,address
+       :file-name,lenght +getdents64,d_name+ add
+       fetch-byte zero? not if
+         :file-name,address
+         :file-name,lenght
+         :bool
+         end
+       then
+       :file-name,address :file-name,lenght
+       +getdents64,d_name+ :file-name,lenght
+       string-equal? if
+         :file-name,address
+         :file-name,lenght
+         true
+         end
+       then
+       :file-name,address
+       :file-name,lenght
+       :bool
+       end ]
+     <directory> map
      xx|swap|x drop2
      end
    ; define-function
    #+end_src
-** directory,find-directory
+** find-directory
    #+begin_src cicada-nymph :tangle core.cn
-   : directory,find-directory,finder
-     << file-name[address, length], bool --
-        file-name[address, length], bool >>
-     +getdents64,d_type+ fetch-byte 4 equal? not if
-       end
-     then
-     >:bool
-     >:file-name,lenght
-     >:file-name,address
-     :file-name,lenght +getdents64,d_name+ add
-     fetch-byte zero? not if
-       :file-name,address
-       :file-name,lenght
-       :bool
-       end
-     then
-     :file-name,address :file-name,lenght
-     +getdents64,d_name+ :file-name,lenght
-     string-equal? if
-       :file-name,address
-       :file-name,lenght
-       true
-       end
-     then
-     :file-name,address
-     :file-name,lenght
-     :bool
-     end
-   ; define-function
-
-   : directory,find-directory
+   : <directory> find-directory
      << directory-path[address, length], file-name[address, length] -- bool >>
      xx|swap|xx
      false
      xx|swap|x
-     jo directory,find-directory,finder
-     directory,map
+     [ << file-name[address, length], bool --
+          file-name[address, length], bool >>
+       +getdents64,d_type+ fetch-byte 4 equal? not if
+         end
+       then
+       >:bool
+       >:file-name,lenght
+       >:file-name,address
+       :file-name,lenght +getdents64,d_name+ add
+       fetch-byte zero? not if
+         :file-name,address
+         :file-name,lenght
+         :bool
+         end
+       then
+       :file-name,address :file-name,lenght
+       +getdents64,d_name+ :file-name,lenght
+       string-equal? if
+         :file-name,address
+         :file-name,lenght
+         true
+         end
+       then
+       :file-name,address
+       :file-name,lenght
+       :bool
+       end ]
+     <directory> map
      xx|swap|x drop2
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test,directory,find-file
+   : test
      << -- >>
-     "play" "cn" directory,find-file .
-     "play" "kkk" directory,find-file .
-     "play" "no" directory,find-file .
+     "play" "cn" <directory> find-file .
+     "play" "kkk" <directory> find-file .
+     "play" "no" <directory> find-file .
      .l
-     "playlay" "no" directory,find-file .
+     "playlay" "no" <directory> find-file .
      .l
      end
    ; define-function
-   test,directory,find-file
+   test
 
-   : test,directory,find-directory
+   : test
      << -- >>
-     "play" "cn" directory,find-directory .
-     "play" "kkk" directory,find-directory .
-     "play" "no" directory,find-directory .
+     "play" "cn" <directory> find-directory .
+     "play" "kkk" <directory> find-directory .
+     "play" "no" <directory> find-directory .
      .l
-     "playlay" "no" directory,find-directory .
+     "playlay" "no" <directory> find-directory .
      .l
      end
    ; define-function
-   test,directory,find-directory
+   test
    #+end_src
 * system environment                  :linux:
 ** note one directory
    * all files about cicada
      are stored in
      "/home/<user>/.cicada"
-** note linux system environment
+** note pid
    * pid is the key to all the linux system environment
    * command-line
      /proc/<pid>/cmdline
@@ -5129,7 +5016,7 @@
      << -- >>
      :syscall-number,getpid:
      0 syscall
-     save-to *pid*
+     address *pid* save
      end
    ; define-function
 
@@ -5170,7 +5057,7 @@
 
      :path-buffer
      :cursor :path-buffer sub dup2 >::path
-     input-port,open if
+     <port> open if
      else
        "* (init-command-line) fail to open : " .s ::path .s .l
        end
@@ -5180,12 +5067,12 @@
      *address,command-line*
      *length,command-line*
      :port
-     port,read if
+     <port> read if
      else
        "* (init-command-line) fail to read : " .s ::path .s .l
        end
      then
-     save-to *length,command-line*
+     address *length,command-line* save
      end
    ; define-function
 
@@ -5227,7 +5114,7 @@
 
      :path-buffer
      :cursor :path-buffer sub dup2 >::path
-     input-port,open if
+     <port> open if
      else
        "* (init-environment-variable-list) fail to open : " .s ::path .s .l
        end
@@ -5237,12 +5124,12 @@
      *address,environment-variable-list*
      *length,environment-variable-list*
      :port
-     port,read if
+     <port> read if
      else
        "* (init-environment-variable-list) fail to read : " .s ::path .s .l
        end
      then
-     save-to *length,environment-variable-list*
+     address *length,environment-variable-list* save
      end
    ; define-function
 
@@ -5315,9 +5202,9 @@
      "HOME" find-environment-variable
    ; define-variable
    #+end_src
-** report-environment-variable
+** <report> environment-variable
    #+begin_src cicada-nymph :tangle core.cn
-   : report-environment-variable,loop
+   : <report> environment-variable,loop
      << environment-variable-list[address, length]-- >>
      dup2 space-string? if
        drop2
@@ -5338,16 +5225,16 @@
      loop
    ; define-function
 
-   : report-environment-variable
+   : <report> environment-variable
      << -- >>
      get-environment-variable-list
-     report-environment-variable,loop
+     <report> environment-variable,loop
      end
    ; define-function
    #+end_src
-** report-command-line
+** <report> command-line
    #+begin_src cicada-nymph :tangle core.cn
-   : report-command-line,loop
+   : <report> command-line,loop
      << command-line[address, length] -- >>
      dup2 space-string? if
        drop2
@@ -5358,17 +5245,17 @@
      loop
    ; define-function
 
-   : report-command-line
+   : <report> command-line
      << -- >>
      get-command-line
-     report-command-line,loop
+     <report> command-line,loop
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   report-environment-variable
-   report-command-line
+   <report> environment-variable
+   <report> command-line
    #+end_src
 * work-directory
 ** get-work-directory
@@ -5449,53 +5336,53 @@
    : init,stat
      << offset -- >>
      *jo-size* 4 equal? if
-       dup save-to +stat,st_dev+         *jo-size* add
-       dup save-to +stat,st_ino+         *jo-size* add
-       dup save-to +stat,st_mode+        2 add
-       dup save-to +stat,st_nlink+       2 add
-       dup save-to +stat,st_uid+         2 add
-       dup save-to +stat,st_gid+         2 add
-       dup save-to +stat,st_rdev+        *jo-size* add
-       dup save-to +stat,st_size+        *jo-size* add
-       dup save-to +stat,st_blksize+     *jo-size* add
-       dup save-to +stat,st_blocks+      *jo-size* add
-       dup save-to +stat,st_atime+       *jo-size* add
-       dup save-to +stat,st_atime_nsec+  *jo-size* add
-       dup save-to +stat,st_mtime+       *jo-size* add
-       dup save-to +stat,st_mtime_nsec+  *jo-size* add
-       dup save-to +stat,st_ctime+       *jo-size* add
-       dup save-to +stat,st_ctime_nsec+  *jo-size* add
-       dup save-to +stat,__unused4+      *jo-size* add
-       dup save-to +stat,__unused5+      *jo-size* add
-           save-to +stat,end+
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
+       dup address +stat,st_mode+       save 2 add
+       dup address +stat,st_nlink+      save 2 add
+       dup address +stat,st_uid+        save 2 add
+       dup address +stat,st_gid+        save 2 add
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
        end
      then
      *jo-size* 8 equal? if
-       dup save-to +stat,st_dev+         *jo-size* add
-       dup save-to +stat,st_ino+         *jo-size* add
+       dup address +stat,st_dev+        save *jo-size* add
+       dup address +stat,st_ino+        save *jo-size* add
        <<
        note the following order changing
        this is linux' bad
        >>
-       dup save-to +stat,st_nlink+       8 add
-       dup save-to +stat,st_mode+        4 add
+       dup address +stat,st_nlink+      save 8 add
+       dup address +stat,st_mode+       save 4 add
 
-       dup save-to +stat,st_uid+         4 add
-       dup save-to +stat,st_gid+         4 add
+       dup address +stat,st_uid+        save 4 add
+       dup address +stat,st_gid+        save 4 add
                                              4 add << padding >>
-       dup save-to +stat,st_rdev+        *jo-size* add
-       dup save-to +stat,st_size+        *jo-size* add
-       dup save-to +stat,st_blksize+     *jo-size* add
-       dup save-to +stat,st_blocks+      *jo-size* add
-       dup save-to +stat,st_atime+       *jo-size* add
-       dup save-to +stat,st_atime_nsec+  *jo-size* add
-       dup save-to +stat,st_mtime+       *jo-size* add
-       dup save-to +stat,st_mtime_nsec+  *jo-size* add
-       dup save-to +stat,st_ctime+       *jo-size* add
-       dup save-to +stat,st_ctime_nsec+  *jo-size* add
-       dup save-to +stat,__unused4+      *jo-size* add
-       dup save-to +stat,__unused5+      *jo-size* add
-           save-to +stat,end+
+       dup address +stat,st_rdev+       save *jo-size* add
+       dup address +stat,st_size+       save *jo-size* add
+       dup address +stat,st_blksize+    save *jo-size* add
+       dup address +stat,st_blocks+     save *jo-size* add
+       dup address +stat,st_atime+      save *jo-size* add
+       dup address +stat,st_atime_nsec+ save *jo-size* add
+       dup address +stat,st_mtime+      save *jo-size* add
+       dup address +stat,st_mtime_nsec+ save *jo-size* add
+       dup address +stat,st_ctime+      save *jo-size* add
+       dup address +stat,st_ctime_nsec+ save *jo-size* add
+       dup address +stat,__unused4+     save *jo-size* add
+       dup address +stat,__unused5+     save *jo-size* add
+           address +stat,end+           save
        end
      then
      end
@@ -5757,11 +5644,11 @@
      *poi-directory,user,address* swap
    ; define-variable
    #+end_src
-** poi,find
+** find
    * note that
      this function uses *circular-string-area*
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,find
+   : <poi> find
      << name[address, length]
         -- path[address, length], true
         -- false >>
@@ -5780,7 +5667,7 @@
      512 allocate-local-memory >:read-buffer
      :read-buffer 512
      :buffer :length
-     file,read >:read-length
+     <file> read >:read-length
 
      *circular-string-area,current-free-address*
      >:path-address
@@ -5794,27 +5681,27 @@
      end
    ; define-function
    #+end_src
-** poi,add
+** add
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,add
+   : <poi> add
      << name[address, length], relative-path[address, length] -- >>
      >::relative-path
      >::name
 
      ::relative-path relative-path? not if
-       "* (poi,add) the argument must be a relative-path" .s .l
+       "* (<poi> add) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
      ::relative-path path,directory? not if
-       "* (poi,add) the argument must be a relative-path to a existing directory" .s .l
+       "* (<poi> add) the argument must be a relative-path to a existing directory" .s .l
        "  but the following path is not to a directory : " .s ::relative-path .s .l
        end
      then
 
-     ::name poi,find if
-       "* (poi,add) can not add" .s .l
+     ::name <poi> find if
+       "* (<poi> add) can not add" .s .l
        "  for the following poi already exist : " .s ::name .s .l
        "  name is use as the following directory's name : " .s .s .l
        end
@@ -5826,14 +5713,14 @@
      3 n-string->buffer!
      >:length
      :buffer :length
-     directory,creat
+     <directory> create
 
      *poi-directory* "/" ::name "/path"
      :buffer
      4 n-string->buffer!
      >:length
      :buffer :length
-     file,creat
+     <file> create
 
      512 allocate-local-memory >:address,full-path
      get-work-directory "/" ::relative-path
@@ -5842,18 +5729,18 @@
 
      :address,full-path :length,full-path
      :buffer :length
-     file,write
+     <file> write
      end
    ; define-function
    #+end_src
-** poi,sub
+** sub
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,sub
+   : <poi> sub
      << name[address, length] -- >>
      >::name
 
-     ::name poi,find not if
-       "* (poi,sub) can not sub" .s .l
+     ::name <poi> find not if
+       "* (<poi> sub) can not sub" .s .l
        "  for the following poi does not exist : " .s ::name .s .l
        end
      then
@@ -5865,38 +5752,38 @@
      4 n-string->buffer! >:length
 
      :buffer :length
-     file,remove
+     <file> remove
 
      *poi-directory* "/" ::name
      :buffer
      3 n-string->buffer!
      >:length
      :buffer :length
-     directory,remove
+     <directory> remove
      end
    ; define-function
    #+end_src
-** poi,up
+** up
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,up
+   : <poi> up
      << name[address, length], relative-path[address, length] -- >>
      >::relative-path
      >::name
 
      ::relative-path relative-path? not if
-       "* (poi,up) the argument must be a relative-path" .s .l
+       "* (<poi> up) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
      ::relative-path path,directory? not if
-       "* (poi,up) the argument must be a relative-path to a existing directory" .s .l
+       "* (<poi> up) the argument must be a relative-path to a existing directory" .s .l
        "  but the following directory is not exist : " .s ::relative-path .s .l
        end
      then
 
-     ::name poi,find not if
-       "* (poi,up) can not up" .s .l
+     ::name <poi> find not if
+       "* (<poi> up) can not up" .s .l
        "  for the following poi does not exist : " .s ::name .s .l
        end
      then
@@ -5914,62 +5801,58 @@
 
      :address,full-path :length,full-path
      :buffer :length
-     file,write
+     <file> write
      end
    ; define-function
    #+end_src
-** poi,list
+** list
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,list,lister
-     << -- >>
-     +getdents64,d_type+ fetch-byte
-     4 equal? if
-       512 allocate-local-memory >:path-buffer
-       +getdents64,d_name+
-       dup 256
-       0 string,find-char
-       drop  << drop 0 >>
-       over sub >::name
-
-       ".." ::name string-equal? if
-         end
-       then
-
-       "." ::name string-equal? if
-         end
-       then
-
-       "  * " .s ::name .s .l
-       "      " .s
-
-       *poi-directory* "/" ::name "/path"
-       :path-buffer
-       4 n-string->buffer! >:path-length
-
-       512 allocate-local-memory >:reading-buffer
-       :reading-buffer 512
-       :path-buffer :path-length
-       file,read >:reading-length
-
-       :reading-buffer :reading-length
-       .s .l
-     then
-     end
-   ; define-function
-
-   : poi,list
+   : <poi> list
      << -- >>
      *poi-directory*
-     jo poi,list,lister
-     directory,map
+     [ << -- >>
+       +getdents64,d_type+ fetch-byte
+       4 equal? if
+         512 allocate-local-memory >:path-buffer
+         +getdents64,d_name+
+         dup 256
+         0 string,find-char
+         drop  << drop 0 >>
+         over sub >::name
+
+         ".." ::name string-equal? if
+           end
+         then
+
+         "." ::name string-equal? if
+           end
+         then
+
+         "  * " .s ::name .s .l
+         "      " .s
+
+         *poi-directory* "/" ::name "/path"
+         :path-buffer
+         4 n-string->buffer! >:path-length
+
+         512 allocate-local-memory >:reading-buffer
+         :reading-buffer 512
+         :path-buffer :path-length
+         <file> read >:reading-length
+
+         :reading-buffer :reading-length
+         .s .l
+       then
+       end ]
+     <directory> map
      end
    ; define-function
    #+end_src
-** poi,help
+** help
    #+begin_src cicada-nymph :tangle core.cn
-   : poi,help
+   : <poi> help
      << -- >>
-     "* (poi,help)" .s .l
+     "* (<poi> help)" .s .l
      "  * cn poi add  <new-name> <relative-path-to-existing-directory>" .s .l
      "  * cn poi sub  <old-name>" .s .l
      "  * cn poi up   <old-name> <relative-path-to-existing-directory>" .s .l
@@ -6009,33 +5892,33 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "test-cicada-play" "./play" poi,add
-   "test-cicada-play" poi,find
+   "test-cicada-play" "./play" <poi> add
+   "test-cicada-play" <poi> find
    if .s .l
    else "not found" .s .l
    then
 
-   "test-cicada-play-2" "./play-2" poi,add
-   "test-cicada-play-2" poi,find
+   "test-cicada-play-2" "./play-2" <poi> add
+   "test-cicada-play-2" <poi> find
    if .s .l
    else "not found" .s .l
    then
 
-   "test-cicada-play" "./contribution" poi,up
-   "test-cicada-play" poi,find
+   "test-cicada-play" "./contribution" <poi> up
+   "test-cicada-play" <poi> find
    if .s .l
    else "not found" .s .l
    then
 
-   "test-cicada-play" poi,sub
-   "test-cicada-play" poi,find
+   "test-cicada-play" <poi> sub
+   "test-cicada-play" <poi> find
    if .s .l
    else "not found" .s .l
    then
 
-   poi,list
+   <poi> list
 
-   poi,help
+   <poi> help
 
    "+work+" +word+? .
    "work" +word+? .
@@ -6069,14 +5952,6 @@
 
    path: +library+ hi.cn ;
    "/home/xyh/cicada/library/hi.cn"
-   #+end_src
-** word:path:?
-   #+begin_src cicada-nymph :tangle core.cn
-   : word:path:?
-     << word[address, length] -- bool >>
-     "path:" string-equal?
-     end
-   ; define-function
    #+end_src
 ** !bad-path-syntax-word
    #+begin_src cicada-nymph :tangle core.cn
@@ -6127,7 +6002,7 @@
        ::word
        end
      then
-     ::word +word+->word poi,find if
+     ::word +word+->word <poi> find if
        end
      then
      ::word
@@ -6184,11 +6059,16 @@
      end
    ; define-function
    #+end_src
-** add-rule to *rule-set,basic-REPL*
+** more,rule-set,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   jo word:path:?
-   jo syntax,path:,basic-REPL
-   *rule-set,basic-REPL* add-rule
+   : more,rule-set,basic-REPL
+     << -- >>
+     ["path:" string-equal? end]
+     jo syntax,path:,basic-REPL
+     *rule-set,basic-REPL* add-rule
+     end
+   ; define-function
+   more,rule-set,basic-REPL
    #+end_src
 ** test
    #+begin_src cicada-nymph
@@ -6200,9 +6080,9 @@
    path: +work+ core core.cn ; .s
    path: core core.cn ; .s
 
-   "library" "library" poi,add
+   "library" "library" <poi> add
    path: +library+ hi.cn ; .s
-   "library" poi,sub
+   "library" <poi> sub
    path: +library+ hi.cn ;
    #+end_src
 * -----------------------------------
@@ -6236,26 +6116,10 @@
   * name-hash-table
   * syntax-stack
     and rule-set in it
-* back-up-area
-  #+begin_src cicada-nymph
-  :
-  ; define-function
-  #+end_src
-* undo-stack
+* >< back-up-area
+* >< undo-stack
 ** mark-undo-point
-   #+begin_src cicada-nymph
-
-   #+end_src
 ** undo
-**
-** ><
-   #+begin_src cicada-nymph :tangle core.cn
-   : <undo-stack> mark-undo-point
-     << -- >>
-
-     end
-   ; define-function
-   #+end_src
 * -----------------------------------
 * note loading
 ** no auto load
@@ -6330,9 +6194,9 @@
     會提供與測試有關的設計
 * -----------------------------------
 * report
-** report-memory
+** memory
    #+begin_src cicada-nymph :tangle core.cn
-   : report-memory
+   : <report> memory
      << -- >>
      "* *un-initialized-memory*" .s .l
      "  * size : " .s
@@ -6375,9 +6239,9 @@
      end
    ; define-function
    #+end_src
-** report-platform
+** platform
    #+begin_src cicada-nymph :tangle core.cn
-   : report-platform
+   : <report> platform
      << -- >>
      "* platform : " .s
      platform .s
@@ -6385,9 +6249,9 @@
      end
    ; define-function
    #+end_src
-** report-jo-size
+** jo-size
    #+begin_src cicada-nymph :tangle core.cn
-   : report-jo-size
+   : <report> jo-size
      << -- >>
      "* jo-size : " .s
      *jo-size* write-number
@@ -6396,9 +6260,9 @@
      end
    ; define-function
    #+end_src
-** report-machine-word-size
+** machine-word-size
    #+begin_src cicada-nymph :tangle core.cn
-   : report-machine-word-size
+   : <report> machine-word-size
      << -- >>
      "* machine-word-size : " .s
      *jo-size* 8 mul write-number
@@ -6407,9 +6271,9 @@
      end
    ; define-function
    #+end_src
-** report-syntax
+** syntax
    #+begin_src cicada-nymph :tangle core.cn
-   : report-syntax
+   : <report> syntax
      << -- >>
      "* *rule-set,make-jojo* :" .s .l
       *rule-set,make-jojo* list-rule
@@ -6420,38 +6284,37 @@
      end
    ; define-function
    #+end_src
-** report-link
+** link
    * different types of words in link
      are showed separately
    #+begin_src cicada-nymph :tangle core.cn
-   : report-link
+   : <report> link
      << -- >>
      "* all primitive-function in link :" .s .l
      *link* jo primitive-function-jo?
-     link,list-by-jo-predicate
+     <link> list-by-jo-predicate
 
      "* all function in link :" .s .l
      *link* jo function-jo?
-     link,list-by-jo-predicate
+     <link> list-by-jo-predicate
 
      "* all exception in link :" .s .l
      *link* jo exception-jo?
-     link,list-by-jo-predicate
+     <link> list-by-jo-predicate
 
      "* all variable in link :" .s .l
      *link* jo variable-jo?
-     link,list-by-jo-predicate
+     <link> list-by-jo-predicate
      end
    ; define-function
    #+end_src
-** initial-report
+** system
    #+begin_src cicada-nymph :tangle core.cn
-   : initial-report
+   : <report> system
      << -- >>
-     "* initial-report : " .s .l
-     "  " .s report-platform
-     "  " .s report-machine-word-size
-     "  " .s report-jo-size
+     <report> platform
+     <report> machine-word-size
+     <report> jo-size
      end
    ; define-function
    #+end_src
@@ -6512,11 +6375,11 @@
      end
    ; define-function
    #+end_src
-* command-line-interface
-** note
-** command-line,unknow-function
+* -----------------------------------
+* command-function
+** unknow-function
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line,unknow-function
+   : <command-function> unknow-function
      << -- >>
      "* (cicada-nymph) unknow command-line-function : " .s
      get-command-line
@@ -6526,13 +6389,13 @@
      bye
    ; define-function
    #+end_src
-** command-line,stack-REPL
+** stack-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line,stack-REPL
+   : <command-function> stack-REPL
      << -- >>
      .l
      welcome hi .l
-     initial-report .l
+     <report> system .l
      "* you are in the (stack-REPL)" .s .l
      "  every time after a word is executed" .s .l
      "  the argument-stack get printed" .s .l
@@ -6541,34 +6404,34 @@
      reset-top-level-REPL
    ; define-function
    #+end_src
-** command-line,basic-REPL
+** basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line,basic-REPL
+   : <command-function> basic-REPL
      << -- >>
      .l
      welcome hi .l
-     initial-report .l
+     <report> system .l
      "* you are in the (basic-REPL)" .s .l
      "  this REPL does not print any thing automaticly" .s .l
      jo basic-REPL
      reset-top-level-REPL
    ; define-function
    #+end_src
-** command-line,poi
+** poi
    * cn poi add  <name> <relative-path>
    * cn poi sub  <name>
    * cn poi up   <name> <relative-path>
    * cn poi find <name>
    * cn poi list
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line,poi
+   : <command-function> poi
      << -- >>
      get-command-line
      string-tail,word
      string-tail,word >::command-line
 
      ::command-line space-string? if
-       poi,help
+       <poi> help
        bye
      then
 
@@ -6576,33 +6439,33 @@
      ::command-line string-tail,word >::command-line-arguments
 
      ::sub-function-name "help" string-equal? if
-       poi,help
+       <poi> help
        bye
      then
 
      ::sub-function-name "add" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
-       poi,add
+       <poi> add
        bye
      then
 
      ::sub-function-name "sub" string-equal? if
        ::command-line-arguments string-head,word
-       poi,sub
+       <poi> sub
        bye
      then
 
      ::sub-function-name "up" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
-       poi,up
+       <poi> up
        bye
      then
 
      ::sub-function-name "find" string-equal? if
        ::command-line-arguments string-head,word
-       poi,find if
+       <poi> find if
          .s .l
        else
          "no found" .s .l
@@ -6611,61 +6474,63 @@
      then
 
      ::sub-function-name "list" string-equal? if
-       poi,list
+       <poi> list
        bye
      then
 
      "* (poi) meets argument that (poi) can not understand" .s .l
      "  it is the following command-line that is confusing (poi) :" .s .l
-     "    " .s report-command-line .l
+     "    " .s <report> command-line .l
      "  to get some help info  you can type :" .s .l
      "    cn poi help" .s .l
      "  good bye ^-^/" .s .l
      bye
    ; define-function
    #+end_src
-** command-line,no-function
+** no-function
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line,no-function
+   : <command-function> no-function
      << -- >>
-     command-line,stack-REPL
+     <command-function> stack-REPL
      end
    ; define-function
    #+end_src
-** command-line-dispatcher
+* command
+** dispatch
    #+begin_src cicada-nymph :tangle core.cn
-   : command-line-dispatcher
+   : <command> dispatch
      << -- >>
      get-command-line
      string-tail,word
      dup2 space-string? if
        drop2
-       command-line,no-function
+       <command-function> no-function
        end
      then
      string-head,word
      >::1st-word
      ::1st-word "basic-REPL" string-equal? if
-       command-line,basic-REPL
+       <command-function> basic-REPL
        end
      then
      ::1st-word "stack-REPL" string-equal? if
-       command-line,stack-REPL
+       <command-function> stack-REPL
        end
      then
      ::1st-word "poi" string-equal? if
-       command-line,poi
+       <command-function> poi
        end
      then
-     command-line,unknow-function
+     <command-function> unknow-function
      end
    ; define-function
    #+end_src
-* *the-story-begin*
+* -----------------------------------
+* the-story-begin
   #+begin_src cicada-nymph :tangle core.cn
   : the-story-begin
     << -- >>
-    command-line-dispatcher
+    <command> dispatch
     end
   ; define-function
 
@@ -6674,8 +6539,8 @@
 * ===================================
 * test report
   #+begin_src cicada-nymph
-  report-memory
-  report-syntax
-  report-link
+  <report> memory
+  <report> syntax
+  <report> link
   #+end_src
 * ===================================

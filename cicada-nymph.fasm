@@ -3647,14 +3647,6 @@ define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
    xx literal, syntax__jo__make_jojo
    xx V__rule_set__make_jojo, add_rule
 
-   xx literal, word_is_branch?
-   xx literal, syntax__branch__make_jojo
-   xx V__rule_set__make_jojo, add_rule
-
-   xx literal, word_is_false?branch?
-   xx literal, syntax__false?branch__make_jojo
-   xx V__rule_set__make_jojo, add_rule
-
    xx literal, word_is_double_quote?
    xx literal, syntax__double_quote__make_jojo
    xx V__rule_set__make_jojo, add_rule
@@ -3694,35 +3686,9 @@ define_function "syntax,address,make-jojo", syntax__address__make_jojo
    ;; << string[address, length], word:address --
    ;;    string[address, length] >>
    xx drop2
-
    xx literal, address
-   xx jojo_area__stay
-
-   xx dup2
-   xx string_head__word
-   xx V__link
-   xx find_link, false?branch, 5
-   xx   link_to_jo, jojo_area__stay
-   xx   string_tail__word
-   xx   end
-
-   xx write_undefined_word_report__for_address
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-undefined-word-report,for-address", write_undefined_word_report__for_address
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_address
-   xx literal, length$undefined_word_report__for_address
-   xx write_string
+   xx   jojo_area__stay
    xx end
-
-string$undefined_word_report__for_address:
-   db "* (make-jojo (address)) the word follows (address) is undefined : "
-.end:
-length$undefined_word_report__for_address = (.end - string$undefined_word_report__for_address)
 
 string$word_is_jo?:
    db "jo"
@@ -3740,127 +3706,9 @@ define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
    ;; << string[address, length], word:jo --
    ;;    string[address, length] >>
    xx drop2
-
    xx literal, literal
-   xx jojo_area__stay
-
-   xx dup2
-   xx string_head__word
-   xx V__link
-   xx find_link, false?branch, 5
-   xx   link_to_jo, jojo_area__stay
-   xx   string_tail__word
-   xx   end
-
-   xx write_undefined_word_report__for_jo
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-undefined-word-report,for-jo", write_undefined_word_report__for_jo
-   ;; << -- >>
-   xx literal, string$undefined_word_report__for_jo
-   xx literal, length$undefined_word_report__for_jo
-   xx write_string
-   xx end
-
-string$undefined_word_report__for_jo:
-   db "* (syntax,jo,make-jojo) the word follows (jo) is undefined : "
-.end:
-length$undefined_word_report__for_jo = (.end - string$undefined_word_report__for_jo)
-
-string$word_is_branch?:
-   db "branch"
-.end:
-length$word_is_branch? = (.end - string$word_is_branch?)
-
-define_function "word:branch?", word_is_branch?
-   ;; << word[branch, length] -- bool >>
-   xx literal, string$word_is_branch?
-   xx literal, length$word_is_branch?
-   xx string_equal?
-   xx end
-
-define_function "syntax,branch,make-jojo", syntax__branch__make_jojo
-   ;; << string[address, length], word:jo --
-   ;;    string[address, length] >>
-   xx drop2
-
-   xx literal, branch
-   xx jojo_area__stay
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
    xx   jojo_area__stay
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-branch", write_not_integer_string_report__for_branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_branch
-   xx literal, length$not_integer_string_report__for_branch
-   xx write_string
    xx end
-
-string$not_integer_string_report__for_branch:
-   db "* (syntax,branch,make-jojo) the word follows (branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_branch = (.end - string$not_integer_string_report__for_branch)
-
-string$word_is_false?branch?:
-   db "false?branch"
-.end:
-length$word_is_false?branch? = (.end - string$word_is_false?branch?)
-
-define_function "word:false?branch?", word_is_false?branch?
-   ;; << word[false?branch, length] -- bool >>
-   xx literal, string$word_is_false?branch?
-   xx literal, length$word_is_false?branch?
-   xx string_equal?
-   xx end
-
-define_function "syntax,false?branch,make-jojo", syntax__false?branch__make_jojo
-   ;; << string[address, length], word:jo --
-   ;;    string[address, length] >>
-   xx drop2
-
-   xx literal, false?branch
-   xx jojo_area__stay
-
-   xx dup2
-   xx string_head__word
-   xx dup2, integer_string?, false?branch, 5
-   xx   string_to_integer
-   xx   jojo_area__stay
-   xx   string_tail__word
-   xx   end
-
-   xx write_not_integer_string_report__for_false?branch
-   xx dup2, string_head__word, write_string
-   xx literal, 10, write_byte
-   xx !undo_make_jojo
-
-
-define_function "write-not-integer-string-report,for-false?branch", write_not_integer_string_report__for_false?branch
-   ;; << -- >>
-   xx literal, string$not_integer_string_report__for_false?branch
-   xx literal, length$not_integer_string_report__for_false?branch
-   xx write_string
-   xx end
-
-string$not_integer_string_report__for_false?branch:
-   db "* (syntax,false?branch,make-jojo) the word follows (false?branch) must be a integer string : "
-.end:
-length$not_integer_string_report__for_false?branch = (.end - string$not_integer_string_report__for_false?branch)
 
 string$word_is_double_quote?:
    db '"'
