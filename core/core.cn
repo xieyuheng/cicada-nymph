@@ -582,6 +582,18 @@ allocate-memory
   end
 ; define-function
 
+2046 *jo-size* mul
+: *backup-area,size*
+; define-variable,with-tos
+
+*backup-area,size* allocate-memory
+: *backup-area*
+; define-variable,with-tos
+
+*backup-area*
+: *backup-area,current-free-address*
+; define-variable,with-tos
+
 : restore,jojo-area
   << undo-point -- >>
   fetch
@@ -602,7 +614,7 @@ allocate-memory
     drop2
     end
   then
-  dup
+  dup name-hash-table,delete-jo,by-link
   link->next-link
   loop
 ; define-function
@@ -610,14 +622,45 @@ allocate-memory
 : restore,link
   << undo-point -- >>
   *jo-size* 2 mul add fetch >:old-link
-  :old-link *link* restore,link,remove-jo
+  :old-link *link*
+  restore,link,remove-jo
   :old-link address *link* save
   end
 ; define-function
 
-3 *jo-size* mul allocate-memory
-: *undo-point*
-; define-variable,with-tos
+: restore,backup-area,save-jo
+  << old-address, address -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  *jo-size* 2 mul sub
+  dup 2 n-fetch name,save-jo
+  loop
+; define-function
+
+: restore,backup-area
+  << undo-point -- >>
+  *jo-size* 3 mul add fetch >:old-address
+  :old-address *backup-area,current-free-address*
+  restore,backup-area,save-jo
+  :old-address address *backup-area,current-free-address* save
+  end
+; define-function
+
+
+
+: push-undo-stack
+  << -- >>
+
+  end
+; define-function
+
+: pop-undo-stack
+  << -- >>
+
+  end
+; define-function
 
 : undo
   << undo-point -- >>
@@ -625,6 +668,7 @@ allocate-memory
   :undo-point restore,jojo-area
   :undo-point restore,string-area
   :undo-point restore,link
+  :undo-point restore,backup-area
   end
 ; define-function
 
@@ -746,6 +790,16 @@ allocate-memory
 
   :jo :link link,save-jo
 
+  ::name string->name >:name-index
+  :name-index name,used-as-jo? if
+    :name-index name,fetch-jo
+    :name-index
+    *backup-area,current-free-address*
+    2 n-save
+    *jo-size* 2 mul
+    address *backup-area,current-free-address*
+    add-save
+  then
   :link name-hash-table,save-jo,by-link
 
   *jojo-area,current-free-address* >:old-address
@@ -793,6 +847,16 @@ allocate-memory
 
   :jo :link link,save-jo
 
+  ::name string->name >:name-index
+  :name-index name,used-as-jo? if
+    :name-index name,fetch-jo
+    :name-index
+    *backup-area,current-free-address*
+    2 n-save
+    *jo-size* 2 mul
+    address *backup-area,current-free-address*
+    add-save
+  then
   :link name-hash-table,save-jo,by-link
 
   1 :jo jo,save-length
@@ -844,6 +908,16 @@ allocate-memory
 
   :jo :link link,save-jo
 
+  ::name string->name >:name-index
+  :name-index name,used-as-jo? if
+    :name-index name,fetch-jo
+    :name-index
+    *backup-area,current-free-address*
+    2 n-save
+    *jo-size* 2 mul
+    address *backup-area,current-free-address*
+    add-save
+  then
   :link name-hash-table,save-jo,by-link
 
   *jojo-area,current-free-address* >:old-address
@@ -878,6 +952,16 @@ allocate-memory
 
   :link address *link* save
 
+  ::alias string->name >:name-index
+  :name-index name,used-as-jo? if
+    :name-index name,fetch-jo
+    :name-index
+    *backup-area,current-free-address*
+    2 n-save
+    *jo-size* 2 mul
+    address *backup-area,current-free-address*
+    add-save
+  then
   :link name-hash-table,save-jo,by-link
   end
 ; define-function
@@ -2012,6 +2096,16 @@ jo stack-REPL address *lost-exception-REPL* save
 
   :jo :link link,save-jo
 
+  ::name string->name >:name-index
+  :name-index name,used-as-jo? if
+    :name-index name,fetch-jo
+    :name-index
+    *backup-area,current-free-address*
+    2 n-save
+    *jo-size* 2 mul
+    address *backup-area,current-free-address*
+    add-save
+  then
   :link name-hash-table,save-jo,by-link
 
   :length

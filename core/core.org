@@ -3,7 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** 利用 alias 來實現中文支持
+** 有了匯編器之後 所有的名字都應該被 name-hash-table 處理 這樣就沒有重複問題了 :也許:
 ** 重新實現關於局部變元的語法 使得可以在匿名函數中使用 修復 if 的問題 並增加語法
    * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
      注意
@@ -14,7 +14,6 @@
      代入的方式可以各種各樣
      一套設計良好的標記語言語法 就能完成這個特性
    * 還有 各種返回方式的實現
-** better names for (make-*)
 ** 基礎設施 之 撤銷
 ** 基礎設施 之 加載與依賴
 ** 基礎設施 之 測試框架
@@ -27,6 +26,8 @@
 ** 整理結構 之 匿名函數的使用
 ** 整理結構 之 良好測試
 ** 整理結構 之 分散文件
+** better names for (make-*)
+** 利用 alias 來實現中文支持
 ** 基礎設施 之 匿名函數 之 *circular-jojo-area* :maybe:
    * 需要重新定義 mmake-jojo 的接口使得它更加一般
    * 也許 make-jojo make-link make-jo-head
@@ -227,6 +228,9 @@
         這裏
         理解上的壓力來源於
         對名字所捕捉的模式的熟悉
+** 圓上的點
+   * 一個點在圓上移動
+     它的位置在變 但是它到圓心的距離始終相等
 ** 姓
 *** 目的
     * 在 小蟬 中
@@ -1428,7 +1432,7 @@
    *test,buffer* swap
    .s
    #+end_src
-* >< undo
+* undo
 ** 記 撤銷
    * 因爲 name-hash-table 的存在
      導致我實現 undo 這個特性的機制
@@ -1440,7 +1444,7 @@
      恢復這些被從 name-hash-table 中踢出去的 jo
    * 這樣
      每一個 jo 被踢出 name-hash-table 時
-     會存入 name jo 的對子在 undo-stack 中
+     會存入 jo name 的對子在 undo-stack 中
    * 注意
      每一次重新定義都對應一次恢復
      * 缺點是
@@ -1456,72 +1460,30 @@
    * *string-area,current-free-address*
    * *link*
    * name-hash-table
-   * *back-up-area,current-free-address*
+   * *backup-area,current-free-address*
    * syntax-stack
      and rule-set in it
-** 記
-   - x :: kkk 如何實現呢
-   - k :: 先寫出來所需要的步驟
-        然後再想接口把
-        因爲接口可能很難設計
-        一下子想不好
-   - x :: 好吧
-        首先在進行一次 undo 的時候
-        需要重置 全局狀態
-        這包含
-     - *jojo-area,current-free-address*
-     - *string-area,current-free-address*
-     - *link*
-     - 先不考慮 syntax-stack 和 其中的 rule-set
-       也就是說這些信息必須被保存在 undo-stack 中
-       在重置 *link* 之前
-       需要把 當前的 *link* 到 undo 點的 *link* 之間的 所有 link 中到包含的珠子 都從 name-hash-table 中踢出
-   - k :: 沒錯
-        並且這些現在需要被踢出來的珠子
-        當他們被保存在 name-hash-table 中的時候 所踢出來的珠子都需要被恢復
-        這些 珠子是被保存在 *back-up-area* 中的
-        每當 一個 definer 重新 定義東西的時候 都會把被重新定義的珠子 放到 *back-up-area* 中
-   - x :: 所以步驟基本如下
-     1. restore *jojo-area,current-free-address*
-     2. restore *string-area,current-free-address*
-     3. restore *link*
-        1. remove jo from name-hash-table by *link*
-        2. restore jo from name-hash-table by *back-up-area*
-     4. restore *back-up-area,current-free-address*
-        這就全部了嘛
-   - k :: 試着實現它們試試
-        可以先不把用 undo-stack
-        而先把所需要的信息保存在一個全局變量中
-        也就是先實現單一的 undo-point
-   - x :: 沒錯
-        這樣從簡單到難才對
-   - k :: 另外需要注意的是
-        undo 機制需要 definer 的支持
-        所以這裏的機制應該定義在 definer 之前
-        然後在重新定義 definer 的時候加入 在重複時 對 *back-up-area* 的寫入
-   - x :: 並且更加簡化一下
-        讓我們先不實現 *back-up-area*
-        先做前四項
-   - k :: 其實還有一點
-        那就是我們還是要設計一點接口然後才能着手實現
-        也就是說
-        現在我們知道了該做什麼
-        我們還必須討論以什麼樣的方式來做
-   - x :: 好的
-        首先
-        一些以 <restore> 爲姓的函數 以 undo-point 爲參數
-        undo 調用它們就行了
-        當然還需要考慮
-        undo-point 這個數據結構的設計和保存
-   - k :: 那就快先想數據結構
-   - x :: 我知道了
-        這些值最終是要做爲一組一組的值被保存在 undo-stack 中的
-        所以我所傳遞的參數是 undo-stack 的指針就對了
-        這樣說的話 我可以先用一塊靜態的內存來保存一組值 然後傳遞指針
-        | undo-point | jojo-area    |
-        |            | string-area  |
-        |            | link         |
+** *backup-area*
+   #+begin_src cicada-nymph :tangle core.cn
+   2046 *jo-size* mul
+   : *backup-area,size*
+   ; define-variable,with-tos
+
+   *backup-area,size* allocate-memory
+   : *backup-area*
+   ; define-variable,with-tos
+
+   *backup-area*
+   : *backup-area,current-free-address*
+   ; define-variable,with-tos
+   #+end_src
 ** restore
+*** note undo-point
+    * structure
+      | undo-point | jojo-area   |
+      |            | string-area |
+      |            | link        |
+      |            | backup-area |
 *** jojo-area
     #+begin_src cicada-nymph :tangle core.cn
     : restore,jojo-area
@@ -1548,7 +1510,7 @@
         drop2
         end
       then
-      dup
+      dup name-hash-table,delete-jo,by-link
       link->next-link
       loop
     ; define-function
@@ -1558,25 +1520,136 @@
     : restore,link
       << undo-point -- >>
       *jo-size* 2 mul add fetch >:old-link
-      :old-link *link* restore,link,remove-jo
+      :old-link *link*
+      restore,link,remove-jo
       :old-link address *link* save
+      end
+    ; define-function
+    #+end_src
+*** backup-area,save-jo
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,backup-area,save-jo
+      << old-address, address -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      *jo-size* 2 mul sub
+      dup 2 n-fetch name,save-jo
+      loop
+    ; define-function
+    #+end_src
+*** backup-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,backup-area
+      << undo-point -- >>
+      *jo-size* 3 mul add fetch >:old-address
+      :old-address *backup-area,current-free-address*
+      restore,backup-area,save-jo
+      :old-address address *backup-area,current-free-address* save
+      end
+    ; define-function
+    #+end_src
+** >< *undo-stack*
+*** note undo point
+    * the undo point used to undo
+      will be used to reset the pointer of undo-stack
+      [the current-free-address of undo-stack]
+*** memory allocation
+    #+begin_src cicada-nymph :tangle core.cn
+
+    #+end_src
+*** push & pop
+    #+begin_src cicada-nymph :tangle core.cn
+    : push-undo-stack
+      << -- >>
+
+      end
+    ; define-function
+
+    : pop-undo-stack
+      << -- >>
+
       end
     ; define-function
     #+end_src
 ** undo
    #+begin_src cicada-nymph :tangle core.cn
-   3 *jo-size* mul allocate-memory
-   : *undo-point*
-   ; define-variable,with-tos
-
    : undo
      << undo-point -- >>
      >:undo-point
      :undo-point restore,jojo-area
      :undo-point restore,string-area
      :undo-point restore,link
+     :undo-point restore,backup-area
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   4 *jo-size* mul allocate-memory
+   : *undo-point*
+   ; define-variable,with-tos
+
+
+   *jojo-area,current-free-address*
+   *undo-point* save
+
+   *string-area,current-free-address*
+   *undo-point* *jo-size* add save
+
+   *link*
+   *undo-point* *jo-size* add *jo-size* add save
+
+   *backup-area,current-free-address*
+   *undo-point* *jo-size* add  *jo-size* add *jo-size* add save
+
+   : test,undo
+     << -- >>
+     1 2 3 . . .
+     end
+   ; define-function
+
+   test,undo
+
+   *undo-point* undo
+
+   test,undo
+
+
+   << with backup-area >>
+
+   : test,undo
+     << -- >>
+     11 22 33 . . .
+     end
+   ; define-function
+
+   *jojo-area,current-free-address*
+   *undo-point* save
+
+   *string-area,current-free-address*
+   *undo-point* *jo-size* add save
+
+   *link*
+   *undo-point* *jo-size* add *jo-size* add save
+
+   *backup-area,current-free-address*
+   *undo-point* *jo-size* add  *jo-size* add *jo-size* add save
+
+   test,undo
+
+   : test,undo
+     << -- >>
+     1 2 3 . . .
+     end
+   ; define-function
+
+   test,undo
+
+   *undo-point* undo
+
+   test,undo
    #+end_src
 * definers
 ** <word>?
@@ -1740,6 +1813,16 @@
 
      :jo :link link,save-jo
 
+     ::name string->name >:name-index
+     :name-index name,used-as-jo? if
+       :name-index name,fetch-jo
+       :name-index
+       *backup-area,current-free-address*
+       2 n-save
+       *jo-size* 2 mul
+       address *backup-area,current-free-address*
+       add-save
+     then
      :link name-hash-table,save-jo,by-link
 
      *jojo-area,current-free-address* >:old-address
@@ -1792,6 +1875,16 @@
 
      :jo :link link,save-jo
 
+     ::name string->name >:name-index
+     :name-index name,used-as-jo? if
+       :name-index name,fetch-jo
+       :name-index
+       *backup-area,current-free-address*
+       2 n-save
+       *jo-size* 2 mul
+       address *backup-area,current-free-address*
+       add-save
+     then
      :link name-hash-table,save-jo,by-link
 
      1 :jo jo,save-length
@@ -1845,6 +1938,16 @@
 
      :jo :link link,save-jo
 
+     ::name string->name >:name-index
+     :name-index name,used-as-jo? if
+       :name-index name,fetch-jo
+       :name-index
+       *backup-area,current-free-address*
+       2 n-save
+       *jo-size* 2 mul
+       address *backup-area,current-free-address*
+       add-save
+     then
      :link name-hash-table,save-jo,by-link
 
      *jojo-area,current-free-address* >:old-address
@@ -1881,6 +1984,16 @@
 
      :link address *link* save
 
+     ::alias string->name >:name-index
+     :name-index name,used-as-jo? if
+       :name-index name,fetch-jo
+       :name-index
+       *backup-area,current-free-address*
+       2 n-save
+       *jo-size* 2 mul
+       address *backup-area,current-free-address*
+       add-save
+     then
      :link name-hash-table,save-jo,by-link
      end
    ; define-function
@@ -3922,6 +4035,16 @@
 
      :jo :link link,save-jo
 
+     ::name string->name >:name-index
+     :name-index name,used-as-jo? if
+       :name-index name,fetch-jo
+       :name-index
+       *backup-area,current-free-address*
+       2 n-save
+       *jo-size* 2 mul
+       address *backup-area,current-free-address*
+       add-save
+     then
      :link name-hash-table,save-jo,by-link
 
      :length
