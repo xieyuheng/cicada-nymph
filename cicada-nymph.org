@@ -1273,7 +1273,7 @@
 ** make-string
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "make-string", make_string
-      ;; << string[address, length] -- string[address, length] >>
+      ;; << string[address, length] -- string-copy[address, length] >>
       xx V__string_area__current_free_address
       xx xxswapx
       xx tuck

@@ -184,6 +184,38 @@ more,rule-set,make-jojo
 : *name-hash-table,counter*
 ; define-variable,with-tos
 
+*name-hash-table,size* 32 mul
+: *name-hash-table,string-area,size*
+; define-variable,with-tos
+
+*name-hash-table,string-area,size*
+allocate-memory
+: *name-hash-table,string-area*
+; define-variable,with-tos
+
+*name-hash-table,string-area*
+: *name-hash-table,string-area,current-free-address*
+; define-variable,with-tos
+
+: name-hash-table,string-area,stay
+  << string[address, length] -- >>
+  tuck
+  *name-hash-table,string-area,current-free-address*
+  string->buffer!
+  address *name-hash-table,string-area,current-free-address*
+  add-save
+  end
+; define-function
+
+: make-string,for-name
+  << string[address, length] -- string-copy[address, length] >>
+  *name-hash-table,string-area,current-free-address*
+  xx|swap|x
+  tuck
+  name-hash-table,string-area,stay
+  end
+; define-function
+
 : name->address
   << name -- address >>
   *name-hash-table,unit* mul
@@ -240,15 +272,8 @@ more,rule-set,make-jojo
 : name,save-string
   << string[address, length], name -- >>
   >:name
-  make-string
+  make-string,for-name
   :name name->address
-  2 n-save
-  end
-; define-function
-
-: name,save-string,share
-  << string[address, length], name -- >>
-  name->address
   2 n-save
   end
 ; define-function
@@ -402,65 +427,11 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: name-hash-table,insert,share,loop
-  << string[address, length], number, counter
-     -- name, true
-     -- name, false >>
-  >:counter >:number >::string
-  :number :counter name-hash-table,hash
-  >:name
-  :number 0 name-hash-table,hash
-  >:orbit
-  :name name,used? false? if
-    ::string :name
-    name,save-string,share
-    :orbit :name
-    name,save-orbiton
-    :counter :orbit
-    name,save-orbit-length
-    1 address *name-hash-table,counter* add-save
-    :name true
-    end
-  then
-  :name name->string
-  ::string string-equal? if
-    :name true
-    end
-  then
-  :counter *name-hash-table,size* equal? if
-    :name false
-    end
-  then
-  ::string
-  :number
-  :counter add1
-  loop
-; define-function
-
-: name-hash-table,insert,share
-  << string[address, length]
-     -- name, true
-     -- name, false >>
-  dup2 string->finite-carry-sum
-  0 name-hash-table,insert,share,loop
-  end
-; define-function
-
 : string->name
   << string[address, length] -- name >>
   name-hash-table,insert
   false? if
     "* (string->name) *name-hash-table* is full!" .s .l
-    end
-  then
-  end
-; define-function
-
-: string->name,share
-  << string[address, length] -- name >>
-  name-hash-table,insert,share
-  false? if
-    "* (string->name,share) *name-hash-table* is full!" .s .l
     end
   then
   end
@@ -529,7 +500,7 @@ more,rule-set,make-jojo
   << link -- >>
   >:link
   :link link->jo
-  :link link->name-string string->name,share
+  :link link->name-string string->name
   name,save-jo
   end
 ; define-function
@@ -557,7 +528,15 @@ more,rule-set,make-jojo
 : name-hash-table,delete-jo
   << jo -- >>
   >:jo
-  :jo jo->name-string string->name,share >:name
+  :jo jo->name-string string->name >:name
+  0 :name name,save-jo
+  end
+; define-function
+
+: name-hash-table,delete-jo,by-link
+  << link -- >>
+  >:link
+  :link link->name-string string->name >:name
   0 :name name,save-jo
   end
 ; define-function
@@ -600,6 +579,52 @@ more,rule-set,make-jojo
      buffer, n
      -- length >>
   over n-string->buffer!,loop
+  end
+; define-function
+
+: restore,jojo-area
+  << undo-point -- >>
+  fetch
+  address *jojo-area,current-free-address* save
+  end
+; define-function
+
+: restore,string-area
+  << undo-point -- >>
+  *jo-size* add fetch
+  address *string-area,current-free-address* save
+  end
+; define-function
+
+: restore,link,remove-jo
+  << old-link, link -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  dup
+  link->next-link
+  loop
+; define-function
+
+: restore,link
+  << undo-point -- >>
+  *jo-size* 2 mul add fetch >:old-link
+  :old-link *link* restore,link,remove-jo
+  :old-link address *link* save
+  end
+; define-function
+
+3 *jo-size* mul allocate-memory
+: *undo-point*
+; define-variable,with-tos
+
+: undo
+  << undo-point -- >>
+  >:undo-point
+  :undo-point restore,jojo-area
+  :undo-point restore,string-area
+  :undo-point restore,link
   end
 ; define-function
 

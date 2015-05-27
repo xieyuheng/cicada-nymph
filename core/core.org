@@ -832,7 +832,7 @@
 
    more,rule-set,make-jojo
    #+end_src
-* name
+* name & name-hash-table
 ** note
    * the name-hash-table
      is used both in cicada-nymph and cicada-language
@@ -849,7 +849,7 @@
       end
     ; define-function
     #+end_src
-** memory allocation
+** *name-hash-table*
    * the following are some prime number
      ready to be used
      * 1000003   about 976 k
@@ -877,6 +877,44 @@
    0
    : *name-hash-table,counter*
    ; define-variable,with-tos
+   #+end_src
+** *name-hash-table,string-area*
+   #+begin_src cicada-nymph :tangle core.cn
+   *name-hash-table,size* 32 mul
+   : *name-hash-table,string-area,size*
+   ; define-variable,with-tos
+
+   *name-hash-table,string-area,size*
+   allocate-memory
+   : *name-hash-table,string-area*
+   ; define-variable,with-tos
+
+   *name-hash-table,string-area*
+   : *name-hash-table,string-area,current-free-address*
+   ; define-variable,with-tos
+   #+end_src
+** name-hash-table,string-area,stay
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,string-area,stay
+     << string[address, length] -- >>
+     tuck
+     *name-hash-table,string-area,current-free-address*
+     string->buffer!
+     address *name-hash-table,string-area,current-free-address*
+     add-save
+     end
+   ; define-function
+   #+end_src
+** make-string,for-name
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-string,for-name
+     << string[address, length] -- string-copy[address, length] >>
+     *name-hash-table,string-area,current-free-address*
+     xx|swap|x
+     tuck
+     name-hash-table,string-area,stay
+     end
+   ; define-function
    #+end_src
 ** name
 *** note
@@ -974,17 +1012,8 @@
     : name,save-string
       << string[address, length], name -- >>
       >:name
-      make-string
+      make-string,for-name
       :name name->address
-      2 n-save
-      end
-    ; define-function
-    #+end_src
-*** name,save-string,share
-    #+begin_src cicada-nymph :tangle core.cn
-    : name,save-string,share
-      << string[address, length], name -- >>
-      name->address
       2 n-save
       end
     ; define-function
@@ -1169,53 +1198,6 @@
       end
     ; define-function
     #+end_src
-*** name-hash-table,insert,share
-    * I found that (insert) can not re-use (search)
-    #+begin_src cicada-nymph :tangle core.cn
-    : name-hash-table,insert,share,loop
-      << string[address, length], number, counter
-         -- name, true
-         -- name, false >>
-      >:counter >:number >::string
-      :number :counter name-hash-table,hash
-      >:name
-      :number 0 name-hash-table,hash
-      >:orbit
-      :name name,used? false? if
-        ::string :name
-        name,save-string,share
-        :orbit :name
-        name,save-orbiton
-        :counter :orbit
-        name,save-orbit-length
-        1 address *name-hash-table,counter* add-save
-        :name true
-        end
-      then
-      :name name->string
-      ::string string-equal? if
-        :name true
-        end
-      then
-      :counter *name-hash-table,size* equal? if
-        :name false
-        end
-      then
-      ::string
-      :number
-      :counter add1
-      loop
-    ; define-function
-
-    : name-hash-table,insert,share
-      << string[address, length]
-         -- name, true
-         -- name, false >>
-      dup2 string->finite-carry-sum
-      0 name-hash-table,insert,share,loop
-      end
-    ; define-function
-    #+end_src
 *** string->name
     * error handling here
     #+begin_src cicada-nymph :tangle core.cn
@@ -1228,27 +1210,6 @@
       then
       end
     ; define-function
-    #+end_src
-*** string->name,share
-    * error handling here
-    #+begin_src cicada-nymph :tangle core.cn
-    : string->name,share
-      << string[address, length] -- name >>
-      name-hash-table,insert,share
-      false? if
-        "* (string->name,share) *name-hash-table* is full!" .s .l
-        end
-      then
-      end
-    ; define-function
-    #+end_src
-*** test
-    #+begin_src cicada-nymph
-    *string-area,current-free-address* .
-    "12345,share" string->name,share .
-    *string-area,current-free-address* .
-    "12345,no-share" string->name .
-    *string-area,current-free-address* .
     #+end_src
 *** note about report
     * report point orbit by orbit
@@ -1349,39 +1310,7 @@
       "b-999" string->name . .l
       end
     ; define-function
-
-    : test,name-hash-table,share
-      << -- >>
-      "a-000,share" string->name,share . .l
-      "a-111,share" string->name,share . .l
-      "a-222,share" string->name,share . .l
-      "a-333,share" string->name,share . .l
-      "a-444,share" string->name,share . .l
-      "a-555,share" string->name,share . .l
-      "a-666,share" string->name,share . .l
-      "a-777,share" string->name,share . .l
-      "a-888,share" string->name,share . .l
-      "a-999,share" string->name,share . .l
-      "b-000,share" string->name,share . .l
-      "b-111,share" string->name,share . .l
-      "b-222,share" string->name,share . .l
-      "b-333,share" string->name,share . .l
-      "b-444,share" string->name,share . .l
-      "b-555,share" string->name,share . .l
-      "b-666,share" string->name,share . .l
-      "b-777,share" string->name,share . .l
-      "b-888,share" string->name,share . .l
-      "b-999,share" string->name,share . .l
-      end
-    ; define-function
-
-    <report> memory
-
-    test,name-hash-table,share
-    <report> memory
-
     test,name-hash-table
-    <report> memory
 
     name-hash-table,report
     #+end_src
@@ -1391,7 +1320,7 @@
       << link -- >>
       >:link
       :link link->jo
-      :link link->name-string string->name,share
+      :link link->name-string string->name
       name,save-jo
       end
     ; define-function
@@ -1423,7 +1352,17 @@
     : name-hash-table,delete-jo
       << jo -- >>
       >:jo
-      :jo jo->name-string string->name,share >:name
+      :jo jo->name-string string->name >:name
+      0 :name name,save-jo
+      end
+    ; define-function
+    #+end_src
+*** name-hash-table,delete-jo,by-link
+    #+begin_src cicada-nymph :tangle core.cn
+    : name-hash-table,delete-jo,by-link
+      << link -- >>
+      >:link
+      :link link->name-string string->name >:name
       0 :name name,save-jo
       end
     ; define-function
@@ -1488,6 +1427,156 @@
    3 n-string->buffer!
    *test,buffer* swap
    .s
+   #+end_src
+* >< undo
+** 記 撤銷
+   * 因爲 name-hash-table 的存在
+     導致我實現 undo 這個特性的機制
+     必須是去記錄差別 而不能是記錄歷史
+   * 具體地
+     在每個 undo point 之後
+     所有對 jo 的 redefine 都需要被記錄
+     在需要退回到這個 undo point 之時
+     恢復這些被從 name-hash-table 中踢出去的 jo
+   * 這樣
+     每一個 jo 被踢出 name-hash-table 時
+     會存入 name jo 的對子在 undo-stack 中
+   * 注意
+     每一次重新定義都對應一次恢復
+     * 缺點是
+       這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
+       就帶來了一些沒必要的恢復
+     * 優點是
+       這樣就避免了對 多次重複定義的 jo 的特殊處理
+       不論是在效率上
+       還是實現的簡潔性上
+       這種實現方式都是更優的
+** note global states
+   * *jojo-area,current-free-address*
+   * *string-area,current-free-address*
+   * *link*
+   * name-hash-table
+   * *back-up-area,current-free-address*
+   * syntax-stack
+     and rule-set in it
+** 記
+   - x :: kkk 如何實現呢
+   - k :: 先寫出來所需要的步驟
+        然後再想接口把
+        因爲接口可能很難設計
+        一下子想不好
+   - x :: 好吧
+        首先在進行一次 undo 的時候
+        需要重置 全局狀態
+        這包含
+     - *jojo-area,current-free-address*
+     - *string-area,current-free-address*
+     - *link*
+     - 先不考慮 syntax-stack 和 其中的 rule-set
+       也就是說這些信息必須被保存在 undo-stack 中
+       在重置 *link* 之前
+       需要把 當前的 *link* 到 undo 點的 *link* 之間的 所有 link 中到包含的珠子 都從 name-hash-table 中踢出
+   - k :: 沒錯
+        並且這些現在需要被踢出來的珠子
+        當他們被保存在 name-hash-table 中的時候 所踢出來的珠子都需要被恢復
+        這些 珠子是被保存在 *back-up-area* 中的
+        每當 一個 definer 重新 定義東西的時候 都會把被重新定義的珠子 放到 *back-up-area* 中
+   - x :: 所以步驟基本如下
+     1. restore *jojo-area,current-free-address*
+     2. restore *string-area,current-free-address*
+     3. restore *link*
+        1. remove jo from name-hash-table by *link*
+        2. restore jo from name-hash-table by *back-up-area*
+     4. restore *back-up-area,current-free-address*
+        這就全部了嘛
+   - k :: 試着實現它們試試
+        可以先不把用 undo-stack
+        而先把所需要的信息保存在一個全局變量中
+        也就是先實現單一的 undo-point
+   - x :: 沒錯
+        這樣從簡單到難才對
+   - k :: 另外需要注意的是
+        undo 機制需要 definer 的支持
+        所以這裏的機制應該定義在 definer 之前
+        然後在重新定義 definer 的時候加入 在重複時 對 *back-up-area* 的寫入
+   - x :: 並且更加簡化一下
+        讓我們先不實現 *back-up-area*
+        先做前四項
+   - k :: 其實還有一點
+        那就是我們還是要設計一點接口然後才能着手實現
+        也就是說
+        現在我們知道了該做什麼
+        我們還必須討論以什麼樣的方式來做
+   - x :: 好的
+        首先
+        一些以 <restore> 爲姓的函數 以 undo-point 爲參數
+        undo 調用它們就行了
+        當然還需要考慮
+        undo-point 這個數據結構的設計和保存
+   - k :: 那就快先想數據結構
+   - x :: 我知道了
+        這些值最終是要做爲一組一組的值被保存在 undo-stack 中的
+        所以我所傳遞的參數是 undo-stack 的指針就對了
+        這樣說的話 我可以先用一塊靜態的內存來保存一組值 然後傳遞指針
+        | undo-point | jojo-area    |
+        |            | string-area  |
+        |            | link         |
+** restore
+*** jojo-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,jojo-area
+      << undo-point -- >>
+      fetch
+      address *jojo-area,current-free-address* save
+      end
+    ; define-function
+    #+end_src
+*** string-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,string-area
+      << undo-point -- >>
+      *jo-size* add fetch
+      address *string-area,current-free-address* save
+      end
+    ; define-function
+    #+end_src
+*** link,remove-jo
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,link,remove-jo
+      << old-link, link -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      dup
+      link->next-link
+      loop
+    ; define-function
+    #+end_src
+*** link
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,link
+      << undo-point -- >>
+      *jo-size* 2 mul add fetch >:old-link
+      :old-link *link* restore,link,remove-jo
+      :old-link address *link* save
+      end
+    ; define-function
+    #+end_src
+** undo
+   #+begin_src cicada-nymph :tangle core.cn
+   3 *jo-size* mul allocate-memory
+   : *undo-point*
+   ; define-variable,with-tos
+
+   : undo
+     << undo-point -- >>
+     >:undo-point
+     :undo-point restore,jojo-area
+     :undo-point restore,string-area
+     :undo-point restore,link
+     end
+   ; define-function
    #+end_src
 * definers
 ** <word>?
@@ -6054,41 +6143,6 @@
    "library" <poi> sub
    path: +library+ hi.cn ;
    #+end_src
-* >< undo
-** 記 撤銷
-   * 因爲 name-hash-table 的存在
-     導致我實現 undo 這個特性的機制
-     必須是去記錄差別 而不能是記錄歷史
-   * 具體地
-     在每個 undo point 之後
-     所有對 jo 的 redefine 都需要被記錄
-     在需要退回到這個 undo point 之時
-     恢復這些被從 name-hash-table 中踢出去的 jo
-   * 這樣
-     每一個 jo 被踢出 name-hash-table 時
-     會存入 name jo 的對子在 undo-stack 中
-   * 注意
-     每一次重新定義都對應一次恢復
-     * 缺點是
-       這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
-       就帶來了一些沒必要的恢復
-     * 優點是
-       這樣就避免了對 多次重複定義的 jo 的特殊處理
-       不論是在效率上
-       還是實現的簡潔性上
-       這種實現方式都是更優的
-** note global states
-   * *jojo-area,current-free-address*
-   * *string-area,current-free-address*
-   * *back-up-area,current-free-address*
-   * *link*
-   * name-hash-table
-   * syntax-stack
-     and rule-set in it
-** >< back-up-area
-** >< undo-stack
-*** mark-undo-point
-*** undo
 * >< load & need
 ** 記 加載
 *** meta-code
