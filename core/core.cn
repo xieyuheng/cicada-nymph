@@ -681,6 +681,65 @@ more,rule-set,make-jojo
   loop
 ; define-function
 
+: define-function
+  << string[address, length] -- >>
+  *string-area,current-free-address* xx|swap|x
+  *jojo-area,current-free-address* xx|swap|x
+  *link* xx|swap|x
+  << *string-area,current-free-address*
+     *jojo-area,current-free-address*
+     *link*
+     string[address, length] >>
+  prepare-for
+    !undo-make-jojo
+    end
+
+  dup2 >::string
+
+  ::string string-head,word >::title
+  ::string string-tail,word string-head,word >::name
+  ::string string-tail,word string-tail,word >::body
+
+  ::title " " ::name
+  512 allocate-local-memory dup >:buffer
+  3 n-string->buffer! >:length
+  :buffer :length >::name
+  ::title <word>? not if
+    ::string string-head,word >::name
+    ::string string-tail,word >::body
+  then
+  ::name
+  make-string >::name
+
+  ::name *link* 0
+  make-link >:link
+
+  :link address *link* save
+
+  ::name *explainer,function* 0
+  make-jo-head >:jo
+
+  :jo :link link,save-jo
+
+  :link name-hash-table,save-jo,by-link
+
+  *jojo-area,current-free-address* >:old-address
+
+  :jo ::body make-jojo
+
+  *jojo-area,current-free-address*
+  :old-address sub *jo-size* div
+  :jo jo,save-length
+
+  drop2
+  drop
+  drop
+  drop
+  end
+; define-function
+
+*link* init,name-hash-table,by-link
+
 : define-variable,with-tos
   << value, string[address, length] -- >>
   >::string
@@ -777,64 +836,26 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: define-function
-  << string[address, length] -- >>
-  *string-area,current-free-address* xx|swap|x
-  *jojo-area,current-free-address* xx|swap|x
-  *link* xx|swap|x
-  << *string-area,current-free-address*
-     *jojo-area,current-free-address*
-     *link*
-     string[address, length] >>
-  prepare-for
-    !undo-make-jojo
+: alias
+  << alias[address, length], name[address, length] -- >>
+  >::name >::alias
+  ::name name-hash-table,find-jo if
+  else
+    "* (alias) fail" .s .l
+    "  because can not find name in name-hash-table" .s .l
+    "  alias : " .s ::alias .s .l
+    "  name : " .s ::name .s .l
     end
-
-  dup2 >::string
-
-  ::string string-head,word >::title
-  ::string string-tail,word string-head,word >::name
-  ::string string-tail,word string-tail,word >::body
-
-  ::title " " ::name
-  512 allocate-local-memory dup >:buffer
-  3 n-string->buffer! >:length
-  :buffer :length >::name
-  ::title <word>? not if
-    ::string string-head,word >::name
-    ::string string-tail,word >::body
   then
-  ::name
-  make-string >::name
-
-  ::name *link* 0
+  >:jo
+  ::alias *link* :jo
   make-link >:link
 
   :link address *link* save
 
-  ::name *explainer,function* 0
-  make-jo-head >:jo
-
-  :jo :link link,save-jo
-
   :link name-hash-table,save-jo,by-link
-
-  *jojo-area,current-free-address* >:old-address
-
-  :jo ::body make-jojo
-
-  *jojo-area,current-free-address*
-  :old-address sub *jo-size* div
-  :jo jo,save-length
-
-  drop2
-  drop
-  drop
-  drop
   end
 ; define-function
-
-*link* init,name-hash-table,by-link
 
 : name-hash-table,find-jo,with-title
   << title[address, length], word[address, length]
@@ -996,27 +1017,6 @@ more,rule-set,make-jojo
 ; define-function
 
 more,rule-set,make-jojo
-
-: alias
-  << alias[address, length], name[address, length] -- >>
-  >::name >::alias
-  ::name name-hash-table,find-jo if
-  else
-    "* (alias) fail" .s .l
-    "  because can not find name in name-hash-table" .s .l
-    "  alias : " .s ::alias .s .l
-    "  name : " .s ::name .s .l
-    end
-  then
-  >:jo
-  ::alias *link* :jo
-  make-link >:link
-
-  :link address *link* save
-
-  :link name-hash-table,save-jo,by-link
-  end
-; define-function
 
 : remove-char!,loop
   << cursor, length, char -- cursor >>
