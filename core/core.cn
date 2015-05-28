@@ -582,17 +582,106 @@ allocate-memory
   end
 ; define-function
 
-2046 *jo-size* mul
-: *backup-area,size*
+2048 *jo-size* mul
+: *undo-stack,size*
 ; define-variable,with-tos
 
-*backup-area,size* allocate-memory
-: *backup-area*
+*undo-stack,size* allocate-memory
+: *undo-stack*
 ; define-variable,with-tos
 
-*backup-area*
-: *backup-area,current-free-address*
+*undo-stack*
+: *undo-stack,pointer*
 ; define-variable,with-tos
+
+2048 *jo-size* mul
+: *jo-backup-area,size*
+; define-variable,with-tos
+
+*jo-backup-area,size* allocate-memory
+: *jo-backup-area*
+; define-variable,with-tos
+
+*jo-backup-area*
+: *jo-backup-area,current-free-address*
+; define-variable,with-tos
+
+2048 10 mul
+*jo-size* mul
+: *syntax-backup-area,size*
+; define-variable,with-tos
+
+*syntax-backup-area,size* allocate-memory
+: *syntax-backup-area*
+; define-variable,with-tos
+
+*syntax-backup-area*
+: *syntax-backup-area,current-free-address*
+; define-variable,with-tos
+
+: create-undo-point,copy-syntax,one-rule-set
+  << rule-set -- >>
+  >:rule-set
+  :rule-set rule-set,fetch-border >:border
+  :border :rule-set sub
+  *jo-size* div >:n
+
+  :rule-set
+  *syntax-backup-area,current-free-address* save
+  *jo-size* address *syntax-backup-area,current-free-address* add-save
+
+  :n
+  *syntax-backup-area,current-free-address* save
+  *jo-size* address *syntax-backup-area,current-free-address* add-save
+
+  :rule-set
+  :n n-fetch
+  *syntax-backup-area,current-free-address*
+  :n n-save
+  *jo-size* :n mul
+  address *syntax-backup-area,current-free-address* add-save
+  end
+; define-function
+
+: create-undo-point,copy-syntax
+  << cursor -- >>
+  dup *syntax-stack,pointer* equal? if
+    drop
+    end
+  then
+  dup fetch create-undo-point,copy-syntax,one-rule-set
+  *jo-size* add
+  loop
+; define-function
+
+: create-undo-point
+  << -- undo-point >>
+  *undo-stack,pointer* >:undo-point
+
+  *jojo-area,current-free-address*
+  *string-area,current-free-address*
+  *link*
+  *jo-backup-area,current-free-address*
+  *syntax-backup-area,current-free-address*
+  :undo-point
+  5 n-save
+
+  *jo-size* 5 mul
+  address *undo-stack,pointer* add-save
+
+  *syntax-stack,address* create-undo-point,copy-syntax
+
+  *syntax-stack,pointer*
+  *syntax-stack,address* sub
+  *jo-size* div
+  *undo-stack,pointer* save
+
+  *jo-size*
+  address *undo-stack,pointer* add-save
+
+  :undo-point
+  end
+; define-function
 
 : restore,jojo-area
   << undo-point -- >>
@@ -628,7 +717,7 @@ allocate-memory
   end
 ; define-function
 
-: restore,backup-area,save-jo
+: restore,jo-backup-area,save-jo
   << old-address, address -- >>
   dup2 equal? if
     drop2
@@ -639,26 +728,57 @@ allocate-memory
   loop
 ; define-function
 
-: restore,backup-area
+: restore,jo-backup-area
   << undo-point -- >>
   *jo-size* 3 mul add fetch >:old-address
-  :old-address *backup-area,current-free-address*
-  restore,backup-area,save-jo
-  :old-address address *backup-area,current-free-address* save
+  :old-address *jo-backup-area,current-free-address*
+  restore,jo-backup-area,save-jo
+  :old-address address *jo-backup-area,current-free-address* save
   end
 ; define-function
 
+: restore,syntax-backup-area,save-syntax
+  << rule-set-copy, number-of-rule-sets -- >>
+  dup zero? if
+    drop2
+    end
+  then
+  >:number-of-rule-sets
+  >:rule-set-copy
+  :rule-set-copy fetch >:rule-set
+  :rule-set-copy *jo-size* add fetch >:n
 
+  :rule-set-copy *jo-size* 2 mul add
+  :n n-fetch
+  :rule-set
+  :n n-save
 
-: push-undo-stack
-  << -- >>
+  *jo-size*
+  :n mul
+  :rule-set add
+  :rule-set rule-set,save-border
 
+  *jo-size*
+  :n 2 add mul
+  :rule-set-copy add
+  :number-of-rule-sets sub1
+  loop
+; define-function
+
+: restore,syntax-backup-area
+  << undo-point -- >>
+  dup
+  *jo-size* 4 mul add fetch >:old-address
+  *jo-size* 5 mul add fetch >:number-of-rule-sets
+  :old-address :number-of-rule-sets
+  restore,syntax-backup-area,save-syntax
+  :old-address address *syntax-backup-area,current-free-address* save
   end
 ; define-function
 
-: pop-undo-stack
-  << -- >>
-
+: restore,undo-stack
+  << undo-point -- >>
+  address *undo-stack,pointer* save
   end
 ; define-function
 
@@ -668,7 +788,9 @@ allocate-memory
   :undo-point restore,jojo-area
   :undo-point restore,string-area
   :undo-point restore,link
-  :undo-point restore,backup-area
+  :undo-point restore,jo-backup-area
+  :undo-point restore,syntax-backup-area
+  :undo-point restore,undo-stack
   end
 ; define-function
 
@@ -794,10 +916,10 @@ allocate-memory
   :name-index name,used-as-jo? if
     :name-index name,fetch-jo
     :name-index
-    *backup-area,current-free-address*
+    *jo-backup-area,current-free-address*
     2 n-save
     *jo-size* 2 mul
-    address *backup-area,current-free-address*
+    address *jo-backup-area,current-free-address*
     add-save
   then
   :link name-hash-table,save-jo,by-link
@@ -851,10 +973,10 @@ allocate-memory
   :name-index name,used-as-jo? if
     :name-index name,fetch-jo
     :name-index
-    *backup-area,current-free-address*
+    *jo-backup-area,current-free-address*
     2 n-save
     *jo-size* 2 mul
-    address *backup-area,current-free-address*
+    address *jo-backup-area,current-free-address*
     add-save
   then
   :link name-hash-table,save-jo,by-link
@@ -912,10 +1034,10 @@ allocate-memory
   :name-index name,used-as-jo? if
     :name-index name,fetch-jo
     :name-index
-    *backup-area,current-free-address*
+    *jo-backup-area,current-free-address*
     2 n-save
     *jo-size* 2 mul
-    address *backup-area,current-free-address*
+    address *jo-backup-area,current-free-address*
     add-save
   then
   :link name-hash-table,save-jo,by-link
@@ -956,10 +1078,10 @@ allocate-memory
   :name-index name,used-as-jo? if
     :name-index name,fetch-jo
     :name-index
-    *backup-area,current-free-address*
+    *jo-backup-area,current-free-address*
     2 n-save
     *jo-size* 2 mul
-    address *backup-area,current-free-address*
+    address *jo-backup-area,current-free-address*
     add-save
   then
   :link name-hash-table,save-jo,by-link
@@ -2100,10 +2222,10 @@ jo stack-REPL address *lost-exception-REPL* save
   :name-index name,used-as-jo? if
     :name-index name,fetch-jo
     :name-index
-    *backup-area,current-free-address*
+    *jo-backup-area,current-free-address*
     2 n-save
     *jo-size* 2 mul
-    address *backup-area,current-free-address*
+    address *jo-backup-area,current-free-address*
     add-save
   then
   :link name-hash-table,save-jo,by-link
@@ -3689,11 +3811,11 @@ more,rule-set,basic-REPL
 : <report> syntax
   << -- >>
   "* *rule-set,make-jojo* :" .s .l
-   *rule-set,make-jojo* list-rule
+     *rule-set,make-jojo* list-rule
   "* *rule-set,basic-REPL* :" .s .l
-   *rule-set,basic-REPL* list-rule
+     *rule-set,basic-REPL* list-rule
   "* tos-syntax-stack :" .s .l
-   tos-syntax-stack list-rule
+     tos-syntax-stack list-rule
   end
 ; define-function
 

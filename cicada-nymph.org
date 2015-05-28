@@ -4799,17 +4799,20 @@
    address$syntax_stack labeling
       preserve jo_size * 1024
 
-   define_variable "*pointer-syntax-stack*", V__pointer_syntax_stack
+   define_variable "*syntax-stack,address*", V__syntax_stack__address
+      xx address$syntax_stack
+
+   define_variable "*syntax-stack,pointer*", V__syntax_stack__pointer
       xx address$syntax_stack
    #+end_src
 ** push-syntax-stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "push-syntax-stack", push_syntax_stack
       ;; << syntax-set[address] -- >>
-      xx V__pointer_syntax_stack
+      xx V__syntax_stack__pointer
       xx save
       xx V__jo_size
-      xx address, V__pointer_syntax_stack
+      xx address, V__syntax_stack__pointer
       xx add_save
       xx end
    #+end_src
@@ -4818,16 +4821,16 @@
    define_function "pop-syntax-stack", pop_syntax_stack
       ;; << -- syntax-set[address] >>
       xx V__jo_size
-      xx address, V__pointer_syntax_stack
+      xx address, V__syntax_stack__pointer
       xx sub_save
-      xx V__pointer_syntax_stack, fetch
+      xx V__syntax_stack__pointer, fetch
       xx end
    #+end_src
 ** tos-syntax-stack
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "tos-syntax-stack", tos_syntax_stack
       ;; << -- syntax-set[address] >>
-      xx V__pointer_syntax_stack
+      xx V__syntax_stack__pointer
       xx V__jo_size
       xx subtraction
       xx fetch
@@ -4838,7 +4841,7 @@
    define_function "drop-syntax-stack", drop_syntax_stack
       ;; << -- >>
       xx V__jo_size
-      xx address, V__pointer_syntax_stack
+      xx address, V__syntax_stack__pointer
       xx sub_save
       xx end
    #+end_src
@@ -4846,7 +4849,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "syntax-stack-empty?", syntax_stack_empty?
       ;; << -- bool >>
-      xx V__pointer_syntax_stack
+      xx V__syntax_stack__pointer
       xx literal, address$syntax_stack
       xx equal?
       xx end
@@ -4890,18 +4893,14 @@
    * rule-set,make-jojo 是
      語法謂詞 還有 語法函數 這種對子
      所形成的有序集合
-   * 這樣就可以形成簡單的語境概念了
-     這種簡單的語境概念也很有趣
-     但是
-     它與我爲蟬語所構想的
-     利用姓名來實現的語境機制是不同的
+     這樣就可以形成簡單的語境概念了
    * 每個語境都有責任
      在進入和退出時
      維護好 rule-set,make-jojo
-   * 以 rule 爲前綴的 macro 的類型常常是
+   * 以 syntax 爲前綴的 function 的類型常常是
      1. 以 make-jojo 爲後綴時
-        << string[address, length], word[address, length]
-        -- string[address, length] >>
+        << jo, string[address, length], word[address, length]
+        -- jo, string[address, length] >>
      2. 在 REPL 中使用時又可以是
         << word[address, length] -- integer >>
      所以在使用時
@@ -5003,7 +5002,7 @@
       xx literal, cursor$find_rule, save
       xx tail_call, find_rule__loop
    #+end_src
-* rule-set,make-jojo
+* *rule-set,make-jojo*
 ** ----------------------------------
 ** note
    * a syntax is a function to be called at compile time

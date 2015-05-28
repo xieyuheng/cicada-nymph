@@ -467,6 +467,42 @@
     no-collision
 *** <title>
     find-jo
+** 命名
+   * 命名行爲有很多類型
+     令人困惑 列舉如下
+     1. 首先是全局變量
+        一個全局變量 是一個有名字的盒子
+        裏面可以保存值
+     2. 其次是有 名域 的數據結構
+        比如 珠 和 鍊
+     3. 再次是 名散表 中
+        一個 名 下所保存的值
+   * 特點是
+     1. 由值不能找回名字
+     2. 值本身是一個數據結構的地址
+        可以用以找回名字
+        因爲名字只是這個數據結構的一個域
+     3. 目前 名散表 中所保存的值
+        只限於 珠
+        一個 珠 可以存在於很多 名散表 中的 名欄 中
+        每個 名欄 之名 都是這個珠的別名
+        珠 做爲數據結構其內所保存的名字
+        纔是這個珠的真名
+   * 問題
+     1. 珠 內的真名 是有必要的還是沒必要的
+        這個名字的唯一目的就是 用以打印於顯示
+        完全沒有查找的功能
+   * 這種混亂的原因在於
+     1. 函數體中所保存的
+        不是 名散表 中的 名欄
+        而是 函數的真正地址
+   * 這導致動態性的喪失
+     即 重新定義一個函數的時候
+     有時必須重新定義所有依賴於它的函數
+     才能達到所期望的效果
+     同時獲得靜態性
+     即 重新定義一個函數時
+     不會破壞以前的定義
 * ===================================
 * writers
 ** note name of writers
@@ -575,77 +611,77 @@
       end
     ; define-function
     #+end_src
-*** test if & else & then
-    #+begin_src cicada-nymph
-    : .12
-      << 1 2 -- >>
-      2 equal? if
-        "(^-^)" .s
-        1 equal? if
-          "\^o^/" .s
-        else
-          "     " .s
-        then
-      else
-        "     " .s
-        1 equal? if
-          "\^o^/" .s
-        else
-          "     " .s
-        then
-      then
-      end
-    ; define-function
+** test if & else & then
+   #+begin_src cicada-nymph
+   : .12
+     << 1 2 -- >>
+     2 equal? if
+       "(^-^)" .s
+       1 equal? if
+         "\^o^/" .s
+       else
+         "     " .s
+       then
+     else
+       "     " .s
+       1 equal? if
+         "\^o^/" .s
+       else
+         "     " .s
+       then
+     then
+     end
+   ; define-function
 
-    : .12,test
-      .l
-      1 2 .12 .l
-      6 2 .12 .l
-      1 6 .12 .l
-      6 6 .12 .l
-      end
-    ; define-function
-    .12,test
-    #+end_src
-*** test if & else & then [by factorial]
-    #+begin_src cicada-nymph
-    : factorial
-      << number -- number >>
-      dup
-      one? if
-        end
-      then
-      dup sub1 factorial
-      mul
-      end
-    ; define-function
+   : .12,test
+     .l
+     1 2 .12 .l
+     6 2 .12 .l
+     1 6 .12 .l
+     6 6 .12 .l
+     end
+   ; define-function
+   .12,test
+   #+end_src
+** test if & else & then [by factorial]
+   #+begin_src cicada-nymph
+   : factorial
+     << number -- number >>
+     dup
+     one? if
+       end
+     then
+     dup sub1 factorial
+     mul
+     end
+   ; define-function
 
-    : factorial,test
-      .l
-      1 factorial . .l
-      2 factorial . .l
-      3 factorial . .l
-      4 factorial . .l
-      5 factorial . .l
-      6 factorial . .l
-      7 factorial . .l
-      8 factorial . .l
-      9 factorial . .l
-      10 factorial . .l
-      11 factorial . .l
-      12 factorial . .l
-      13 factorial . .l
-      14 factorial . .l
-      15 factorial . .l
-      16 factorial . .l
-      17 factorial . .l
-      18 factorial . .l
-      19 factorial . .l
-      20 factorial . .l
-      end
-    ; define-function
-    factorial,test
-    #+end_src
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+   factorial,test
+   #+end_src
 ** prepare-for                        :syntax:
 *** word:prepare-for?
     #+begin_src cicada-nymph :tangle core.cn
@@ -732,88 +768,133 @@
       end
     ; define-function
     #+end_src
-*** test recur [by factorial]
-    #+begin_src cicada-nymph
-    : factorial
-      << number -- number >>
-      dup
-      one? if
-        end
-      then
-      dup sub1 recur mul
-      end
-    ; define-function
+** test recur [by factorial]
+   #+begin_src cicada-nymph
+   : factorial
+     << number -- number >>
+     dup
+     one? if
+       end
+     then
+     dup sub1 recur mul
+     end
+   ; define-function
 
-    : factorial,test
-      .l
-      1 factorial . .l
-      2 factorial . .l
-      3 factorial . .l
-      4 factorial . .l
-      5 factorial . .l
-      6 factorial . .l
-      7 factorial . .l
-      8 factorial . .l
-      9 factorial . .l
-      10 factorial . .l
-      11 factorial . .l
-      12 factorial . .l
-      13 factorial . .l
-      14 factorial . .l
-      15 factorial . .l
-      16 factorial . .l
-      17 factorial . .l
-      18 factorial . .l
-      19 factorial . .l
-      20 factorial . .l
-      end
-    ; define-function
-    factorial,test
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+   factorial,test
 
 
-    : factorial,loop
-      << counter, product -- product >>
-      over one? if
-        swap drop
-        end
-      then
-      over mul
-      swap sub1 swap
-      loop
-    ; define-function
+   : factorial,loop
+     << counter, product -- product >>
+     over one? if
+       swap drop
+       end
+     then
+     over mul
+     swap sub1 swap
+     loop
+   ; define-function
 
-    : factorial
-      << number -- number >>
-      1 factorial,loop
-      end
-    ; define-function
+   : factorial
+     << number -- number >>
+     1 factorial,loop
+     end
+   ; define-function
 
-    : factorial,test
-      .l
-      1 factorial . .l
-      2 factorial . .l
-      3 factorial . .l
-      4 factorial . .l
-      5 factorial . .l
-      6 factorial . .l
-      7 factorial . .l
-      8 factorial . .l
-      9 factorial . .l
-      10 factorial . .l
-      11 factorial . .l
-      12 factorial . .l
-      13 factorial . .l
-      14 factorial . .l
-      15 factorial . .l
-      16 factorial . .l
-      17 factorial . .l
-      18 factorial . .l
-      19 factorial . .l
-      20 factorial . .l
-      end
-    ; define-function
-    factorial,test
-    #+end_src
+   : factorial,test
+     .l
+     1 factorial . .l
+     2 factorial . .l
+     3 factorial . .l
+     4 factorial . .l
+     5 factorial . .l
+     6 factorial . .l
+     7 factorial . .l
+     8 factorial . .l
+     9 factorial . .l
+     10 factorial . .l
+     11 factorial . .l
+     12 factorial . .l
+     13 factorial . .l
+     14 factorial . .l
+     15 factorial . .l
+     16 factorial . .l
+     17 factorial . .l
+     18 factorial . .l
+     19 factorial . .l
+     20 factorial . .l
+     end
+   ; define-function
+   factorial,test
+   #+end_src
+** test recur [by fibonacci]
+   #+begin_src cicada-nymph
+   << 0 1 1 2 3 5 8 13 21 34 55 89 144 233 >>
+
+   : fibonacci
+     << number -- number >>
+     dup zero? if
+       end
+     then
+     dup one? if
+       end
+     then
+     dup sub1 recur
+     swap sub1 sub1 recur
+     add
+     end
+   ; define-function
+
+   : fibonacci,test
+     .l
+     0 fibonacci . .l
+     1 fibonacci . .l
+     2 fibonacci . .l
+     3 fibonacci . .l
+     4 fibonacci . .l
+     5 fibonacci . .l
+     6 fibonacci . .l
+     7 fibonacci . .l
+     8 fibonacci . .l
+     9 fibonacci . .l
+     10 fibonacci . .l
+     11 fibonacci . .l
+     12 fibonacci . .l
+     13 fibonacci . .l
+     14 fibonacci . .l
+     15 fibonacci . .l
+     16 fibonacci . .l
+     17 fibonacci . .l
+     18 fibonacci . .l
+     19 fibonacci . .l
+     20 fibonacci . .l
+     end
+   ; define-function
+   fibonacci,test
+   #+end_src
 ** more,rule-set,make-jojo
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
@@ -1463,27 +1544,141 @@
    * *backup-area,current-free-address*
    * syntax-stack
      and rule-set in it
-** *backup-area*
+** undo-point
+*** note undo point
+    * the undo point used to undo
+      will be used to reset the pointer of undo-stack
+      [the current-free-address of undo-stack]
+    * structure
+      | undo-point | jojo-area           |
+      |            | string-area         |
+      |            | link                |
+      |            | jo-backup-area      |
+      |            | syntax-backup-area  |
+      |            | number of rule-sets |
+    * interface function is not implemented
+      because they will not be used very much
+** *undo-stack*
+*** note
+    * I do not need the push & pop interface here
+*** memory allocation
+    #+begin_src cicada-nymph :tangle core.cn
+    2048 *jo-size* mul
+    : *undo-stack,size*
+    ; define-variable,with-tos
+
+    *undo-stack,size* allocate-memory
+    : *undo-stack*
+    ; define-variable,with-tos
+
+    *undo-stack*
+    : *undo-stack,pointer*
+    ; define-variable,with-tos
+    #+end_src
+** *jo-backup-area*
    #+begin_src cicada-nymph :tangle core.cn
-   2046 *jo-size* mul
-   : *backup-area,size*
+   2048 *jo-size* mul
+   : *jo-backup-area,size*
    ; define-variable,with-tos
 
-   *backup-area,size* allocate-memory
-   : *backup-area*
+   *jo-backup-area,size* allocate-memory
+   : *jo-backup-area*
    ; define-variable,with-tos
 
-   *backup-area*
-   : *backup-area,current-free-address*
+   *jo-backup-area*
+   : *jo-backup-area,current-free-address*
    ; define-variable,with-tos
    #+end_src
+** *syntax-backup-area*
+   #+begin_src cicada-nymph :tangle core.cn
+   2048 10 mul
+   *jo-size* mul
+   : *syntax-backup-area,size*
+   ; define-variable,with-tos
+
+   *syntax-backup-area,size* allocate-memory
+   : *syntax-backup-area*
+   ; define-variable,with-tos
+
+   *syntax-backup-area*
+   : *syntax-backup-area,current-free-address*
+   ; define-variable,with-tos
+   #+end_src
+** create-undo-point
+*** 記
+    * 將 undo-point 這個數據結構入 undo-stack
+      並返回剛入棧的數據結構的地址
+*** create-undo-point,copy-syntax,one-rule-set
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point,copy-syntax,one-rule-set
+      << rule-set -- >>
+      >:rule-set
+      :rule-set rule-set,fetch-border >:border
+      :border :rule-set sub
+      *jo-size* div >:n
+
+      :rule-set
+      *syntax-backup-area,current-free-address* save
+      *jo-size* address *syntax-backup-area,current-free-address* add-save
+
+      :n
+      *syntax-backup-area,current-free-address* save
+      *jo-size* address *syntax-backup-area,current-free-address* add-save
+
+      :rule-set
+      :n n-fetch
+      *syntax-backup-area,current-free-address*
+      :n n-save
+      *jo-size* :n mul
+      address *syntax-backup-area,current-free-address* add-save
+      end
+    ; define-function
+    #+end_src
+*** create-undo-point,copy-syntax
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point,copy-syntax
+      << cursor -- >>
+      dup *syntax-stack,pointer* equal? if
+        drop
+        end
+      then
+      dup fetch create-undo-point,copy-syntax,one-rule-set
+      *jo-size* add
+      loop
+    ; define-function
+    #+end_src
+*** create-undo-point
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point
+      << -- undo-point >>
+      *undo-stack,pointer* >:undo-point
+
+      *jojo-area,current-free-address*
+      *string-area,current-free-address*
+      *link*
+      *jo-backup-area,current-free-address*
+      *syntax-backup-area,current-free-address*
+      :undo-point
+      5 n-save
+
+      *jo-size* 5 mul
+      address *undo-stack,pointer* add-save
+
+      *syntax-stack,address* create-undo-point,copy-syntax
+
+      *syntax-stack,pointer*
+      *syntax-stack,address* sub
+      *jo-size* div
+      *undo-stack,pointer* save
+
+      *jo-size*
+      address *undo-stack,pointer* add-save
+
+      :undo-point
+      end
+    ; define-function
+    #+end_src
 ** restore
-*** note undo-point
-    * structure
-      | undo-point | jojo-area   |
-      |            | string-area |
-      |            | link        |
-      |            | backup-area |
 *** jojo-area
     #+begin_src cicada-nymph :tangle core.cn
     : restore,jojo-area
@@ -1526,9 +1721,9 @@
       end
     ; define-function
     #+end_src
-*** backup-area,save-jo
+*** jo-backup-area,save-jo
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,backup-area,save-jo
+    : restore,jo-backup-area,save-jo
       << old-address, address -- >>
       dup2 equal? if
         drop2
@@ -1539,37 +1734,87 @@
       loop
     ; define-function
     #+end_src
-*** backup-area
+*** jo-backup-area
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,backup-area
+    : restore,jo-backup-area
       << undo-point -- >>
       *jo-size* 3 mul add fetch >:old-address
-      :old-address *backup-area,current-free-address*
-      restore,backup-area,save-jo
-      :old-address address *backup-area,current-free-address* save
+      :old-address *jo-backup-area,current-free-address*
+      restore,jo-backup-area,save-jo
+      :old-address address *jo-backup-area,current-free-address* save
       end
     ; define-function
     #+end_src
-** >< *undo-stack*
-*** note undo point
-    * the undo point used to undo
-      will be used to reset the pointer of undo-stack
-      [the current-free-address of undo-stack]
-*** memory allocation
+*** 記 語法棧的備份
+    * 複製出去的時候 從頭到尾[從棧底到棧頂]掃描 語法棧
+      複製回來的時候 從頭到尾掃描 語法備份區
+    * 規則集 本身做爲數據結構的存在是
+      |          | border    |
+      |----------+-----------|
+      | rule-set | predicate |
+      |          | function  |
+      |----------+-----------|
+      |          | predicate |
+      |          | function  |
+      |----------+-----------|
+      |          | ...       |
+    * 語法棧中的每一個 規則集 在備份中的存在是
+      | address |
+      | length  |
+      | jo      |
+      | jo      |
+      | ...     |
+      此處把 jo 按順序複製回 address 所代表的 規則集
+      然後重置 current-free-address 就行了
+      並不必知道 jo 的語義
+*** syntax-backup-area,save-syntax
     #+begin_src cicada-nymph :tangle core.cn
+    : restore,syntax-backup-area,save-syntax
+      << rule-set-copy, number-of-rule-sets -- >>
+      dup zero? if
+        drop2
+        end
+      then
+      >:number-of-rule-sets
+      >:rule-set-copy
+      :rule-set-copy fetch >:rule-set
+      :rule-set-copy *jo-size* add fetch >:n
 
+      :rule-set-copy *jo-size* 2 mul add
+      :n n-fetch
+      :rule-set
+      :n n-save
+
+      *jo-size*
+      :n mul
+      :rule-set add
+      :rule-set rule-set,save-border
+
+      *jo-size*
+      :n 2 add mul
+      :rule-set-copy add
+      :number-of-rule-sets sub1
+      loop
+    ; define-function
     #+end_src
-*** push & pop
+*** syntax-backup-area
     #+begin_src cicada-nymph :tangle core.cn
-    : push-undo-stack
-      << -- >>
-
+    : restore,syntax-backup-area
+      << undo-point -- >>
+      dup
+      *jo-size* 4 mul add fetch >:old-address
+      *jo-size* 5 mul add fetch >:number-of-rule-sets
+      :old-address :number-of-rule-sets
+      restore,syntax-backup-area,save-syntax
+      :old-address address *syntax-backup-area,current-free-address* save
       end
     ; define-function
-
-    : pop-undo-stack
-      << -- >>
-
+    #+end_src
+*** undo-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,undo-stack
+      << undo-point -- >>
+      address *undo-stack,pointer* save
       end
     ; define-function
     #+end_src
@@ -1581,75 +1826,60 @@
      :undo-point restore,jojo-area
      :undo-point restore,string-area
      :undo-point restore,link
-     :undo-point restore,backup-area
+     :undo-point restore,jo-backup-area
+     :undo-point restore,syntax-backup-area
+     :undo-point restore,undo-stack
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   4 *jo-size* mul allocate-memory
+   create-undo-point
    : *undo-point*
    ; define-variable,with-tos
 
-
-   *jojo-area,current-free-address*
-   *undo-point* save
-
-   *string-area,current-free-address*
-   *undo-point* *jo-size* add save
-
-   *link*
-   *undo-point* *jo-size* add *jo-size* add save
-
-   *backup-area,current-free-address*
-   *undo-point* *jo-size* add  *jo-size* add *jo-size* add save
-
    : test,undo
      << -- >>
-     1 2 3 . . .
+     "testing undo" .s .l
      end
    ; define-function
 
-   test,undo
+   test,undo << testing undo >>
 
    *undo-point* undo
 
-   test,undo
+   test,undo << undefined >>
+
+   *undo-point* << undefined >>
 
 
-   << with backup-area >>
+   << with jo-backup-area >>
 
-   : test,undo
-     << -- >>
-     11 22 33 . . .
-     end
-   ; define-function
-
-   *jojo-area,current-free-address*
-   *undo-point* save
-
-   *string-area,current-free-address*
-   *undo-point* *jo-size* add save
-
-   *link*
-   *undo-point* *jo-size* add *jo-size* add save
-
-   *backup-area,current-free-address*
-   *undo-point* *jo-size* add  *jo-size* add *jo-size* add save
-
-   test,undo
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
 
    : test,undo
      << -- >>
-     1 2 3 . . .
+     "before undo" .s .l
      end
    ; define-function
 
-   test,undo
+   test,undo << before undo >>
+
+   : test,undo
+     << -- >>
+     "after undo" .s .l
+     end
+   ; define-function
+
+   test,undo << after undo >>
 
    *undo-point* undo
 
-   test,undo
+   test,undo << before undo >>
+
+   *undo-point* << undefined >>
    #+end_src
 * definers
 ** <word>?
@@ -1817,10 +2047,10 @@
      :name-index name,used-as-jo? if
        :name-index name,fetch-jo
        :name-index
-       *backup-area,current-free-address*
+       *jo-backup-area,current-free-address*
        2 n-save
        *jo-size* 2 mul
-       address *backup-area,current-free-address*
+       address *jo-backup-area,current-free-address*
        add-save
      then
      :link name-hash-table,save-jo,by-link
@@ -1879,10 +2109,10 @@
      :name-index name,used-as-jo? if
        :name-index name,fetch-jo
        :name-index
-       *backup-area,current-free-address*
+       *jo-backup-area,current-free-address*
        2 n-save
        *jo-size* 2 mul
-       address *backup-area,current-free-address*
+       address *jo-backup-area,current-free-address*
        add-save
      then
      :link name-hash-table,save-jo,by-link
@@ -1942,10 +2172,10 @@
      :name-index name,used-as-jo? if
        :name-index name,fetch-jo
        :name-index
-       *backup-area,current-free-address*
+       *jo-backup-area,current-free-address*
        2 n-save
        *jo-size* 2 mul
-       address *backup-area,current-free-address*
+       address *jo-backup-area,current-free-address*
        add-save
      then
      :link name-hash-table,save-jo,by-link
@@ -1988,10 +2218,10 @@
      :name-index name,used-as-jo? if
        :name-index name,fetch-jo
        :name-index
-       *backup-area,current-free-address*
+       *jo-backup-area,current-free-address*
        2 n-save
        *jo-size* 2 mul
-       address *backup-area,current-free-address*
+       address *jo-backup-area,current-free-address*
        add-save
      then
      :link name-hash-table,save-jo,by-link
@@ -4039,10 +4269,10 @@
      :name-index name,used-as-jo? if
        :name-index name,fetch-jo
        :name-index
-       *backup-area,current-free-address*
+       *jo-backup-area,current-free-address*
        2 n-save
        *jo-size* 2 mul
-       address *backup-area,current-free-address*
+       address *jo-backup-area,current-free-address*
        add-save
      then
      :link name-hash-table,save-jo,by-link
@@ -6421,11 +6651,11 @@
    : <report> syntax
      << -- >>
      "* *rule-set,make-jojo* :" .s .l
-      *rule-set,make-jojo* list-rule
+        *rule-set,make-jojo* list-rule
      "* *rule-set,basic-REPL* :" .s .l
-      *rule-set,basic-REPL* list-rule
+        *rule-set,basic-REPL* list-rule
      "* tos-syntax-stack :" .s .l
-      tos-syntax-stack list-rule
+        tos-syntax-stack list-rule
      end
    ; define-function
    #+end_src

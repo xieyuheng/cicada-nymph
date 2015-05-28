@@ -3485,29 +3485,32 @@ preserve jo_size * 64
 address$syntax_stack labeling
    preserve jo_size * 1024
 
-define_variable "*pointer-syntax-stack*", V__pointer_syntax_stack
+define_variable "*syntax-stack,address*", V__syntax_stack__address
+   xx address$syntax_stack
+
+define_variable "*syntax-stack,pointer*", V__syntax_stack__pointer
    xx address$syntax_stack
 
 define_function "push-syntax-stack", push_syntax_stack
    ;; << syntax-set[address] -- >>
-   xx V__pointer_syntax_stack
+   xx V__syntax_stack__pointer
    xx save
    xx V__jo_size
-   xx address, V__pointer_syntax_stack
+   xx address, V__syntax_stack__pointer
    xx add_save
    xx end
 
 define_function "pop-syntax-stack", pop_syntax_stack
    ;; << -- syntax-set[address] >>
    xx V__jo_size
-   xx address, V__pointer_syntax_stack
+   xx address, V__syntax_stack__pointer
    xx sub_save
-   xx V__pointer_syntax_stack, fetch
+   xx V__syntax_stack__pointer, fetch
    xx end
 
 define_function "tos-syntax-stack", tos_syntax_stack
    ;; << -- syntax-set[address] >>
-   xx V__pointer_syntax_stack
+   xx V__syntax_stack__pointer
    xx V__jo_size
    xx subtraction
    xx fetch
@@ -3516,13 +3519,13 @@ define_function "tos-syntax-stack", tos_syntax_stack
 define_function "drop-syntax-stack", drop_syntax_stack
    ;; << -- >>
    xx V__jo_size
-   xx address, V__pointer_syntax_stack
+   xx address, V__syntax_stack__pointer
    xx sub_save
    xx end
 
 define_function "syntax-stack-empty?", syntax_stack_empty?
    ;; << -- bool >>
-   xx V__pointer_syntax_stack
+   xx V__syntax_stack__pointer
    xx literal, address$syntax_stack
    xx equal?
    xx end
