@@ -1770,15 +1770,19 @@
 *** syntax-backup-area,save-syntax
     #+begin_src cicada-nymph :tangle core.cn
     : restore,syntax-backup-area,save-syntax
-      << rule-set-copy, number-of-rule-sets -- >>
+      << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
       dup zero? if
         drop2
         end
       then
       >:number-of-rule-sets
       >:rule-set-copy
+      >:cursor
+
       :rule-set-copy fetch >:rule-set
       :rule-set-copy *jo-size* add fetch >:n
+
+      :rule-set :cursor save
 
       :rule-set-copy *jo-size* 2 mul add
       :n n-fetch
@@ -1790,9 +1794,8 @@
       :rule-set add
       :rule-set rule-set,save-border
 
-      *jo-size*
-      :n 2 add mul
-      :rule-set-copy add
+      :cursor *jo-size* add
+      :rule-set-copy *jo-size* :n 2 add mul add
       :number-of-rule-sets sub1
       loop
     ; define-function
@@ -1804,8 +1807,15 @@
       dup
       *jo-size* 4 mul add fetch >:old-address
       *jo-size* 5 mul add fetch >:number-of-rule-sets
-      :old-address :number-of-rule-sets
-      restore,syntax-backup-area,save-syntax
+
+      *syntax-stack,address*
+      :old-address
+      :number-of-rule-sets
+      restore,syntax-backup-area,save-syntax >:cursor
+
+      :cursor
+      address *syntax-stack,pointer* save
+
       :old-address address *syntax-backup-area,current-free-address* save
       end
     ; define-function
@@ -1880,6 +1890,40 @@
    test,undo << before undo >>
 
    *undo-point* << undefined >>
+   #+end_src
+** test syntax-stack
+   #+begin_src cicada-nymph
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   jo integer-string?
+   jo hi
+   *rule-set,basic-REPL* add-rule
+
+   *rule-set,basic-REPL* push-syntax-stack
+
+   123 drop2 << hi >>
+
+   *syntax-stack,pointer*
+   *syntax-stack,address* sub
+   *jo-size* div . << 2 >>
+
+   <<
+   <report> syntax
+   >>
+
+   *undo-point* undo
+
+   123 . << 123 >>
+
+   *syntax-stack,pointer*
+   *syntax-stack,address* sub
+   *jo-size* div . << 1 >>
+
+   <<
+   <report> syntax
+   >>
    #+end_src
 * definers
 ** <word>?

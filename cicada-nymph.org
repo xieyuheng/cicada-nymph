@@ -1545,6 +1545,14 @@
 
    }
    #+end_src
+** __reset_syntax_stack               :linux:
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   __reset_syntax_stack:
+      ;; << -- >>
+      mov rax, address$syntax_stack
+      mov [V__syntax_stack__pointer + jo_size], rax
+      ret
+   #+end_src
 ** __reset_local_jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    __reset_local_jo:
@@ -1656,6 +1664,7 @@
    define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
       ;; << top_level_REPL [jo] -- >>
       call __reset_return_stack
+      call __reset_syntax_stack
       call __reset_local_jo
       call __reset_local_byte
       pop_argument_stack rax
@@ -1668,6 +1677,7 @@
    define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
       ;; << top_level_REPL [jo] -- >>
       call __reset_return_stack
+      call __reset_syntax_stack
       call __reset_local_jo
       call __reset_local_byte
       pop_argument_stack rax
