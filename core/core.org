@@ -95,48 +95,6 @@
     * 用以保存被加載的代碼的信息
       使得代碼可以被分散到不同的文件
       以形成相對獨立的的模塊
-** 匯編
-*** 能夠編譯自己之後之後才能實現的性狀
-    * jotionary 中 jojo 的長度
-    * 把對 棧註釋 處理成 元數據
-      利用這些元數據 就能夠實現簡單的類型推導
-    * 一個 debug 模式
-      在其中 對所有的基本的 棧的接口加上保護
-    * jojo 的頭部 和 jojo 本身的分離
-      這樣就能在 link 方面增加一層間接
-      而實現別名機制
-*** 對匯編器的需要
-    * 爲了實現上面的性狀
-      把 cicada-nymph 編譯到任何一個語言都是可以的
-      [比如 Fasm]
-    * 但是我還是需要自己實現匯編器
-      因爲就工作量而言 二者相當
-      就所形成的實現策略的靈活性而言
-      根據 自己的匯編器 所制定的實現策略 要靈活很多
-*** 小蟬 與 蟬語
-    * 關係如下
-      #+begin_src return-stack
-      (machine) -> (cicada-nymph) ->
-      (assembler) & (vm) -> (cicada-language)
-      #+end_src
-    * 可移植性由小蟬的易實現性來維護
-    * (vm) 是
-      實現與 cicada-nymph 中的
-      對底層機器的特殊屬性依賴很弱的
-      線串碼解釋器
-    * (assembler) 是
-      以 cicada-nymph 所提供的交叉匯編器框架爲基礎的
-*** >< 交叉匯編器構架
-    * cross assembler framework
-    * 目的 爲了寫 cicada-language 的 VM 的 匯編器
-    * byte buffer editor
-      bit buffer editor
-      * cursor = 1 cursor
-      * buffer = 2 cursor
-      * xxxxxx = 3 cursor
-    * like line editor with modes ?
-    * hash-table for naming
-      各種 ?
 ** 沒有類型
    * 沒有類型推導
      沒有動態的類型標籤
@@ -503,6 +461,50 @@
      同時獲得靜態性
      即 重新定義一個函數時
      不會破壞以前的定義
+** 匯編器
+*** 能夠編譯自己之後之後才能實現的性狀
+    * jotionary 中 jojo 的長度
+    * 把對 棧註釋 處理成 元數據
+      利用這些元數據 就能夠實現簡單的類型推導
+    * 一個 debug 模式
+      在其中 對所有的基本的 棧的接口加上保護
+    * jojo 的頭部 和 jojo 本身的分離
+      這樣就能在 link 方面增加一層間接
+      而實現別名機制
+*** 對匯編器的需要
+    * 爲了實現上面的性狀
+      把 cicada-nymph 編譯到任何一個語言都是可以的
+      [比如 Fasm]
+    * 但是我還是需要自己實現匯編器
+      因爲就工作量而言 二者相當
+      就所形成的實現策略的靈活性而言
+      根據 自己的匯編器 所制定的實現策略 要靈活很多
+*** 小蟬 與 蟬語
+    * 關係如下
+      #+begin_src return-stack
+      (machine) -> (cicada-nymph)
+      (assembler) & (vm) -> (cicada-language)
+      #+end_src
+    * 可移植性由小蟬的易實現性來維護
+    * (vm) 是
+      實現與 cicada-nymph 中的
+      對底層機器的特殊屬性依賴很弱的
+      線串碼解釋器
+    * (assembler) 是
+      以 cicada-nymph 所提供的交叉匯編器框架爲基礎的
+** 交叉匯編器構架
+   * cross assembler framework
+   * 目的 爲了寫 cicada-language 的 VM 的 匯編器
+   * 在 name-hash-table 中貢獻出一個域
+     來分離 匯編器 的命名空間
+   * memory buffer editor
+     1. bit buffer editor
+     2. byte buffer editor
+   * 多光標編輯
+     * cursor = 1 cursor
+     * buffer = 2 cursor
+     * xxxxxx = 3 cursor
+   * line editor 外加各種 mode
 * ===================================
 * writers
 ** note name of writers
@@ -6542,32 +6544,8 @@
    #+end_src
 * >< load & need
 ** 記 加載
-*** meta-code
-    * 有關於文件的謂詞來根據文件的內容來判斷它是否爲 code
-      只有帶有 meta-code 的文件才被認爲是 code
-*** loading-stack
-    * 爲了恢復 name-hash-table 到之前的狀態
-      我需要在 loading-stack 中保存類似 diff 的數據
-    * 爲了實現 (need)
-      meta-code 需要被做爲字符串而保存在 loading-stack 中
-    * 上面這兩個性狀
-      也可以幫助實現詳細的 report
-** note loading
-*** no auto load
-    * no library code will be auto loaded
-      you need to configure path by (poi)
-      then load the code you want using path-syntax
-*** loading-stack & unload
-    * by a loading-stack
-      (load) is able to maintain a list of loaded files
-    * values in the loading-stack
-      are used to help to remember a variety of global states
-      these values are used to implement unload
-    * unload is expensive
-      1. delete jo of a link
-      2. re-hash all link to name-hash-table
-*** terminology
-    * meta-code
+*** 術語
+    * 元碼 [meta-code]
       #+begin_src cicada-nymph
       :::::::::
 
@@ -6575,12 +6553,42 @@
 
       =========
       #+end_src
-    * code
+    * 代碼 [code]
+*** 元碼
+    * 有關於文件的謂詞來根據文件的內容來判斷它是否爲 code
+      只有帶有 meta-code 的文件才被認爲是 code
+*** 加載棧
+    * 爲了實現 (need)
+      meta-code 需要被做爲字符串而保存在 加載棧 中
+      用以聞訊
+      同時
+      這些信息 也可以幫助實現詳細的 report
+*** 沒有啓動時默認加載的文件
+    * 沒有文件系統中的代碼 會被在啓動時默認加載
+      用戶必須配置 (poi)
+      然後利用 path-syntax 加載自己所需要的代碼
+    * 我提供 命令行函數 來幫助在啓動時加載文件
+*** 減載
+    * 或者說 撤銷加載 (unload)
+      它利用 (undo) 來實現
 ** *loading-stack*
-   #+begin_src cicada-nymph
+*** note
+    * I do not need the push & pop interface here
+*** memory allocation
+    #+begin_src cicada-nymph :tangle core.cn
+    1024 100 mul
+    : *undo-stack,size*
+    ; define-variable,with-tos
 
-   #+end_src
-** load
+    *undo-stack,size* allocate-memory
+    : *loading-stack*
+    ; define-variable,with-tos
+
+    *loading-stack*
+    : *undo-stack,pointer*
+    ; define-variable,with-tos
+    #+end_src
+** >< load
    #+begin_src cicada-nymph
    : load
      << path[address, length] -- >>
@@ -6588,7 +6596,7 @@
      end
    ; define-function
    #+end_src
-** need
+** >< need
    * (need) is as (load-when-not-loaded)
    #+begin_src cicada-nymph
    : need
