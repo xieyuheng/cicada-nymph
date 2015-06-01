@@ -4801,8 +4801,8 @@
 * -----------------------------------
 * syntax-stack
 ** 記
-   * 用 *syntax-stack* 來進行語境轉換
-   * 用 *rule-set,...* 來進行動態添加
+   * *syntax-stack* 轉換語境
+   * *rule-set,...* 添加語法
 ** memory allocate
    #+begin_src fasm :tangle cicada-nymph.fasm
       preserve jo_size * 64

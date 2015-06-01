@@ -3749,6 +3749,18 @@ init-environment-variable-list
 ; define-function
 more,rule-set,basic-REPL
 
+1024 100 mul
+: *undo-stack,size*
+; define-variable,with-tos
+
+*undo-stack,size* allocate-memory
+: *loading-stack*
+; define-variable,with-tos
+
+*loading-stack*
+: *undo-stack,pointer*
+; define-variable,with-tos
+
 : <report> memory
   << -- >>
   "* *un-initialized-memory*" .s .l
