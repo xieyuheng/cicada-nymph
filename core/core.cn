@@ -57,7 +57,7 @@
   << address, string[address, length], address >>
   *jojo-area,current-free-address*
   over sub *jo-size* div
-  swap save
+  swap set
   end
 ; define-function
 
@@ -68,7 +68,7 @@
   x|swap|xxx
   *jojo-area,current-free-address*
   over sub *jo-size* div
-  swap save
+  swap set
   end
 ; define-function
 
@@ -162,7 +162,7 @@ more,rule-set,make-jojo
   << size -- address >>
   dup *un-initialized-memory,current-free-address* clear-memory
   *un-initialized-memory,current-free-address* swap << address as return value >>
-  address *un-initialized-memory,current-free-address* add-save
+  address *un-initialized-memory,current-free-address* add-set
   end
 ; define-function
 
@@ -203,7 +203,7 @@ allocate-memory
   *name-hash-table,string-area,current-free-address*
   string->buffer!
   address *name-hash-table,string-area,current-free-address*
-  add-save
+  add-set
   end
 ; define-function
 
@@ -226,7 +226,7 @@ allocate-memory
 : name,used?
   << name -- bool >>
   name->address
-  fetch zero? false?
+  get zero? false?
   end
 ; define-function
 
@@ -234,77 +234,77 @@ allocate-memory
   << name -- bool >>
   name->address
   *jo-size* 4 mul add
-  fetch zero? not
+  get zero? not
   end
 ; define-function
 
 : name->string
   << name -- string[address, length] >>
   name->address
-  2 n-fetch
+  2 n-get
   end
 ; define-function
 
-: name,fetch-orbit-length
+: name,get-orbit-length
   << name -- orbit-length >>
   name->address
   *jo-size* 2 mul add
-  fetch
+  get
   end
 ; define-function
 
-: name,fetch-orbiton
+: name,get-orbiton
   << name -- orbiton >>
   name->address
   *jo-size* 3 mul add
-  fetch
+  get
   end
 ; define-function
 
-: name,fetch-jo
+: name,get-jo
   << name -- jo >>
   name->address
   *jo-size* 4 mul add
-  fetch
+  get
   end
 ; define-function
 
-: name,save-string
+: name,set-string
   << string[address, length], name -- >>
   >:name
   make-string,for-name
   :name name->address
-  2 n-save
+  2 n-set
   end
 ; define-function
 
-: name,save-orbit-length
+: name,set-orbit-length
   << orbit-length, name -- >>
   name->address
   *jo-size* 2 mul add
-  save
+  set
   end
 ; define-function
 
-: name,save-orbiton
+: name,set-orbiton
   << orbiton, name -- >>
   name->address
   *jo-size* 3 mul add
-  save
+  set
   end
 ; define-function
 
-: name,save-jo
+: name,set-jo
   << jo, name -- >>
   name->address
   *jo-size* 4 mul add
-  save
+  set
   end
 ; define-function
 
 : name,no-collision?
   << name -- bool >>
-  dup name,fetch-orbiton
+  dup name,get-orbiton
   equal?
   end
 ; define-function
@@ -364,7 +364,7 @@ allocate-memory
     :name true
     end
   then
-  :name name,fetch-orbit-length
+  :name name,get-orbit-length
   :counter equal? if
     :name false
     end
@@ -394,12 +394,12 @@ allocate-memory
   >:orbit
   :name name,used? false? if
     ::string :name
-    name,save-string
+    name,set-string
     :orbit :name
-    name,save-orbiton
+    name,set-orbiton
     :counter :orbit
-    name,save-orbit-length
-    1 address *name-hash-table,counter* add-save
+    name,set-orbit-length
+    1 address *name-hash-table,counter* add-set
     :name true
     end
   then
@@ -439,14 +439,14 @@ allocate-memory
 
 : name-hash-table,report,orbit
   << name, counter -- >>
-  over name,fetch-orbit-length
+  over name,get-orbit-length
   over less-than? if
     drop2
     end
   then
   over name->string string->finite-carry-sum
   over name-hash-table,hash
-  dup name,fetch-orbiton
+  dup name,get-orbiton
   << name, counter, new-name, orbiton >>
   x|over|xxx name->string string->finite-carry-sum
   0 name-hash-table,hash
@@ -477,7 +477,7 @@ allocate-memory
     "} " .s
     dup name->string .s
     " # " .s
-    dup name,fetch-orbit-length
+    dup name,get-orbit-length
     write-number
     .l
     dup 1 name-hash-table,report,orbit
@@ -496,15 +496,6 @@ allocate-memory
   end
 ; define-function
 
-: name-hash-table,save-jo,by-link
-  << link -- >>
-  >:link
-  :link link->jo
-  :link link->name-string string->name
-  name,save-jo
-  end
-; define-function
-
 : name-hash-table,find-jo
   << word[address, length]
      -- jo, true
@@ -516,7 +507,7 @@ allocate-memory
     end
   then
   dup name,used-as-jo? if
-    name,fetch-jo
+    name,get-jo
     true
     end
   then
@@ -525,68 +516,125 @@ allocate-memory
   end
 ; define-function
 
-: name-hash-table,delete-jo
-  << jo -- >>
-  >:jo
-  :jo jo->name-string string->name >:name
-  0 :name name,save-jo
+100 1024 mul
+: *name-stack,size*
+; define-variable,with-tos
+
+3 *jo-size* mul
+: *name-stack,unit*
+; define-variable,with-tos
+
+*name-stack,size*
+*name-stack,unit* mul allocate-memory
+: *name-stack*
+; define-variable,with-tos
+
+*name-stack*
+: *name-stack,pointer*
+; define-variable,with-tos
+
+: name-record,get-old-jo
+  << name-record -- old-jo >>
+  get
   end
 ; define-function
 
-: name-hash-table,delete-jo,by-link
-  << link -- >>
-  >:link
-  :link link->name-string string->name >:name
-  0 :name name,save-jo
+: name-record,set-old-jo
+  << old-jo, name-record -- >>
+  set
   end
 ; define-function
 
-: n-string->buffer!,loop
-  << string-1[address, length],
-     ...
-     string-2[address, length],
-     buffer, n, cursor
-     -- length >>
-  >:cursor
-  >:n
-  >:buffer
-  :n zero? if
-    :buffer
-    :cursor :buffer sub
-    string-reverse!
-    swap drop
+: name-record,get-name
+  << name-record -- name >>
+  *jo-size* add get
+  end
+; define-function
+
+: name-record,set-name
+  << name, name-record -- >>
+  *jo-size* add set
+  end
+; define-function
+
+: name-record,get-new-jo
+  << name-record -- new-jo >>
+  *jo-size* 2 mul add get
+  end
+; define-function
+
+: name-record,set-new-jo
+  << new-jo, name-record -- >>
+  *jo-size* 2 mul add set
+  end
+; define-function
+
+: name,record-jo
+  << jo, name -- >>
+  dup name,get-jo
+  *name-stack,pointer* name-record,set-old-jo
+  dup2 name,set-jo
+  *name-stack,pointer* name-record,set-name
+  *name-stack,pointer* name-record,set-new-jo
+  *name-stack,unit* address *name-stack,pointer* add-set
+  end
+; define-function
+
+: jo,find-name,loop
+  << jo, current-record
+     -- name, true
+     -- false >>
+  dup *name-stack* equal? if
+    drop2
+    false
     end
   then
-  dup zero? if
+  *name-stack,unit* sub
+  dup >:name-record
+  over
+  :name-record name-record,get-new-jo equal? if
     drop2
-    :buffer
-    :n sub1
-    :cursor
-    loop
+    :name-record name-record,get-name
+    true
+    end
   then
-  dup2 add sub1 fetch-byte :cursor save-byte
-  sub1
-  :buffer
-  :n
-  :cursor add1
   loop
 ; define-function
 
-: n-string->buffer!
-  << string-1[address, length],
-     ...
-     string-2[address, length],
-     buffer, n
-     -- length >>
-  over n-string->buffer!,loop
+: jo,find-name
+  << jo
+     -- name, true
+     -- false >>
+  *name-stack,pointer*
+  jo,find-name,loop
   end
 ; define-function
 
-2048 *jo-size* mul
+: name-hash-table,record-jo,by-link
+  << link -- >>
+  >:link
+  :link link->jo
+  :link link->name-string string->name
+  name,record-jo
+  end
+; define-function
+
+: name-stack,delete-last-record
+  << -- >>
+  *name-stack,unit* address *name-stack,pointer* sub-set
+  end
+; define-function
+
+60 1024 mul
 : *undo-stack,size*
 ; define-variable,with-tos
 
-*undo-stack,size* allocate-memory
+6 *jo-size* mul
+: *undo-stack,unit*
+; define-variable,with-tos
+
+*undo-stack,size*
+*undo-stack,unit* mul allocate-memory
 : *undo-stack*
 ; define-variable,with-tos
 
@@ -594,19 +642,7 @@ allocate-memory
 : *undo-stack,pointer*
 ; define-variable,with-tos
 
-2048 *jo-size* mul
-: *jo-backup-area,size*
-; define-variable,with-tos
-
-*jo-backup-area,size* allocate-memory
-: *jo-backup-area*
-; define-variable,with-tos
-
-*jo-backup-area*
-: *jo-backup-area,current-free-address*
-; define-variable,with-tos
-
-2048 10 mul
+20 1024 mul
 *jo-size* mul
 : *syntax-backup-area,size*
 ; define-variable,with-tos
@@ -622,24 +658,24 @@ allocate-memory
 : create-undo-point,copy-syntax,one-rule-set
   << rule-set -- >>
   >:rule-set
-  :rule-set rule-set,fetch-border >:border
+  :rule-set rule-set,get-border >:border
   :border :rule-set sub
   *jo-size* div >:n
 
   :rule-set
-  *syntax-backup-area,current-free-address* save
-  *jo-size* address *syntax-backup-area,current-free-address* add-save
+  *syntax-backup-area,current-free-address* set
+  *jo-size* address *syntax-backup-area,current-free-address* add-set
 
   :n
-  *syntax-backup-area,current-free-address* save
-  *jo-size* address *syntax-backup-area,current-free-address* add-save
+  *syntax-backup-area,current-free-address* set
+  *jo-size* address *syntax-backup-area,current-free-address* add-set
 
   :rule-set
-  :n n-fetch
+  :n n-get
   *syntax-backup-area,current-free-address*
-  :n n-save
+  :n n-set
   *jo-size* :n mul
-  address *syntax-backup-area,current-free-address* add-save
+  address *syntax-backup-area,current-free-address* add-set
   end
 ; define-function
 
@@ -649,7 +685,7 @@ allocate-memory
     drop
     end
   then
-  dup fetch create-undo-point,copy-syntax,one-rule-set
+  dup get create-undo-point,copy-syntax,one-rule-set
   *jo-size* add
   loop
 ; define-function
@@ -661,23 +697,23 @@ allocate-memory
   *jojo-area,current-free-address*
   *string-area,current-free-address*
   *link*
-  *jo-backup-area,current-free-address*
+  *name-stack,pointer*
   *syntax-backup-area,current-free-address*
   :undo-point
-  5 n-save
+  5 n-set
 
   *jo-size* 5 mul
-  address *undo-stack,pointer* add-save
+  address *undo-stack,pointer* add-set
 
   *syntax-stack,address* create-undo-point,copy-syntax
 
   *syntax-stack,pointer*
   *syntax-stack,address* sub
   *jo-size* div
-  *undo-stack,pointer* save
+  *undo-stack,pointer* set
 
   *jo-size*
-  address *undo-stack,pointer* add-save
+  address *undo-stack,pointer* add-set
 
   :undo-point
   end
@@ -685,59 +721,42 @@ allocate-memory
 
 : restore,jojo-area
   << undo-point -- >>
-  fetch
-  address *jojo-area,current-free-address* save
+  get
+  address *jojo-area,current-free-address* set
   end
 ; define-function
 
 : restore,string-area
   << undo-point -- >>
-  *jo-size* add fetch
-  address *string-area,current-free-address* save
+  *jo-size* add get
+  address *string-area,current-free-address* set
   end
 ; define-function
 
-: restore,link,remove-jo
-  << old-link, link -- >>
+: restore,name-stack,set-jo
+  << old-record, current-record -- >>
   dup2 equal? if
     drop2
     end
   then
-  dup name-hash-table,delete-jo,by-link
-  link->next-link
+  *name-stack,unit* sub
+  dup >:name-record
+  :name-record name-record,get-old-jo
+  :name-record name-record,get-name
+  name,set-jo
   loop
 ; define-function
 
-: restore,link
+: restore,name-stack
   << undo-point -- >>
-  *jo-size* 2 mul add fetch >:old-link
-  :old-link *link*
-  restore,link,remove-jo
-  :old-link address *link* save
+  *jo-size* 3 mul add get >:old-record
+  :old-record *name-stack,pointer*
+  restore,name-stack,set-jo
+  :old-record address *name-stack,pointer* set
   end
 ; define-function
 
-: restore,jo-backup-area,save-jo
-  << old-address, address -- >>
-  dup2 equal? if
-    drop2
-    end
-  then
-  *jo-size* 2 mul sub
-  dup 2 n-fetch name,save-jo
-  loop
-; define-function
-
-: restore,jo-backup-area
-  << undo-point -- >>
-  *jo-size* 3 mul add fetch >:old-address
-  :old-address *jo-backup-area,current-free-address*
-  restore,jo-backup-area,save-jo
-  :old-address address *jo-backup-area,current-free-address* save
-  end
-; define-function
-
-: restore,syntax-backup-area,save-syntax
+: restore,syntax-backup-area,set-syntax
   << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
   dup zero? if
     drop2
@@ -747,20 +766,20 @@ allocate-memory
   >:rule-set-copy
   >:cursor
 
-  :rule-set-copy fetch >:rule-set
-  :rule-set-copy *jo-size* add fetch >:n
+  :rule-set-copy get >:rule-set
+  :rule-set-copy *jo-size* add get >:n
 
-  :rule-set :cursor save
+  :rule-set :cursor set
 
   :rule-set-copy *jo-size* 2 mul add
-  :n n-fetch
+  :n n-get
   :rule-set
-  :n n-save
+  :n n-set
 
   *jo-size*
   :n mul
   :rule-set add
-  :rule-set rule-set,save-border
+  :rule-set rule-set,set-border
 
   :cursor *jo-size* add
   :rule-set-copy *jo-size* :n 2 add mul add
@@ -771,24 +790,24 @@ allocate-memory
 : restore,syntax-backup-area
   << undo-point -- >>
   dup
-  *jo-size* 4 mul add fetch >:old-address
-  *jo-size* 5 mul add fetch >:number-of-rule-sets
+  *jo-size* 4 mul add get >:old-address
+  *jo-size* 5 mul add get >:number-of-rule-sets
 
   *syntax-stack,address*
   :old-address
   :number-of-rule-sets
-  restore,syntax-backup-area,save-syntax >:cursor
+  restore,syntax-backup-area,set-syntax >:cursor
 
   :cursor
-  address *syntax-stack,pointer* save
+  address *syntax-stack,pointer* set
 
-  :old-address address *syntax-backup-area,current-free-address* save
+  :old-address address *syntax-backup-area,current-free-address* set
   end
 ; define-function
 
 : restore,undo-stack
   << undo-point -- >>
-  address *undo-stack,pointer* save
+  address *undo-stack,pointer* set
   end
 ; define-function
 
@@ -797,10 +816,80 @@ allocate-memory
   >:undo-point
   :undo-point restore,jojo-area
   :undo-point restore,string-area
-  :undo-point restore,link
-  :undo-point restore,jo-backup-area
+  :undo-point restore,name-stack
   :undo-point restore,syntax-backup-area
   :undo-point restore,undo-stack
+  end
+; define-function
+
+1024 *jo-size* mul
+: *size,rule-set,basic-REPL*
+; define-variable,with-tos
+
+<< for cursor >>
+*jo-size* allocate-memory drop
+
+*size,rule-set,basic-REPL*
+allocate-memory
+: *rule-set,basic-REPL*
+; define-variable,with-tos
+
+*rule-set,basic-REPL*
+*rule-set,basic-REPL* *jo-size* sub
+set
+
+: eval-word
+  << word[address, length] -- unknown >>
+  dup2 find-syntax if
+    apply
+    end
+  then
+  dup2
+  name-hash-table,find-jo if
+    dup exception-jo? if
+      drop
+      "* (eval-word) can not execute exception directly : " .s
+      .s .l
+      end
+    then
+    << function & primitive-function & variable >>
+    xx|swap|x drop2
+    apply
+    end
+  else
+  "* (eval-word) meets undefined word : " .s
+  .s .l
+  then
+  end
+; define-function
+
+: !bye,basic-REPL
+  << -- >>
+  exception-reset-stack
+  drop-syntax-stack
+  end
+; define-exception
+
+: syntax,bye,basic-REPL
+  << word:bye -- >>
+  drop2
+  !bye,basic-REPL
+; define-function
+
+: basic-REPL,loop
+  << unknown -- unknown >>
+  read-word-for-REPL
+  eval-word
+  loop
+; define-function
+
+: basic-REPL
+  << unknown -- unknown >>
+  prepare-for
+    !bye,basic-REPL
+    end
+  *rule-set,basic-REPL* push-syntax-stack
+  basic-REPL,loop
   end
 ; define-function
 
@@ -835,7 +924,7 @@ allocate-memory
     end
   then
   "* (make-jojo) meets undefined word : " .s .s .l
-  x|over|xx name-hash-table,delete-jo
+  name-stack,delete-last-record
   !undo-make-jojo
 ; define-function
 
@@ -870,16 +959,50 @@ allocate-memory
   :link zero? if
     end
   then
-  :link link->name-string >::name-string
-  ::name-string name-hash-table,search swap >:name if
-    :name name,used-as-jo? if
-      :link link->next-link
-      loop
-    then
+  :link link->next-link recur
+  :link name-hash-table,record-jo,by-link
+  end
+; define-function
+
+: n-string->buffer!,loop
+  << string-1[address, length],
+     ...
+     string-2[address, length],
+     buffer, n, cursor
+     -- length >>
+  >:cursor
+  >:n
+  >:buffer
+  :n zero? if
+    :buffer
+    :cursor :buffer sub
+    string-reverse!
+    swap drop
+    end
   then
-  :link name-hash-table,save-jo,by-link
-  :link link->next-link
+  dup zero? if
+    drop2
+    :buffer
+    :n sub1
+    :cursor
+    loop
+  then
+  dup2 add sub1 get-byte :cursor set-byte
+  sub1
+  :buffer
+  :n
+  :cursor add1
   loop
+; define-function
+
+: n-string->buffer!
+  << string-1[address, length],
+     ...
+     string-2[address, length],
+     buffer, n
+     -- length >>
+  over n-string->buffer!,loop
+  end
 ; define-function
 
 : define-function
@@ -909,30 +1032,13 @@ allocate-memory
     ::string string-head,word >::name
     ::string string-tail,word >::body
   then
-  ::name
-  make-string >::name
 
-  ::name *link* 0
-  make-link >:link
-
-  :link address *link* save
-
-  ::name *explainer,function* 0
+  *explainer,function* 0
   make-jo-head >:jo
 
-  :jo :link link,save-jo
-
-  ::name string->name >:name-index
-  :name-index name,used-as-jo? if
-    :name-index name,fetch-jo
-    :name-index
-    *jo-backup-area,current-free-address*
-    2 n-save
-    *jo-size* 2 mul
-    address *jo-backup-area,current-free-address*
-    add-save
-  then
-  :link name-hash-table,save-jo,by-link
+  :jo
+  ::name string->name
+  name,record-jo
 
   *jojo-area,current-free-address* >:old-address
 
@@ -940,7 +1046,7 @@ allocate-memory
 
   *jojo-area,current-free-address*
   :old-address sub *jo-size* div
-  :jo jo,save-length
+  :jo jo,set-length
 
   drop2
   drop
@@ -950,6 +1056,7 @@ allocate-memory
 ; define-function
 
 *link* init,name-hash-table,by-link
+basic-REPL
 
 : define-variable,with-tos
   << value, string[address, length] -- >>
@@ -966,32 +1073,15 @@ allocate-memory
   ::title <word>? not if
     ::title >::name
   then
-  ::name
-  make-string >::name
 
-  ::name *link* 0
-  make-link >:link
-
-  :link address *link* save
-
-  ::name *explainer,variable* 0
+  *explainer,variable* 0
   make-jo-head >:jo
 
-  :jo :link link,save-jo
+  :jo
+  ::name string->name
+  name,record-jo
 
-  ::name string->name >:name-index
-  :name-index name,used-as-jo? if
-    :name-index name,fetch-jo
-    :name-index
-    *jo-backup-area,current-free-address*
-    2 n-save
-    *jo-size* 2 mul
-    address *jo-backup-area,current-free-address*
-    add-save
-  then
-  :link name-hash-table,save-jo,by-link
-
-  1 :jo jo,save-length
+  1 :jo jo,set-length
 
   :value jojo-area,stay
   end
@@ -1027,30 +1117,12 @@ allocate-memory
     ::string string-tail,word >::body
   then
 
-  ::name
-  make-string >::name
-
-  ::name *link* 0
-  make-link >:link
-
-  :link address *link* save
-
-  ::name *explainer,exception* 0
+  *explainer,exception* 0
   make-jo-head >:jo
 
-  :jo :link link,save-jo
-
-  ::name string->name >:name-index
-  :name-index name,used-as-jo? if
-    :name-index name,fetch-jo
-    :name-index
-    *jo-backup-area,current-free-address*
-    2 n-save
-    *jo-size* 2 mul
-    address *jo-backup-area,current-free-address*
-    add-save
-  then
-  :link name-hash-table,save-jo,by-link
+  :jo
+  ::name string->name
+  name,record-jo
 
   *jojo-area,current-free-address* >:old-address
 
@@ -1058,7 +1130,7 @@ allocate-memory
 
   *jojo-area,current-free-address*
   :old-address sub *jo-size* div
-  :jo jo,save-length
+  :jo jo,set-length
 
   drop2
   drop
@@ -1079,22 +1151,9 @@ allocate-memory
     end
   then
   >:jo
-  ::alias *link* :jo
-  make-link >:link
-
-  :link address *link* save
-
-  ::alias string->name >:name-index
-  :name-index name,used-as-jo? if
-    :name-index name,fetch-jo
-    :name-index
-    *jo-backup-area,current-free-address*
-    2 n-save
-    *jo-size* 2 mul
-    address *jo-backup-area,current-free-address*
-    add-save
-  then
-  :link name-hash-table,save-jo,by-link
+  :jo
+  ::alias string->name
+  name,record-jo
   end
 ; define-function
 
@@ -1115,7 +1174,7 @@ allocate-memory
     end
   then
   dup name,used-as-jo? if
-    name,fetch-jo
+    name,get-jo
     true
     end
   then
@@ -1137,7 +1196,7 @@ allocate-memory
     "* (syntax,<title>,make-jojo) meet undefined" .s .l
     "  title : " .s ::title .s .l
     "  name  : " .s ::string string-head,word .s .l
-    :jo name-hash-table,delete-jo
+    name-stack,delete-last-record
     !undo-make-jojo
   then
   :jo
@@ -1198,7 +1257,7 @@ more,rule-set,make-jojo
   *jojo-area,current-free-address* >:address,offset
   0 jojo-area,stay
 
-  "" *explainer,function* 0
+  *explainer,function* 0
   make-jo-head >:jo
 
   ::string "]" string,find-word if
@@ -1214,7 +1273,7 @@ more,rule-set,make-jojo
   *jojo-area,current-free-address*
   :address,offset sub
   *jo-size* div
-  :address,offset save
+  :address,offset set
 
   jo instruction,literal
     jojo-area,stay
@@ -1268,7 +1327,7 @@ more,rule-set,make-jojo
     :cursor
     end
   then
-  :cursor fetch-byte :char equal? if
+  :cursor get-byte :char equal? if
     :cursor add1 :length sub1
     :cursor
     string->buffer!
@@ -1360,7 +1419,7 @@ more,rule-set,make-jojo
     drop2 true
     end
   then
-  over fetch-byte
+  over get-byte
   dup digit-char?
   swap latin-char?
   or if
@@ -1495,7 +1554,7 @@ more,rule-set,make-jojo
     :sum
     end
   then
-  :address fetch-byte >:char
+  :address get-byte >:char
   :char digit-char? if
     :char digit-char->number
   then
@@ -1582,7 +1641,7 @@ more,rule-set,make-jojo
     :mod number->latin-char
   then
   :cursor
-  save-byte
+  set-byte
   :div
   :base
   :cursor add1
@@ -1682,79 +1741,6 @@ more,rule-set,make-jojo
 ; define-function
 
 more,rule-set,make-jojo
-
-1024 *jo-size* mul
-: *size,rule-set,basic-REPL*
-; define-variable,with-tos
-
-<< for cursor >>
-*jo-size* allocate-memory drop
-
-*size,rule-set,basic-REPL*
-allocate-memory
-: *rule-set,basic-REPL*
-; define-variable,with-tos
-
-*rule-set,basic-REPL*
-*rule-set,basic-REPL* *jo-size* sub
-save
-
-: eval-word
-  << word[address, length] -- unknown >>
-  dup2 find-syntax if
-    apply
-    end
-  then
-  dup2
-  name-hash-table,find-jo if
-    dup exception-jo? if
-      drop
-      "* (eval-word) can not execute exception directly : " .s
-      .s .l
-      end
-    then
-    << function & primitive-function & variable >>
-    xx|swap|x drop2
-    apply
-    end
-  else
-  "* (eval-word) meets undefined word : " .s
-  .s .l
-  then
-  end
-; define-function
-
-: !bye,basic-REPL
-  << -- >>
-  exception-reset-stack
-  drop-syntax-stack
-  end
-; define-exception
-
-: syntax,bye,basic-REPL
-  << word:bye -- >>
-  drop2
-  !bye,basic-REPL
-; define-function
-
-: basic-REPL,loop
-  << unknown -- unknown >>
-  read-word-for-REPL
-  eval-word
-  loop
-; define-function
-
-: basic-REPL
-  << unknown -- unknown >>
-  prepare-for
-    !bye,basic-REPL
-    end
-  *rule-set,basic-REPL* push-syntax-stack
-  basic-REPL,loop
-  end
-; define-function
-
-basic-REPL
 
 : syntax,jo,basic-REPL
   << word:jo -- >>
@@ -1871,17 +1857,17 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   *circular-string-area,size* *circular-string-area* add
   greater-or-equal? if
     *circular-string-area*
-    address *circular-string-area,current-free-address* save
+    address *circular-string-area,current-free-address* set
   then
   tuck
   *circular-string-area,current-free-address*
   string->buffer!
   address *circular-string-area,current-free-address*
-  add-save
+  add-set
   0 *circular-string-area,current-free-address*
-  save-byte
+  set-byte
   1 address *circular-string-area,current-free-address*
-  add-save
+  add-set
   end
 ; define-function
 
@@ -1892,7 +1878,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
     drop
     end
   then
-  over save-byte
+  over set-byte
   add1
   loop
 ; define-function
@@ -1975,7 +1961,7 @@ jo syntax,<title>,basic-REPL
     end
   then
   sub1 swap
-    dup fetch .
+    dup get .
   *jo-size* add
   swap
   loop
@@ -2038,7 +2024,7 @@ jo syntax,<title>,basic-REPL
   end
 ; define-function
 
-jo stack-REPL address *lost-exception-REPL* save
+jo stack-REPL address *lost-exception-REPL* set
 
 : list-rule,loop
   << rule-set, cursor, counter -- >>
@@ -2052,9 +2038,9 @@ jo stack-REPL address *lost-exception-REPL* save
   ")" .s .l
   swap
     dup cursor->predicate
-    "    " .s jo->name-string .s .l
+    "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
     dup cursor->function
-    "    " .s jo->name-string .s .l
+    "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
     *jo-size* sub *jo-size* sub
   swap
   loop
@@ -2062,7 +2048,7 @@ jo stack-REPL address *lost-exception-REPL* save
 
 : list-rule
   << rule-set -- >>
-  dup rule-set,fetch-border
+  dup rule-set,get-border
   0 list-rule,loop
   end
 ; define-function
@@ -2070,9 +2056,9 @@ jo stack-REPL address *lost-exception-REPL* save
 : sub-rule,move-one
   << cursor -- >>
   >:cursor
-  :cursor 2 n-fetch
+  :cursor 2 n-get
   :cursor *jo-size* 2 mul sub
-  2 n-save
+  2 n-set
   end
 ; define-function
 
@@ -2080,11 +2066,11 @@ jo stack-REPL address *lost-exception-REPL* save
   << rule-set, cursor -- >>
   >:cursor
   >:rule-set
-  :rule-set rule-set,fetch-border >:border
+  :rule-set rule-set,get-border >:border
   :cursor :border equal? if
     :border *jo-size* 2 mul sub
     :rule-set
-    rule-set,save-border
+    rule-set,set-border
     end
   then
   :cursor sub-rule,move-one
@@ -2114,7 +2100,7 @@ jo stack-REPL address *lost-exception-REPL* save
 
 : sub-rule
   << rule[predicate, function], rule-set -- >>
-  dup rule-set,fetch-border
+  dup rule-set,get-border
   sub-rule,loop
   end
 ; define-function
@@ -2144,7 +2130,7 @@ jo stack-REPL address *lost-exception-REPL* save
     drop
     end
   then
-  over save-byte
+  over set-byte
   add1
   loop
 ; define-function
@@ -2221,35 +2207,25 @@ jo stack-REPL address *lost-exception-REPL* save
   ::name *link* 0
   make-link >:link
 
-  :link address *link* save
+  :link address *link* set
 
-  ::name *explainer,variable* 0
+  *explainer,variable* 0
   make-jo-head >:jo
 
-  :jo :link link,save-jo
+  :jo :link link,set-jo
 
-  ::name string->name >:name-index
-  :name-index name,used-as-jo? if
-    :name-index name,fetch-jo
-    :name-index
-    *jo-backup-area,current-free-address*
-    2 n-save
-    *jo-size* 2 mul
-    address *jo-backup-area,current-free-address*
-    add-save
-  then
-  :link name-hash-table,save-jo,by-link
+  :link name-hash-table,record-jo,by-link
 
   :length
-  :jo jo,save-length
+  :jo jo,set-length
 
   *jojo-area,current-free-address*
   :length
-  n-save
+  n-set
 
   :length *jo-size* mul
   address *jojo-area,current-free-address*
-  add-save
+  add-set
   end
 ; define-function
 
@@ -2343,43 +2319,6 @@ then
   dup 12 equal?  << DT_SOCK  >>  if drop "UNIX domain socket"    end then
   drop
   "unknow file type"
-  end
-; define-function
-
-: <link> list-by-jo-predicate,loop
-  << jo-predicate, counter, link -- >>
-  dup zero? if
-    drop
-    drop
-    drop
-    end
-  then
-  dup link->jo
-  x|over|xxx apply false? if
-    link->next-link
-    loop
-  then
-  swap
-    "  " .s
-    add1 dup .i ". " .s
-  swap
-  dup link->jo jo->name-string
-  dup2 space-string? if
-    drop2
-    "  unnamed" .s .l
-  else
-    .s .l
-  then
-  link->next-link
-  loop
-; define-function
-
-: <link> list-by-jo-predicate
-  << link, jo-predicate -- >>
-  swap
-  0
-  swap
-  <link> list-by-jo-predicate,loop
   end
 ; define-function
 
@@ -2706,21 +2645,21 @@ then
 : init,getdents64
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +getdents64,d_ino+    save    8 add
-    dup address +getdents64,d_off+    save    8 add
-    dup address +getdents64,d_reclen+ save    2 add
-    dup address +getdents64,d_type+   save    1 add
-    dup address +getdents64,d_name+   save    256 add
-        address +getdents64,end+      save
+    dup address +getdents64,d_ino+    set    8 add
+    dup address +getdents64,d_off+    set    8 add
+    dup address +getdents64,d_reclen+ set    2 add
+    dup address +getdents64,d_type+   set    1 add
+    dup address +getdents64,d_name+   set    256 add
+        address +getdents64,end+      set
     end
   then
   *jo-size* 8 equal? if
-    dup address +getdents64,d_ino+    save    8 add
-    dup address +getdents64,d_off+    save    8 add
-    dup address +getdents64,d_reclen+ save    2 add
-    dup address +getdents64,d_type+   save    1 add
-    dup address +getdents64,d_name+   save    256 add
-        address +getdents64,end+      save
+    dup address +getdents64,d_ino+    set    8 add
+    dup address +getdents64,d_off+    set    8 add
+    dup address +getdents64,d_reclen+ set    2 add
+    dup address +getdents64,d_type+   set    1 add
+    dup address +getdents64,d_name+   set    256 add
+        address +getdents64,end+      set
     end
   then
   end
@@ -2768,7 +2707,7 @@ then
   :cursor init,getdents64
   :function apply
   :end
-  :cursor +getdents64,d_reclen+ fetch-two-bytes add
+  :cursor +getdents64,d_reclen+ get-two-bytes add
   :function
   loop
 ; define-function
@@ -2827,7 +2766,7 @@ then
 : <directory> list-file
   << directory-path[address, length] -- >>
   [ << -- >>
-    +getdents64,d_type+ fetch-byte
+    +getdents64,d_type+ get-byte
     8 equal? if
       "  " .s
       +getdents64,d_name+
@@ -2844,7 +2783,7 @@ then
 : <directory> list-directory
   << directory-path[address, length] -- >>
   [ << -- >>
-    +getdents64,d_type+ fetch-byte
+    +getdents64,d_type+ get-byte
     4 equal? if
       +getdents64,d_name+
       dup 256
@@ -2872,14 +2811,14 @@ then
   xx|swap|x
   [ << file-name[address, length], bool --
        file-name[address, length], bool >>
-    +getdents64,d_type+ fetch-byte 8 equal? not if
+    +getdents64,d_type+ get-byte 8 equal? not if
       end
     then
     >:bool
     >:file-name,lenght
     >:file-name,address
     :file-name,lenght +getdents64,d_name+ add
-    fetch-byte zero? not if
+    get-byte zero? not if
       :file-name,address
       :file-name,lenght
       :bool
@@ -2909,14 +2848,14 @@ then
   xx|swap|x
   [ << file-name[address, length], bool --
        file-name[address, length], bool >>
-    +getdents64,d_type+ fetch-byte 4 equal? not if
+    +getdents64,d_type+ get-byte 4 equal? not if
       end
     then
     >:bool
     >:file-name,lenght
     >:file-name,address
     :file-name,lenght +getdents64,d_name+ add
-    fetch-byte zero? not if
+    get-byte zero? not if
       :file-name,address
       :file-name,lenght
       :bool
@@ -2945,7 +2884,7 @@ then
   << -- >>
   :syscall-number,getpid:
   0 syscall
-  address *pid* save
+  address *pid* set
   end
 ; define-function
 
@@ -2999,7 +2938,7 @@ then
     "* (init-command-line) fail to read : " .s ::path .s .l
     end
   then
-  address *length,command-line* save
+  address *length,command-line* set
   end
 ; define-function
 
@@ -3053,7 +2992,7 @@ then
     "* (init-environment-variable-list) fail to read : " .s ::path .s .l
     end
   then
-  address *length,environment-variable-list* save
+  address *length,environment-variable-list* set
   end
 ; define-function
 
@@ -3084,7 +3023,7 @@ then
     :cursor 0 cursor->next-matching-byte add1
     loop
   then
-  :cursor :length add fetch-byte
+  :cursor :length add get-byte
   "=" string-head,byte
   equal? not if
     :address :length
@@ -3224,53 +3163,53 @@ init-environment-variable-list
 : init,stat
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
-    dup address +stat,st_mode+       save 2 add
-    dup address +stat,st_nlink+      save 2 add
-    dup address +stat,st_uid+        save 2 add
-    dup address +stat,st_gid+        save 2 add
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
+    dup address +stat,st_dev+        set *jo-size* add
+    dup address +stat,st_ino+        set *jo-size* add
+    dup address +stat,st_mode+       set 2 add
+    dup address +stat,st_nlink+      set 2 add
+    dup address +stat,st_uid+        set 2 add
+    dup address +stat,st_gid+        set 2 add
+    dup address +stat,st_rdev+       set *jo-size* add
+    dup address +stat,st_size+       set *jo-size* add
+    dup address +stat,st_blksize+    set *jo-size* add
+    dup address +stat,st_blocks+     set *jo-size* add
+    dup address +stat,st_atime+      set *jo-size* add
+    dup address +stat,st_atime_nsec+ set *jo-size* add
+    dup address +stat,st_mtime+      set *jo-size* add
+    dup address +stat,st_mtime_nsec+ set *jo-size* add
+    dup address +stat,st_ctime+      set *jo-size* add
+    dup address +stat,st_ctime_nsec+ set *jo-size* add
+    dup address +stat,__unused4+     set *jo-size* add
+    dup address +stat,__unused5+     set *jo-size* add
+        address +stat,end+           set
     end
   then
   *jo-size* 8 equal? if
-    dup address +stat,st_dev+        save *jo-size* add
-    dup address +stat,st_ino+        save *jo-size* add
+    dup address +stat,st_dev+        set *jo-size* add
+    dup address +stat,st_ino+        set *jo-size* add
     <<
     note the following order changing
     this is linux' bad
     >>
-    dup address +stat,st_nlink+      save 8 add
-    dup address +stat,st_mode+       save 4 add
+    dup address +stat,st_nlink+      set 8 add
+    dup address +stat,st_mode+       set 4 add
 
-    dup address +stat,st_uid+        save 4 add
-    dup address +stat,st_gid+        save 4 add
+    dup address +stat,st_uid+        set 4 add
+    dup address +stat,st_gid+        set 4 add
                                           4 add << padding >>
-    dup address +stat,st_rdev+       save *jo-size* add
-    dup address +stat,st_size+       save *jo-size* add
-    dup address +stat,st_blksize+    save *jo-size* add
-    dup address +stat,st_blocks+     save *jo-size* add
-    dup address +stat,st_atime+      save *jo-size* add
-    dup address +stat,st_atime_nsec+ save *jo-size* add
-    dup address +stat,st_mtime+      save *jo-size* add
-    dup address +stat,st_mtime_nsec+ save *jo-size* add
-    dup address +stat,st_ctime+      save *jo-size* add
-    dup address +stat,st_ctime_nsec+ save *jo-size* add
-    dup address +stat,__unused4+     save *jo-size* add
-    dup address +stat,__unused5+     save *jo-size* add
-        address +stat,end+           save
+    dup address +stat,st_rdev+       set *jo-size* add
+    dup address +stat,st_size+       set *jo-size* add
+    dup address +stat,st_blksize+    set *jo-size* add
+    dup address +stat,st_blocks+     set *jo-size* add
+    dup address +stat,st_atime+      set *jo-size* add
+    dup address +stat,st_atime_nsec+ set *jo-size* add
+    dup address +stat,st_mtime+      set *jo-size* add
+    dup address +stat,st_mtime_nsec+ set *jo-size* add
+    dup address +stat,st_ctime+      set *jo-size* add
+    dup address +stat,st_ctime_nsec+ set *jo-size* add
+    dup address +stat,__unused4+     set *jo-size* add
+    dup address +stat,__unused5+     set *jo-size* add
+        address +stat,end+           set
     end
   then
   end
@@ -3313,11 +3252,11 @@ init-environment-variable-list
   :stat-structure init,stat
   *jo-size* 4 equal? if
     +stat,st_mode+
-    fetch-two-bytes
+    get-two-bytes
   then
   *jo-size* 8 equal? if
     +stat,st_mode+
-    fetch-four-bytes
+    get-four-bytes
   then
   12 bit-right
   8#0010
@@ -3355,11 +3294,11 @@ init-environment-variable-list
   :stat-structure init,stat
   *jo-size* 4 equal? if
     +stat,st_mode+
-    fetch-two-bytes
+    get-two-bytes
   then
   *jo-size* 8 equal? if
     +stat,st_mode+
-    fetch-four-bytes
+    get-four-bytes
   then
   12 bit-right
   8#0004
@@ -3567,7 +3506,7 @@ init-environment-variable-list
   << -- >>
   *poi-directory*
   [ << -- >>
-    +getdents64,d_type+ fetch-byte
+    +getdents64,d_type+ get-byte
     4 equal? if
       512 allocate-local-memory >:path-buffer
       +getdents64,d_name+
@@ -3622,13 +3561,13 @@ init-environment-variable-list
     false
     end
   then
-  over fetch-byte
+  over get-byte
   "+" string-head,byte equal? not if
     drop2
     false
     end
   then
-  add sub1 fetch-byte
+  add sub1 get-byte
   "+" string-head,byte equal?
   end
 ; define-function
@@ -3710,7 +3649,7 @@ init-environment-variable-list
     dup
     "/" string-head,byte
     swap
-    save-byte
+    set-byte
   add1
   loop
 ; define-function
@@ -3841,23 +3780,55 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <report> link
+: <name-stack> list-by-jo-predicate,loop
+  << jo-predicate, counter, cursor -- >>
+  dup *name-stack,pointer* equal? if
+    drop
+    drop
+    drop
+    end
+  then
+  >:cursor
+  >:counter
+  >:jo-predicate
+  :cursor name-record,get-new-jo
+  :jo-predicate apply if
+    "  " .s
+    :counter .i ". " .s :counter add1 >:counter
+    :cursor name-record,get-name name->string .s
+    .l
+  then
+  :jo-predicate
+  :counter
+  :cursor *name-stack,unit* add
+  loop
+; define-function
+
+: <name-stack> list-by-jo-predicate
+  << jo-predicate -- >>
+  1
+  *name-stack*
+  <name-stack> list-by-jo-predicate,loop
+  end
+; define-function
+
+: <report> name-stack
   << -- >>
-  "* all primitive-function in link :" .s .l
-  *link* jo primitive-function-jo?
-  <link> list-by-jo-predicate
+  "* all primitive-function in name-stack :" .s .l
+  jo primitive-function-jo?
+  <name-stack> list-by-jo-predicate
 
-  "* all function in link :" .s .l
-  *link* jo function-jo?
-  <link> list-by-jo-predicate
+  "* all function in name-stack :" .s .l
+  jo function-jo?
+  <name-stack> list-by-jo-predicate
 
-  "* all exception in link :" .s .l
-  *link* jo exception-jo?
-  <link> list-by-jo-predicate
+  "* all exception in name-stack :" .s .l
+  jo exception-jo?
+  <name-stack> list-by-jo-predicate
 
-  "* all variable in link :" .s .l
-  *link* jo variable-jo?
-  <link> list-by-jo-predicate
+  "* all variable in name-stack :" .s .l
+  jo variable-jo?
+  <name-stack> list-by-jo-predicate
   end
 ; define-function
 
@@ -3887,7 +3858,7 @@ more,rule-set,basic-REPL
   <<
    *hi,random-base*
    *hi,random-base* add1 13 mod
-   address *hi,random-base* save
+   address *hi,random-base* set
   >>
   end
 ; define-function

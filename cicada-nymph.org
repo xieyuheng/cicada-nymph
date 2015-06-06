@@ -562,11 +562,7 @@
   * jo as data-structure
     |----+----------------|
     |    | length         |
-    |    | string-address |
-    |    | string-length  |
-    |----+----------------|
     | jo | explainer      |
-    |----+----------------|
     |    | body           |
     |----+----------------|
   * the body for
@@ -582,10 +578,8 @@
     the [other] is a pointer into argument-stack
 * offset of jo
   #+begin_src fasm :tangle cicada-nymph.fasm
-  offset__jo$other          = - (jo_size * 4)
-  offset__jo$length         = - (jo_size * 3)
-  offset__jo$string_address = - (jo_size * 2)
-  offset__jo$string_length  = - (jo_size * 1)
+  offset__jo$other          = - (jo_size * 2)
+  offset__jo$length         = - (jo_size * 1)
   offset__jo$body           = (jo_size * 1)
   #+end_src
 * note link
@@ -668,12 +662,6 @@
    * explain$function is used as jojo-head
      and explains the meaning of the jojo as function
    * a jojo-head identifies one type of jo
-** define_end
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   macro define_end jo {
-      end__#jo:
-   }
-   #+end_src
 ** define_function
    #+begin_src fasm :tangle cicada-nymph.fasm
    macro define_function string, jo {
@@ -693,9 +681,6 @@
 
       ;; xx (end__#jo - jo)/jo_size
       xx 0
-
-      xx .address
-      xx .length
 
    jo:
       xx explain$function
@@ -745,9 +730,6 @@
       ;; xx (end__#jo - jo)
       xx 0
 
-      xx .address
-      xx .length
-
    jo:
       xx assembly_code__#jo
 
@@ -785,9 +767,6 @@
 
       ;; length
       xx 1
-
-      xx .address
-      xx .length
 
    jo:
       xx explain$variable
@@ -880,9 +859,6 @@
 
       ;; xx (end__#jo - jo)/jo_size
       xx 0
-
-      xx .address
-      xx .length
 
    jo:
       xx explain$exception
@@ -1149,15 +1125,6 @@
    define_variable "*jo-size*", V__jo_size
       xx jo_size
    #+end_src
-** jo->name-string
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo->name-string", jo_to_name_string
-      ;; << jo -- string[address, length] >>
-      xx literal, offset__jo$string_address, addition
-      xx literal, 2
-      xx n_fetch
-      xx end
-   #+end_src
 ** jo->explainer
    * the type of primitive function jo
      is encoded by 0
@@ -1168,12 +1135,12 @@
       ;; << jo -- type >>
       xx dup
 
-      xx dup, fetch
+      xx dup, get
       xx swap, subtraction, literal, jo_size, equal?, false?branch, 4
       xx   drop, zero
       xx   end
 
-      xx fetch
+      xx get
       xx end
    #+end_src
 ** jo->length
@@ -1181,15 +1148,15 @@
    define_function "jo->length", jo_to_length
       ;; << jo -- length >>
       xx literal, offset__jo$length, addition
-      xx fetch
+      xx get
       xx end
    #+end_src
-** jo,save-length
+** jo,set-length
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jo,save-length", jo__save_length
+   define_function "jo,set-length", jo__set_length
       ;; << length, jo -- >>
       xx literal, offset__jo$length, addition
-      xx save
+      xx set
       xx end
    #+end_src
 ** jo->body
@@ -1246,8 +1213,8 @@
 * string-area
 ** note interface
    * the interface of string-area is not good
-     one can NOT use n-fetch and n-save
-     to fetch and save value from the address
+     one can NOT use n-get and n-set
+     to get and set value from the address
 ** *string-area*
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*string-area*", V__string_area
@@ -1267,7 +1234,7 @@
       xx V__string_area__current_free_address
       xx string_to_buffer!
       xx address, V__string_area__current_free_address
-      xx add_save
+      xx add_set
       xx end
    #+end_src
 ** make-string
@@ -1710,8 +1677,8 @@
       ;;;; exit ocde : 4
 
       ;;;; address
-      ;; xx address, V__little_test_number, fetch, add2
-      ;; xx address, V__little_test_number, save
+      ;; xx address, V__little_test_number, get, add2
+      ;; xx address, V__little_test_number, set
       ;; xx V__little_test_number
       ;; xx exit_with_TOS
       ;;;; exit ocde : 5
@@ -1782,16 +1749,6 @@
       ;; xx exit_with_TOS
       ;;;; type 123
       ;;;; exit code 123
-
-      ;;;; use jo_to_name_string to test the macro ASSEMBLY__make_string
-      ;; xx literal, jo_to_name_string, jo_to_name_string, write_string
-      ;; xx literal, 10, write_byte
-      ;; xx literal, addition, jo_to_name_string, write_string
-      ;; xx literal, 10, write_byte
-      ;; xx zero
-      ;; xx exit_with_TOS
-      ;;;; print "jo->name-string"
-      ;;;; print "add"
 
       ;;;; xxoverxx
       ;; xx literal, 1
@@ -2773,7 +2730,7 @@
       imul rbx, rax
       ;; imul will ignore overflow
       ;; when there are two registers as arg
-      ;; imul will save the result into the first register
+      ;; imul will set the result into the first register
       push_argument_stack rbx
       next
    #+end_src
@@ -2950,11 +2907,11 @@
    #+end_src
 ** ----------------------------------
 * memory
-** note fetch & save
+** note get & set
    * although the following functions are all side-effect
-     but I use "save" instead of "save!"
-   * (fetch) and (save) default to a jo_size
-** note endianness of n-fetch & n-save
+     but I use "set" instead of "set!"
+   * (get) and (set) default to a jo_size
+** note endianness of n-get & n-set
    * big-endian is used
      in memory
      | value-1 |
@@ -2963,24 +2920,24 @@
      on stack
      << value-1, value-2, value-3 >>
    * thus
-     what saved into the address
-     will re-occur when fetching through the address
+     what setd into the address
+     will re-occur when geting through the address
    * thus
-     I do not implement n-fetch-byte & n-save-byte
+     I do not implement n-get-byte & n-set-byte
      for the endianness of machine
      might not be big-endian
-** fetch                              :64bit:
+** get                                :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "fetch", fetch
+   define_primitive_function "get", get
       ;; ( address -- value )
       pop_argument_stack  rbx
       mov rax, [rbx]
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-byte", fetch_byte
+   define_primitive_function "get-byte", get_byte
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -2988,7 +2945,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-two-bytes", fetch_two_bytes
+   define_primitive_function "get-two-bytes", get_two_bytes
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -2996,7 +2953,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-four-bytes", fetch_four_bytes
+   define_primitive_function "get-four-bytes", get_four_bytes
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -3004,7 +2961,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "n-fetch", n_fetch
+   define_primitive_function "n-get", n_get
       ;; << address, n -- value-1, ..., value-n >>
       pop_argument_stack  rcx
       pop_argument_stack  rdx
@@ -3017,39 +2974,39 @@
 
    }
    #+end_src
-** save                               :64bit:
+** set                                :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "save", save
+   define_primitive_function "set", set
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov [rbx], rax
       next
 
-   define_primitive_function "save-byte", save_byte
+   define_primitive_function "set-byte", set_byte
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov byte[rbx], al
       next
 
-   define_primitive_function "save-two-bytes", save_two_bytes
+   define_primitive_function "set-two-bytes", set_two_bytes
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov word [rbx], ax
       next
 
-   define_primitive_function "save-four-bytes", save_four_bytes
+   define_primitive_function "set-four-bytes", set_four_bytes
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov dword [rbx], eax
       next
 
-   define_primitive_function "n-save", n_save
+   define_primitive_function "n-set", n_set
       ;; << value-n, ..., value-1, address, n -- >>
       pop_argument_stack rcx
       pop_argument_stack rdx
@@ -3066,14 +3023,14 @@
       loop .loop
       next
 
-   define_primitive_function "add-save", add_save
+   define_primitive_function "add-set", add_set
       ;; ( number to add, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       add qword [rbx], rax
       next
 
-   define_primitive_function "sub-save", sub_save
+   define_primitive_function "sub-set", sub_set
       ;; ( number to sub, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -3082,18 +3039,18 @@
 
    }
    #+end_src
-** fetch                              :32bit:
+** get                                :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "fetch", fetch
+   define_primitive_function "get", get
       ;; ( address -- value )
       pop_argument_stack  rbx
       mov rax, [rbx]
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-byte", fetch_byte
+   define_primitive_function "get-byte", get_byte
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -3101,7 +3058,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-two-bytes", fetch_two_bytes
+   define_primitive_function "get-two-bytes", get_two_bytes
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -3109,7 +3066,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "fetch-four-bytes", fetch_four_bytes
+   define_primitive_function "get-four-bytes", get_four_bytes
       ;; ( address -- value )
       pop_argument_stack rbx
       xor rax, rax
@@ -3117,7 +3074,7 @@
       push_argument_stack rax
       next
 
-   define_primitive_function "n-fetch", n_fetch
+   define_primitive_function "n-get", n_get
       ;; << address, n -- value-1, ..., value-n >>
       pop_argument_stack  rcx
       pop_argument_stack  rdx
@@ -3130,39 +3087,39 @@
 
    }
    #+end_src
-** save                               :32bit:
+** set                                :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "save", save
+   define_primitive_function "set", set
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov [rbx], rax
       next
 
-   define_primitive_function "save-byte", save_byte
+   define_primitive_function "set-byte", set_byte
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov byte[rbx], al
       next
 
-   define_primitive_function "save-two-bytes", save_two_bytes
+   define_primitive_function "set-two-bytes", set_two_bytes
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov word [rbx], ax
       next
 
-   define_primitive_function "save-four-bytes", save_four_bytes
+   define_primitive_function "set-four-bytes", set_four_bytes
       ;; ( value, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       mov dword [rbx], eax
       next
 
-   define_primitive_function "n-save", n_save
+   define_primitive_function "n-set", n_set
       ;; << value-n, ..., value-1, address, n -- >>
       pop_argument_stack rcx
       pop_argument_stack rdx
@@ -3179,14 +3136,14 @@
       loop .loop
       next
 
-   define_primitive_function "add-save", add_save
+   define_primitive_function "add-set", add_set
       ;; ( number to add, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
       add dword [rbx], rax
       next
 
-   define_primitive_function "sub-save", sub_save
+   define_primitive_function "sub-set", sub_set
       ;; ( number to sub, address -- )
       pop_argument_stack rbx
       pop_argument_stack rax
@@ -3582,7 +3539,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "reading-stack-empty?", reading_stack_empty?
       ;; << -- bool >>
-      xx literal, pointer$reading_stack, fetch
+      xx literal, pointer$reading_stack, get
       xx literal, address$reading_stack
       xx equal?
       xx end
@@ -3599,7 +3556,7 @@
      thus
      1. when reading from file
         a whole file is readed at a time
-        and saved to a buffer
+        and setd to a buffer
      2. when reading from stdin
         a whole line is readed at a time
      3. note that
@@ -3675,7 +3632,7 @@
       xx   tuck
       xx   add1, swap
       xx   push_reading_stack
-      xx   fetch_byte
+      xx   get_byte
       xx   end
    .bad_tos:
       xx reading_stack_empty?, false?branch, (.not_empty-$)/jo_size
@@ -3821,7 +3778,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "cursor->next-matching-byte", cursor_to_next_matching_byte
       ;; << cursor, byte -- cursor new address >>
-      xx over, add1, fetch_byte
+      xx over, add1, get_byte
       xx over, equal?, false?branch, 4
       xx   drop, add1
       xx   end
@@ -3840,7 +3797,7 @@
       xx   drop2
       xx   end
       xx sub1, swap
-      xx dup, fetch_byte, write_byte
+      xx dup, get_byte, write_byte
       xx add1, swap
       xx tail_call, write_string
 
@@ -3883,7 +3840,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-head,byte", string_head__byte
       ;; << string[address, length] -- char >>
-      xx drop, fetch_byte
+      xx drop, get_byte
       xx end
 
    define_function "string-tail,byte", string_tail__byte
@@ -4001,7 +3958,7 @@
       xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   end
-      xx over, fetch_byte, digit_char?, false?branch, 4
+      xx over, get_byte, digit_char?, false?branch, 4
       xx   string_tail__byte
       xx   tail_call, digit_string?
       xx drop2, false
@@ -4034,15 +3991,15 @@
 
    define_function "digit-string->number", digit_string_to_number
       ;; << string[address, length] -- integer >>
-      xx zero, literal, sum$digit_string_to_number, save
-      xx zero, literal, counter$digit_string_to_number, save
+      xx zero, literal, sum$digit_string_to_number, set
+      xx zero, literal, counter$digit_string_to_number, set
 
       xx dup2, string_reverse!
       xx   help__digit_string_to_number
       xx string_reverse!, drop2
 
       xx literal, sum$digit_string_to_number
-      xx fetch
+      xx get
       xx end
 
    define_function "help,digit-string->number", help__digit_string_to_number
@@ -4053,15 +4010,15 @@
 
       xx dup2, string_head__byte, digit_char_to_number
       xx   literal, 10
-      xx   literal, counter$digit_string_to_number, fetch
+      xx   literal, counter$digit_string_to_number, get
       xx     one
       xx     literal, counter$digit_string_to_number
-      xx     add_save
+      xx     add_set
       xx   power
       xx multiple
 
       xx literal, sum$digit_string_to_number
-      xx add_save
+      xx add_set
 
       xx string_tail__byte
       xx tail_call, help__digit_string_to_number
@@ -4089,7 +4046,7 @@
      xx   drop, drop2
      xx   false
      xx   end
-     xx xoverxx, fetch_byte
+     xx xoverxx, get_byte
      xx over, equal?, false?branch, 4
      xx   drop2
      xx   true
@@ -4103,13 +4060,13 @@
    #+begin_src cicada-nymph
    : XIE Yuheng ;
    32 string,find-char . << 1 >>
-   fetch-byte . << 32 >>
+   get-byte . << 32 >>
    #+end_src
 ** string-end,byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-end,byte", string_end__byte
       ;; << string[address, length] -- char >>
-      xx addition, sub1, fetch_byte
+      xx addition, sub1, get_byte
       xx end
    #+end_src
 ** ----------------------------------
@@ -4216,12 +4173,12 @@
    define_function "write-number,fill-buffer", write_number__fill_buffer
       ;; << number -- string[address, length] >>
       xx zero
-      xx literal, counter$write_number, save
+      xx literal, counter$write_number, set
 
       xx write_number__loop
 
       xx literal, buffer$write_number
-      xx literal, counter$write_number, fetch
+      xx literal, counter$write_number, get
       xx string_reverse!
       xx end
 
@@ -4232,13 +4189,13 @@
 
       xx number_to_digit_char
       xx literal, buffer$write_number
-      xx literal, counter$write_number, fetch
+      xx literal, counter$write_number, get
       xx addition
-      xx save_byte
+      xx set_byte
 
       xx one
       xx literal, counter$write_number
-      xx add_save
+      xx add_set
 
       xx dup, zero?, false?branch, 3
       xx   drop
@@ -4384,7 +4341,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "last-link?", last_link?
       ;; << link -- bool >>
-      xx fetch, zero?
+      xx get, zero?
       xx end
    #+end_src
 ** link->next-link
@@ -4393,7 +4350,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "link->next-link", link_to_next_link
      ;; << link -- next-link >>
-     xx fetch
+     xx get
      xx end
    #+end_src
 ** link->name-string
@@ -4402,22 +4359,22 @@
       ;; << link -- string[address, length] >>
       xx literal, offset__link$string_address, addition
       xx literal, 2
-      xx n_fetch
+      xx n_get
       xx end
    #+end_src
 ** link->jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "link->jo", link_to_jo
       ;; << link -- jo >>
-      xx literal, offset__link$jo, addition, fetch
+      xx literal, offset__link$jo, addition, get
       xx end
    #+end_src
-** link,save-jo
+** link,set-jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "link,save-jo", link__save_jo
+   define_function "link,set-jo", link__set_jo
       ;; << jo, link -- >>
       xx literal, offset__link$jo, addition
-      xx save
+      xx set
       xx end
    #+end_src
 ** *link*
@@ -4602,63 +4559,63 @@
    define_function ":", colon
       ;; << -- string[address of buffer$colon, length] >>
       xx literal, buffer$colon
-      xx literal, cursor$colon, save
+      xx literal, cursor$colon, set
       xx help__loop__colon
       ;; address
       xx literal, buffer$colon
       ;; length
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, buffer$colon
       xx subtraction
-      xx dup, literal, length$colon, save
+      xx dup, literal, length$colon, set
       xx end
 
 
    define_function "", help__loop__colon
       ;; << -- >>
       xx read_byte
-      xx help__save_byte__colon
+      xx help__set_byte__colon
       xx help__meet_end__colon?, false?branch, 7
       xx   literal, 3 ;; for the string " ; "
       xx   literal, cursor$colon
-      xx   sub_save
+      xx   sub_set
       xx   end
       xx help__meet_comment__colon?, false?branch, 9
       xx   literal, 4 ;; for the string " << "
       xx   literal, cursor$colon
-      xx   sub_save
+      xx   sub_set
       xx   ignore_comment
       xx   tail_call, help__loop__colon
       xx tail_call, help__loop__colon
 
 
-   define_function "", help__save_byte__colon
+   define_function "", help__set_byte__colon
       ;; << byte -- >>
-      xx literal, cursor$colon, fetch
-      xx save_byte
+      xx literal, cursor$colon, get
+      xx set_byte
       xx one
       xx literal, cursor$colon
-      xx add_save
+      xx add_set
       xx end
 
 
    define_function "", help__meet_end__colon?
       ;; << -- bool >>
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 3, subtraction
-      xx fetch_byte, space_char?
+      xx get_byte, space_char?
       xx false?, false?branch, 3
       xx   false
       xx   end
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 2, subtraction
-      xx fetch_byte, literal, ';', equal?
+      xx get_byte, literal, ';', equal?
       xx false?, false?branch, 3
       xx   false
       xx   end
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 1, subtraction
-      xx fetch_byte, space_char?
+      xx get_byte, space_char?
       xx false?, false?branch, 3
       xx   false
       xx   end
@@ -4667,27 +4624,27 @@
 
    define_function "", help__meet_comment__colon?
       ;; << -- bool >>
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 4, subtraction
-      xx fetch_byte, space_char?
+      xx get_byte, space_char?
       xx false?, false?branch, 3
       xx   false
       xx   end
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 3, subtraction
-      xx fetch_byte, literal, '<', equal?
+      xx get_byte, literal, '<', equal?
       xx false?, false?branch, 3
       xx   false
       xx   end
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 2, subtraction
-      xx fetch_byte, literal, '<', equal?
+      xx get_byte, literal, '<', equal?
       xx false?, false?branch, 3
       xx   false
       xx   end
-      xx literal, cursor$colon, fetch
+      xx literal, cursor$colon, get
       xx literal, 1, subtraction
-      xx fetch_byte, space_char?
+      xx get_byte, space_char?
       xx false?, false?branch, 3
       xx   false
       xx   end
@@ -4746,10 +4703,10 @@
    define_function "jojo-area,stay", jojo_area__stay
       ;; << number -- >>
       xx V__jojo_area__current_free_address
-      xx save
+      xx set
       xx literal, jo_size
       xx address, V__jojo_area__current_free_address
-      xx add_save
+      xx add_set
       xx end
    #+end_src
 * make-link
@@ -4778,8 +4735,6 @@
   * jo as data-structure
     |----+----------------|
     |    | length         |
-    |    | string-address |
-    |    | string-length  |
     |----+----------------|
     | jo | explainer      |
     |----+----------------|
@@ -4787,11 +4742,7 @@
     |----+----------------|
   #+begin_src fasm :tangle cicada-nymph.fasm
   define_function "make-jo-head", make_jo_head
-     ;; << string[address, length], explainer, length -- jo >>
-     xx   jojo_area__stay
-     xx xxswapx
-     xx swap
-     xx   jojo_area__stay
+     ;; << explainer, length -- jo >>
      xx   jojo_area__stay
      xx V__jojo_area__current_free_address
      xx swap
@@ -4820,10 +4771,10 @@
    define_function "push-syntax-stack", push_syntax_stack
       ;; << syntax-set[address] -- >>
       xx V__syntax_stack__pointer
-      xx save
+      xx set
       xx V__jo_size
       xx address, V__syntax_stack__pointer
-      xx add_save
+      xx add_set
       xx end
    #+end_src
 ** pop-syntax-stack
@@ -4832,8 +4783,8 @@
       ;; << -- syntax-set[address] >>
       xx V__jo_size
       xx address, V__syntax_stack__pointer
-      xx sub_save
-      xx V__syntax_stack__pointer, fetch
+      xx sub_set
+      xx V__syntax_stack__pointer, get
       xx end
    #+end_src
 ** tos-syntax-stack
@@ -4843,7 +4794,7 @@
       xx V__syntax_stack__pointer
       xx V__jo_size
       xx subtraction
-      xx fetch
+      xx get
       xx end
    #+end_src
 ** drop-syntax-stack
@@ -4852,7 +4803,7 @@
       ;; << -- >>
       xx V__jo_size
       xx address, V__syntax_stack__pointer
-      xx sub_save
+      xx sub_set
       xx end
    #+end_src
 ** syntax-stack-empty?
@@ -4917,20 +4868,20 @@
      一定要注意維護棧中的值的良好性
 ** note border
    * border is current-free-address of rule-set
-** rule-set,fetch-border
+** rule-set,get-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "rule-set,fetch-border", rule_set__fetch_border
+   define_function "rule-set,get-border", rule_set__get_border
       ;; << rule-set -- border >>
       xx V__jo_size, subtraction
-      xx fetch
+      xx get
       xx end
    #+end_src
-** rule-set,save-border
+** rule-set,set-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "rule-set,save-border", rule_set__save_border
+   define_function "rule-set,set-border", rule_set__set_border
       ;; << border, rule-set -- >>
       xx V__jo_size, subtraction
-      xx save
+      xx set
       xx end
    #+end_src
 ** cursor->[rule|function|predicate]
@@ -4941,20 +4892,20 @@
       xx V__jo_size, subtraction
       xx V__jo_size, subtraction
       xx literal, 2
-      xx n_fetch
+      xx n_get
       xx end
 
    define_function "cursor->predicate", cursor_to_predicate
       ;; << cursor -- predicate >>
       xx V__jo_size, subtraction
       xx V__jo_size, subtraction
-      xx fetch
+      xx get
       xx end
 
    define_function "cursor->function", cursor_to_function
       ;; << cursor -- function >>
       xx V__jo_size, subtraction
-      xx fetch
+      xx get
       xx end
    #+end_src
 ** add-rule
@@ -4962,15 +4913,15 @@
    define_function "add-rule", add_rule
       ;; << rule[predicate, function], rule-set -- >>
       xx xxtuckx
-      xx rule_set__fetch_border
+      xx rule_set__get_border
       xx literal, 2
-      xx n_save
+      xx n_set
       xx dup
-      xx rule_set__fetch_border
+      xx rule_set__get_border
       xx V__jo_size, addition
       xx V__jo_size, addition
       xx swap
-      xx rule_set__save_border
+      xx rule_set__set_border
       xx end
    #+end_src
 ** find-rule
@@ -4982,8 +4933,8 @@
       ;; << word[address, length], rule-set
       ;;    -- function, true
       ;;    -- false >>
-      xx dup, rule_set__fetch_border
-      xx literal, cursor$find_rule, save
+      xx dup, rule_set__get_border
+      xx literal, cursor$find_rule, set
       xx find_rule__loop
       xx end
 
@@ -4991,25 +4942,25 @@
       ;; << word[address, length], rule-set
       ;;    -- function, true
       ;;    -- false >>
-      xx literal, cursor$find_rule, fetch
+      xx literal, cursor$find_rule, get
       xx over, equal?, false?branch, 5
       xx   drop, drop2
       xx   false
       xx   end
       xx xxoverx
-      xx literal, cursor$find_rule, fetch
+      xx literal, cursor$find_rule, get
       xx cursor_to_predicate
       xx apply, false?branch, (.not_found-$)/jo_size
       xx   drop, drop2
-      xx   literal, cursor$find_rule, fetch
+      xx   literal, cursor$find_rule, get
       xx   cursor_to_function
       xx   true
       xx   end
    .not_found:
-      xx literal, cursor$find_rule, fetch
+      xx literal, cursor$find_rule, get
       xx V__jo_size, subtraction
       xx V__jo_size, subtraction
-      xx literal, cursor$find_rule, save
+      xx literal, cursor$find_rule, set
       xx tail_call, find_rule__loop
    #+end_src
 * *rule-set,make-jojo*
@@ -5054,12 +5005,12 @@
       xx literal, syntax__double_quote__make_jojo
       xx V__rule_set__make_jojo, add_rule
 
-      xx literal, local_variable_save_string?
-      xx literal, syntax__local_variable_save__make_jojo
+      xx literal, local_variable_set_string?
+      xx literal, syntax__local_variable_set__make_jojo
       xx V__rule_set__make_jojo, add_rule
 
-      xx literal, local_variable_fetch_string?
-      xx literal, syntax__local_variable_fetch__make_jojo
+      xx literal, local_variable_get_string?
+      xx literal, syntax__local_variable_get__make_jojo
       xx V__rule_set__make_jojo, add_rule
 
       xx end
@@ -5285,10 +5236,10 @@
      xx literal, ';', write_byte
      xx literal, 10, write_byte
 
-     xx address, V__link, save
-     xx address, V__jojo_area__current_free_address, save
+     xx address, V__link, set
+     xx address, V__jojo_area__current_free_address, set
      xx address, V__string_area__current_free_address
-     xx save
+     xx set
      xx end
 
   string$undo_make_jojo_report:
@@ -5341,7 +5292,8 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link, save
+      xx address, V__link, set
+      xx drop2
       xx literal, explain$function
       xx literal, 0
       ;; << string[address, length]
@@ -5358,7 +5310,7 @@
       ;;    jo
       ;;    jo
       ;;    link >>
-      xx link__save_jo
+      xx link__set_jo
       ;; << string[address, length]
       ;;    jo >>
 
@@ -5378,7 +5330,7 @@
       xx V__jojo_area__current_free_address
       xx swap, subtraction
       xx V__jo_size, division
-      xx swap, jo__save_length
+      xx swap, jo__set_length
 
       xx drop2
       xx drop
@@ -5449,7 +5401,8 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link, save
+      xx address, V__link, set
+      xx drop2
       xx literal, explain$exception
       xx literal, 0
       ;; << string[address, length]
@@ -5466,7 +5419,7 @@
       ;;    jo
       ;;    jo
       ;;    link >>
-      xx link__save_jo
+      xx link__set_jo
       ;; << string[address, length]
       ;;    jo >>
 
@@ -5486,7 +5439,7 @@
       xx V__jojo_area__current_free_address
       xx swap, subtraction
       xx V__jo_size, division
-      xx swap, jo__save_length
+      xx swap, jo__set_length
 
       xx drop2
       xx drop
@@ -5520,7 +5473,8 @@
       ;;    link >>
 
       xx xxtuckx
-      xx address, V__link, save
+      xx address, V__link, set
+      xx drop2
       xx literal, explain$variable
       xx literal, 0
       ;; << string[address, length]
@@ -5537,7 +5491,7 @@
       ;;    jo
       ;;    jo
       ;;    link >>
-      xx link__save_jo
+      xx link__set_jo
       ;; << string[address, length]
       ;;    jo >>
 
@@ -5546,7 +5500,7 @@
       ;; << string[address, length]
       ;;    1
       ;;    jo >>
-      xx jo__save_length
+      xx jo__set_length
       ;; << string[address, length] >>
 
       xx drop2
@@ -5563,7 +5517,7 @@
 
    << you get the address of the variable *three*
       by add "address" in front of it >>
-   : fix-*three* 3 address *three* save end ; define-function
+   : fix-*three* 3 address *three* set end ; define-function
    fix-*three*
    1 add-three . << 4 >>
 
@@ -5702,18 +5656,18 @@
       add [current_free_address$local_jo], rax
       next
    #+end_src
-** note many fetch & save
+** note many get & set
    * in memory
      | 1 : value-1 |
      | 1 : value-2 |
      | 1 : value-3 |
    * on stack
      << value-1, value-2, value-3, ... >>
-** [n-fetch|n-save],local-jo          :64bit:
+** [n-get|n-set],local-jo             :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
+   define_primitive_function "n-get,local-jo", n_get__local_jo
       ;; << offset, n -- value-1, ..., value-n >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -5727,7 +5681,7 @@
       loop .loop
       next
 
-   define_primitive_function "n-save,local-jo", n_save__local_jo
+   define_primitive_function "n-set,local-jo", n_set__local_jo
       ;; << value-n, ..., value-1, offset, n -- >>
       mov rbx, [pointer$return_stack - (2 * jo_size)]
 
@@ -5749,11 +5703,11 @@
 
    }
    #+end_src
-** [n-fetch|n-save],local-jo          :32bit:
+** [n-get|n-set],local-jo             :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "n-fetch,local-jo", n_fetch__local_jo
+   define_primitive_function "n-get,local-jo", n_get__local_jo
       ;; << offset, n -- value-1, ..., value-n >>
       mov rax, [pointer$return_stack]
       mov rbx, [rax - (2 * jo_size)]
@@ -5768,7 +5722,7 @@
       loop .loop
       next
 
-   define_primitive_function "n-save,local-jo", n_save__local_jo
+   define_primitive_function "n-set,local-jo", n_set__local_jo
       ;; << value-n, ..., value-1, offset, n -- >>
       mov rax, [pointer$return_stack]
       mov rbx, [rax - (2 * jo_size)]
@@ -5809,13 +5763,13 @@
 
         ;; >::var2
         xx literal, 2, local_data_allocate__jo
-        xx literal, 0, literal, 2, n_save__local_jo
+        xx literal, 0, literal, 2, n_set__local_jo
 
         ;; >::var2
-        xx literal, 0, literal, 2, n_save__local_jo
+        xx literal, 0, literal, 2, n_set__local_jo
 
         ;; ::var2
-        xx literal, 0, literal, 2, n_fetch__local_jo
+        xx literal, 0, literal, 2, n_get__local_jo
 
         xx end
      #+end_src
@@ -5892,13 +5846,13 @@
 
         ;; >::var2
         xx literal, 2, local_data_allocate__jo
-        xx literal, 0, literal, 2, n_save__local_jo
+        xx literal, 0, literal, 2, n_set__local_jo
 
         ;; >::var2
-        xx literal, 0, literal, 2, n_save__local_jo
+        xx literal, 0, literal, 2, n_set__local_jo
 
         ;; ::var2
-        xx literal, 0, literal, 2, n_fetch__local_jo
+        xx literal, 0, literal, 2, n_get__local_jo
 
         xx end
      #+end_src
@@ -5919,18 +5873,18 @@
      第一個是
      ;; >::var2
      xx literal, 2, local_data_allocate__jo
-     xx literal, 0, literal, 2, n_save__local_jo
+     xx literal, 0, literal, 2, n_set__local_jo
      第二個是
      ;; >::var2
-     xx literal, 0, literal, 2, n_save__local_jo
+     xx literal, 0, literal, 2, n_set__local_jo
      也就是說 不同分支下
      局部變元的編譯效果不等同了
 * local-variable-table
 ** 記
    * 只有一個 local-variable-table
      用以在編譯時期解決局部變元的名與值的對應
-     這個數據結構被 syntax__local_variable_save__make_jojo
-     和 syntax__local_variable_fetch__make_jojo 所使用
+     這個數據結構被 syntax__local_variable_set__make_jojo
+     和 syntax__local_variable_get__make_jojo 所使用
    * 其中保存
      * offset-in-local-jo
      * length-of-string
@@ -5971,9 +5925,9 @@
    define_function "local-variable-table,clear", local_variable_table__clear
       ;; << -- >>
       xx literal, address$local_variable_table
-      xx literal, border$local_variable_table, save
+      xx literal, border$local_variable_table, set
       xx literal, 0
-      xx literal, offset$local_variable_table, save
+      xx literal, offset$local_variable_table, set
       xx end
    #+end_src
 ** local-variable-table,insert
@@ -5982,32 +5936,32 @@
       ;; << string[address, length] -- offset >>
 
       ;; leave offset
-      xx literal, offset$local_variable_table, fetch
+      xx literal, offset$local_variable_table, get
       xx   xxtuckx ;; return value
-      xx literal, border$local_variable_table, fetch, save
+      xx literal, border$local_variable_table, get, set
       xx V__jo_size
-      xx literal, border$local_variable_table, add_save
+      xx literal, border$local_variable_table, add_set
 
       ;; update offset$local_variable_table
       xx dup2
       xx   count_front_colon
       xx   V__jo_size, multiple
-      xx   literal, offset$local_variable_table, add_save
+      xx   literal, offset$local_variable_table, add_set
 
       ;; leave length
       xx dup
-      xx literal, border$local_variable_table, fetch, save
+      xx literal, border$local_variable_table, get, set
       xx V__jo_size
-      xx literal, border$local_variable_table, add_save
+      xx literal, border$local_variable_table, add_set
 
       xx tuck ;; for to update border$local_variable_table
 
       ;; leave string
-      xx literal, border$local_variable_table, fetch
+      xx literal, border$local_variable_table, get
       xx string_to_buffer!
 
       ;; update border$local_variable_table
-      xx literal, border$local_variable_table, add_save
+      xx literal, border$local_variable_table, add_set
 
       xx end
    #+end_src
@@ -6021,7 +5975,7 @@
       ;;    -- offset, true
       ;;    -- false >>
       xx literal, address$local_variable_table
-      xx literal, cursor$local_variable_table, save
+      xx literal, cursor$local_variable_table, set
       xx local_variable_table__find__loop
       xx end
 
@@ -6029,31 +5983,31 @@
       ;; << string[address, length]
       ;;    -- offset, true
       ;;    -- false >>
-      xx literal, cursor$local_variable_table, fetch
-      xx literal, border$local_variable_table, fetch
+      xx literal, cursor$local_variable_table, get
+      xx literal, border$local_variable_table, get
       xx greater_or_equal?, false?branch, 4
       xx   drop2
       xx   false
       xx   end
       xx dup2
-      xx literal, cursor$local_variable_table, fetch
+      xx literal, cursor$local_variable_table, get
       xx   V__jo_size, addition
       xx   V__jo_size, addition ;; address of string
-      xx literal, cursor$local_variable_table, fetch
+      xx literal, cursor$local_variable_table, get
       xx   V__jo_size, addition
-      xx   fetch ;; length of string
+      xx   get ;; length of string
       xx string_equal?, false?branch, 8
       xx   drop2
-      xx   literal, cursor$local_variable_table, fetch
-      xx     fetch ;; offset
+      xx   literal, cursor$local_variable_table, get
+      xx     get ;; offset
       xx   true
       xx   end
-      xx literal, cursor$local_variable_table, fetch
+      xx literal, cursor$local_variable_table, get
       xx   V__jo_size, addition
-      xx   fetch ;; length of string
+      xx   get ;; length of string
       xx V__jo_size, addition
       xx V__jo_size, addition
-      xx literal, cursor$local_variable_table, add_save
+      xx literal, cursor$local_variable_table, add_set
       xx tail_call, local_variable_table__find__loop
    #+end_src
 ** count-front-colon
@@ -6079,20 +6033,20 @@
    #+end_src
 * two syntaxes
 ** ----------------------------------
-** local-variable-fetch-string?
+** local-variable-get-string?
    * :name
      ::name
    * but not
      :name:
      ::name:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-fetch-string?", local_variable_fetch_string?
+   define_function "local-variable-get-string?", local_variable_get_string?
       ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, addition, sub1
-      xx fetch_byte, literal, ':'
+      xx get_byte, literal, ':'
       xx equal?, false?branch, 4
       xx   drop2, false
       xx   end
@@ -6105,14 +6059,14 @@
       xx literal, 0, greater_than?
       xx end
    #+end_src
-** syntax,local-variable-fetch,make-jojo
+** syntax,local-variable-get,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,local-variable-fetch,make-jojo", syntax__local_variable_fetch__make_jojo
+   define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_get__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx dup2
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_fetch__local_jo
+      ;;   literal, <offese>, literal, n, n_get__local_jo
       xx     literal, literal
       xx       jojo_area__stay
       ;;     offset
@@ -6122,7 +6076,7 @@
       ;;     n
       xx     count_front_colon
       xx       jojo_area__stay
-      xx     literal, n_fetch__local_jo
+      xx     literal, n_get__local_jo
       xx       jojo_area__stay
       xx   end
    .not_found:
@@ -6143,20 +6097,20 @@
    length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
    #+end_src
 ** ----------------------------------
-** local-variable-save-string?
+** local-variable-set-string?
    * >:name
      >::name
    * but not
      >:name:
      >::name:
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-save-string?", local_variable_save_string?
+   define_function "local-variable-set-string?", local_variable_set_string?
       ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, addition, sub1
-      xx fetch_byte, literal, ':'
+      xx get_byte, literal, ':'
       xx equal?, false?branch, 4
       xx   drop2, false
       xx   end
@@ -6174,15 +6128,15 @@
       xx literal, 0, greater_than?
       xx end
    #+end_src
-** syntax,local-variable-save,make-jojo
+** syntax,local-variable-set,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,local-variable-save,make-jojo", syntax__local_variable_save__make_jojo
+   define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx string_tail__byte
       xx dup2
       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_save__local_jo
+      ;;   literal, <offese>, literal, n, n_set__local_jo
       xx     literal, literal
       xx       jojo_area__stay
       ;;     offset
@@ -6192,7 +6146,7 @@
       ;;     n
       xx     count_front_colon
       xx       jojo_area__stay
-      xx     literal, n_save__local_jo
+      xx     literal, n_set__local_jo
       xx       jojo_area__stay
       xx   end
    .not_found:
@@ -6207,7 +6161,7 @@
       xx     dup, jojo_area__stay
       xx   literal, local_data_allocate__jo
       xx     jojo_area__stay
-      ;; literal, <offese>, literal, n, save_local_data
+      ;; literal, <offese>, literal, n, set_local_data
       xx   literal, literal
       xx     jojo_area__stay
       ;;   offset
@@ -6217,7 +6171,7 @@
       xx     jojo_area__stay
       ;;   n
       xx     jojo_area__stay
-      xx   literal, n_save__local_jo
+      xx   literal, n_set__local_jo
       xx     jojo_area__stay
       xx end
    #+end_src
@@ -6324,7 +6278,7 @@
       xx   literal, string$string_to_syscall_string
       xx   addition
       xx   literal, 0
-      xx   swap, save_byte
+      xx   swap, set_byte
       xx literal, string$string_to_syscall_string
       xx string_to_buffer!
       xx literal, string$string_to_syscall_string
@@ -6341,7 +6295,7 @@
       xx   literal, string$string_to_syscall_string_2
       xx   addition
       xx   literal, 0
-      xx   swap, save_byte
+      xx   swap, set_byte
       xx literal, string$string_to_syscall_string_2
       xx string_to_buffer!
       xx literal, string$string_to_syscall_string_2
