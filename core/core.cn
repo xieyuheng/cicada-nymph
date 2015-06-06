@@ -517,20 +517,20 @@ allocate-memory
 ; define-function
 
 100 1024 mul
-: *name-stack,size*
+: *naming-stack,size*
 ; define-variable,with-tos
 
 3 *jo-size* mul
-: *name-stack,unit*
+: *naming-stack,unit*
 ; define-variable,with-tos
 
-*name-stack,size*
-*name-stack,unit* mul allocate-memory
-: *name-stack*
+*naming-stack,size*
+*naming-stack,unit* mul allocate-memory
+: *naming-stack*
 ; define-variable,with-tos
 
-*name-stack*
-: *name-stack,pointer*
+*naming-stack*
+: *naming-stack,pointer*
 ; define-variable,with-tos
 
 : name-record,get-old-jo
@@ -572,11 +572,11 @@ allocate-memory
 : name,record-jo
   << jo, name -- >>
   dup name,get-jo
-  *name-stack,pointer* name-record,set-old-jo
+  *naming-stack,pointer* name-record,set-old-jo
   dup2 name,set-jo
-  *name-stack,pointer* name-record,set-name
-  *name-stack,pointer* name-record,set-new-jo
-  *name-stack,unit* address *name-stack,pointer* add-set
+  *naming-stack,pointer* name-record,set-name
+  *naming-stack,pointer* name-record,set-new-jo
+  *naming-stack,unit* address *naming-stack,pointer* add-set
   end
 ; define-function
 
@@ -584,12 +584,12 @@ allocate-memory
   << jo, current-record
      -- name, true
      -- false >>
-  dup *name-stack* equal? if
+  dup *naming-stack* equal? if
     drop2
     false
     end
   then
-  *name-stack,unit* sub
+  *naming-stack,unit* sub
   dup >:name-record
   over
   :name-record name-record,get-new-jo equal? if
@@ -605,7 +605,7 @@ allocate-memory
   << jo
      -- name, true
      -- false >>
-  *name-stack,pointer*
+  *naming-stack,pointer*
   jo,find-name,loop
   end
 ; define-function
@@ -619,206 +619,9 @@ allocate-memory
   end
 ; define-function
 
-: name-stack,delete-last-record
+: naming-stack,delete-last-record
   << -- >>
-  *name-stack,unit* address *name-stack,pointer* sub-set
-  end
-; define-function
-
-60 1024 mul
-: *undo-stack,size*
-; define-variable,with-tos
-
-6 *jo-size* mul
-: *undo-stack,unit*
-; define-variable,with-tos
-
-*undo-stack,size*
-*undo-stack,unit* mul allocate-memory
-: *undo-stack*
-; define-variable,with-tos
-
-*undo-stack*
-: *undo-stack,pointer*
-; define-variable,with-tos
-
-20 1024 mul
-*jo-size* mul
-: *syntax-backup-area,size*
-; define-variable,with-tos
-
-*syntax-backup-area,size* allocate-memory
-: *syntax-backup-area*
-; define-variable,with-tos
-
-*syntax-backup-area*
-: *syntax-backup-area,current-free-address*
-; define-variable,with-tos
-
-: create-undo-point,copy-syntax,one-rule-set
-  << rule-set -- >>
-  >:rule-set
-  :rule-set rule-set,get-border >:border
-  :border :rule-set sub
-  *jo-size* div >:n
-
-  :rule-set
-  *syntax-backup-area,current-free-address* set
-  *jo-size* address *syntax-backup-area,current-free-address* add-set
-
-  :n
-  *syntax-backup-area,current-free-address* set
-  *jo-size* address *syntax-backup-area,current-free-address* add-set
-
-  :rule-set
-  :n n-get
-  *syntax-backup-area,current-free-address*
-  :n n-set
-  *jo-size* :n mul
-  address *syntax-backup-area,current-free-address* add-set
-  end
-; define-function
-
-: create-undo-point,copy-syntax
-  << cursor -- >>
-  dup *syntax-stack,pointer* equal? if
-    drop
-    end
-  then
-  dup get create-undo-point,copy-syntax,one-rule-set
-  *jo-size* add
-  loop
-; define-function
-
-: create-undo-point
-  << -- undo-point >>
-  *undo-stack,pointer* >:undo-point
-
-  *jojo-area,current-free-address*
-  *string-area,current-free-address*
-  *link*
-  *name-stack,pointer*
-  *syntax-backup-area,current-free-address*
-  :undo-point
-  5 n-set
-
-  *jo-size* 5 mul
-  address *undo-stack,pointer* add-set
-
-  *syntax-stack,address* create-undo-point,copy-syntax
-
-  *syntax-stack,pointer*
-  *syntax-stack,address* sub
-  *jo-size* div
-  *undo-stack,pointer* set
-
-  *jo-size*
-  address *undo-stack,pointer* add-set
-
-  :undo-point
-  end
-; define-function
-
-: restore,jojo-area
-  << undo-point -- >>
-  get
-  address *jojo-area,current-free-address* set
-  end
-; define-function
-
-: restore,string-area
-  << undo-point -- >>
-  *jo-size* add get
-  address *string-area,current-free-address* set
-  end
-; define-function
-
-: restore,name-stack,set-jo
-  << old-record, current-record -- >>
-  dup2 equal? if
-    drop2
-    end
-  then
-  *name-stack,unit* sub
-  dup >:name-record
-  :name-record name-record,get-old-jo
-  :name-record name-record,get-name
-  name,set-jo
-  loop
-; define-function
-
-: restore,name-stack
-  << undo-point -- >>
-  *jo-size* 3 mul add get >:old-record
-  :old-record *name-stack,pointer*
-  restore,name-stack,set-jo
-  :old-record address *name-stack,pointer* set
-  end
-; define-function
-
-: restore,syntax-backup-area,set-syntax
-  << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
-  dup zero? if
-    drop2
-    end
-  then
-  >:number-of-rule-sets
-  >:rule-set-copy
-  >:cursor
-
-  :rule-set-copy get >:rule-set
-  :rule-set-copy *jo-size* add get >:n
-
-  :rule-set :cursor set
-
-  :rule-set-copy *jo-size* 2 mul add
-  :n n-get
-  :rule-set
-  :n n-set
-
-  *jo-size*
-  :n mul
-  :rule-set add
-  :rule-set rule-set,set-border
-
-  :cursor *jo-size* add
-  :rule-set-copy *jo-size* :n 2 add mul add
-  :number-of-rule-sets sub1
-  loop
-; define-function
-
-: restore,syntax-backup-area
-  << undo-point -- >>
-  dup
-  *jo-size* 4 mul add get >:old-address
-  *jo-size* 5 mul add get >:number-of-rule-sets
-
-  *syntax-stack,address*
-  :old-address
-  :number-of-rule-sets
-  restore,syntax-backup-area,set-syntax >:cursor
-
-  :cursor
-  address *syntax-stack,pointer* set
-
-  :old-address address *syntax-backup-area,current-free-address* set
-  end
-; define-function
-
-: restore,undo-stack
-  << undo-point -- >>
-  address *undo-stack,pointer* set
-  end
-; define-function
-
-: undo
-  << undo-point -- >>
-  >:undo-point
-  :undo-point restore,jojo-area
-  :undo-point restore,string-area
-  :undo-point restore,name-stack
-  :undo-point restore,syntax-backup-area
-  :undo-point restore,undo-stack
+  *naming-stack,unit* address *naming-stack,pointer* sub-set
   end
 ; define-function
 
@@ -924,7 +727,7 @@ set
     end
   then
   "* (make-jojo) meets undefined word : " .s .s .l
-  name-stack,delete-last-record
+  naming-stack,delete-last-record
   !undo-make-jojo
 ; define-function
 
@@ -1196,7 +999,7 @@ basic-REPL
     "* (syntax,<title>,make-jojo) meet undefined" .s .l
     "  title : " .s ::title .s .l
     "  name  : " .s ::string string-head,word .s .l
-    name-stack,delete-last-record
+    naming-stack,delete-last-record
     !undo-make-jojo
   then
   :jo
@@ -3688,17 +3491,219 @@ init-environment-variable-list
 ; define-function
 more,rule-set,basic-REPL
 
-1024 100 mul
+10 1024 mul
 : *undo-stack,size*
 ; define-variable,with-tos
 
-*undo-stack,size* allocate-memory
-: *loading-stack*
+1 *jo-size* mul
+: *undo-stack,unit*
 ; define-variable,with-tos
 
-*loading-stack*
+*undo-stack,size*
+*undo-stack,unit* mul allocate-memory
+: *module-stack*
+; define-variable,with-tos
+
+*module-stack*
 : *undo-stack,pointer*
 ; define-variable,with-tos
+
+60 1024 mul
+: *undo-stack,size*
+; define-variable,with-tos
+
+6 *jo-size* mul
+: *undo-stack,unit*
+; define-variable,with-tos
+
+*undo-stack,size*
+*undo-stack,unit* mul allocate-memory
+: *undo-stack*
+; define-variable,with-tos
+
+*undo-stack*
+: *undo-stack,pointer*
+; define-variable,with-tos
+
+20 1024 mul
+*jo-size* mul
+: *syntax-backup-area,size*
+; define-variable,with-tos
+
+*syntax-backup-area,size* allocate-memory
+: *syntax-backup-area*
+; define-variable,with-tos
+
+*syntax-backup-area*
+: *syntax-backup-area,current-free-address*
+; define-variable,with-tos
+
+: create-undo-point,copy-syntax,one-rule-set
+  << rule-set -- >>
+  >:rule-set
+  :rule-set rule-set,get-border >:border
+  :border :rule-set sub
+  *jo-size* div >:n
+
+  :rule-set
+  *syntax-backup-area,current-free-address* set
+  *jo-size* address *syntax-backup-area,current-free-address* add-set
+
+  :n
+  *syntax-backup-area,current-free-address* set
+  *jo-size* address *syntax-backup-area,current-free-address* add-set
+
+  :rule-set
+  :n n-get
+  *syntax-backup-area,current-free-address*
+  :n n-set
+  *jo-size* :n mul
+  address *syntax-backup-area,current-free-address* add-set
+  end
+; define-function
+
+: create-undo-point,copy-syntax
+  << cursor -- >>
+  dup *syntax-stack,pointer* equal? if
+    drop
+    end
+  then
+  dup get create-undo-point,copy-syntax,one-rule-set
+  *jo-size* add
+  loop
+; define-function
+
+: create-undo-point
+  << -- undo-point >>
+  *undo-stack,pointer* >:undo-point
+
+  *jojo-area,current-free-address*
+  *string-area,current-free-address*
+  *link*
+  *naming-stack,pointer*
+  *syntax-backup-area,current-free-address*
+  :undo-point
+  5 n-set
+
+  *jo-size* 5 mul
+  address *undo-stack,pointer* add-set
+
+  *syntax-stack,address* create-undo-point,copy-syntax
+
+  *syntax-stack,pointer*
+  *syntax-stack,address* sub
+  *jo-size* div
+  *undo-stack,pointer* set
+
+  *jo-size*
+  address *undo-stack,pointer* add-set
+
+  :undo-point
+  end
+; define-function
+
+: restore,jojo-area
+  << undo-point -- >>
+  get
+  address *jojo-area,current-free-address* set
+  end
+; define-function
+
+: restore,string-area
+  << undo-point -- >>
+  *jo-size* add get
+  address *string-area,current-free-address* set
+  end
+; define-function
+
+: restore,naming-stack,set-jo
+  << old-record, current-record -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  *naming-stack,unit* sub
+  dup >:name-record
+  :name-record name-record,get-old-jo
+  :name-record name-record,get-name
+  name,set-jo
+  loop
+; define-function
+
+: restore,naming-stack
+  << undo-point -- >>
+  *jo-size* 3 mul add get >:old-record
+  :old-record *naming-stack,pointer*
+  restore,naming-stack,set-jo
+  :old-record address *naming-stack,pointer* set
+  end
+; define-function
+
+: restore,syntax-backup-area,set-syntax
+  << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
+  dup zero? if
+    drop2
+    end
+  then
+  >:number-of-rule-sets
+  >:rule-set-copy
+  >:cursor
+
+  :rule-set-copy get >:rule-set
+  :rule-set-copy *jo-size* add get >:n
+
+  :rule-set :cursor set
+
+  :rule-set-copy *jo-size* 2 mul add
+  :n n-get
+  :rule-set
+  :n n-set
+
+  *jo-size*
+  :n mul
+  :rule-set add
+  :rule-set rule-set,set-border
+
+  :cursor *jo-size* add
+  :rule-set-copy *jo-size* :n 2 add mul add
+  :number-of-rule-sets sub1
+  loop
+; define-function
+
+: restore,syntax-backup-area
+  << undo-point -- >>
+  dup
+  *jo-size* 4 mul add get >:old-address
+  *jo-size* 5 mul add get >:number-of-rule-sets
+
+  *syntax-stack,address*
+  :old-address
+  :number-of-rule-sets
+  restore,syntax-backup-area,set-syntax >:cursor
+
+  :cursor
+  address *syntax-stack,pointer* set
+
+  :old-address address *syntax-backup-area,current-free-address* set
+  end
+; define-function
+
+: restore,undo-stack
+  << undo-point -- >>
+  address *undo-stack,pointer* set
+  end
+; define-function
+
+: undo
+  << undo-point -- >>
+  >:undo-point
+  :undo-point restore,jojo-area
+  :undo-point restore,string-area
+  :undo-point restore,naming-stack
+  :undo-point restore,syntax-backup-area
+  :undo-point restore,undo-stack
+  end
+; define-function
 
 : <report> memory
   << -- >>
@@ -3780,9 +3785,9 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <name-stack> list-by-jo-predicate,loop
+: <naming-stack> list-by-jo-predicate,loop
   << jo-predicate, counter, cursor -- >>
-  dup *name-stack,pointer* equal? if
+  dup *naming-stack,pointer* equal? if
     drop
     drop
     drop
@@ -3800,35 +3805,35 @@ more,rule-set,basic-REPL
   then
   :jo-predicate
   :counter
-  :cursor *name-stack,unit* add
+  :cursor *naming-stack,unit* add
   loop
 ; define-function
 
-: <name-stack> list-by-jo-predicate
+: <naming-stack> list-by-jo-predicate
   << jo-predicate -- >>
   1
-  *name-stack*
-  <name-stack> list-by-jo-predicate,loop
+  *naming-stack*
+  <naming-stack> list-by-jo-predicate,loop
   end
 ; define-function
 
-: <report> name-stack
+: <report> naming-stack
   << -- >>
-  "* all primitive-function in name-stack :" .s .l
+  "* all primitive-function in naming-stack :" .s .l
   jo primitive-function-jo?
-  <name-stack> list-by-jo-predicate
+  <naming-stack> list-by-jo-predicate
 
-  "* all function in name-stack :" .s .l
+  "* all function in naming-stack :" .s .l
   jo function-jo?
-  <name-stack> list-by-jo-predicate
+  <naming-stack> list-by-jo-predicate
 
-  "* all exception in name-stack :" .s .l
+  "* all exception in naming-stack :" .s .l
   jo exception-jo?
-  <name-stack> list-by-jo-predicate
+  <naming-stack> list-by-jo-predicate
 
-  "* all variable in name-stack :" .s .l
+  "* all variable in naming-stack :" .s .l
   jo variable-jo?
-  <name-stack> list-by-jo-predicate
+  <naming-stack> list-by-jo-predicate
   end
 ; define-function
 

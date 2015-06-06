@@ -2,11 +2,8 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* >< 模塊化的出入點 注意內存分配
-* >< 模塊機制需要全局變量的輔助
-  因爲 有關的接口要植入到 (define*) 之內
 * todo
-** 基礎設施 之 加載與依賴
+** 基礎設施 之 模塊機制
 ** 基礎設施 之 測試框架
    * 讓所有的測試讀的內容讀起來都有趣味
 ** 基礎設施 之 返回值
@@ -59,6 +56,10 @@
 *** 莫若以名
     * 少使機器自動處理
       多以人工明顯表達
+*** 順序
+    * 一個文件中代碼 之 處理順序
+      一個函數定義 之 處理順序
+      定義好的函數 之 作用順序
 *** 底層
     * 我要能完全控制底層機器資源
       如果把類型信息編碼到值中 [即 所謂的動態語言]
@@ -128,6 +129,9 @@
 *** 撤銷棧
     * 用以保存某一時刻的全局狀態
       以實現撤銷
+*** 模塊棧
+    * 用以記錄當前所在模塊
+      定義者將把 模塊名 用爲前綴
 *** 加載棧
     * 用以保存被加載的代碼的信息
       使得代碼可以被分散到不同的文件
@@ -311,7 +315,7 @@
       在函數提中的每個位置增加一個名
     * 假設這種 珠 到 名 的函數
       只爲除錯所用
-      那麼在 *name-stack* 中搜索 珠 的名字
+      那麼在 *naming-stack* 中搜索 珠 的名字
       也是可以接受的
       我選擇這種方式
       並且把 名域 從 珠中剔除
@@ -1471,32 +1475,32 @@
      注意
      是在實現了 模塊機制 之後 core 才被製作成模塊的
      在這之前 都只有由 name-hash-table 來實現的 全局命名空間而已
-** note name-stack
+** note naming-stack
    * (define-*) push
      (undo) pop
 ** note name-record
-   * *name-stack* contain name-record
+   * *naming-stack* contain name-record
    * structure
      | name-record | old-jo |
      |             | name   |
      |             | new-jo |
-** *name-stack*
+** *naming-stack*
    #+begin_src cicada-nymph :tangle core.cn
    100 1024 mul
-   : *name-stack,size*
+   : *naming-stack,size*
    ; define-variable,with-tos
 
    3 *jo-size* mul
-   : *name-stack,unit*
+   : *naming-stack,unit*
    ; define-variable,with-tos
 
-   *name-stack,size*
-   *name-stack,unit* mul allocate-memory
-   : *name-stack*
+   *naming-stack,size*
+   *naming-stack,unit* mul allocate-memory
+   : *naming-stack*
    ; define-variable,with-tos
 
-   *name-stack*
-   : *name-stack,pointer*
+   *naming-stack*
+   : *naming-stack,pointer*
    ; define-variable,with-tos
    #+end_src
 ** name-record,[get|set]-old-jo
@@ -1546,11 +1550,11 @@
    : name,record-jo
      << jo, name -- >>
      dup name,get-jo
-     *name-stack,pointer* name-record,set-old-jo
+     *naming-stack,pointer* name-record,set-old-jo
      dup2 name,set-jo
-     *name-stack,pointer* name-record,set-name
-     *name-stack,pointer* name-record,set-new-jo
-     *name-stack,unit* address *name-stack,pointer* add-set
+     *naming-stack,pointer* name-record,set-name
+     *naming-stack,pointer* name-record,set-new-jo
+     *naming-stack,unit* address *naming-stack,pointer* add-set
      end
    ; define-function
    #+end_src
@@ -1560,12 +1564,12 @@
      << jo, current-record
         -- name, true
         -- false >>
-     dup *name-stack* equal? if
+     dup *naming-stack* equal? if
        drop2
        false
        end
      then
-     *name-stack,unit* sub
+     *naming-stack,unit* sub
      dup >:name-record
      over
      :name-record name-record,get-new-jo equal? if
@@ -1581,7 +1585,7 @@
      << jo
         -- name, true
         -- false >>
-     *name-stack,pointer*
+     *naming-stack,pointer*
      jo,find-name,loop
      end
    ; define-function
@@ -1597,453 +1601,13 @@
      end
    ; define-function
    #+end_src
-** name-stack,delete-last-record
+** naming-stack,delete-last-record
    #+begin_src cicada-nymph :tangle core.cn
-   : name-stack,delete-last-record
+   : naming-stack,delete-last-record
      << -- >>
-     *name-stack,unit* address *name-stack,pointer* sub-set
+     *naming-stack,unit* address *naming-stack,pointer* sub-set
      end
    ; define-function
-   #+end_src
-* undo
-** 記 撤銷
-   * 因爲 name-hash-table 的存在
-     導致我實現 undo 這個特性的機制
-     必須是去記錄差別 而不能是記錄歷史
-   * 具體地
-     在每個 undo point 之後
-     所有對 jo 的 redefine 都需要被記錄
-     在需要退回到這個 undo point 之時
-     恢復這些被從 name-hash-table 中踢出去的 jo
-   * 這樣
-     每一個 jo 被踢出 name-hash-table 時
-     會存入 jo name 的對子在 undo-stack 中
-   * 注意
-     每一次重新定義都對應一次恢復
-     * 缺點是
-       這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
-       就帶來了一些沒必要的恢復
-     * 優點是
-       這樣就避免了對 多次重複定義的 jo 的特殊處理
-       不論是在效率上
-       還是實現的簡潔性上
-       這種實現方式都是更優的
-** note global states
-   * *jojo-area,current-free-address*
-   * *string-area,current-free-address*
-   * *link*
-   * name-hash-table
-   * *backup-area,current-free-address*
-   * syntax-stack
-     and rule-set in it
-** note undo point
-   * *undo-stack* contain undo-point
-   * structure
-     | undo-point | jojo-area           |
-     |            | string-area         |
-     |            | link                |
-     |            | name-stack          |
-     |            | syntax-backup-area  |
-     |            | number of rule-sets |
-   * the undo point used to undo
-     will be used to reset the pointer of undo-stack
-     [the current-free-address of undo-stack]
-** *undo-stack*
-   #+begin_src cicada-nymph :tangle core.cn
-   60 1024 mul
-   : *undo-stack,size*
-   ; define-variable,with-tos
-
-   6 *jo-size* mul
-   : *undo-stack,unit*
-   ; define-variable,with-tos
-
-   *undo-stack,size*
-   *undo-stack,unit* mul allocate-memory
-   : *undo-stack*
-   ; define-variable,with-tos
-
-   *undo-stack*
-   : *undo-stack,pointer*
-   ; define-variable,with-tos
-   #+end_src
-** *syntax-backup-area*
-   #+begin_src cicada-nymph :tangle core.cn
-   20 1024 mul
-   *jo-size* mul
-   : *syntax-backup-area,size*
-   ; define-variable,with-tos
-
-   *syntax-backup-area,size* allocate-memory
-   : *syntax-backup-area*
-   ; define-variable,with-tos
-
-   *syntax-backup-area*
-   : *syntax-backup-area,current-free-address*
-   ; define-variable,with-tos
-   #+end_src
-** create-undo-point
-*** 記
-    * 將 undo-point 這個數據結構入 undo-stack
-      並返回剛入棧的數據結構的地址
-*** create-undo-point,copy-syntax,one-rule-set
-    #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point,copy-syntax,one-rule-set
-      << rule-set -- >>
-      >:rule-set
-      :rule-set rule-set,get-border >:border
-      :border :rule-set sub
-      *jo-size* div >:n
-
-      :rule-set
-      *syntax-backup-area,current-free-address* set
-      *jo-size* address *syntax-backup-area,current-free-address* add-set
-
-      :n
-      *syntax-backup-area,current-free-address* set
-      *jo-size* address *syntax-backup-area,current-free-address* add-set
-
-      :rule-set
-      :n n-get
-      *syntax-backup-area,current-free-address*
-      :n n-set
-      *jo-size* :n mul
-      address *syntax-backup-area,current-free-address* add-set
-      end
-    ; define-function
-    #+end_src
-*** create-undo-point,copy-syntax
-    #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point,copy-syntax
-      << cursor -- >>
-      dup *syntax-stack,pointer* equal? if
-        drop
-        end
-      then
-      dup get create-undo-point,copy-syntax,one-rule-set
-      *jo-size* add
-      loop
-    ; define-function
-    #+end_src
-*** create-undo-point
-    #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point
-      << -- undo-point >>
-      *undo-stack,pointer* >:undo-point
-
-      *jojo-area,current-free-address*
-      *string-area,current-free-address*
-      *link*
-      *name-stack,pointer*
-      *syntax-backup-area,current-free-address*
-      :undo-point
-      5 n-set
-
-      *jo-size* 5 mul
-      address *undo-stack,pointer* add-set
-
-      *syntax-stack,address* create-undo-point,copy-syntax
-
-      *syntax-stack,pointer*
-      *syntax-stack,address* sub
-      *jo-size* div
-      *undo-stack,pointer* set
-
-      *jo-size*
-      address *undo-stack,pointer* add-set
-
-      :undo-point
-      end
-    ; define-function
-    #+end_src
-** restore
-*** restore,jojo-area
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,jojo-area
-      << undo-point -- >>
-      get
-      address *jojo-area,current-free-address* set
-      end
-    ; define-function
-    #+end_src
-*** restore,string-area
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,string-area
-      << undo-point -- >>
-      *jo-size* add get
-      address *string-area,current-free-address* set
-      end
-    ; define-function
-    #+end_src
-*** restore,name-stack,set-jo
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,name-stack,set-jo
-      << old-record, current-record -- >>
-      dup2 equal? if
-        drop2
-        end
-      then
-      *name-stack,unit* sub
-      dup >:name-record
-      :name-record name-record,get-old-jo
-      :name-record name-record,get-name
-      name,set-jo
-      loop
-    ; define-function
-    #+end_src
-*** restore,name-stack
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,name-stack
-      << undo-point -- >>
-      *jo-size* 3 mul add get >:old-record
-      :old-record *name-stack,pointer*
-      restore,name-stack,set-jo
-      :old-record address *name-stack,pointer* set
-      end
-    ; define-function
-    #+end_src
-*** 記 語法棧的備份
-    * 複製出去的時候 從頭到尾[從棧底到棧頂]掃描 語法棧
-      複製回來的時候 從頭到尾掃描 語法備份區
-    * 規則集 本身做爲數據結構的存在是
-      |          | border    |
-      |----------+-----------|
-      | rule-set | predicate |
-      |          | function  |
-      |----------+-----------|
-      |          | predicate |
-      |          | function  |
-      |----------+-----------|
-      |          | ...       |
-    * 語法棧中的每一個 規則集 在備份中的存在是
-      | address |
-      | length  |
-      | jo      |
-      | jo      |
-      | ...     |
-      此處把 jo 按順序複製回 address 所代表的 規則集
-      然後重置 current-free-address 就行了
-      並不必知道 jo 的語義
-*** restore,syntax-backup-area,set-syntax
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,syntax-backup-area,set-syntax
-      << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
-      dup zero? if
-        drop2
-        end
-      then
-      >:number-of-rule-sets
-      >:rule-set-copy
-      >:cursor
-
-      :rule-set-copy get >:rule-set
-      :rule-set-copy *jo-size* add get >:n
-
-      :rule-set :cursor set
-
-      :rule-set-copy *jo-size* 2 mul add
-      :n n-get
-      :rule-set
-      :n n-set
-
-      *jo-size*
-      :n mul
-      :rule-set add
-      :rule-set rule-set,set-border
-
-      :cursor *jo-size* add
-      :rule-set-copy *jo-size* :n 2 add mul add
-      :number-of-rule-sets sub1
-      loop
-    ; define-function
-    #+end_src
-*** restore,syntax-backup-area
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,syntax-backup-area
-      << undo-point -- >>
-      dup
-      *jo-size* 4 mul add get >:old-address
-      *jo-size* 5 mul add get >:number-of-rule-sets
-
-      *syntax-stack,address*
-      :old-address
-      :number-of-rule-sets
-      restore,syntax-backup-area,set-syntax >:cursor
-
-      :cursor
-      address *syntax-stack,pointer* set
-
-      :old-address address *syntax-backup-area,current-free-address* set
-      end
-    ; define-function
-    #+end_src
-*** restore,undo-stack
-    #+begin_src cicada-nymph :tangle core.cn
-    : restore,undo-stack
-      << undo-point -- >>
-      address *undo-stack,pointer* set
-      end
-    ; define-function
-    #+end_src
-** undo
-   #+begin_src cicada-nymph :tangle core.cn
-   : undo
-     << undo-point -- >>
-     >:undo-point
-     :undo-point restore,jojo-area
-     :undo-point restore,string-area
-     :undo-point restore,name-stack
-     :undo-point restore,syntax-backup-area
-     :undo-point restore,undo-stack
-     end
-   ; define-function
-   #+end_src
-** test undo
-   #+begin_src cicada-nymph
-   create-undo-point
-   : *undo-point*
-   ; define-variable,with-tos
-
-   : test,undo
-     << -- >>
-     "testing undo" .s .l
-     end
-   ; define-function
-
-   test,undo << testing undo >>
-
-   *undo-point* undo
-
-   test,undo << undefined >>
-
-   *undo-point* << undefined >>
-
-
-   << with name-stack >>
-
-   create-undo-point
-   : *undo-point*
-   ; define-variable,with-tos
-
-   : test,undo
-     << -- >>
-     "before undo" .s .l
-     end
-   ; define-function
-
-   test,undo << before undo >>
-
-   : test,undo
-     << -- >>
-     "after undo" .s .l
-     end
-   ; define-function
-
-   test,undo << after undo >>
-
-   *undo-point* undo
-
-   test,undo << undefined >>
-
-   *undo-point* << undefined >>
-   #+end_src
-** test undo with syntax-stack
-   #+begin_src cicada-nymph
-   create-undo-point
-   : *undo-point*
-   ; define-variable,with-tos
-
-   jo integer-string?
-   jo hi
-   *rule-set,basic-REPL* add-rule
-
-   *rule-set,basic-REPL* push-syntax-stack
-
-   123 drop2 << hi >>
-
-   *syntax-stack,pointer*
-   *syntax-stack,address* sub
-   *jo-size* div . << 2 >>
-
-   <<
-   <report> syntax
-   >>
-
-   *undo-point* undo
-
-   123 . << 123 >>
-
-   *syntax-stack,pointer*
-   *syntax-stack,address* sub
-   *jo-size* div . << 1 >>
-
-   <<
-   <report> syntax
-   >>
-   #+end_src
-** test undo with alias
-   #+begin_src cicada-nymph
-   create-undo-point
-   : *undo-point*
-   ; define-variable,with-tos
-
-   : test,undo
-     << -- >>
-     "testing undo" .s .l
-     end
-   ; define-function
-
-   "t,u" "test,undo" alias
-
-   test,undo << testing undo >>
-   t,u << testing undo >>
-
-   *undo-point* undo
-
-   test,undo << undefined >>
-   t,u << undefined >>
-
-   *undo-point* << undefined >>
-
-
-   << with name-stack >>
-
-   create-undo-point
-   : *undo-point*
-   ; define-variable,with-tos
-
-   : test,undo
-     << -- >>
-     "before undo" .s .l
-     end
-   ; define-function
-
-   "t,u" "test,undo" alias
-
-   test,undo << before undo >>
-   t,u  << before undo >>
-
-   : test,undo
-     << -- >>
-     "after undo" .s .l
-     end
-   ; define-function
-
-   test,undo << after undo >>
-
-   t,u  << before undo >>
-
-   "t,u" "test,undo" alias
-
-   t,u  << after undo >>
-
-   *undo-point* undo
-
-
-   test,undo << undefined >>
-   t,u  << undefined >>
-
-   *undo-point* << undefined >>
    #+end_src
 * basic-REPL
 ** *rule-set,basic-REPL*
@@ -2243,7 +1807,7 @@
         end
       then
       "* (make-jojo) meets undefined word : " .s .s .l
-      name-stack,delete-last-record
+      naming-stack,delete-last-record
       !undo-make-jojo
     ; define-function
     #+end_src
@@ -2558,6 +2122,8 @@
    ; define-function
    #+end_src
 * alias
+** note
+   * there shall be no way to know a naming is an alias or not
 ** alias
    #+begin_src cicada-nymph :tangle core.cn
    : alias
@@ -2645,7 +2211,7 @@
         "* (syntax,<title>,make-jojo) meet undefined" .s .l
         "  title : " .s ::title .s .l
         "  name  : " .s ::string string-head,word .s .l
-        name-stack,delete-last-record
+        naming-stack,delete-last-record
         !undo-make-jojo
       then
       :jo
@@ -6585,10 +6151,10 @@
    "library" <poi> sub
    path: +library+ hi.cn ;
    #+end_src
-* >< module
-** 記 加載
-*** 術語
-    * 元碼 [meta-code]
+* ><>< module
+** 記
+*** 元數據 之 語法
+    * 舉例
       #+begin_src cicada-nymph
       :::::::::
       import: combinator math
@@ -6596,43 +6162,107 @@
       do: "assembler loaded" .s .l
       =========
       #+end_src
-    * 元碼中所包含的信息應該只和如何運行這個程序有關
+    * 元數據中所包含的信息應該只和如何運行這個程序有關
       因爲其他信息可能會在各個文件中重複
       這些可能重複的信息應該另行保存
-    * 代碼 [code]
-*** 元碼
-    * 有關於文件的謂詞來根據文件的內容來判斷它是否爲 code
-      只有帶有 meta-code 的文件才被認爲是 code
-    * 元碼 中 也可以定義函數
-    * 元碼 中 所能包含的信息類型 是可以擴展的
-*** 加載棧
-    * 爲了實現 (need)
-      meta-code 需要被做爲字符串而保存在 加載棧 中
-      用以聞訊
-      同時
-      這些信息 也可以幫助實現詳細的 report
-*** 沒有啓動時默認加載的文件
-    * 沒有文件系統中的代碼 會被在啓動時默認加載
-      用戶必須配置 (poi)
-      然後利用 path-syntax 加載自己所需要的代碼
-    * 我提供 命令行函數 來幫助在啓動時加載文件
+    * 有了 元數據 之後
+      就可以對文件實現相對豐富的謂詞
+    * 元數據 中 所能包含的信息類型
+      還有聲明這些信息的語法
+      都是可以擴展的
 *** 減載
     * 或者說 撤銷加載 (unload)
       它利用 (undo) 來實現
-** *loading-stack*
-*** note
-    * I do not need the push & pop interface here
+*** ><>< 使用
+    * 沒有文件系統中的代碼 會被在啓動時默認加載
+      用戶必須利用 (poi)
+      [具體用法有待確定]
+    * 我提供 命令行函數 來幫助在啓動時加載文件
+*** 模塊棧 之 使用分析
+    * 需要記錄當前被加載的模塊名字
+      函數定義時 要用其前綴以成名
+    * 這個前綴以全局狀態傳遞給 define-function
+      而不以函數的參數傳遞給 define-function
+      這是爲了簡化 define-function 的接口
+    * 這裏爲什麼需要棧
+      而不單用一個全局變量
+      其實
+      使用單一的全局變量就夠了
+      在加載一個 模塊 時
+      看其元數據以處理其引入的模塊
+      之後覆蓋全局變量中所保存的值
+      然後在處理當前定義的模塊就行了
+      但是
+      如若用棧就能達到下面的效果
+      在一個模塊之中 可以暫時切換 當前模塊
+      [儘管這種功能可能並不經常需要]
+      所以說
+      用棧則可能實現更多
+      單用全局變量就限制了性狀
+*** 模塊棧 與 加載棧 辨析
+    * 上面的棧其實是用來記錄 模塊的前綴的
+      這些信息被 define-function 等等 所使用
+    * 但是被成功加載的模塊
+      有關其本身存在的信息並不記錄在上面這個棧中
+      而是記錄在下面的 加載棧 中
+    * 模塊棧 在加載過程中 爲 define-function 所用
+      加載棧 負責記錄成功加載
+*** 加載棧
+    * 加載棧 記錄
+      1. 所有被加載的模塊的信息[模塊元數據字符串]
+      2. 模塊被加載的順序
+      3. 被加載的模塊是被直接加載還是間接加載
+      4. 等等 其他根系統狀態有關的元數據
+    * (import) 就利用了這些信息
+      用以聞訊
+      同時
+      這些信息 也可以幫助實現詳細的 report
+*** 關於遞歸函數
+    * 沒有相互遞歸函數
+     (load) (import) 不可相互調用
+    * 加載[load] 不是遞歸函數
+      它等待 exception
+      而不調用 exception
+    * 引入[import] 是遞歸函數
+      它調用 exception
+      而不等待 exception
+*** 臨時命名棧
+    * 臨時命名棧 [temporary naming-stack]
+    * 其中所保存的命名全都不帶 模塊 前綴
+      而利用這些命名去做定義
+      每個定義都對應兩個命名
+      一個帶有前綴的 記錄在 *naming-stack* 中
+      一個不帶前綴的 記錄在 當前的 temporary naming-stack 中
+      所以說
+      temporary naming-stack 本身應該做爲一個全局的棧而存在
+      記爲 *temporary-naming-stack*
+*** ><>< 問題
+    * 應該用兩種 命名棧
+      其一 所有名字都有 模塊前綴
+      其一 所有名字都沒有 模塊前綴
+    * 這樣處理起來就方便多了
+** ><>< *module-stack*
+*** note module-info
+    * structure
+      | module-info | name as prefix |
+      |             |                |
+    * *module-stack* contain module-info
 *** memory allocation
     #+begin_src cicada-nymph :tangle core.cn
-    1024 100 mul
+    10 1024 mul
     : *undo-stack,size*
     ; define-variable,with-tos
 
-    *undo-stack,size* allocate-memory
-    : *loading-stack*
+    1 *jo-size* mul
+    : *undo-stack,unit*
     ; define-variable,with-tos
 
-    *loading-stack*
+    *undo-stack,size*
+    *undo-stack,unit* mul allocate-memory
+    : *module-stack*
+    ; define-variable,with-tos
+
+    *module-stack*
     : *undo-stack,pointer*
     ; define-variable,with-tos
     #+end_src
@@ -6647,19 +6277,458 @@
 ** >< load
    #+begin_src cicada-nymph
    : load
-     << path[address, length] -- >>
+     << module-name -- >>
 
      end
    ; define-function
    #+end_src
 ** >< import
-   * (need) is as (load-when-not-loaded)
    #+begin_src cicada-nymph
-   : need
-     << library[address, length] -- >>
+   : import
+     << module-name -- >>
 
      end
    ; define-function
+   #+end_src
+* undo
+** 記 撤銷
+   * 因爲 name-hash-table 的存在
+     導致我實現 undo 這個特性的機制
+     必須是去記錄差別 而不能是記錄歷史
+   * 具體地
+     在每個 undo point 之後
+     所有對 jo 的 redefine 都需要被記錄
+     在需要退回到這個 undo point 之時
+     恢復這些被從 name-hash-table 中踢出去的 jo
+   * 這樣
+     每一個 jo 被踢出 name-hash-table 時
+     會存入 jo name 的對子在 undo-stack 中
+   * 注意
+     每一次重新定義都對應一次恢復
+     * 缺點是
+       這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
+       就帶來了一些沒必要的恢復
+     * 優點是
+       這樣就避免了對 多次重複定義的 jo 的特殊處理
+       不論是在效率上
+       還是實現的簡潔性上
+       這種實現方式都是更優的
+** note global states
+   * *jojo-area,current-free-address*
+   * *string-area,current-free-address*
+   * *link*
+   * name-hash-table
+   * *backup-area,current-free-address*
+   * syntax-stack
+     and rule-set in it
+** note undo point
+   * *undo-stack* contain undo-point
+   * structure
+     | undo-point | jojo-area           |
+     |            | string-area         |
+     |            | link                |
+     |            | naming-stack        |
+     |            | syntax-backup-area  |
+     |            | number of rule-sets |
+   * the undo point used to undo
+     will be used to reset the pointer of undo-stack
+     [the current-free-address of undo-stack]
+** *undo-stack*
+   #+begin_src cicada-nymph :tangle core.cn
+   60 1024 mul
+   : *undo-stack,size*
+   ; define-variable,with-tos
+
+   6 *jo-size* mul
+   : *undo-stack,unit*
+   ; define-variable,with-tos
+
+   *undo-stack,size*
+   *undo-stack,unit* mul allocate-memory
+   : *undo-stack*
+   ; define-variable,with-tos
+
+   *undo-stack*
+   : *undo-stack,pointer*
+   ; define-variable,with-tos
+   #+end_src
+** *syntax-backup-area*
+   #+begin_src cicada-nymph :tangle core.cn
+   20 1024 mul
+   *jo-size* mul
+   : *syntax-backup-area,size*
+   ; define-variable,with-tos
+
+   *syntax-backup-area,size* allocate-memory
+   : *syntax-backup-area*
+   ; define-variable,with-tos
+
+   *syntax-backup-area*
+   : *syntax-backup-area,current-free-address*
+   ; define-variable,with-tos
+   #+end_src
+** create-undo-point
+*** 記
+    * 將 undo-point 這個數據結構入 undo-stack
+      並返回剛入棧的數據結構的地址
+*** create-undo-point,copy-syntax,one-rule-set
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point,copy-syntax,one-rule-set
+      << rule-set -- >>
+      >:rule-set
+      :rule-set rule-set,get-border >:border
+      :border :rule-set sub
+      *jo-size* div >:n
+
+      :rule-set
+      *syntax-backup-area,current-free-address* set
+      *jo-size* address *syntax-backup-area,current-free-address* add-set
+
+      :n
+      *syntax-backup-area,current-free-address* set
+      *jo-size* address *syntax-backup-area,current-free-address* add-set
+
+      :rule-set
+      :n n-get
+      *syntax-backup-area,current-free-address*
+      :n n-set
+      *jo-size* :n mul
+      address *syntax-backup-area,current-free-address* add-set
+      end
+    ; define-function
+    #+end_src
+*** create-undo-point,copy-syntax
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point,copy-syntax
+      << cursor -- >>
+      dup *syntax-stack,pointer* equal? if
+        drop
+        end
+      then
+      dup get create-undo-point,copy-syntax,one-rule-set
+      *jo-size* add
+      loop
+    ; define-function
+    #+end_src
+*** create-undo-point
+    #+begin_src cicada-nymph :tangle core.cn
+    : create-undo-point
+      << -- undo-point >>
+      *undo-stack,pointer* >:undo-point
+
+      *jojo-area,current-free-address*
+      *string-area,current-free-address*
+      *link*
+      *naming-stack,pointer*
+      *syntax-backup-area,current-free-address*
+      :undo-point
+      5 n-set
+
+      *jo-size* 5 mul
+      address *undo-stack,pointer* add-set
+
+      *syntax-stack,address* create-undo-point,copy-syntax
+
+      *syntax-stack,pointer*
+      *syntax-stack,address* sub
+      *jo-size* div
+      *undo-stack,pointer* set
+
+      *jo-size*
+      address *undo-stack,pointer* add-set
+
+      :undo-point
+      end
+    ; define-function
+    #+end_src
+** restore
+*** restore,jojo-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,jojo-area
+      << undo-point -- >>
+      get
+      address *jojo-area,current-free-address* set
+      end
+    ; define-function
+    #+end_src
+*** restore,string-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,string-area
+      << undo-point -- >>
+      *jo-size* add get
+      address *string-area,current-free-address* set
+      end
+    ; define-function
+    #+end_src
+*** restore,naming-stack,set-jo
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,naming-stack,set-jo
+      << old-record, current-record -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      *naming-stack,unit* sub
+      dup >:name-record
+      :name-record name-record,get-old-jo
+      :name-record name-record,get-name
+      name,set-jo
+      loop
+    ; define-function
+    #+end_src
+*** restore,naming-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,naming-stack
+      << undo-point -- >>
+      *jo-size* 3 mul add get >:old-record
+      :old-record *naming-stack,pointer*
+      restore,naming-stack,set-jo
+      :old-record address *naming-stack,pointer* set
+      end
+    ; define-function
+    #+end_src
+*** 記 語法棧的備份
+    * 複製出去的時候 從頭到尾[從棧底到棧頂]掃描 語法棧
+      複製回來的時候 從頭到尾掃描 語法備份區
+    * 規則集 本身做爲數據結構的存在是
+      |          | border    |
+      |----------+-----------|
+      | rule-set | predicate |
+      |          | function  |
+      |----------+-----------|
+      |          | predicate |
+      |          | function  |
+      |----------+-----------|
+      |          | ...       |
+    * 語法棧中的每一個 規則集 在備份中的存在是
+      | address |
+      | length  |
+      | jo      |
+      | jo      |
+      | ...     |
+      此處把 jo 按順序複製回 address 所代表的 規則集
+      然後重置 current-free-address 就行了
+      並不必知道 jo 的語義
+*** restore,syntax-backup-area,set-syntax
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,syntax-backup-area,set-syntax
+      << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
+      dup zero? if
+        drop2
+        end
+      then
+      >:number-of-rule-sets
+      >:rule-set-copy
+      >:cursor
+
+      :rule-set-copy get >:rule-set
+      :rule-set-copy *jo-size* add get >:n
+
+      :rule-set :cursor set
+
+      :rule-set-copy *jo-size* 2 mul add
+      :n n-get
+      :rule-set
+      :n n-set
+
+      *jo-size*
+      :n mul
+      :rule-set add
+      :rule-set rule-set,set-border
+
+      :cursor *jo-size* add
+      :rule-set-copy *jo-size* :n 2 add mul add
+      :number-of-rule-sets sub1
+      loop
+    ; define-function
+    #+end_src
+*** restore,syntax-backup-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,syntax-backup-area
+      << undo-point -- >>
+      dup
+      *jo-size* 4 mul add get >:old-address
+      *jo-size* 5 mul add get >:number-of-rule-sets
+
+      *syntax-stack,address*
+      :old-address
+      :number-of-rule-sets
+      restore,syntax-backup-area,set-syntax >:cursor
+
+      :cursor
+      address *syntax-stack,pointer* set
+
+      :old-address address *syntax-backup-area,current-free-address* set
+      end
+    ; define-function
+    #+end_src
+*** restore,undo-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : restore,undo-stack
+      << undo-point -- >>
+      address *undo-stack,pointer* set
+      end
+    ; define-function
+    #+end_src
+** undo
+   #+begin_src cicada-nymph :tangle core.cn
+   : undo
+     << undo-point -- >>
+     >:undo-point
+     :undo-point restore,jojo-area
+     :undo-point restore,string-area
+     :undo-point restore,naming-stack
+     :undo-point restore,syntax-backup-area
+     :undo-point restore,undo-stack
+     end
+   ; define-function
+   #+end_src
+** test undo
+   #+begin_src cicada-nymph
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   : test,undo
+     << -- >>
+     "testing undo" .s .l
+     end
+   ; define-function
+
+   test,undo << testing undo >>
+
+   *undo-point* undo
+
+   test,undo << undefined >>
+
+   *undo-point* << undefined >>
+
+
+   << with naming-stack >>
+
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   : test,undo
+     << -- >>
+     "before undo" .s .l
+     end
+   ; define-function
+
+   test,undo << before undo >>
+
+   : test,undo
+     << -- >>
+     "after undo" .s .l
+     end
+   ; define-function
+
+   test,undo << after undo >>
+
+   *undo-point* undo
+
+   test,undo << undefined >>
+
+   *undo-point* << undefined >>
+   #+end_src
+** test undo with syntax-stack
+   #+begin_src cicada-nymph
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   jo integer-string?
+   jo hi
+   *rule-set,basic-REPL* add-rule
+
+   *rule-set,basic-REPL* push-syntax-stack
+
+   123 drop2 << hi >>
+
+   *syntax-stack,pointer*
+   *syntax-stack,address* sub
+   *jo-size* div . << 2 >>
+
+   <<
+   <report> syntax
+   >>
+
+   *undo-point* undo
+
+   123 . << 123 >>
+
+   *syntax-stack,pointer*
+   *syntax-stack,address* sub
+   *jo-size* div . << 1 >>
+
+   <<
+   <report> syntax
+   >>
+   #+end_src
+** test undo with alias
+   #+begin_src cicada-nymph
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   : test,undo
+     << -- >>
+     "testing undo" .s .l
+     end
+   ; define-function
+
+   "t,u" "test,undo" alias
+
+   test,undo << testing undo >>
+   t,u << testing undo >>
+
+   *undo-point* undo
+
+   test,undo << undefined >>
+   t,u << undefined >>
+
+   *undo-point* << undefined >>
+
+
+   << with naming-stack >>
+
+   create-undo-point
+   : *undo-point*
+   ; define-variable,with-tos
+
+   : test,undo
+     << -- >>
+     "before undo" .s .l
+     end
+   ; define-function
+
+   "t,u" "test,undo" alias
+
+   test,undo << before undo >>
+   t,u  << before undo >>
+
+   : test,undo
+     << -- >>
+     "after undo" .s .l
+     end
+   ; define-function
+
+   test,undo << after undo >>
+
+   t,u  << before undo >>
+
+   "t,u" "test,undo" alias
+
+   t,u  << after undo >>
+
+   *undo-point* undo
+
+
+   test,undo << undefined >>
+   t,u  << undefined >>
+
+   *undo-point* << undefined >>
    #+end_src
 * >< test framework
 ** 記 測試
@@ -6775,12 +6844,12 @@
      end
    ; define-function
    #+end_src
-** <name-stack> list-by-jo-predicate
+** <naming-stack> list-by-jo-predicate
    * 最後寫到珠典裏的 被最先打印出來
    #+begin_src cicada-nymph :tangle core.cn
-   : <name-stack> list-by-jo-predicate,loop
+   : <naming-stack> list-by-jo-predicate,loop
      << jo-predicate, counter, cursor -- >>
-     dup *name-stack,pointer* equal? if
+     dup *naming-stack,pointer* equal? if
        drop
        drop
        drop
@@ -6798,39 +6867,39 @@
      then
      :jo-predicate
      :counter
-     :cursor *name-stack,unit* add
+     :cursor *naming-stack,unit* add
      loop
    ; define-function
 
-   : <name-stack> list-by-jo-predicate
+   : <naming-stack> list-by-jo-predicate
      << jo-predicate -- >>
      1
-     *name-stack*
-     <name-stack> list-by-jo-predicate,loop
+     *naming-stack*
+     <naming-stack> list-by-jo-predicate,loop
      end
    ; define-function
    #+end_src
-** <report> name-stack
+** <report> naming-stack
    * different types of words in link
      are showed separately
    #+begin_src cicada-nymph :tangle core.cn
-   : <report> name-stack
+   : <report> naming-stack
      << -- >>
-     "* all primitive-function in name-stack :" .s .l
+     "* all primitive-function in naming-stack :" .s .l
      jo primitive-function-jo?
-     <name-stack> list-by-jo-predicate
+     <naming-stack> list-by-jo-predicate
 
-     "* all function in name-stack :" .s .l
+     "* all function in naming-stack :" .s .l
      jo function-jo?
-     <name-stack> list-by-jo-predicate
+     <naming-stack> list-by-jo-predicate
 
-     "* all exception in name-stack :" .s .l
+     "* all exception in naming-stack :" .s .l
      jo exception-jo?
-     <name-stack> list-by-jo-predicate
+     <naming-stack> list-by-jo-predicate
 
-     "* all variable in name-stack :" .s .l
+     "* all variable in naming-stack :" .s .l
      jo variable-jo?
-     <name-stack> list-by-jo-predicate
+     <naming-stack> list-by-jo-predicate
      end
    ; define-function
    #+end_src
@@ -7065,6 +7134,6 @@
   #+begin_src cicada-nymph
   <report> memory
   <report> syntax
-  <report> name-stack
+  <report> naming-stack
   #+end_src
 * ===================================
