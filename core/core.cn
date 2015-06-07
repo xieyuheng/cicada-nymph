@@ -517,20 +517,20 @@ allocate-memory
 ; define-function
 
 100 1024 mul
-: *naming-stack,size*
+: *global-naming-stack,size*
 ; define-variable,with-tos
 
 3 *jo-size* mul
-: *naming-stack,unit*
+: *global-naming-stack,unit*
 ; define-variable,with-tos
 
-*naming-stack,size*
-*naming-stack,unit* mul allocate-memory
-: *naming-stack*
+*global-naming-stack,size*
+*global-naming-stack,unit* mul allocate-memory
+: *global-naming-stack*
 ; define-variable,with-tos
 
-*naming-stack*
-: *naming-stack,pointer*
+*global-naming-stack*
+: *global-naming-stack,pointer*
 ; define-variable,with-tos
 
 : name-record,get-old-jo
@@ -572,11 +572,11 @@ allocate-memory
 : name,record-jo
   << jo, name -- >>
   dup name,get-jo
-  *naming-stack,pointer* name-record,set-old-jo
+  *global-naming-stack,pointer* name-record,set-old-jo
   dup2 name,set-jo
-  *naming-stack,pointer* name-record,set-name
-  *naming-stack,pointer* name-record,set-new-jo
-  *naming-stack,unit* address *naming-stack,pointer* add-set
+  *global-naming-stack,pointer* name-record,set-name
+  *global-naming-stack,pointer* name-record,set-new-jo
+  *global-naming-stack,unit* address *global-naming-stack,pointer* add-set
   end
 ; define-function
 
@@ -584,12 +584,12 @@ allocate-memory
   << jo, current-record
      -- name, true
      -- false >>
-  dup *naming-stack* equal? if
+  dup *global-naming-stack* equal? if
     drop2
     false
     end
   then
-  *naming-stack,unit* sub
+  *global-naming-stack,unit* sub
   dup >:name-record
   over
   :name-record name-record,get-new-jo equal? if
@@ -605,7 +605,7 @@ allocate-memory
   << jo
      -- name, true
      -- false >>
-  *naming-stack,pointer*
+  *global-naming-stack,pointer*
   jo,find-name,loop
   end
 ; define-function
@@ -619,9 +619,9 @@ allocate-memory
   end
 ; define-function
 
-: naming-stack,delete-last-record
+: global-naming-stack,delete-last-record
   << -- >>
-  *naming-stack,unit* address *naming-stack,pointer* sub-set
+  *global-naming-stack,unit* address *global-naming-stack,pointer* sub-set
   end
 ; define-function
 
@@ -727,7 +727,7 @@ set
     end
   then
   "* (make-jojo) meets undefined word : " .s .s .l
-  naming-stack,delete-last-record
+  global-naming-stack,delete-last-record
   !undo-make-jojo
 ; define-function
 
@@ -999,7 +999,7 @@ basic-REPL
     "* (syntax,<title>,make-jojo) meet undefined" .s .l
     "  title : " .s ::title .s .l
     "  name  : " .s ::string string-head,word .s .l
-    naming-stack,delete-last-record
+    global-naming-stack,delete-last-record
     !undo-make-jojo
   then
   :jo
@@ -3491,21 +3491,252 @@ init-environment-variable-list
 ; define-function
 more,rule-set,basic-REPL
 
+100 1024 mul
+: *module-naming-stack,size*
+; define-variable,with-tos
+
+3 *jo-size* mul
+: *module-naming-stack,unit*
+; define-variable,with-tos
+
+*module-naming-stack,size*
+*module-naming-stack,unit* mul allocate-memory
+: *module-naming-stack*
+; define-variable,with-tos
+
+*module-naming-stack*
+: *module-naming-stack,pointer*
+; define-variable,with-tos
+
+: *module-directory,user,address*
+  512 allocate-memory
+; define-variable
+
+: *module-directory*
+  *home-directory* "/.cicada/module"
+  *module-directory,user,address*
+  2 n-string->buffer!
+  *module-directory,user,address* swap
+; define-variable
+
+: <module> find
+  << name[address, length]
+     -- path[address, length], true
+     -- false >>
+  >::name
+  512 allocate-local-memory >:buffer
+  *module-directory* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer! >:length
+
+  :buffer :length
+  path,file? not if
+    false
+    end
+  then
+
+  512 allocate-local-memory >:read-buffer
+  :read-buffer 512
+  :buffer :length
+  <file> read >:read-length
+
+  *circular-string-area,current-free-address*
+  >:path-address
+
+  :read-buffer :read-length
+  circular-string-area,stay
+
+  :path-address
+  :read-length
+  true
+  end
+; define-function
+
+: <module> add
+  << name[address, length], relative-path[address, length] -- >>
+  >::relative-path
+  >::name
+
+  ::relative-path relative-path? not if
+    "* (<module> add) the argument must be a relative-path" .s .l
+    "  but the following is not : " .s ::relative-path .s .l
+    end
+  then
+
+  ::relative-path path,directory? not if
+    "* (<module> add) the argument must be a relative-path to a existing directory" .s .l
+    "  but the following path is not to a directory : " .s ::relative-path .s .l
+    end
+  then
+
+  ::name <module> find if
+    "* (<module> add) can not add" .s .l
+    "  for the following module already exist : " .s ::name .s .l
+    "  name is use as the following directory's name : " .s .s .l
+    end
+  then
+
+  512 allocate-local-memory >:buffer
+  *module-directory* "/" ::name
+  :buffer
+  3 n-string->buffer!
+  >:length
+  :buffer :length
+  <directory> create
+
+  *module-directory* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer!
+  >:length
+  :buffer :length
+  <file> create
+
+  512 allocate-local-memory >:address,full-path
+  get-work-directory "/" ::relative-path
+  :address,full-path
+  3 n-string->buffer! >:length,full-path
+
+  :address,full-path :length,full-path
+  :buffer :length
+  <file> write
+  end
+; define-function
+
+: <module> sub
+  << name[address, length] -- >>
+  >::name
+
+  ::name <module> find not if
+    "* (<module> sub) can not sub" .s .l
+    "  for the following module does not exist : " .s ::name .s .l
+    end
+  then
+  >::named-directory
+
+  512 allocate-local-memory >:buffer
+  *module-directory* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer! >:length
+
+  :buffer :length
+  <file> remove
+
+  *module-directory* "/" ::name
+  :buffer
+  3 n-string->buffer!
+  >:length
+  :buffer :length
+  <directory> remove
+  end
+; define-function
+
+: <module> up
+  << name[address, length], relative-path[address, length] -- >>
+  >::relative-path
+  >::name
+
+  ::relative-path relative-path? not if
+    "* (<module> up) the argument must be a relative-path" .s .l
+    "  but the following is not : " .s ::relative-path .s .l
+    end
+  then
+
+  ::relative-path path,directory? not if
+    "* (<module> up) the argument must be a relative-path to a existing directory" .s .l
+    "  but the following directory is not exist : " .s ::relative-path .s .l
+    end
+  then
+
+  ::name <module> find not if
+    "* (<module> up) can not up" .s .l
+    "  for the following module does not exist : " .s ::name .s .l
+    end
+  then
+  >::named-directory
+
+  512 allocate-local-memory >:buffer
+  *module-directory* "/" ::name "/path"
+  :buffer
+  4 n-string->buffer! >:length
+
+  512 allocate-local-memory >:address,full-path
+  get-work-directory "/" ::relative-path
+  :address,full-path
+  3 n-string->buffer! >:length,full-path
+
+  :address,full-path :length,full-path
+  :buffer :length
+  <file> write
+  end
+; define-function
+
+: <module> list
+  << -- >>
+  *module-directory*
+  [ << -- >>
+    +getdents64,d_type+ get-byte
+    4 equal? if
+      512 allocate-local-memory >:path-buffer
+      +getdents64,d_name+
+      dup 256
+      0 string,find-char
+      drop  << drop 0 >>
+      over sub >::name
+
+      ".." ::name string-equal? if
+        end
+      then
+
+      "." ::name string-equal? if
+        end
+      then
+
+      "  * " .s ::name .s .l
+      "      " .s
+
+      *module-directory* "/" ::name "/path"
+      :path-buffer
+      4 n-string->buffer! >:path-length
+
+      512 allocate-local-memory >:reading-buffer
+      :reading-buffer 512
+      :path-buffer :path-length
+      <file> read >:reading-length
+
+      :reading-buffer :reading-length
+      .s .l
+    then
+    end ]
+  <directory> map
+  end
+; define-function
+
+: <module> help
+  << -- >>
+  "* (<module> help)" .s .l
+  "  * cn module add  <new-name> <relative-path-to-existing-directory>" .s .l
+  "  * cn module sub  <old-name>" .s .l
+  "  * cn module up   <old-name> <relative-path-to-existing-directory>" .s .l
+  "  * cn module find <old-name>" .s .l
+  "  * cn module list" .s .l
+  end
+; define-function
+
 10 1024 mul
-: *undo-stack,size*
+: *loading-stack,size*
 ; define-variable,with-tos
 
 1 *jo-size* mul
-: *undo-stack,unit*
+: *loading-stack,unit*
 ; define-variable,with-tos
 
-*undo-stack,size*
-*undo-stack,unit* mul allocate-memory
-: *module-stack*
+*loading-stack,size*
+*loading-stack,unit* mul allocate-memory
+: *loading-stack*
 ; define-variable,with-tos
 
-*module-stack*
-: *undo-stack,pointer*
+*loading-stack*
+: *loading-stack,pointer*
 ; define-variable,with-tos
 
 60 1024 mul
@@ -3525,6 +3756,78 @@ more,rule-set,basic-REPL
 : *undo-stack,pointer*
 ; define-variable,with-tos
 
+: <undo-point> get-jojo-area
+  << undo-point -- jojo-area current-free-address >>
+  get
+  end
+; define-function
+
+: <undo-point> set-jojo-area
+  << jojo-area current-free-address, undo-point -- >>
+  set
+  end
+; define-function
+
+: <undo-point> get-string-area
+  << undo-point -- jojo-area current-free-address >>
+  *jo-size* add get
+  end
+; define-function
+
+: <undo-point> set-string-area
+  << jojo-area current-free-address, undo-point -- >>
+  *jo-size* add set
+  end
+; define-function
+
+: <undo-point> get-global-naming-stack
+  << undo-point -- jojo-area current-free-address >>
+  *jo-size* 2 mul add get
+  end
+; define-function
+
+: <undo-point> set-global-naming-stack
+  << jojo-area current-free-address, undo-point -- >>
+  *jo-size* 2 mul add set
+  end
+; define-function
+
+: <undo-point> get-module-naming-stack
+  << undo-point -- jojo-area current-free-address >>
+  *jo-size* 3 mul add get
+  end
+; define-function
+
+: <undo-point> set-module-naming-stack
+  << jojo-area current-free-address, undo-point -- >>
+  *jo-size* 3 mul add set
+  end
+; define-function
+
+: <undo-point> get-syntax-backup-area
+  << undo-point -- jojo-area current-free-address >>
+  *jo-size* 4 mul add get
+  end
+; define-function
+
+: <undo-point> set-syntax-backup-area
+  << jojo-area current-free-address, undo-point -- >>
+  *jo-size* 4 mul add set
+  end
+; define-function
+
+: <undo-point> get-number-of-rule-sets
+  << undo-point -- jojo-area current-free-address >>
+  *jo-size* 5 mul add get
+  end
+; define-function
+
+: <undo-point> set-number-of-rule-sets
+  << jojo-area current-free-address, undo-point -- >>
+  *jo-size* 5 mul add set
+  end
+; define-function
+
 20 1024 mul
 *jo-size* mul
 : *syntax-backup-area,size*
@@ -3538,7 +3841,7 @@ more,rule-set,basic-REPL
 : *syntax-backup-area,current-free-address*
 ; define-variable,with-tos
 
-: create-undo-point,copy-syntax,one-rule-set
+: <undo-point> create,copy-syntax,one-rule-set
   << rule-set -- >>
   >:rule-set
   :rule-set rule-set,get-border >:border
@@ -3562,67 +3865,82 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: create-undo-point,copy-syntax
+: <undo-point> create,copy-syntax
   << cursor -- >>
   dup *syntax-stack,pointer* equal? if
     drop
     end
   then
-  dup get create-undo-point,copy-syntax,one-rule-set
+  dup get <undo-point> create,copy-syntax,one-rule-set
   *jo-size* add
   loop
 ; define-function
 
-: create-undo-point
+: <undo-point> create
   << -- undo-point >>
-  *undo-stack,pointer* >:undo-point
+  *undo-stack,pointer*
+  >:undo-point
+
+  *undo-stack,unit*
+  address *undo-stack,pointer*
+  add-set
 
   *jojo-area,current-free-address*
+  :undo-point
+  <undo-point> set-jojo-area
+
   *string-area,current-free-address*
-  *link*
-  *naming-stack,pointer*
+  :undo-point
+  <undo-point> set-string-area
+
+  *global-naming-stack,pointer*
+  :undo-point
+  <undo-point> set-global-naming-stack
+
+  *module-naming-stack,pointer*
+  :undo-point
+  <undo-point> set-module-naming-stack
+
   *syntax-backup-area,current-free-address*
   :undo-point
-  5 n-set
+  <undo-point> set-syntax-backup-area
 
-  *jo-size* 5 mul
-  address *undo-stack,pointer* add-set
-
-  *syntax-stack,address* create-undo-point,copy-syntax
+  *syntax-stack,address*
+  <undo-point> create,copy-syntax
 
   *syntax-stack,pointer*
   *syntax-stack,address* sub
   *jo-size* div
-  *undo-stack,pointer* set
-
-  *jo-size*
-  address *undo-stack,pointer* add-set
+  :undo-point
+  <undo-point> set-number-of-rule-sets
 
   :undo-point
   end
 ; define-function
 
-: restore,jojo-area
+: <undo-point> restore-jojo-area
   << undo-point -- >>
-  get
-  address *jojo-area,current-free-address* set
+  <undo-point> get-jojo-area
+  address *jojo-area,current-free-address*
+  set
   end
 ; define-function
 
-: restore,string-area
+: <undo-point> restore-string-area
   << undo-point -- >>
-  *jo-size* add get
-  address *string-area,current-free-address* set
+  <undo-point> get-string-area
+  address *string-area,current-free-address*
+  set
   end
 ; define-function
 
-: restore,naming-stack,set-jo
+: <undo-point> restore-global-naming-stack,set-jo
   << old-record, current-record -- >>
   dup2 equal? if
     drop2
     end
   then
-  *naming-stack,unit* sub
+  *global-naming-stack,unit* sub
   dup >:name-record
   :name-record name-record,get-old-jo
   :name-record name-record,get-name
@@ -3630,16 +3948,39 @@ more,rule-set,basic-REPL
   loop
 ; define-function
 
-: restore,naming-stack
+: <undo-point> restore-global-naming-stack
   << undo-point -- >>
-  *jo-size* 3 mul add get >:old-record
-  :old-record *naming-stack,pointer*
-  restore,naming-stack,set-jo
-  :old-record address *naming-stack,pointer* set
+  <undo-point> get-global-naming-stack >:old-record
+  :old-record *global-naming-stack,pointer*
+  <undo-point> restore-global-naming-stack,set-jo
+  :old-record address *global-naming-stack,pointer* set
   end
 ; define-function
 
-: restore,syntax-backup-area,set-syntax
+: <undo-point> restore-module-naming-stack,set-jo
+  << old-record, current-record -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  *module-naming-stack,unit* sub
+  dup >:name-record
+  :name-record name-record,get-old-jo
+  :name-record name-record,get-name
+  name,set-jo
+  loop
+; define-function
+
+: <undo-point> restore-module-naming-stack
+  << undo-point -- >>
+  <undo-point> get-module-naming-stack >:old-record
+  :old-record *module-naming-stack,pointer*
+  <undo-point> restore-module-naming-stack,set-jo
+  :old-record address *module-naming-stack,pointer* set
+  end
+; define-function
+
+: <undo-point> restore-syntax-backup-area,set-syntax
   << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
   dup zero? if
     drop2
@@ -3670,38 +4011,43 @@ more,rule-set,basic-REPL
   loop
 ; define-function
 
-: restore,syntax-backup-area
+: <undo-point> restore-syntax-backup-area
   << undo-point -- >>
-  dup
-  *jo-size* 4 mul add get >:old-address
-  *jo-size* 5 mul add get >:number-of-rule-sets
+  >:undo-point
+  :undo-point <undo-point> get-syntax-backup-area >:old-address
+  :undo-point <undo-point> get-number-of-rule-sets >:number-of-rule-sets
 
   *syntax-stack,address*
   :old-address
   :number-of-rule-sets
-  restore,syntax-backup-area,set-syntax >:cursor
+  <undo-point> restore-syntax-backup-area,set-syntax >:cursor
 
   :cursor
-  address *syntax-stack,pointer* set
+  address *syntax-stack,pointer*
+  set
 
-  :old-address address *syntax-backup-area,current-free-address* set
+  :old-address
+  address *syntax-backup-area,current-free-address*
+  set
   end
 ; define-function
 
-: restore,undo-stack
+: <undo-point> restore-undo-stack
   << undo-point -- >>
-  address *undo-stack,pointer* set
+  address *undo-stack,pointer*
+  set
   end
 ; define-function
 
 : undo
   << undo-point -- >>
   >:undo-point
-  :undo-point restore,jojo-area
-  :undo-point restore,string-area
-  :undo-point restore,naming-stack
-  :undo-point restore,syntax-backup-area
-  :undo-point restore,undo-stack
+  :undo-point <undo-point> restore-jojo-area
+  :undo-point <undo-point> restore-string-area
+  :undo-point <undo-point> restore-global-naming-stack
+  :undo-point <undo-point> restore-module-naming-stack
+  :undo-point <undo-point> restore-syntax-backup-area
+  :undo-point <undo-point> restore-undo-stack
   end
 ; define-function
 
@@ -3785,9 +4131,9 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <naming-stack> list-by-jo-predicate,loop
+: <global-naming-stack> list-by-jo-predicate,loop
   << jo-predicate, counter, cursor -- >>
-  dup *naming-stack,pointer* equal? if
+  dup *global-naming-stack,pointer* equal? if
     drop
     drop
     drop
@@ -3805,35 +4151,35 @@ more,rule-set,basic-REPL
   then
   :jo-predicate
   :counter
-  :cursor *naming-stack,unit* add
+  :cursor *global-naming-stack,unit* add
   loop
 ; define-function
 
-: <naming-stack> list-by-jo-predicate
+: <global-naming-stack> list-by-jo-predicate
   << jo-predicate -- >>
   1
-  *naming-stack*
-  <naming-stack> list-by-jo-predicate,loop
+  *global-naming-stack*
+  <global-naming-stack> list-by-jo-predicate,loop
   end
 ; define-function
 
-: <report> naming-stack
+: <report> global-naming-stack
   << -- >>
-  "* all primitive-function in naming-stack :" .s .l
+  "* all primitive-function in global-naming-stack :" .s .l
   jo primitive-function-jo?
-  <naming-stack> list-by-jo-predicate
+  <global-naming-stack> list-by-jo-predicate
 
-  "* all function in naming-stack :" .s .l
+  "* all function in global-naming-stack :" .s .l
   jo function-jo?
-  <naming-stack> list-by-jo-predicate
+  <global-naming-stack> list-by-jo-predicate
 
-  "* all exception in naming-stack :" .s .l
+  "* all exception in global-naming-stack :" .s .l
   jo exception-jo?
-  <naming-stack> list-by-jo-predicate
+  <global-naming-stack> list-by-jo-predicate
 
-  "* all variable in naming-stack :" .s .l
+  "* all variable in global-naming-stack :" .s .l
   jo variable-jo?
-  <naming-stack> list-by-jo-predicate
+  <global-naming-stack> list-by-jo-predicate
   end
 ; define-function
 
@@ -3992,6 +4338,69 @@ more,rule-set,basic-REPL
   bye
 ; define-function
 
+: <command-function> module
+  << -- >>
+  get-command-line
+  string-tail,word
+  string-tail,word >::command-line
+
+  ::command-line space-string? if
+    <module> help
+    bye
+  then
+
+  ::command-line string-head,word >::sub-function-name
+  ::command-line string-tail,word >::command-line-arguments
+
+  ::sub-function-name "help" string-equal? if
+    <module> help
+    bye
+  then
+
+  ::sub-function-name "add" string-equal? if
+    ::command-line-arguments string-head,word
+    ::command-line-arguments string-tail,word string-head,word
+    <module> add
+    bye
+  then
+
+  ::sub-function-name "sub" string-equal? if
+    ::command-line-arguments string-head,word
+    <module> sub
+    bye
+  then
+
+  ::sub-function-name "up" string-equal? if
+    ::command-line-arguments string-head,word
+    ::command-line-arguments string-tail,word string-head,word
+    <module> up
+    bye
+  then
+
+  ::sub-function-name "find" string-equal? if
+    ::command-line-arguments string-head,word
+    <module> find if
+      .s .l
+    else
+      "no found" .s .l
+    then
+    bye
+  then
+
+  ::sub-function-name "list" string-equal? if
+    <module> list
+    bye
+  then
+
+  "* (module) meets argument that (module) can not understand" .s .l
+  "  it is the following command-line that is confusing (module) :" .s .l
+  "    " .s <report> command-line .l
+  "  to get some help info  you can type :" .s .l
+  "    cn module help" .s .l
+  "  good bye ^-^/" .s .l
+  bye
+; define-function
+
 : <command-function> no-function
   << -- >>
   <command-function> stack-REPL
@@ -4019,6 +4428,10 @@ more,rule-set,basic-REPL
   then
   ::1st-word "poi" string-equal? if
     <command-function> poi
+    end
+  then
+  ::1st-word "module" string-equal? if
+    <command-function> module
     end
   then
   <command-function> unknow-function

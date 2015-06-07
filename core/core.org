@@ -129,9 +129,6 @@
 *** 撤銷棧
     * 用以保存某一時刻的全局狀態
       以實現撤銷
-*** 模塊棧
-    * 用以記錄當前所在模塊
-      定義者將把 模塊名 用爲前綴
 *** 加載棧
     * 用以保存被加載的代碼的信息
       使得代碼可以被分散到不同的文件
@@ -315,7 +312,7 @@
       在函數提中的每個位置增加一個名
     * 假設這種 珠 到 名 的函數
       只爲除錯所用
-      那麼在 *naming-stack* 中搜索 珠 的名字
+      那麼在 *global-naming-stack* 中搜索 珠 的名字
       也是可以接受的
       我選擇這種方式
       並且把 名域 從 珠中剔除
@@ -1470,37 +1467,32 @@
     "add" name-hash-table,find-jo
     #+end_src
 * name-record
-** 記 初始化
-   * 只是把 link 中的信息全部都加進來
-     注意
-     是在實現了 模塊機制 之後 core 才被製作成模塊的
-     在這之前 都只有由 name-hash-table 來實現的 全局命名空間而已
-** note naming-stack
+** note global-naming-stack
    * (define-*) push
      (undo) pop
 ** note name-record
-   * *naming-stack* contain name-record
+   * *global-naming-stack* contain name-record
    * structure
      | name-record | old-jo |
      |             | name   |
      |             | new-jo |
-** *naming-stack*
+** *global-naming-stack*
    #+begin_src cicada-nymph :tangle core.cn
    100 1024 mul
-   : *naming-stack,size*
+   : *global-naming-stack,size*
    ; define-variable,with-tos
 
    3 *jo-size* mul
-   : *naming-stack,unit*
+   : *global-naming-stack,unit*
    ; define-variable,with-tos
 
-   *naming-stack,size*
-   *naming-stack,unit* mul allocate-memory
-   : *naming-stack*
+   *global-naming-stack,size*
+   *global-naming-stack,unit* mul allocate-memory
+   : *global-naming-stack*
    ; define-variable,with-tos
 
-   *naming-stack*
-   : *naming-stack,pointer*
+   *global-naming-stack*
+   : *global-naming-stack,pointer*
    ; define-variable,with-tos
    #+end_src
 ** name-record,[get|set]-old-jo
@@ -1550,11 +1542,11 @@
    : name,record-jo
      << jo, name -- >>
      dup name,get-jo
-     *naming-stack,pointer* name-record,set-old-jo
+     *global-naming-stack,pointer* name-record,set-old-jo
      dup2 name,set-jo
-     *naming-stack,pointer* name-record,set-name
-     *naming-stack,pointer* name-record,set-new-jo
-     *naming-stack,unit* address *naming-stack,pointer* add-set
+     *global-naming-stack,pointer* name-record,set-name
+     *global-naming-stack,pointer* name-record,set-new-jo
+     *global-naming-stack,unit* address *global-naming-stack,pointer* add-set
      end
    ; define-function
    #+end_src
@@ -1564,12 +1556,12 @@
      << jo, current-record
         -- name, true
         -- false >>
-     dup *naming-stack* equal? if
+     dup *global-naming-stack* equal? if
        drop2
        false
        end
      then
-     *naming-stack,unit* sub
+     *global-naming-stack,unit* sub
      dup >:name-record
      over
      :name-record name-record,get-new-jo equal? if
@@ -1585,7 +1577,7 @@
      << jo
         -- name, true
         -- false >>
-     *naming-stack,pointer*
+     *global-naming-stack,pointer*
      jo,find-name,loop
      end
    ; define-function
@@ -1601,11 +1593,11 @@
      end
    ; define-function
    #+end_src
-** naming-stack,delete-last-record
+** global-naming-stack,delete-last-record
    #+begin_src cicada-nymph :tangle core.cn
-   : naming-stack,delete-last-record
+   : global-naming-stack,delete-last-record
      << -- >>
-     *naming-stack,unit* address *naming-stack,pointer* sub-set
+     *global-naming-stack,unit* address *global-naming-stack,pointer* sub-set
      end
    ; define-function
    #+end_src
@@ -1807,7 +1799,7 @@
         end
       then
       "* (make-jojo) meets undefined word : " .s .s .l
-      naming-stack,delete-last-record
+      global-naming-stack,delete-last-record
       !undo-make-jojo
     ; define-function
     #+end_src
@@ -2211,7 +2203,7 @@
         "* (syntax,<title>,make-jojo) meet undefined" .s .l
         "  title : " .s ::title .s .l
         "  name  : " .s ::string string-head,word .s .l
-        naming-stack,delete-last-record
+        global-naming-stack,delete-last-record
         !undo-make-jojo
       then
       :jo
@@ -5689,6 +5681,11 @@
    "home" full-path? .
    #+end_src
 * poi
+** 記
+   * poi 是利用文件系統所實現的登記機制
+     所登記的 path 信息爲 path-syntax 所用
+   * module 也是用文件系統所實現的登記機制
+     所登記的 path 信息爲 module 機制所用
 ** note
    * poi denotes path-organizer
      it can give a name to a path
@@ -5710,7 +5707,7 @@
      *poi-directory,user,address* swap
    ; define-variable
    #+end_src
-** find
+** <poi> find
    * note that
      this function uses *circular-string-area*
    #+begin_src cicada-nymph :tangle core.cn
@@ -5747,7 +5744,7 @@
      end
    ; define-function
    #+end_src
-** add
+** <poi> add
    #+begin_src cicada-nymph :tangle core.cn
    : <poi> add
      << name[address, length], relative-path[address, length] -- >>
@@ -5799,7 +5796,7 @@
      end
    ; define-function
    #+end_src
-** sub
+** <poi> sub
    #+begin_src cicada-nymph :tangle core.cn
    : <poi> sub
      << name[address, length] -- >>
@@ -5829,7 +5826,7 @@
      end
    ; define-function
    #+end_src
-** up
+** <poi> up
    #+begin_src cicada-nymph :tangle core.cn
    : <poi> up
      << name[address, length], relative-path[address, length] -- >>
@@ -5871,7 +5868,7 @@
      end
    ; define-function
    #+end_src
-** list
+** <poi> list
    #+begin_src cicada-nymph :tangle core.cn
    : <poi> list
      << -- >>
@@ -5914,7 +5911,7 @@
      end
    ; define-function
    #+end_src
-** help
+** <poi> help
    #+begin_src cicada-nymph :tangle core.cn
    : <poi> help
      << -- >>
@@ -5924,35 +5921,6 @@
      "  * cn poi up   <old-name> <relative-path-to-existing-directory>" .s .l
      "  * cn poi find <old-name>" .s .l
      "  * cn poi list" .s .l
-     end
-   ; define-function
-   #+end_src
-** +word+?
-   #+begin_src cicada-nymph :tangle core.cn
-   : +word+?
-     << string[address, length] -- bool >>
-     dup 1 less-or-equal? if
-       drop2
-       false
-       end
-     then
-     over get-byte
-     "+" string-head,byte equal? not if
-       drop2
-       false
-       end
-     then
-     add sub1 get-byte
-     "+" string-head,byte equal?
-     end
-   ; define-function
-   #+end_src
-** +word+->word
-   #+begin_src cicada-nymph :tangle core.cn
-   : +word+->word
-     << +word+[address, length] -- name[address, length] >>
-     sub2 swap
-     add1 swap
      end
    ; define-function
    #+end_src
@@ -5985,11 +5953,42 @@
    <poi> list
 
    <poi> help
-
+   #+end_src
+* path syntax
+** +word+?
+   #+begin_src cicada-nymph :tangle core.cn
+   : +word+?
+     << string[address, length] -- bool >>
+     dup 1 less-or-equal? if
+       drop2
+       false
+       end
+     then
+     over get-byte
+     "+" string-head,byte equal? not if
+       drop2
+       false
+       end
+     then
+     add sub1 get-byte
+     "+" string-head,byte equal?
+     end
+   ; define-function
+   #+end_src
+** +word+->word
+   #+begin_src cicada-nymph :tangle core.cn
+   : +word+->word
+     << +word+[address, length] -- name[address, length] >>
+     sub2 swap
+     add1 swap
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
    "+work+" +word+? .
    "work" +word+? .
    #+end_src
-* path syntax
 ** note
    * path syntax can be implemented by a new *rule-set*
      but in the following
@@ -6149,6 +6148,7 @@
    "library" "library" <poi> add
    path: +library+ hi.cn ; .s
    "library" <poi> sub
+   << error >>
    path: +library+ hi.cn ;
    #+end_src
 * ><>< module
@@ -6173,46 +6173,12 @@
 *** 減載
     * 或者說 撤銷加載 (unload)
       它利用 (undo) 來實現
-*** ><>< 使用
-    * 沒有文件系統中的代碼 會被在啓動時默認加載
-      用戶必須利用 (poi)
-      [具體用法有待確定]
-    * 我提供 命令行函數 來幫助在啓動時加載文件
-*** 模塊棧 之 使用分析
-    * 需要記錄當前被加載的模塊名字
-      函數定義時 要用其前綴以成名
-    * 這個前綴以全局狀態傳遞給 define-function
-      而不以函數的參數傳遞給 define-function
-      這是爲了簡化 define-function 的接口
-    * 這裏爲什麼需要棧
-      而不單用一個全局變量
-      其實
-      使用單一的全局變量就夠了
-      在加載一個 模塊 時
-      看其元數據以處理其引入的模塊
-      之後覆蓋全局變量中所保存的值
-      然後在處理當前定義的模塊就行了
-      但是
-      如若用棧就能達到下面的效果
-      在一個模塊之中 可以暫時切換 當前模塊
-      [儘管這種功能可能並不經常需要]
-      所以說
-      用棧則可能實現更多
-      單用全局變量就限制了性狀
-*** 模塊棧 與 加載棧 辨析
-    * 上面的棧其實是用來記錄 模塊的前綴的
-      這些信息被 define-function 等等 所使用
-    * 但是被成功加載的模塊
-      有關其本身存在的信息並不記錄在上面這個棧中
-      而是記錄在下面的 加載棧 中
-    * 模塊棧 在加載過程中 爲 define-function 所用
-      加載棧 負責記錄成功加載
 *** 加載棧
     * 加載棧 記錄
       1. 所有被加載的模塊的信息[模塊元數據字符串]
       2. 模塊被加載的順序
       3. 被加載的模塊是被直接加載還是間接加載
-      4. 等等 其他根系統狀態有關的元數據
+      4. 時間 路徑 等等 其他根系統狀態有關的元數據
     * (import) 就利用了這些信息
       用以聞訊
       同時
@@ -6226,58 +6192,345 @@
     * 引入[import] 是遞歸函數
       它調用 exception
       而不等待 exception
-*** 臨時命名棧
-    * 臨時命名棧 [temporary naming-stack]
-    * 其中所保存的命名全都不帶 模塊 前綴
-      而利用這些命名去做定義
-      每個定義都對應兩個命名
-      一個帶有前綴的 記錄在 *naming-stack* 中
-      一個不帶前綴的 記錄在 當前的 temporary naming-stack 中
-      所以說
-      temporary naming-stack 本身應該做爲一個全局的棧而存在
-      記爲 *temporary-naming-stack*
-*** ><>< 問題
+*** 模塊命名棧 與 全局命名棧
     * 應該用兩種 命名棧
-      其一 所有名字都有 模塊前綴
-      其一 所有名字都沒有 模塊前綴
-    * 這樣處理起來就方便多了
-** ><>< *module-stack*
+      全局命名棧[global-naming-stack] 所有名字都沒有 模塊前綴
+      模塊命名棧[module-naming-stack] 所有名字都有 模塊前綴
+    * 加載模塊時入 global-naming-stack
+      之後統一移到 module-naming-stack
+      這樣就不必更改 定義者 的接口了
+      定義者 只要向 global-naming-stack 中入值 就行了
+      根 module-naming-stack 有關的操作 由其他函數 另行完成
+*** 模塊與文件一一對應
+    * 要求 模塊與文件一一對應
+      這種 對應關係影響對模塊機制的使用
+    * 在啓動時
+      解釋器不會加載 core 之外的任何 module
+    * 所加載者 爲模塊 而非文件
+      不用路徑來加載模塊
+      而預先登記其路徑 然後直接通過模塊名來加載
+    * 我提供 命令行函數 來幫助在啓動時加載模塊
+** module-naming-stack
+*** note module-naming-stack
+    * (define-*) push
+      (undo) pop
+*** note name-record
+    * *module-naming-stack* contain name-record
+    * structure
+      | name-record | old-jo |
+      |             | name   |
+      |             | new-jo |
+*** *module-naming-stack*
+    #+begin_src cicada-nymph :tangle core.cn
+    100 1024 mul
+    : *module-naming-stack,size*
+    ; define-variable,with-tos
+
+    3 *jo-size* mul
+    : *module-naming-stack,unit*
+    ; define-variable,with-tos
+
+    *module-naming-stack,size*
+    *module-naming-stack,unit* mul allocate-memory
+    : *module-naming-stack*
+    ; define-variable,with-tos
+
+    *module-naming-stack*
+    : *module-naming-stack,pointer*
+    ; define-variable,with-tos
+    #+end_src
+** <poi> like <module>
+*** *module-directory*
+    * one directory to store the name path record
+      "/home/<user>/.cicada/module"
+    #+begin_src cicada-nymph :tangle core.cn
+    : *module-directory,user,address*
+      512 allocate-memory
+    ; define-variable
+
+    : *module-directory*
+      *home-directory* "/.cicada/module"
+      *module-directory,user,address*
+      2 n-string->buffer!
+      *module-directory,user,address* swap
+    ; define-variable
+    #+end_src
+*** <module> find
+    * note that
+      this function uses *circular-string-area*
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> find
+      << name[address, length]
+         -- path[address, length], true
+         -- false >>
+      >::name
+      512 allocate-local-memory >:buffer
+      *module-directory* "/" ::name "/path"
+      :buffer
+      4 n-string->buffer! >:length
+
+      :buffer :length
+      path,file? not if
+        false
+        end
+      then
+
+      512 allocate-local-memory >:read-buffer
+      :read-buffer 512
+      :buffer :length
+      <file> read >:read-length
+
+      *circular-string-area,current-free-address*
+      >:path-address
+
+      :read-buffer :read-length
+      circular-string-area,stay
+
+      :path-address
+      :read-length
+      true
+      end
+    ; define-function
+    #+end_src
+*** <module> add
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> add
+      << name[address, length], relative-path[address, length] -- >>
+      >::relative-path
+      >::name
+
+      ::relative-path relative-path? not if
+        "* (<module> add) the argument must be a relative-path" .s .l
+        "  but the following is not : " .s ::relative-path .s .l
+        end
+      then
+
+      ::relative-path path,directory? not if
+        "* (<module> add) the argument must be a relative-path to a existing directory" .s .l
+        "  but the following path is not to a directory : " .s ::relative-path .s .l
+        end
+      then
+
+      ::name <module> find if
+        "* (<module> add) can not add" .s .l
+        "  for the following module already exist : " .s ::name .s .l
+        "  name is use as the following directory's name : " .s .s .l
+        end
+      then
+
+      512 allocate-local-memory >:buffer
+      *module-directory* "/" ::name
+      :buffer
+      3 n-string->buffer!
+      >:length
+      :buffer :length
+      <directory> create
+
+      *module-directory* "/" ::name "/path"
+      :buffer
+      4 n-string->buffer!
+      >:length
+      :buffer :length
+      <file> create
+
+      512 allocate-local-memory >:address,full-path
+      get-work-directory "/" ::relative-path
+      :address,full-path
+      3 n-string->buffer! >:length,full-path
+
+      :address,full-path :length,full-path
+      :buffer :length
+      <file> write
+      end
+    ; define-function
+    #+end_src
+*** <module> sub
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> sub
+      << name[address, length] -- >>
+      >::name
+
+      ::name <module> find not if
+        "* (<module> sub) can not sub" .s .l
+        "  for the following module does not exist : " .s ::name .s .l
+        end
+      then
+      >::named-directory
+
+      512 allocate-local-memory >:buffer
+      *module-directory* "/" ::name "/path"
+      :buffer
+      4 n-string->buffer! >:length
+
+      :buffer :length
+      <file> remove
+
+      *module-directory* "/" ::name
+      :buffer
+      3 n-string->buffer!
+      >:length
+      :buffer :length
+      <directory> remove
+      end
+    ; define-function
+    #+end_src
+*** <module> up
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> up
+      << name[address, length], relative-path[address, length] -- >>
+      >::relative-path
+      >::name
+
+      ::relative-path relative-path? not if
+        "* (<module> up) the argument must be a relative-path" .s .l
+        "  but the following is not : " .s ::relative-path .s .l
+        end
+      then
+
+      ::relative-path path,directory? not if
+        "* (<module> up) the argument must be a relative-path to a existing directory" .s .l
+        "  but the following directory is not exist : " .s ::relative-path .s .l
+        end
+      then
+
+      ::name <module> find not if
+        "* (<module> up) can not up" .s .l
+        "  for the following module does not exist : " .s ::name .s .l
+        end
+      then
+      >::named-directory
+
+      512 allocate-local-memory >:buffer
+      *module-directory* "/" ::name "/path"
+      :buffer
+      4 n-string->buffer! >:length
+
+      512 allocate-local-memory >:address,full-path
+      get-work-directory "/" ::relative-path
+      :address,full-path
+      3 n-string->buffer! >:length,full-path
+
+      :address,full-path :length,full-path
+      :buffer :length
+      <file> write
+      end
+    ; define-function
+    #+end_src
+*** <module> list
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> list
+      << -- >>
+      *module-directory*
+      [ << -- >>
+        +getdents64,d_type+ get-byte
+        4 equal? if
+          512 allocate-local-memory >:path-buffer
+          +getdents64,d_name+
+          dup 256
+          0 string,find-char
+          drop  << drop 0 >>
+          over sub >::name
+
+          ".." ::name string-equal? if
+            end
+          then
+
+          "." ::name string-equal? if
+            end
+          then
+
+          "  * " .s ::name .s .l
+          "      " .s
+
+          *module-directory* "/" ::name "/path"
+          :path-buffer
+          4 n-string->buffer! >:path-length
+
+          512 allocate-local-memory >:reading-buffer
+          :reading-buffer 512
+          :path-buffer :path-length
+          <file> read >:reading-length
+
+          :reading-buffer :reading-length
+          .s .l
+        then
+        end ]
+      <directory> map
+      end
+    ; define-function
+    #+end_src
+*** <module> help
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module> help
+      << -- >>
+      "* (<module> help)" .s .l
+      "  * cn module add  <new-name> <relative-path-to-existing-directory>" .s .l
+      "  * cn module sub  <old-name>" .s .l
+      "  * cn module up   <old-name> <relative-path-to-existing-directory>" .s .l
+      "  * cn module find <old-name>" .s .l
+      "  * cn module list" .s .l
+      end
+    ; define-function
+    #+end_src
+*** test
+    #+begin_src cicada-nymph
+    "test-cicada-play" "./play" <module> add
+    "test-cicada-play" <module> find
+    if .s .l
+    else "not found" .s .l
+    then
+
+    "test-cicada-play-2" "./play-2" <module> add
+    "test-cicada-play-2" <module> find
+    if .s .l
+    else "not found" .s .l
+    then
+
+    "test-cicada-play" "./contribution" <module> up
+    "test-cicada-play" <module> find
+    if .s .l
+    else "not found" .s .l
+    then
+
+    "test-cicada-play" <module> sub
+    "test-cicada-play" <module> find
+    if .s .l
+    else "not found" .s .l
+    then
+
+    <module> list
+
+    <module> help
+    #+end_src
+** ><>< *loading-stack*
 *** note module-info
     * structure
       | module-info | name as prefix |
       |             |                |
-    * *module-stack* contain module-info
+    * *loading-stack* contain module-info
 *** memory allocation
     #+begin_src cicada-nymph :tangle core.cn
     10 1024 mul
-    : *undo-stack,size*
+    : *loading-stack,size*
     ; define-variable,with-tos
 
     1 *jo-size* mul
-    : *undo-stack,unit*
+    : *loading-stack,unit*
     ; define-variable,with-tos
 
-    *undo-stack,size*
-    *undo-stack,unit* mul allocate-memory
-    : *module-stack*
+    *loading-stack,size*
+    *loading-stack,unit* mul allocate-memory
+    : *loading-stack*
     ; define-variable,with-tos
 
-    *module-stack*
-    : *undo-stack,pointer*
+    *loading-stack*
+    : *loading-stack,pointer*
     ; define-variable,with-tos
     #+end_src
 ** >< meta-code
    #+begin_src cicada-nymph
    : <meta-code> eval
      << -- >>
-
-     end
-   ; define-function
-   #+end_src
-** >< load
-   #+begin_src cicada-nymph
-   : load
-     << module-name -- >>
 
      end
    ; define-function
@@ -6290,15 +6543,23 @@
      end
    ; define-function
    #+end_src
+** >< load
+   #+begin_src cicada-nymph
+   : load
+     << module-name -- >>
+
+     end
+   ; define-function
+   #+end_src
 * undo
 ** 記 撤銷
    * 因爲 name-hash-table 的存在
      導致我實現 undo 這個特性的機制
      必須是去記錄差別 而不能是記錄歷史
    * 具體地
-     在每個 undo point 之後
+     在每個 undo-point 之後
      所有對 jo 的 redefine 都需要被記錄
-     在需要退回到這個 undo point 之時
+     在需要退回到這個 undo-point 之時
      恢復這些被從 name-hash-table 中踢出去的 jo
    * 這樣
      每一個 jo 被踢出 name-hash-table 時
@@ -6306,7 +6567,7 @@
    * 注意
      每一次重新定義都對應一次恢復
      * 缺點是
-       這樣 在兩個 undo point 之間 對一個 jo 的多次重複定義
+       這樣 在兩個 undo-point 之間 對一個 jo 的多次重複定義
        就帶來了一些沒必要的恢復
      * 優點是
        這樣就避免了對 多次重複定義的 jo 的特殊處理
@@ -6314,25 +6575,14 @@
        還是實現的簡潔性上
        這種實現方式都是更優的
 ** note global states
-   * *jojo-area,current-free-address*
-   * *string-area,current-free-address*
-   * *link*
+   * jojo-area
+   * string-area
    * name-hash-table
-   * *backup-area,current-free-address*
+   * global-naming-stack
+   * module-naming-stack
+   * syntax-backup-area
    * syntax-stack
      and rule-set in it
-** note undo point
-   * *undo-stack* contain undo-point
-   * structure
-     | undo-point | jojo-area           |
-     |            | string-area         |
-     |            | link                |
-     |            | naming-stack        |
-     |            | syntax-backup-area  |
-     |            | number of rule-sets |
-   * the undo point used to undo
-     will be used to reset the pointer of undo-stack
-     [the current-free-address of undo-stack]
 ** *undo-stack*
    #+begin_src cicada-nymph :tangle core.cn
    60 1024 mul
@@ -6352,6 +6602,103 @@
    : *undo-stack,pointer*
    ; define-variable,with-tos
    #+end_src
+** note undo-point
+   * *undo-stack* contain undo-point
+   * structure
+     | undo-point | jojo-area           |
+     |            | string-area         |
+     |            | global-naming-stack |
+     |            | module-naming-stack |
+     |            | syntax-backup-area  |
+     |            | number of rule-sets |
+   * the undo-point used to undo
+     will be used to reset the pointer of undo-stack
+     [the current-free-address of undo-stack]
+** interface of <undo-point>
+*** <undo-point> [get|set]-jojo-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-jojo-area
+      << undo-point -- jojo-area current-free-address >>
+      get
+      end
+    ; define-function
+
+    : <undo-point> set-jojo-area
+      << jojo-area current-free-address, undo-point -- >>
+      set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> [get|set]-string-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-string-area
+      << undo-point -- jojo-area current-free-address >>
+      *jo-size* add get
+      end
+    ; define-function
+
+    : <undo-point> set-string-area
+      << jojo-area current-free-address, undo-point -- >>
+      *jo-size* add set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> [get|set]-global-naming-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-global-naming-stack
+      << undo-point -- jojo-area current-free-address >>
+      *jo-size* 2 mul add get
+      end
+    ; define-function
+
+    : <undo-point> set-global-naming-stack
+      << jojo-area current-free-address, undo-point -- >>
+      *jo-size* 2 mul add set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> [get|set]-module-naming-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-module-naming-stack
+      << undo-point -- jojo-area current-free-address >>
+      *jo-size* 3 mul add get
+      end
+    ; define-function
+
+    : <undo-point> set-module-naming-stack
+      << jojo-area current-free-address, undo-point -- >>
+      *jo-size* 3 mul add set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> [get|set]-syntax-backup-area
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-syntax-backup-area
+      << undo-point -- jojo-area current-free-address >>
+      *jo-size* 4 mul add get
+      end
+    ; define-function
+
+    : <undo-point> set-syntax-backup-area
+      << jojo-area current-free-address, undo-point -- >>
+      *jo-size* 4 mul add set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> [get|set]-number-of-rule-sets
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> get-number-of-rule-sets
+      << undo-point -- jojo-area current-free-address >>
+      *jo-size* 5 mul add get
+      end
+    ; define-function
+
+    : <undo-point> set-number-of-rule-sets
+      << jojo-area current-free-address, undo-point -- >>
+      *jo-size* 5 mul add set
+      end
+    ; define-function
+    #+end_src
 ** *syntax-backup-area*
    #+begin_src cicada-nymph :tangle core.cn
    20 1024 mul
@@ -6367,13 +6714,13 @@
    : *syntax-backup-area,current-free-address*
    ; define-variable,with-tos
    #+end_src
-** create-undo-point
+** <undo-point> create
 *** 記
     * 將 undo-point 這個數據結構入 undo-stack
       並返回剛入棧的數據結構的地址
-*** create-undo-point,copy-syntax,one-rule-set
+*** <undo-point> create,copy-syntax,one-rule-set
     #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point,copy-syntax,one-rule-set
+    : <undo-point> create,copy-syntax,one-rule-set
       << rule-set -- >>
       >:rule-set
       :rule-set rule-set,get-border >:border
@@ -6397,78 +6744,93 @@
       end
     ; define-function
     #+end_src
-*** create-undo-point,copy-syntax
+*** <undo-point> create,copy-syntax
     #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point,copy-syntax
+    : <undo-point> create,copy-syntax
       << cursor -- >>
       dup *syntax-stack,pointer* equal? if
         drop
         end
       then
-      dup get create-undo-point,copy-syntax,one-rule-set
+      dup get <undo-point> create,copy-syntax,one-rule-set
       *jo-size* add
       loop
     ; define-function
     #+end_src
-*** create-undo-point
+*** <undo-point> create
     #+begin_src cicada-nymph :tangle core.cn
-    : create-undo-point
+    : <undo-point> create
       << -- undo-point >>
-      *undo-stack,pointer* >:undo-point
+      *undo-stack,pointer*
+      >:undo-point
+
+      *undo-stack,unit*
+      address *undo-stack,pointer*
+      add-set
 
       *jojo-area,current-free-address*
+      :undo-point
+      <undo-point> set-jojo-area
+
       *string-area,current-free-address*
-      *link*
-      *naming-stack,pointer*
+      :undo-point
+      <undo-point> set-string-area
+
+      *global-naming-stack,pointer*
+      :undo-point
+      <undo-point> set-global-naming-stack
+
+      *module-naming-stack,pointer*
+      :undo-point
+      <undo-point> set-module-naming-stack
+
       *syntax-backup-area,current-free-address*
       :undo-point
-      5 n-set
+      <undo-point> set-syntax-backup-area
 
-      *jo-size* 5 mul
-      address *undo-stack,pointer* add-set
-
-      *syntax-stack,address* create-undo-point,copy-syntax
+      *syntax-stack,address*
+      <undo-point> create,copy-syntax
 
       *syntax-stack,pointer*
       *syntax-stack,address* sub
       *jo-size* div
-      *undo-stack,pointer* set
-
-      *jo-size*
-      address *undo-stack,pointer* add-set
+      :undo-point
+      <undo-point> set-number-of-rule-sets
 
       :undo-point
       end
     ; define-function
     #+end_src
-** restore
-*** restore,jojo-area
+** <undo-point> restore
+*** <undo-point> restore-jojo-area
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,jojo-area
+    : <undo-point> restore-jojo-area
       << undo-point -- >>
-      get
-      address *jojo-area,current-free-address* set
+      <undo-point> get-jojo-area
+      address *jojo-area,current-free-address*
+      set
       end
     ; define-function
     #+end_src
-*** restore,string-area
+*** <undo-point> restore-string-area
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,string-area
+    : <undo-point> restore-string-area
       << undo-point -- >>
-      *jo-size* add get
-      address *string-area,current-free-address* set
+      <undo-point> get-string-area
+      address *string-area,current-free-address*
+      set
       end
     ; define-function
     #+end_src
-*** restore,naming-stack,set-jo
+*** <undo-point> restore-global-naming-stack,set-jo
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,naming-stack,set-jo
+    : <undo-point> restore-global-naming-stack,set-jo
       << old-record, current-record -- >>
       dup2 equal? if
         drop2
         end
       then
-      *naming-stack,unit* sub
+      *global-naming-stack,unit* sub
       dup >:name-record
       :name-record name-record,get-old-jo
       :name-record name-record,get-name
@@ -6476,14 +6838,41 @@
       loop
     ; define-function
     #+end_src
-*** restore,naming-stack
+*** <undo-point> restore-global-naming-stack
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,naming-stack
+    : <undo-point> restore-global-naming-stack
       << undo-point -- >>
-      *jo-size* 3 mul add get >:old-record
-      :old-record *naming-stack,pointer*
-      restore,naming-stack,set-jo
-      :old-record address *naming-stack,pointer* set
+      <undo-point> get-global-naming-stack >:old-record
+      :old-record *global-naming-stack,pointer*
+      <undo-point> restore-global-naming-stack,set-jo
+      :old-record address *global-naming-stack,pointer* set
+      end
+    ; define-function
+    #+end_src
+*** <undo-point> restore-module-naming-stack,set-jo
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> restore-module-naming-stack,set-jo
+      << old-record, current-record -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      *module-naming-stack,unit* sub
+      dup >:name-record
+      :name-record name-record,get-old-jo
+      :name-record name-record,get-name
+      name,set-jo
+      loop
+    ; define-function
+    #+end_src
+*** <undo-point> restore-module-naming-stack
+    #+begin_src cicada-nymph :tangle core.cn
+    : <undo-point> restore-module-naming-stack
+      << undo-point -- >>
+      <undo-point> get-module-naming-stack >:old-record
+      :old-record *module-naming-stack,pointer*
+      <undo-point> restore-module-naming-stack,set-jo
+      :old-record address *module-naming-stack,pointer* set
       end
     ; define-function
     #+end_src
@@ -6509,9 +6898,9 @@
       此處把 jo 按順序複製回 address 所代表的 規則集
       然後重置 current-free-address 就行了
       並不必知道 jo 的語義
-*** restore,syntax-backup-area,set-syntax
+*** <undo-point> restore-syntax-backup-area,set-syntax
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,syntax-backup-area,set-syntax
+    : <undo-point> restore-syntax-backup-area,set-syntax
       << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
       dup zero? if
         drop2
@@ -6542,31 +6931,35 @@
       loop
     ; define-function
     #+end_src
-*** restore,syntax-backup-area
+*** <undo-point> restore-syntax-backup-area
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,syntax-backup-area
+    : <undo-point> restore-syntax-backup-area
       << undo-point -- >>
-      dup
-      *jo-size* 4 mul add get >:old-address
-      *jo-size* 5 mul add get >:number-of-rule-sets
+      >:undo-point
+      :undo-point <undo-point> get-syntax-backup-area >:old-address
+      :undo-point <undo-point> get-number-of-rule-sets >:number-of-rule-sets
 
       *syntax-stack,address*
       :old-address
       :number-of-rule-sets
-      restore,syntax-backup-area,set-syntax >:cursor
+      <undo-point> restore-syntax-backup-area,set-syntax >:cursor
 
       :cursor
-      address *syntax-stack,pointer* set
+      address *syntax-stack,pointer*
+      set
 
-      :old-address address *syntax-backup-area,current-free-address* set
+      :old-address
+      address *syntax-backup-area,current-free-address*
+      set
       end
     ; define-function
     #+end_src
-*** restore,undo-stack
+*** <undo-point> restore-undo-stack
     #+begin_src cicada-nymph :tangle core.cn
-    : restore,undo-stack
+    : <undo-point> restore-undo-stack
       << undo-point -- >>
-      address *undo-stack,pointer* set
+      address *undo-stack,pointer*
+      set
       end
     ; define-function
     #+end_src
@@ -6575,17 +6968,18 @@
    : undo
      << undo-point -- >>
      >:undo-point
-     :undo-point restore,jojo-area
-     :undo-point restore,string-area
-     :undo-point restore,naming-stack
-     :undo-point restore,syntax-backup-area
-     :undo-point restore,undo-stack
+     :undo-point <undo-point> restore-jojo-area
+     :undo-point <undo-point> restore-string-area
+     :undo-point <undo-point> restore-global-naming-stack
+     :undo-point <undo-point> restore-module-naming-stack
+     :undo-point <undo-point> restore-syntax-backup-area
+     :undo-point <undo-point> restore-undo-stack
      end
    ; define-function
    #+end_src
 ** test undo
    #+begin_src cicada-nymph
-   create-undo-point
+   <undo-point> create
    : *undo-point*
    ; define-variable,with-tos
 
@@ -6604,9 +6998,9 @@
    *undo-point* << undefined >>
 
 
-   << with naming-stack >>
+   << with global-naming-stack >>
 
-   create-undo-point
+   <undo-point> create
    : *undo-point*
    ; define-variable,with-tos
 
@@ -6634,7 +7028,7 @@
    #+end_src
 ** test undo with syntax-stack
    #+begin_src cicada-nymph
-   create-undo-point
+   <undo-point> create
    : *undo-point*
    ; define-variable,with-tos
 
@@ -6668,7 +7062,7 @@
    #+end_src
 ** test undo with alias
    #+begin_src cicada-nymph
-   create-undo-point
+   <undo-point> create
    : *undo-point*
    ; define-variable,with-tos
 
@@ -6691,9 +7085,9 @@
    *undo-point* << undefined >>
 
 
-   << with naming-stack >>
+   << with global-naming-stack >>
 
-   create-undo-point
+   <undo-point> create
    : *undo-point*
    ; define-variable,with-tos
 
@@ -6844,12 +7238,12 @@
      end
    ; define-function
    #+end_src
-** <naming-stack> list-by-jo-predicate
+** <global-naming-stack> list-by-jo-predicate
    * 最後寫到珠典裏的 被最先打印出來
    #+begin_src cicada-nymph :tangle core.cn
-   : <naming-stack> list-by-jo-predicate,loop
+   : <global-naming-stack> list-by-jo-predicate,loop
      << jo-predicate, counter, cursor -- >>
-     dup *naming-stack,pointer* equal? if
+     dup *global-naming-stack,pointer* equal? if
        drop
        drop
        drop
@@ -6867,39 +7261,39 @@
      then
      :jo-predicate
      :counter
-     :cursor *naming-stack,unit* add
+     :cursor *global-naming-stack,unit* add
      loop
    ; define-function
 
-   : <naming-stack> list-by-jo-predicate
+   : <global-naming-stack> list-by-jo-predicate
      << jo-predicate -- >>
      1
-     *naming-stack*
-     <naming-stack> list-by-jo-predicate,loop
+     *global-naming-stack*
+     <global-naming-stack> list-by-jo-predicate,loop
      end
    ; define-function
    #+end_src
-** <report> naming-stack
+** <report> global-naming-stack
    * different types of words in link
      are showed separately
    #+begin_src cicada-nymph :tangle core.cn
-   : <report> naming-stack
+   : <report> global-naming-stack
      << -- >>
-     "* all primitive-function in naming-stack :" .s .l
+     "* all primitive-function in global-naming-stack :" .s .l
      jo primitive-function-jo?
-     <naming-stack> list-by-jo-predicate
+     <global-naming-stack> list-by-jo-predicate
 
-     "* all function in naming-stack :" .s .l
+     "* all function in global-naming-stack :" .s .l
      jo function-jo?
-     <naming-stack> list-by-jo-predicate
+     <global-naming-stack> list-by-jo-predicate
 
-     "* all exception in naming-stack :" .s .l
+     "* all exception in global-naming-stack :" .s .l
      jo exception-jo?
-     <naming-stack> list-by-jo-predicate
+     <global-naming-stack> list-by-jo-predicate
 
-     "* all variable in naming-stack :" .s .l
+     "* all variable in global-naming-stack :" .s .l
      jo variable-jo?
-     <naming-stack> list-by-jo-predicate
+     <global-naming-stack> list-by-jo-predicate
      end
    ; define-function
    #+end_src
@@ -7081,6 +7475,76 @@
      bye
    ; define-function
    #+end_src
+** module
+   * cn module add  <name> <relative-path>
+   * cn module sub  <name>
+   * cn module up   <name> <relative-path>
+   * cn module find <name>
+   * cn module list
+   #+begin_src cicada-nymph :tangle core.cn
+   : <command-function> module
+     << -- >>
+     get-command-line
+     string-tail,word
+     string-tail,word >::command-line
+
+     ::command-line space-string? if
+       <module> help
+       bye
+     then
+
+     ::command-line string-head,word >::sub-function-name
+     ::command-line string-tail,word >::command-line-arguments
+
+     ::sub-function-name "help" string-equal? if
+       <module> help
+       bye
+     then
+
+     ::sub-function-name "add" string-equal? if
+       ::command-line-arguments string-head,word
+       ::command-line-arguments string-tail,word string-head,word
+       <module> add
+       bye
+     then
+
+     ::sub-function-name "sub" string-equal? if
+       ::command-line-arguments string-head,word
+       <module> sub
+       bye
+     then
+
+     ::sub-function-name "up" string-equal? if
+       ::command-line-arguments string-head,word
+       ::command-line-arguments string-tail,word string-head,word
+       <module> up
+       bye
+     then
+
+     ::sub-function-name "find" string-equal? if
+       ::command-line-arguments string-head,word
+       <module> find if
+         .s .l
+       else
+         "no found" .s .l
+       then
+       bye
+     then
+
+     ::sub-function-name "list" string-equal? if
+       <module> list
+       bye
+     then
+
+     "* (module) meets argument that (module) can not understand" .s .l
+     "  it is the following command-line that is confusing (module) :" .s .l
+     "    " .s <report> command-line .l
+     "  to get some help info  you can type :" .s .l
+     "    cn module help" .s .l
+     "  good bye ^-^/" .s .l
+     bye
+   ; define-function
+   #+end_src
 ** no-function
    #+begin_src cicada-nymph :tangle core.cn
    : <command-function> no-function
@@ -7115,6 +7579,10 @@
        <command-function> poi
        end
      then
+     ::1st-word "module" string-equal? if
+       <command-function> module
+       end
+     then
      <command-function> unknow-function
      end
    ; define-function
@@ -7134,6 +7602,6 @@
   #+begin_src cicada-nymph
   <report> memory
   <report> syntax
-  <report> naming-stack
+  <report> global-naming-stack
   #+end_src
 * ===================================
