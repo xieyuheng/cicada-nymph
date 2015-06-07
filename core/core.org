@@ -1597,7 +1597,12 @@
    #+begin_src cicada-nymph :tangle core.cn
    : global-naming-stack,delete-last-record
      << -- >>
-     *global-naming-stack,unit* address *global-naming-stack,pointer* sub-set
+     *global-naming-stack,unit*
+     address *global-naming-stack,pointer*
+     sub-set
+     *global-naming-stack,pointer* name-record,get-old-jo
+     *global-naming-stack,pointer* name-record,get-name
+     name,set-jo
      end
    ; define-function
    #+end_src
