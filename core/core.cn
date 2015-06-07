@@ -631,13 +631,13 @@ allocate-memory
 ; define-function
 
 1024 *jo-size* mul
-: *size,rule-set,basic-REPL*
+: *rule-set,basic-REPL,size*
 ; define-variable,with-tos
 
 << for cursor >>
 *jo-size* allocate-memory drop
 
-*size,rule-set,basic-REPL*
+*rule-set,basic-REPL,size*
 allocate-memory
 : *rule-set,basic-REPL*
 ; define-variable,with-tos
@@ -991,7 +991,7 @@ basic-REPL
   end
 ; define-function
 
-: syntax,<title>,make-jojo
+: syntax,title,make-jojo
   << jo, string[address, length], <title>[address, length] --
      jo, string[address, length] >>
   >::title
@@ -1001,7 +1001,7 @@ basic-REPL
   name-hash-table,find-jo,with-title if
     jojo-area,stay
   else
-    "* (syntax,<title>,make-jojo) meet undefined" .s .l
+    "* (syntax,title,make-jojo) meet undefined" .s .l
     "  title : " .s ::title .s .l
     "  name  : " .s ::string string-head,word .s .l
     global-naming-stack,delete-last-record
@@ -1015,7 +1015,7 @@ basic-REPL
 : more,rule-set,make-jojo
   << -- >>
   jo <word>?
-  jo syntax,<title>,make-jojo
+  jo syntax,title,make-jojo
   *rule-set,make-jojo* add-rule
   end
 ; define-function
@@ -1054,7 +1054,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: syntax,square-bar,make-jojo
+: <make-jojo-syntax> square-bar
   << jo, string[address, length], word:square-bar --
      jo, string[address, length] >>
   drop2
@@ -1095,14 +1095,14 @@ more,rule-set,make-jojo
 : more,rule-set,make-jojo
   << -- >>
   jo word:square-bar?
-  jo syntax,square-bar,make-jojo
+  jo <make-jojo-syntax> square-bar
   *rule-set,make-jojo* add-rule
   end
 ; define-function
 
 more,rule-set,make-jojo
 
-: syntax,name,make-jojo
+: <make-jojo-syntax> name
   << string[address, length], word[address, length] --
      string[address, length] >>
   drop2
@@ -1119,7 +1119,7 @@ more,rule-set,make-jojo
 : more,rule-set,make-jojo
   << -- >>
   ["name" string-equal? end]
-  jo syntax,name,make-jojo
+  jo <make-jojo-syntax> name
   *rule-set,make-jojo* add-rule
   end
 ; define-function
@@ -1530,7 +1530,7 @@ more,rule-set,make-jojo
   end
 ; define-function
 
-: syntax,base#wild-integer-string,make-jojo
+: <make-jojo-syntax> base#wild-integer-string
   << string[address, length], word[address, length] --
      string[address, length] >>
   jo instruction,literal
@@ -1543,22 +1543,34 @@ more,rule-set,make-jojo
 : more,rule-set,make-jojo
   << -- >>
   jo base#wild-integer-string?
-  jo syntax,base#wild-integer-string,make-jojo
+  jo <make-jojo-syntax> base#wild-integer-string
   *rule-set,make-jojo* add-rule
   end
 ; define-function
 
 more,rule-set,make-jojo
 
-: syntax,jo,basic-REPL
-  << word:jo -- >>
+: <basic-REPL-syntax> jo
+  << word:jo -- jo >>
   drop2
   read-word-for-REPL
   >::word
+
+  ::word <word>? if
+    512 allocate-local-memory >:buffer
+    ::word dup >:length
+    :buffer string->buffer!
+    1024 allocate-local-memory >:new-buffer
+    :buffer :length " " read-word-for-REPL
+    :new-buffer
+    3 n-string->buffer! >:new-length
+    :new-buffer :new-length >::word
+  then
+
   ::word name-hash-table,find-jo if
     end
   then
-  "* (syntax,jo,basic-REPL) meet undefined word after jo : " .s ::word .s .l
+  "* (<basic-REPL-syntax> jo) meet undefined word after jo : " .s ::word .s .l
   end
 ; define-function
 
@@ -1573,7 +1585,7 @@ more,rule-set,make-jojo
   *rule-set,basic-REPL* add-rule
 
   ["jo" string-equal? end]
-  jo syntax,jo,basic-REPL
+  jo <basic-REPL-syntax> jo
   *rule-set,basic-REPL* add-rule
 
   jo base#wild-integer-string? jo base#wild-integer-string->integer *rule-set,basic-REPL* add-rule
@@ -1582,7 +1594,7 @@ more,rule-set,make-jojo
 
 init,rule-set,basic-REPL
 
-: syntax,if,basic-REPL,meet-true,else
+: <basic-REPL-syntax> if,meet-true,else
   << -- >>
   read-word-for-REPL
   "then" string-equal? if
@@ -1591,7 +1603,7 @@ init,rule-set,basic-REPL
   loop
 ; define-function
 
-: syntax,if,basic-REPL,meet-true
+: <basic-REPL-syntax> if,meet-true
   << -- >>
   read-word-for-REPL
   dup2 "then" string-equal? if
@@ -1600,14 +1612,14 @@ init,rule-set,basic-REPL
   then
   dup2 "else" string-equal? if
     drop2
-    syntax,if,basic-REPL,meet-true,else
+    <basic-REPL-syntax> if,meet-true,else
     end
   then
   eval-word
   loop
 ; define-function
 
-: syntax,if,basic-REPL,meet-false,else
+: <basic-REPL-syntax> if,meet-false,else
   << -- >>
   read-word-for-REPL
   dup2 "then" string-equal? if
@@ -1618,7 +1630,7 @@ init,rule-set,basic-REPL
   loop
 ; define-function
 
-: syntax,if,basic-REPL,meet-false
+: <basic-REPL-syntax> if,meet-false
   << -- >>
   read-word-for-REPL
   dup2 "then" string-equal? if
@@ -1627,24 +1639,24 @@ init,rule-set,basic-REPL
   then
   dup2 "else" string-equal? if
     drop2
-    syntax,if,basic-REPL,meet-false,else
+    <basic-REPL-syntax> if,meet-false,else
     end
   then
   drop2
   loop
 ; define-function
 
-: syntax,if,basic-REPL
+: <basic-REPL-syntax> if
   << bool, word:if -- >>
   drop2 if
-    syntax,if,basic-REPL,meet-true
+    <basic-REPL-syntax> if,meet-true
   else
-    syntax,if,basic-REPL,meet-false
+    <basic-REPL-syntax> if,meet-false
   then
   end
 ; define-function
 
-jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
+jo word:if? jo <basic-REPL-syntax> if *rule-set,basic-REPL* add-rule
 
 1024 1024 mul
 : *circular-string-area,size*
@@ -1679,7 +1691,7 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   end
 ; define-function
 
-: syntax,double-quote,basic-REPL,loop
+: <basic-REPL-syntax> double-quote,loop
   << cursor -- cursor >>
   read-byte
   dup 34 equal? if
@@ -1691,12 +1703,12 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   loop
 ; define-function
 
-: syntax,double-quote,basic-REPL
+: <basic-REPL-syntax> double-quote
   << word:double-quote -- string[address, length] >>
   drop2
   1024 2 mul allocate-local-memory >:buffer
   :buffer
-  syntax,double-quote,basic-REPL,loop
+  <basic-REPL-syntax> double-quote,loop
   >:cursor
   *circular-string-area,current-free-address* >:address
   :buffer
@@ -1707,28 +1719,40 @@ jo word:if? jo syntax,if,basic-REPL *rule-set,basic-REPL* add-rule
   end
 ; define-function
 
-jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* add-rule
+jo word:double-quote? jo <basic-REPL-syntax> double-quote *rule-set,basic-REPL* add-rule
 
 0
-: *syntax,address,basic-REPL,stack-balancer*
+: <basic-REPL-syntax> *address,stack-balancer*
 ; define-variable,with-tos
 
-: syntax,address,basic-REPL
+: <basic-REPL-syntax> address
   << word:address -- address >>
   drop2
   read-word-for-REPL
   >::word
+  ::word <word>? if
+    512 allocate-local-memory >:buffer
+    ::word dup >:length
+    :buffer string->buffer!
+    1024 allocate-local-memory >:new-buffer
+    :buffer :length " " read-word-for-REPL
+    :new-buffer
+    3 n-string->buffer! >:new-length
+    :new-buffer :new-length >::word
+  then
+
   ::word name-hash-table,find-jo if
   else
-    "* (syntax,address,basic-REPL) meet undefined word : " .s ::word .s .l
-    address *syntax,address,basic-REPL,stack-balancer*
+    "* (<basic-REPL-syntax> address) meet undefined word : " .s ::word .s .l
+    address <basic-REPL-syntax> *address,stack-balancer*
     end
   then
+
   >:jo
   :jo variable-jo? if
   else
-    "* (syntax,address,basic-REPL) meet a not variable-jo : " .s ::word .s .l
-    address *syntax,address,basic-REPL,stack-balancer*
+    "* (<basic-REPL-syntax> address) meet a not variable-jo : " .s ::word .s .l
+    address <basic-REPL-syntax> *address,stack-balancer*
     end
   then
   :jo *jo-size* add
@@ -1736,10 +1760,10 @@ jo word:double-quote? jo syntax,double-quote,basic-REPL *rule-set,basic-REPL* ad
 ; define-function
 
 jo word:address?
-jo syntax,address,basic-REPL
+jo <basic-REPL-syntax> address
 *rule-set,basic-REPL* add-rule
 
-: syntax,<title>,basic-REPL
+: <basic-REPL-syntax> title
   << <title>[address, length] -- unknown >>
   >::title
   512 allocate-local-memory >:buffer
@@ -1752,15 +1776,35 @@ jo syntax,address,basic-REPL
     apply
     end
   then
-  "* (syntax,<title>,basic-REPL) meet undefined" .s .l
+  "* (<basic-REPL-syntax> title) meet undefined" .s .l
   "  title : " .s ::title .s .l
   "  name  : " .s ::name .s .l
   end
 ; define-function
 
 jo <word>?
-jo syntax,<title>,basic-REPL
+jo <basic-REPL-syntax> title
 *rule-set,basic-REPL* add-rule
+
+"<basic-REPL> *rule-set*" "*rule-set,basic-REPL*" alias
+"<make-jojo> *rule-set*" "*rule-set,make-jojo*" alias
+
+"<make-jojo-syntax> title" "syntax,title,make-jojo" alias
+"<make-jojo-syntax> recur" "syntax,recur,make-jojo" alias
+"<make-jojo-syntax> loop" "syntax,loop,make-jojo" alias
+"<make-jojo-syntax> exception-reset-stack" "syntax,exception-reset-stack,make-jojo" alias
+"<make-jojo-syntax> prepare-for" "syntax,prepare-for,make-jojo" alias
+"<make-jojo-syntax> then" "syntax,then,make-jojo" alias
+"<make-jojo-syntax> else" "syntax,else,make-jojo" alias
+"<make-jojo-syntax> if" "syntax,if,make-jojo" alias
+"<make-jojo-syntax> local-variable-get" "syntax,local-variable-get,make-jojo" alias
+"<make-jojo-syntax> local-variable-set" "syntax,local-variable-set,make-jojo" alias
+"<make-jojo-syntax> double-quote" "syntax,double-quote,make-jojo" alias
+"<make-jojo-syntax> jo" "syntax,jo,make-jojo" alias
+"<make-jojo-syntax> address" "syntax,address,make-jojo" alias
+"<make-jojo-syntax> integer-string" "syntax,integer-string,make-jojo" alias
+
+"<basic-REPL-syntax> bye" "syntax,bye,basic-REPL" alias
 
 : print-argument-stack,loop
   << address, counter -- >>
@@ -1913,7 +1957,7 @@ jo stack-REPL address *lost-exception-REPL* set
   end
 ; define-function
 
-: eval-string,loop
+: <string> eval,loop
   << unknown -- unknown >>
   tos-reading-stack space-string? if
     end
@@ -1923,10 +1967,10 @@ jo stack-REPL address *lost-exception-REPL* set
   loop
 ; define-function
 
-: eval-string
+: <string> eval
   << string[address, length] -- unknown >>
   push-reading-stack
-  eval-string,loop
+  <string> eval,loop
   drop-reading-stack
   end
 ; define-function
@@ -1980,7 +2024,7 @@ jo stack-REPL address *lost-exception-REPL* set
   jo syntax,double-quote,define-variable
   *rule-set,basic-REPL* add-rule
 
-  ::body eval-string
+  ::body <string> eval
 
   jo word:double-quote?
   jo syntax,double-quote,define-variable
@@ -3439,7 +3483,7 @@ init-environment-variable-list
   !bad-path-syntax-word
 ; define-function
 
-: syntax,path:,basic-REPL,loop
+: <basic-REPL-syntax> path,loop
   << cursor -- cursor >>
   >:cursor
   read-word-for-REPL >::word
@@ -3462,7 +3506,7 @@ init-environment-variable-list
   loop
 ; define-function
 
-: syntax,path:,basic-REPL
+: <basic-REPL-syntax> path
   << word:path: -- path[address, length] >>
   drop2
 
@@ -3471,7 +3515,7 @@ init-environment-variable-list
     end
 
   512 allocate-local-memory >:buffer
-  :buffer syntax,path:,basic-REPL,loop >:cursor
+  :buffer <basic-REPL-syntax> path,loop >:cursor
 
   :cursor :buffer sub >:length
 
@@ -3490,7 +3534,7 @@ init-environment-variable-list
 : more,rule-set,basic-REPL
   << -- >>
   ["path:" string-equal? end]
-  jo syntax,path:,basic-REPL
+  jo <basic-REPL-syntax> path
   *rule-set,basic-REPL* add-rule
   end
 ; define-function
@@ -3743,6 +3787,36 @@ more,rule-set,basic-REPL
 *loading-stack*
 : *loading-stack,pointer*
 ; define-variable,with-tos
+
+: <pre-module> *rule-set,size*
+  1024 *jo-size* mul
+; define-variable
+
+<< for cursor >>
+*jo-size* allocate-memory drop
+
+: <pre-module> *rule-set*
+  <pre-module> *rule-set,size* allocate-memory
+; define-variable
+
+<pre-module> *rule-set*
+<pre-module> *rule-set* *jo-size* sub
+set
+
+: <post-module> *rule-set,size*
+  1024 *jo-size* mul
+; define-variable
+
+<< for cursor >>
+*jo-size* allocate-memory drop
+
+: <post-module> *rule-set*
+  <post-module> *rule-set,size* allocate-memory
+; define-variable
+
+<post-module> *rule-set*
+<post-module> *rule-set* *jo-size* sub
+set
 
 60 1024 mul
 : *undo-stack,size*
