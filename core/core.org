@@ -3898,15 +3898,15 @@
    *rule-set,basic-REPL* sub-rule
    *rule-set,basic-REPL* list-rule
    #+end_src
-* <string> eval
+* eval-string
 ** note
-   * (<string> eval) is implemented by doing side-effect on reading-stack
+   * (eval-string) is implemented by doing side-effect on reading-stack
      this is because syntax extension system is implemented by reader-macro
-   * by implementing (<string> eval) this way
+   * by implementing (eval-string) this way
      i can easily change the syntax be used to eval a string
-** <string> eval
+** eval-string
    #+begin_src cicada-nymph :tangle core.cn
-   : <string> eval,loop
+   : eval-string,loop
      << unknown -- unknown >>
      tos-reading-stack space-string? if
        end
@@ -3916,19 +3916,19 @@
      loop
    ; define-function
 
-   : <string> eval
+   : eval-string
      << string[address, length] -- unknown >>
      push-reading-stack
-     <string> eval,loop
+     eval-string,loop
      drop-reading-stack
      end
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "1 2 3 add add . " <string> eval << 6 >>
-   "1 2 3 add add ." <string> eval  << 6 >>
-   ": k 1 2 3 add add . end ; define-function k" <string> eval << 6 >>
+   "1 2 3 add add . " eval-string << 6 >>
+   "1 2 3 add add ." eval-string  << 6 >>
+   ": k 1 2 3 add add . end ; define-function k" eval-string << 6 >>
    k << 6 >>
    #+end_src
 * define-variable
@@ -3991,7 +3991,7 @@
      jo syntax,double-quote,define-variable
      *rule-set,basic-REPL* add-rule
 
-     ::body <string> eval
+     ::body eval-string
 
      jo word:double-quote?
      jo syntax,double-quote,define-variable
@@ -6229,6 +6229,10 @@
     * 元數據 中 所能包含的信息類型
       還有聲明這些信息的語法
       都是可以擴展的
+    * 語法關鍵詞都形如 "word:"
+      每次通過找下一個 "word:" 來確定其截止位置
+    * 遇不被識別的 "word:"
+      就忽略 而找到下一個 "word:"
 *** 減載
     * 或者說 撤銷加載 (unload)
       它利用 (undo) 來實現
@@ -6294,7 +6298,9 @@
     : *module-naming-stack,pointer*
     ; define-variable,with-tos
     #+end_src
-** <poi> like <module>
+** <moi>
+*** note
+    * like <poi>
 *** *module-directory*
     * one directory to store the name path record
       "/home/<user>/.cicada/module"
@@ -6304,17 +6310,17 @@
     ; define-variable
 
     : *module-directory*
-      *home-directory* "/.cicada/module"
+      *home-directory* "/.cicada/moi"
       *module-directory,user,address*
       2 n-string->buffer!
       *module-directory,user,address* swap
     ; define-variable
     #+end_src
-*** <module> find
+*** <moi> find
     * note that
       this function uses *circular-string-area*
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> find
+    : <moi> find
       << name[address, length]
          -- path[address, length], true
          -- false >>
@@ -6347,27 +6353,27 @@
       end
     ; define-function
     #+end_src
-*** <module> add
+*** <moi> add
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> add
+    : <moi> add
       << name[address, length], relative-path[address, length] -- >>
       >::relative-path
       >::name
 
       ::relative-path relative-path? not if
-        "* (<module> add) the argument must be a relative-path" .s .l
+        "* (<moi> add) the argument must be a relative-path" .s .l
         "  but the following is not : " .s ::relative-path .s .l
         end
       then
 
       ::relative-path path,directory? not if
-        "* (<module> add) the argument must be a relative-path to a existing directory" .s .l
+        "* (<moi> add) the argument must be a relative-path to a existing directory" .s .l
         "  but the following path is not to a directory : " .s ::relative-path .s .l
         end
       then
 
-      ::name <module> find if
-        "* (<module> add) can not add" .s .l
+      ::name <moi> find if
+        "* (<moi> add) can not add" .s .l
         "  for the following module already exist : " .s ::name .s .l
         "  name is use as the following directory's name : " .s .s .l
         end
@@ -6399,14 +6405,14 @@
       end
     ; define-function
     #+end_src
-*** <module> sub
+*** <moi> sub
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> sub
+    : <moi> sub
       << name[address, length] -- >>
       >::name
 
-      ::name <module> find not if
-        "* (<module> sub) can not sub" .s .l
+      ::name <moi> find not if
+        "* (<moi> sub) can not sub" .s .l
         "  for the following module does not exist : " .s ::name .s .l
         end
       then
@@ -6429,27 +6435,27 @@
       end
     ; define-function
     #+end_src
-*** <module> up
+*** <moi> up
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> up
+    : <moi> up
       << name[address, length], relative-path[address, length] -- >>
       >::relative-path
       >::name
 
       ::relative-path relative-path? not if
-        "* (<module> up) the argument must be a relative-path" .s .l
+        "* (<moi> up) the argument must be a relative-path" .s .l
         "  but the following is not : " .s ::relative-path .s .l
         end
       then
 
       ::relative-path path,directory? not if
-        "* (<module> up) the argument must be a relative-path to a existing directory" .s .l
+        "* (<moi> up) the argument must be a relative-path to a existing directory" .s .l
         "  but the following directory is not exist : " .s ::relative-path .s .l
         end
       then
 
-      ::name <module> find not if
-        "* (<module> up) can not up" .s .l
+      ::name <moi> find not if
+        "* (<moi> up) can not up" .s .l
         "  for the following module does not exist : " .s ::name .s .l
         end
       then
@@ -6471,9 +6477,9 @@
       end
     ; define-function
     #+end_src
-*** <module> list
+*** <moi> list
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> list
+    : <moi> list
       << -- >>
       *module-directory*
       [ << -- >>
@@ -6514,11 +6520,11 @@
       end
     ; define-function
     #+end_src
-*** <module> help
+*** <moi> help
     #+begin_src cicada-nymph :tangle core.cn
-    : <module> help
+    : <moi> help
       << -- >>
-      "* (<module> help)" .s .l
+      "* (<moi> help)" .s .l
       "  * cn module add  <new-name> <relative-path-to-existing-directory>" .s .l
       "  * cn module sub  <old-name>" .s .l
       "  * cn module up   <old-name> <relative-path-to-existing-directory>" .s .l
@@ -6529,115 +6535,167 @@
     #+end_src
 *** test
     #+begin_src cicada-nymph
-    "test-cicada-play" "./play" <module> add
-    "test-cicada-play" <module> find
+    "test-cicada-play" "./play" <moi> add
+    "test-cicada-play" <moi> find
     if .s .l
     else "not found" .s .l
     then
 
-    "test-cicada-play-2" "./play-2" <module> add
-    "test-cicada-play-2" <module> find
+    "test-cicada-play-2" "./play-2" <moi> add
+    "test-cicada-play-2" <moi> find
     if .s .l
     else "not found" .s .l
     then
 
-    "test-cicada-play" "./contribution" <module> up
-    "test-cicada-play" <module> find
+    "test-cicada-play" "./contribution" <moi> up
+    "test-cicada-play" <moi> find
     if .s .l
     else "not found" .s .l
     then
 
-    "test-cicada-play" <module> sub
-    "test-cicada-play" <module> find
+    "test-cicada-play" <moi> sub
+    "test-cicada-play" <moi> find
     if .s .l
     else "not found" .s .l
     then
 
-    <module> list
+    <moi> list
 
-    <module> help
+    <moi> help
     #+end_src
-** *loading-stack*
-   #+begin_src cicada-nymph :tangle core.cn
-   10 1024 mul
-   : *loading-stack,size*
-   ; define-variable,with-tos
+** <loading-stack> & <module-info>
+*** *loading-stack*
+    #+begin_src cicada-nymph :tangle core.cn
+    10 1024 mul
+    : *loading-stack,size*
+    ; define-variable,with-tos
 
-   1 *jo-size* mul
-   : *loading-stack,unit*
-   ; define-variable,with-tos
+    3 *jo-size* mul
+    : *loading-stack,unit*
+    ; define-variable,with-tos
 
-   *loading-stack,size*
-   *loading-stack,unit* mul allocate-memory
-   : *loading-stack*
-   ; define-variable,with-tos
+    *loading-stack,size*
+    *loading-stack,unit* mul allocate-memory
+    : *loading-stack*
+    ; define-variable,with-tos
 
-   *loading-stack*
-   : *loading-stack,pointer*
-   ; define-variable,with-tos
-   #+end_src
-** note module-info
-   * *loading-stack* contain module-info
-   * structure
-     | module-info | module-name |
-     |             | module-meta |
-** ><>< interface of <module-info>
-*** >< <module-info>
-** 記 避免相互遞歸函數
-   * 沒有相互遞歸函數
-     (load) (import) 不可相互調用
-   * 加載[load] 不是遞歸函數
-     它等待 exception
-     而不調用 exception
-   * 引入[import] 是遞歸函數
-     它調用 exception
-     而不等待 exception
-   * import 之 遞歸調用發生在語法擴展中
-** >< !fail-to-load
-   #+begin_src cicada-nymph
+    *loading-stack*
+    : *loading-stack,pointer*
+    ; define-variable,with-tos
+    #+end_src
+*** note <module-info>
+    * *loading-stack* contain module-info
+    * structure
+      | module-info | meta-string address |
+      |             | meta-string length  |
+      |             | name                |
+*** <module-info> [get|set]-meta-string
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-info> get-meta-string
+      << module-info -- meta-string[address, length] >>
+      2 n-get
+      end
+    ; define-function
 
-   #+end_src
-** 記 元碼語法
-   * 語法關鍵詞都形如 "word:"
-     每次通過找下一個 "word:" 來確定其截止位置
-   * 遇不被識別的 "word:"
-     就忽略 而找到下一個 "word:"
-** <pre-module> *rule-set*
-   #+begin_src cicada-nymph :tangle core.cn
-   : <pre-module> *rule-set,size*
-     1024 *jo-size* mul
-   ; define-variable
+    : <module-info> set-meta-string
+      << meta-string[address, length], module-info -- >>
+      xx|swap|x make-string x|swap|xx
+      2 n-set
+      end
+    ; define-function
+    #+end_src
+*** <module-info> [get|set]-name
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-info> get-name
+      << module-info -- name >>
+      *jo-size* 2 mul add
+      get
+      end
+    ; define-function
 
-   << for cursor >>
-   *jo-size* allocate-memory drop
+    : <module-info> set-name
+      << name, module-info -- >>
+      *jo-size* 2 mul add
+      set
+      end
+    ; define-function
+    #+end_src
+*** >< <loading-stack> find
+    #+begin_src cicada-nymph
+    : <loading-stack> find
+      << name
+         -- true
+         -- false >>
 
-   : <pre-module> *rule-set*
-     <pre-module> *rule-set,size* allocate-memory
-   ; define-variable
+      end
+    ; define-function
+    #+end_src
+** <importing-stack> & <importing-record>
+*** *importing-stack*
+    #+begin_src cicada-nymph :tangle core.cn
+    10 1024 mul
+    : *importing-stack,size*
+    ; define-variable,with-tos
 
-   <pre-module> *rule-set*
-   <pre-module> *rule-set* *jo-size* sub
-   set
-   #+end_src
-** <post-module> *rule-set*
-   #+begin_src cicada-nymph :tangle core.cn
-   : <post-module> *rule-set,size*
-     1024 *jo-size* mul
-   ; define-variable
+    1 *jo-size* mul
+    : *importing-stack,unit*
+    ; define-variable,with-tos
 
-   << for cursor >>
-   *jo-size* allocate-memory drop
+    *importing-stack,size*
+    *importing-stack,unit* mul allocate-memory
+    : *importing-stack*
+    ; define-variable,with-tos
 
-   : <post-module> *rule-set*
-     <post-module> *rule-set,size* allocate-memory
-   ; define-variable
+    *importing-stack*
+    : *importing-stack,pointer*
+    ; define-variable,with-tos
+    #+end_src
+*** note <importing-record>
+    * structure
+      | importing-record | name |
+*** <importing-record> [get|set]-name
+    #+begin_src cicada-nymph :tangle core.cn
+    : <importing-record> get-name
+      << module-info -- name >>
+      get
+      end
+    ; define-function
 
-   <post-module> *rule-set*
-   <post-module> *rule-set* *jo-size* sub
-   set
-   #+end_src
-** <pre-module-syntax>
-*** <pre-module-syntax> import
+    : <importing-record> set-name
+      << name, module-info -- >>
+      set
+      end
+    ; define-function
+    #+end_src
+*** >< <importing-stack> find
+    #+begin_src cicada-nymph
+    : <importing-stack> find
+      << name
+         -- true
+         -- false >>
+
+      end
+    ; define-function
+    #+end_src
+** <pre-module>
+*** <pre-module> *rule-set*
+    #+begin_src cicada-nymph :tangle core.cn
+    : <pre-module> *rule-set,size*
+      1024 *jo-size* mul
+    ; define-variable
+
+    << for cursor >>
+    *jo-size* allocate-memory drop
+
+    : <pre-module> *rule-set*
+      <pre-module> *rule-set,size* allocate-memory
+    ; define-variable
+
+    <pre-module> *rule-set*
+    <pre-module> *rule-set* *jo-size* sub
+    set
+    #+end_src
+*** >< <pre-module-syntax> import
     #+begin_src cicada-nymph
     : <pre-module-syntax> import
       << -- >>
@@ -6645,7 +6703,7 @@
       end
     ; define-function
     #+end_src
-*** <pre-module-syntax> other
+*** >< <pre-module-syntax> other
     #+begin_src cicada-nymph
     : <pre-module-syntax> other
       << -- >>
@@ -6653,47 +6711,147 @@
       end
     ; define-function
     #+end_src
-** >< <post-module-syntax>
-** >< import
+** <post-module>
+*** <post-module> *rule-set*
+    #+begin_src cicada-nymph :tangle core.cn
+    : <post-module> *rule-set,size*
+      1024 *jo-size* mul
+    ; define-variable
+
+    << for cursor >>
+    *jo-size* allocate-memory drop
+
+    : <post-module> *rule-set*
+      <post-module> *rule-set,size* allocate-memory
+    ; define-variable
+
+    <post-module> *rule-set*
+    <post-module> *rule-set* *jo-size* sub
+    set
+    #+end_src
+*** >< <post-module-syntax>
+** >< <module-buffer>
+*** <module-buffer> get-meta-string
+*** <module-buffer> get-code-string
+** exception
+*** >< !fail-to-load
+    #+begin_src cicada-nymph
+
+    #+end_src
+*** >< !circular-import
+    #+begin_src cicada-nymph
+
+    #+end_src
+** 記 避免相互遞歸函數
+   * 沒有相互遞歸函數 (load) (import) 不可相互調用
+     加載[load] 不是遞歸函數 它等待 exception 而不調用 exception
+     引入[import] 是遞歸函數 它調用 exception 而不等待 exception
+   * 分析一下遞歸函數
+     每次分析遞歸函數 就是要知道
+     1. 如何展開 每個遞歸調用就是展開
+        展開就是
+        返回棧增加一珠珠
+        分配內存給局部數據
+     2. 如何收回 每次函數退出就是收回
+     3. 比如
+        pre-function
+        recur
+        post-function
+        end
+        其中 pre-function 是展開過程中調用的函數 調用它們的順序是 珠珠 入棧的順序
+        而 post-function 是收回過程中調用的函數 調用它們的順序是 珠珠 出棧的順序
+        考錄 返回棧 之變化情況就很清楚啦
+     這次
+     1. 展開
+        入 引入棧
+     2. 遞歸
+        遞歸發生在 對語法關鍵詞 "import:" 的處理過程中
+     3. 返回
+        入 加載棧
+        解釋代碼
+** ><>< import
    #+begin_src cicada-nymph
    : import
      << module-name-string[address, length] -- >>
-     >::module-name
-     ::module-name <module> find if
+     >::module-name-string
+
+     ::module-name-string string->name >:module-name-index
+
+     <<
+     檢查加載與否
+     :module-name-index <loading-stack> find if
+       end
      else
+     then
+     >>
+
+     <<
+     檢查循環引用
+     :module-name-index <importing-stack> find if
+       end
+     else
+     then
+     >>
+
+     ::module-name-string <moi> find if
+     else
+       "* (import) can not find module : " .s ::module-name-string .s .l
        end
      then
      >::module-path
 
-     32 1024 mul allocate-local-memory >:buffer
+     64 1024 mul allocate-local-memory >:buffer
 
-     :buffer 32 1024 mul
+     :buffer 64 1024 mul
      ::module-path
      <file> read >:counter
 
      :buffer :counter
-     <module> get-meta >::meta
+     <module-buffer> get-meta-string >::meta-string
 
      :buffer :counter
-     <module> get-code >::code
+     <module-buffer> get-code-string >::code-string
 
-     ><><>< global-naming-stack >:pointer,global-naming-stack
+     記錄 global-naming-stack 所在位置
 
+     <<
+     入 引入棧
+     >>
+
+     <<
+     遞歸調用發生在 處理 語法關鍵詞 import 時
+     那時需要做兩件事
+     一是 引入
+     二是 化名
+     >>
+
+     <<
      <pre-module> *rule-set* push-syntax-stack
-       ::meta <string> eval
+       ::meta-string eval-string
      drop-syntax-stack
+     >>
+
+     <<
+     入 加載棧
+     >>
 
      <basic-REPL> *rule-set* push-syntax-stack
-       ::code <string> eval
+       ::code-string eval-string
      drop-syntax-stack
 
+     <<
      <post-module> *rule-set* push-syntax-stack
-       ::meta <string> eval
+       ::meta-string eval-string
      drop-syntax-stack
+     >>
 
-     ><><>< move global-naming-stack
+     <<
+     出 引入棧
+     >>
 
-     ><><>< clear global-naming-stack
+     移 global-naming-stack 入 module-naming-stack
+
+     清理 global-naming-stack
 
      end
    ; define-function
@@ -6703,7 +6861,7 @@
    : load
      << module-name-string[address, length] -- >>
      prepare-for
-       !undo><><><
+       !kkk
        end
      import
      end
@@ -7640,14 +7798,14 @@
    * cn module find <name>
    * cn module list
    #+begin_src cicada-nymph :tangle core.cn
-   : <command-function> module
+   : <command-function> moi
      << -- >>
      get-command-line
      string-tail,word
      string-tail,word >::command-line
 
      ::command-line space-string? if
-       <module> help
+       <moi> help
        bye
      then
 
@@ -7655,33 +7813,33 @@
      ::command-line string-tail,word >::command-line-arguments
 
      ::sub-function-name "help" string-equal? if
-       <module> help
+       <moi> help
        bye
      then
 
      ::sub-function-name "add" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
-       <module> add
+       <moi> add
        bye
      then
 
      ::sub-function-name "sub" string-equal? if
        ::command-line-arguments string-head,word
-       <module> sub
+       <moi> sub
        bye
      then
 
      ::sub-function-name "up" string-equal? if
        ::command-line-arguments string-head,word
        ::command-line-arguments string-tail,word string-head,word
-       <module> up
+       <moi> up
        bye
      then
 
      ::sub-function-name "find" string-equal? if
        ::command-line-arguments string-head,word
-       <module> find if
+       <moi> find if
          .s .l
        else
          "no found" .s .l
@@ -7690,7 +7848,7 @@
      then
 
      ::sub-function-name "list" string-equal? if
-       <module> list
+       <moi> list
        bye
      then
 
@@ -7737,8 +7895,8 @@
        <command-function> poi
        end
      then
-     ::1st-word "module" string-equal? if
-       <command-function> module
+     ::1st-word "moi" string-equal? if
+       <command-function> moi
        end
      then
      <command-function> unknow-function

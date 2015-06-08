@@ -1957,7 +1957,7 @@ jo stack-REPL address *lost-exception-REPL* set
   end
 ; define-function
 
-: <string> eval,loop
+: eval-string,loop
   << unknown -- unknown >>
   tos-reading-stack space-string? if
     end
@@ -1967,10 +1967,10 @@ jo stack-REPL address *lost-exception-REPL* set
   loop
 ; define-function
 
-: <string> eval
+: eval-string
   << string[address, length] -- unknown >>
   push-reading-stack
-  <string> eval,loop
+  eval-string,loop
   drop-reading-stack
   end
 ; define-function
@@ -2024,7 +2024,7 @@ jo stack-REPL address *lost-exception-REPL* set
   jo syntax,double-quote,define-variable
   *rule-set,basic-REPL* add-rule
 
-  ::body <string> eval
+  ::body eval-string
 
   jo word:double-quote?
   jo syntax,double-quote,define-variable
@@ -3562,13 +3562,13 @@ more,rule-set,basic-REPL
 ; define-variable
 
 : *module-directory*
-  *home-directory* "/.cicada/module"
+  *home-directory* "/.cicada/moi"
   *module-directory,user,address*
   2 n-string->buffer!
   *module-directory,user,address* swap
 ; define-variable
 
-: <module> find
+: <moi> find
   << name[address, length]
      -- path[address, length], true
      -- false >>
@@ -3601,25 +3601,25 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <module> add
+: <moi> add
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
   ::relative-path relative-path? not if
-    "* (<module> add) the argument must be a relative-path" .s .l
+    "* (<moi> add) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
   ::relative-path path,directory? not if
-    "* (<module> add) the argument must be a relative-path to a existing directory" .s .l
+    "* (<moi> add) the argument must be a relative-path to a existing directory" .s .l
     "  but the following path is not to a directory : " .s ::relative-path .s .l
     end
   then
 
-  ::name <module> find if
-    "* (<module> add) can not add" .s .l
+  ::name <moi> find if
+    "* (<moi> add) can not add" .s .l
     "  for the following module already exist : " .s ::name .s .l
     "  name is use as the following directory's name : " .s .s .l
     end
@@ -3651,12 +3651,12 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <module> sub
+: <moi> sub
   << name[address, length] -- >>
   >::name
 
-  ::name <module> find not if
-    "* (<module> sub) can not sub" .s .l
+  ::name <moi> find not if
+    "* (<moi> sub) can not sub" .s .l
     "  for the following module does not exist : " .s ::name .s .l
     end
   then
@@ -3679,25 +3679,25 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <module> up
+: <moi> up
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
   ::relative-path relative-path? not if
-    "* (<module> up) the argument must be a relative-path" .s .l
+    "* (<moi> up) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
   ::relative-path path,directory? not if
-    "* (<module> up) the argument must be a relative-path to a existing directory" .s .l
+    "* (<moi> up) the argument must be a relative-path to a existing directory" .s .l
     "  but the following directory is not exist : " .s ::relative-path .s .l
     end
   then
 
-  ::name <module> find not if
-    "* (<module> up) can not up" .s .l
+  ::name <moi> find not if
+    "* (<moi> up) can not up" .s .l
     "  for the following module does not exist : " .s ::name .s .l
     end
   then
@@ -3719,7 +3719,7 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <module> list
+: <moi> list
   << -- >>
   *module-directory*
   [ << -- >>
@@ -3760,9 +3760,9 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <module> help
+: <moi> help
   << -- >>
-  "* (<module> help)" .s .l
+  "* (<moi> help)" .s .l
   "  * cn module add  <new-name> <relative-path-to-existing-directory>" .s .l
   "  * cn module sub  <old-name>" .s .l
   "  * cn module up   <old-name> <relative-path-to-existing-directory>" .s .l
@@ -3775,7 +3775,7 @@ more,rule-set,basic-REPL
 : *loading-stack,size*
 ; define-variable,with-tos
 
-1 *jo-size* mul
+3 *jo-size* mul
 : *loading-stack,unit*
 ; define-variable,with-tos
 
@@ -3787,6 +3787,62 @@ more,rule-set,basic-REPL
 *loading-stack*
 : *loading-stack,pointer*
 ; define-variable,with-tos
+
+: <module-info> get-meta-string
+  << module-info -- meta-string[address, length] >>
+  2 n-get
+  end
+; define-function
+
+: <module-info> set-meta-string
+  << meta-string[address, length], module-info -- >>
+  xx|swap|x make-string x|swap|xx
+  2 n-set
+  end
+; define-function
+
+: <module-info> get-name
+  << module-info -- name >>
+  *jo-size* 2 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-name
+  << name, module-info -- >>
+  *jo-size* 2 mul add
+  set
+  end
+; define-function
+
+10 1024 mul
+: *importing-stack,size*
+; define-variable,with-tos
+
+1 *jo-size* mul
+: *importing-stack,unit*
+; define-variable,with-tos
+
+*importing-stack,size*
+*importing-stack,unit* mul allocate-memory
+: *importing-stack*
+; define-variable,with-tos
+
+*importing-stack*
+: *importing-stack,pointer*
+; define-variable,with-tos
+
+: <importing-record> get-name
+  << module-info -- name >>
+  get
+  end
+; define-function
+
+: <importing-record> set-name
+  << name, module-info -- >>
+  set
+  end
+; define-function
 
 : <pre-module> *rule-set,size*
   1024 *jo-size* mul
@@ -4417,14 +4473,14 @@ set
   bye
 ; define-function
 
-: <command-function> module
+: <command-function> moi
   << -- >>
   get-command-line
   string-tail,word
   string-tail,word >::command-line
 
   ::command-line space-string? if
-    <module> help
+    <moi> help
     bye
   then
 
@@ -4432,33 +4488,33 @@ set
   ::command-line string-tail,word >::command-line-arguments
 
   ::sub-function-name "help" string-equal? if
-    <module> help
+    <moi> help
     bye
   then
 
   ::sub-function-name "add" string-equal? if
     ::command-line-arguments string-head,word
     ::command-line-arguments string-tail,word string-head,word
-    <module> add
+    <moi> add
     bye
   then
 
   ::sub-function-name "sub" string-equal? if
     ::command-line-arguments string-head,word
-    <module> sub
+    <moi> sub
     bye
   then
 
   ::sub-function-name "up" string-equal? if
     ::command-line-arguments string-head,word
     ::command-line-arguments string-tail,word string-head,word
-    <module> up
+    <moi> up
     bye
   then
 
   ::sub-function-name "find" string-equal? if
     ::command-line-arguments string-head,word
-    <module> find if
+    <moi> find if
       .s .l
     else
       "no found" .s .l
@@ -4467,7 +4523,7 @@ set
   then
 
   ::sub-function-name "list" string-equal? if
-    <module> list
+    <moi> list
     bye
   then
 
@@ -4509,8 +4565,8 @@ set
     <command-function> poi
     end
   then
-  ::1st-word "module" string-equal? if
-    <command-function> module
+  ::1st-word "moi" string-equal? if
+    <command-function> moi
     end
   then
   <command-function> unknow-function
