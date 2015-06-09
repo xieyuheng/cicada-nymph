@@ -2,9 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* comment can not be nested ???       :bug:
 * module mechanism
-** <module-stack> find
-** <module-buffer> good-format?
+** >< about <importing-stack>
+** >< syntax
+** >< exception
 * todo
 ** 基礎設施 之 測試框架
    * 讓所有的測試讀的內容讀起來都有趣味
@@ -3765,6 +3767,54 @@
     << error >>
     address kkk
     #+end_src
+** word:name?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:name?
+     << word[address, length] -- bool >>
+     "name" string-equal?
+     end
+   ; define-function
+   #+end_src
+** name                               :syntax:
+*** <basic-REPL-syntax> name
+    #+begin_src cicada-nymph :tangle core.cn
+    : <basic-REPL-syntax> name
+      << word:name -- name >>
+      drop2
+      read-word-for-REPL
+      >::word
+      ::word <word>? if
+        512 allocate-local-memory >:buffer
+        ::word dup >:length
+        :buffer string->buffer!
+        1024 allocate-local-memory >:new-buffer
+        :buffer :length " " read-word-for-REPL
+        :new-buffer
+        3 n-string->buffer! >:new-length
+        :new-buffer :new-length >::word
+      then
+
+      ::word string->name
+      end
+    ; define-function
+    #+end_src
+*** add-rule to *rule-set,basic-REPL*
+    #+begin_src cicada-nymph :tangle core.cn
+    jo word:name?
+    jo <basic-REPL-syntax> name
+    *rule-set,basic-REPL* add-rule
+    #+end_src
+*** test
+    #+begin_src cicada-nymph
+    name add
+    name->string .s .l
+
+    name <basic-REPL-syntax> *name,stack-balancer*
+    name->string .s .l
+
+    name kkk
+    name->string .s .l
+    #+end_src
 ** <title>                            :syntax:
 *** note
     * <title> in *rule-set,make-jojo*
@@ -3810,6 +3860,10 @@
     <test-title> test-name
     #+end_src
 * to define some alias
+** <string>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<string> equal?" "string-equal?" alias
+   #+end_src
 ** *rule-set*
    #+begin_src cicada-nymph :tangle core.cn
    "<basic-REPL> *rule-set*" "*rule-set,basic-REPL*" alias
@@ -6278,6 +6332,62 @@
    "aaa" "a" string-head,byte <string> full-of-the-same-byte?
    "aba" "a" string-head,byte <string> full-of-the-same-byte?
    #+end_src
+** <string> any-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> any-word
+     << string[address, length]
+        function : < word[address, length] -- bool >
+        -- bool >>
+     >:function
+     >::string
+     ::string space-string? if
+       false
+       end
+     then
+     ::string string-head,word :function apply if
+       true
+       end
+     then
+     ::string string-tail,word
+     :function
+     loop
+   ; define-function
+   #+end_src
+** <string> every-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> every-word
+     << string[address, length]
+        function : < word[address, length] -- bool >
+        -- bool >>
+     >:function
+     >::string
+     ::string space-string? if
+       true
+       end
+     then
+     ::string string-head,word :function apply not if
+       false
+       end
+     then
+     ::string string-tail,word
+     :function
+     loop
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test
+     << -- >>
+     "no no name no" ["name" <string> equal? end] <string> any-word . << 1 >>
+     "name name name" ["name" <string> equal? end] <string> every-word . << 1 >>
+     .l
+     "name name name" ["name" <string> equal? not end] <string> every-word . << 0 >>
+     "no no name no" ["name" <string> equal? end] <string> every-word . << 0 >>
+     .l
+     end
+   ; define-function
+   test
+   #+end_src
 * ><>< module
 ** 記
 *** 元數據 之 語法
@@ -6722,17 +6832,40 @@
       end
     ; define-function
     #+end_src
-*** ><>< <module-stack> find
+*** <module-stack> find
     #+begin_src cicada-nymph :tangle core.cn
+    : <module-stack> find,loop
+      << name[index], cursor
+         -- module-info, true
+         -- false >>
+      dup *module-stack,pointer* equal? if
+        drop2
+        false
+        end
+      then
+      >:cursor
+      >:name
+      :cursor <module-info> get-name
+      :name equal? if
+        :cursor
+        true
+        end
+      then
+      :name
+      :cursor *module-stack,unit* add
+      loop
+    ; define-function
+
     : <module-stack> find
       << name[index]
          -- module-info, true
          -- false >>
-
+      *module-stack*
+      <module-stack> find,loop
       end
     ; define-function
     #+end_src
-** >< <importing-stack> & <importing-record>
+** <importing-stack> & <importing-record>
 *** *importing-stack*
     #+begin_src cicada-nymph :tangle core.cn
     10 1024 mul
@@ -6769,13 +6902,36 @@
       end
     ; define-function
     #+end_src
-*** >< <importing-stack> find
-    #+begin_src cicada-nymph
-    : <importing-stack> find
-      << name
+*** <importing-stack> find
+    #+begin_src cicada-nymph :tangle core.cn
+    : <importing-stack> find,loop
+      << name[index], cursor
          -- importing-record, true
          -- false >>
+      dup *importing-stack,pointer* equal? if
+        drop2
+        false
+        end
+      then
+      >:cursor
+      >:name
+      :cursor <importing-record> get-name
+      :name equal? if
+        :cursor
+        true
+        end
+      then
+      :name
+      :cursor *importing-stack,unit* add
+      loop
+    ; define-function
 
+    : <importing-stack> find
+      << name[index]
+         -- importing-record, true
+         -- false >>
+      *importing-stack*
+      <importing-stack> find,loop
       end
     ; define-function
     #+end_src
@@ -6881,13 +7037,45 @@
       [即 針對字符串的]
       而不是針對文件的
       否則就會重複閱讀文件
-*** ><>< <module-buffer> good-format?
+*** <module-buffer> good-format?
     #+begin_src cicada-nymph :tangle core.cn
     : <module-buffer> good-format?
       << module-buffer[address, length] -- bool >>
-
+      dup2 space-string? if
+        drop2
+        false
+        end
+      then
+      dup2 string-head,word
+      <string> module-meta-begin? not if
+        drop2
+        false
+        end
+      then
+      jo <string> module-meta-end? <string> any-word
       end
     ; define-function
+    #+end_src
+*** test
+    #+begin_src cicada-nymph
+    "
+    :::::::::
+    import: combinator math
+    module: assembler
+    =========
+    hi
+    kkk took my baby away!
+    "
+    <module-buffer> good-format? . << 1 >>
+
+    "
+    :::::::::
+    import: combinator math
+    module: assembler
+    hi
+    kkk took my baby away!
+    "
+    <module-buffer> good-format? . << 0 >>
     #+end_src
 *** <module-buffer> get-code-string
     #+begin_src cicada-nymph :tangle core.cn
@@ -7123,13 +7311,11 @@
      ::module-name-string string->name >:module-name-index
      :module-name-index name->module-prefix >:module-prefix
 
-     <<
-     檢查加載與否
      :module-name-index <module-stack> find if
+       drop
        end
      else
      then
-     >>
 
      <<
      檢查循環引用
@@ -7152,6 +7338,13 @@
      64 1024 mul
      ::module-path
      <file> read >:length
+
+     :buffer :length <module-buffer> good-format? if
+     else
+       "* (import) fail to import module : " .s ::module-name-string .s .l
+       "  for the file is not well formated cicada-nymph source code" .s .l
+       end
+     then
 
      :buffer :length <module-buffer> get-meta-string >::meta-string
      :buffer :length <module-buffer> get-code-string >::code-string
@@ -7231,8 +7424,10 @@
    hihi << undefined >>
 
    : *test-module-info*
-     *module-stack,pointer*
-     *module-stack,unit* sub
+     name hihi <module-stack> find if
+     else
+       "* can not found hihi" .s .l
+     then
    ; define-variable
 
    *test-module-info* <module-info> get-meta-string .s .l

@@ -1862,6 +1862,36 @@ jo word:address?
 jo <basic-REPL-syntax> address
 *rule-set,basic-REPL* add-rule
 
+: word:name?
+  << word[address, length] -- bool >>
+  "name" string-equal?
+  end
+; define-function
+
+: <basic-REPL-syntax> name
+  << word:name -- name >>
+  drop2
+  read-word-for-REPL
+  >::word
+  ::word <word>? if
+    512 allocate-local-memory >:buffer
+    ::word dup >:length
+    :buffer string->buffer!
+    1024 allocate-local-memory >:new-buffer
+    :buffer :length " " read-word-for-REPL
+    :new-buffer
+    3 n-string->buffer! >:new-length
+    :new-buffer :new-length >::word
+  then
+
+  ::word string->name
+  end
+; define-function
+
+jo word:name?
+jo <basic-REPL-syntax> name
+*rule-set,basic-REPL* add-rule
+
 : <basic-REPL-syntax> title
   << <title>[address, length] -- unknown >>
   >::title
@@ -1884,6 +1914,8 @@ jo <basic-REPL-syntax> address
 jo <word>?
 jo <basic-REPL-syntax> title
 *rule-set,basic-REPL* add-rule
+
+"<string> equal?" "string-equal?" alias
 
 "<basic-REPL> *rule-set*" "*rule-set,basic-REPL*" alias
 "<make-jojo> *rule-set*" "*rule-set,make-jojo*" alias
@@ -3590,6 +3622,44 @@ more,rule-set,basic-REPL
   loop
 ; define-function
 
+: <string> any-word
+  << string[address, length]
+     function : < word[address, length] -- bool >
+     -- bool >>
+  >:function
+  >::string
+  ::string space-string? if
+    false
+    end
+  then
+  ::string string-head,word :function apply if
+    true
+    end
+  then
+  ::string string-tail,word
+  :function
+  loop
+; define-function
+
+: <string> every-word
+  << string[address, length]
+     function : < word[address, length] -- bool >
+     -- bool >>
+  >:function
+  >::string
+  ::string space-string? if
+    true
+    end
+  then
+  ::string string-head,word :function apply not if
+    false
+    end
+  then
+  ::string string-tail,word
+  :function
+  loop
+; define-function
+
 100 1024 mul
 : *module-naming-stack,size*
 ; define-variable,with-tos
@@ -3893,11 +3963,34 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
+: <module-stack> find,loop
+  << name[index], cursor
+     -- module-info, true
+     -- false >>
+  dup *module-stack,pointer* equal? if
+    drop2
+    false
+    end
+  then
+  >:cursor
+  >:name
+  :cursor <module-info> get-name
+  :name equal? if
+    :cursor
+    true
+    end
+  then
+  :name
+  :cursor *module-stack,unit* add
+  loop
+; define-function
+
 : <module-stack> find
   << name[index]
      -- module-info, true
      -- false >>
-
+  *module-stack*
+  <module-stack> find,loop
   end
 ; define-function
 
@@ -3927,6 +4020,37 @@ more,rule-set,basic-REPL
 : <importing-record> set-name
   << name, module-info -- >>
   set
+  end
+; define-function
+
+: <importing-stack> find,loop
+  << name[index], cursor
+     -- importing-record, true
+     -- false >>
+  dup *importing-stack,pointer* equal? if
+    drop2
+    false
+    end
+  then
+  >:cursor
+  >:name
+  :cursor <importing-record> get-name
+  :name equal? if
+    :cursor
+    true
+    end
+  then
+  :name
+  :cursor *importing-stack,unit* add
+  loop
+; define-function
+
+: <importing-stack> find
+  << name[index]
+     -- importing-record, true
+     -- false >>
+  *importing-stack*
+  <importing-stack> find,loop
   end
 ; define-function
 
@@ -3986,7 +4110,18 @@ set
 
 : <module-buffer> good-format?
   << module-buffer[address, length] -- bool >>
-
+  dup2 space-string? if
+    drop2
+    false
+    end
+  then
+  dup2 string-head,word
+  <string> module-meta-begin? not if
+    drop2
+    false
+    end
+  then
+  jo <string> module-meta-end? <string> any-word
   end
 ; define-function
 
@@ -4137,13 +4272,11 @@ set
   ::module-name-string string->name >:module-name-index
   :module-name-index name->module-prefix >:module-prefix
 
-  <<
-  檢查加載與否
   :module-name-index <module-stack> find if
+    drop
     end
   else
   then
-  >>
 
   <<
   檢查循環引用
@@ -4166,6 +4299,13 @@ set
   64 1024 mul
   ::module-path
   <file> read >:length
+
+  :buffer :length <module-buffer> good-format? if
+  else
+    "* (import) fail to import module : " .s ::module-name-string .s .l
+    "  for the file is not well formated cicada-nymph source code" .s .l
+    end
+  then
 
   :buffer :length <module-buffer> get-meta-string >::meta-string
   :buffer :length <module-buffer> get-code-string >::code-string
