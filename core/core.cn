@@ -569,7 +569,7 @@ allocate-memory
   end
 ; define-function
 
-: name,record-jo
+: global-naming-stack,record-jo
   << jo, name -- >>
   dup name,get-jo
   *global-naming-stack,pointer* name-record,set-old-jo
@@ -577,6 +577,17 @@ allocate-memory
   *global-naming-stack,pointer* name-record,set-name
   *global-naming-stack,pointer* name-record,set-new-jo
   *global-naming-stack,unit* address *global-naming-stack,pointer* add-set
+  end
+; define-function
+
+: global-naming-stack,delete-last-record
+  << -- >>
+  *global-naming-stack,unit*
+  address *global-naming-stack,pointer*
+  sub-set
+  *global-naming-stack,pointer* name-record,get-old-jo
+  *global-naming-stack,pointer* name-record,get-name
+  name,set-jo
   end
 ; define-function
 
@@ -615,18 +626,7 @@ allocate-memory
   >:link
   :link link->jo
   :link link->name-string string->name
-  name,record-jo
-  end
-; define-function
-
-: global-naming-stack,delete-last-record
-  << -- >>
-  *global-naming-stack,unit*
-  address *global-naming-stack,pointer*
-  sub-set
-  *global-naming-stack,pointer* name-record,get-old-jo
-  *global-naming-stack,pointer* name-record,get-name
-  name,set-jo
+  global-naming-stack,record-jo
   end
 ; define-function
 
@@ -1264,7 +1264,7 @@ init,rule-set,basic-REPL
 
   :jo
   ::name string->name
-  name,record-jo
+  global-naming-stack,record-jo
 
   *jojo-area,current-free-address* >:old-address
 
@@ -1305,7 +1305,7 @@ basic-REPL
 
   :jo
   ::name string->name
-  name,record-jo
+  global-naming-stack,record-jo
 
   1 :jo jo,set-length
 
@@ -1348,7 +1348,7 @@ basic-REPL
 
   :jo
   ::name string->name
-  name,record-jo
+  global-naming-stack,record-jo
 
   *jojo-area,current-free-address* >:old-address
 
@@ -1379,7 +1379,7 @@ basic-REPL
   >:jo
   :jo
   ::alias string->name
-  name,record-jo
+  global-naming-stack,record-jo
   end
 ; define-function
 
@@ -1904,6 +1904,18 @@ jo <basic-REPL-syntax> title
 "<make-jojo-syntax> integer-string" "syntax,integer-string,make-jojo" alias
 
 "<basic-REPL-syntax> bye" "syntax,bye,basic-REPL" alias
+
+"<name-record> get-old-jo" "name-record,get-old-jo" alias
+"<name-record> set-old-jo" "name-record,set-old-jo" alias
+
+"<name-record> get-name" "name-record,get-name" alias
+"<name-record> set-name" "name-record,set-name" alias
+
+"<name-record> get-new-jo" "name-record,get-new-jo" alias
+"<name-record> set-new-jo" "name-record,set-new-jo" alias
+
+"<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
+"<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
 
 : print-argument-stack,loop
   << address, counter -- >>
@@ -3560,6 +3572,24 @@ init-environment-variable-list
 ; define-function
 more,rule-set,basic-REPL
 
+: <string> full-of-the-same-byte?
+  << string[address, length], byte -- bool >>
+  >:byte
+  >::string
+  ::string dup zero? if
+    drop2
+    true
+    end
+  then
+  string-head,byte :byte equal? not if
+    false
+    end
+  then
+  ::string string-tail,byte
+  :byte
+  loop
+; define-function
+
 100 1024 mul
 : *module-naming-stack,size*
 ; define-variable,with-tos
@@ -3632,9 +3662,9 @@ more,rule-set,basic-REPL
     end
   then
 
-  ::relative-path path,directory? not if
-    "* (<moi> add) the argument must be a relative-path to a existing directory" .s .l
-    "  but the following path is not to a directory : " .s ::relative-path .s .l
+  ::relative-path path,file? not if
+    "* (<moi> add) the argument must be a relative-path to a existing file" .s .l
+    "  but the following path is not to a file : " .s ::relative-path .s .l
     end
   then
 
@@ -3710,9 +3740,9 @@ more,rule-set,basic-REPL
     end
   then
 
-  ::relative-path path,directory? not if
-    "* (<moi> up) the argument must be a relative-path to a existing directory" .s .l
-    "  but the following directory is not exist : " .s ::relative-path .s .l
+  ::relative-path path,file? not if
+    "* (<moi> up) the argument must be a relative-path to a existing file" .s .l
+    "  but the following file is not exist : " .s ::relative-path .s .l
     end
   then
 
@@ -3792,20 +3822,20 @@ more,rule-set,basic-REPL
 ; define-function
 
 10 1024 mul
-: *loading-stack,size*
+: *module-stack,size*
 ; define-variable,with-tos
 
-3 *jo-size* mul
-: *loading-stack,unit*
+5 *jo-size* mul
+: *module-stack,unit*
 ; define-variable,with-tos
 
-*loading-stack,size*
-*loading-stack,unit* mul allocate-memory
-: *loading-stack*
+*module-stack,size*
+*module-stack,unit* mul allocate-memory
+: *module-stack*
 ; define-variable,with-tos
 
-*loading-stack*
-: *loading-stack,pointer*
+*module-stack*
+: *module-stack,pointer*
 ; define-variable,with-tos
 
 : <module-info> get-meta-string
@@ -3832,6 +3862,42 @@ more,rule-set,basic-REPL
   << name, module-info -- >>
   *jo-size* 2 mul add
   set
+  end
+; define-function
+
+: <module-info> get-name-record-begin
+  << module-info -- name >>
+  *jo-size* 3 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-name-record-begin
+  << name, module-info -- >>
+  *jo-size* 3 mul add
+  set
+  end
+; define-function
+
+: <module-info> get-name-record-end
+  << module-info -- name >>
+  *jo-size* 4 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-name-record-end
+  << name, module-info -- >>
+  *jo-size* 4 mul add
+  set
+  end
+; define-function
+
+: <module-stack> find
+  << name[index]
+     -- module-info, true
+     -- false >>
+
   end
 ; define-function
 
@@ -3893,6 +3959,281 @@ set
 <post-module> *rule-set*
 <post-module> *rule-set* *jo-size* sub
 set
+
+: <string> module-meta-begin?
+  << string[address, length] -- bool >>
+  dup 6 less-than? if
+    drop2
+    false
+    end
+  then
+  ":" string-head,byte
+  <string> full-of-the-same-byte?
+  end
+; define-function
+
+: <string> module-meta-end?
+  << string[address, length] -- bool >>
+  dup 6 less-than? if
+    drop2
+    false
+    end
+  then
+  "=" string-head,byte
+  <string> full-of-the-same-byte?
+  end
+; define-function
+
+: <module-buffer> good-format?
+  << module-buffer[address, length] -- bool >>
+
+  end
+; define-function
+
+: <module-buffer> get-code-string
+  << module-buffer[address, length] -- meta-string[address, length] >>
+  dup2 string-head,word
+  <string> module-meta-end? if
+    string-tail,word
+    end
+  then
+  string-tail,word
+  loop
+; define-function
+
+: <module-buffer> get-meta-string,loop
+  << module-buffer[address, length] -- cursor >>
+  dup2 string-head,word
+  <string> module-meta-end? if
+    drop
+    end
+  then
+  string-tail,word
+  loop
+; define-function
+
+: <module-buffer> get-meta-string
+  << module-buffer[address, length] -- meta-string[address, length] >>
+  string-tail,word
+  dup2 <module-buffer> get-meta-string,loop >:cursor
+  drop >:address
+  :address
+  :cursor :address sub
+  end
+; define-function
+
+: <module-naming-stack> record-jo
+  << jo, name -- >>
+  dup name,get-jo
+  *module-naming-stack,pointer* name-record,set-old-jo
+  dup2 name,set-jo
+  *module-naming-stack,pointer* name-record,set-name
+  *module-naming-stack,pointer* name-record,set-new-jo
+  *module-naming-stack,unit* address *module-naming-stack,pointer* add-set
+  end
+; define-function
+
+: <module-naming-stack> delete-last-record
+  << -- >>
+  *module-naming-stack,unit*
+  address *module-naming-stack,pointer*
+  sub-set
+  *module-naming-stack,pointer* name-record,get-old-jo
+  *module-naming-stack,pointer* name-record,get-name
+  name,set-jo
+  end
+; define-function
+
+: <global-naming-stack> clear-naming
+  << name-record-begin, name-record-end -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  *global-naming-stack,unit* sub
+  dup >:name-record
+  :name-record <name-record> get-old-jo
+  :name-record <name-record> get-name
+  name,set-jo
+  loop
+; define-function
+
+: <module-naming-stack> clear-naming
+  << name-record-begin, name-record-end -- >>
+  dup2 equal? if
+    drop2
+    end
+  then
+  *module-naming-stack,unit* sub
+  dup >:name-record
+  :name-record <name-record> get-old-jo
+  :name-record <name-record> get-name
+  name,set-jo
+  loop
+; define-function
+
+: <global-naming-stack> prefix-naming
+  << name-record-begin, name-record-end, prefix[name-index] -- >>
+  >:prefix
+  >:end
+  >:begin
+  :end :begin equal? if
+    end
+  then
+
+  512 allocate-local-memory >:buffer
+  :prefix name->string " " :begin <name-record> get-name name->string
+  :buffer 3 n-string->buffer! >:length
+
+  :begin <name-record> get-new-jo
+  :buffer :length string->name
+  <module-naming-stack> record-jo
+
+  :begin *global-naming-stack,unit* add
+  :end
+  :prefix
+  loop
+; define-function
+
+: <module-naming-stack> expose-naming
+  << name-record-begin, name-record-end -- >>
+  >:end
+  >:begin
+  :end :begin equal? if
+    end
+  then
+
+  :begin <name-record> get-new-jo
+  :begin <name-record> get-name
+  name->string
+  string-tail,word string-tail,byte
+  string->name
+  <global-naming-stack> record-jo
+
+  :begin *module-naming-stack,unit* add
+  :end
+  loop
+; define-function
+
+: name->module-prefix
+  << name[index] -- module-prefix[index] >>
+  >:name
+
+  512 allocate-local-memory >:buffer
+
+  "|" :name name->string "|"
+  :buffer
+  3 n-string->buffer! >:length
+
+  :buffer
+  :length
+  string->name
+  end
+; define-function
+
+: import
+  << module-name-string[address, length] -- >>
+  >::module-name-string
+  ::module-name-string string->name >:module-name-index
+  :module-name-index name->module-prefix >:module-prefix
+
+  <<
+  檢查加載與否
+  :module-name-index <module-stack> find if
+    end
+  else
+  then
+  >>
+
+  <<
+  檢查循環引用
+  :module-name-index <importing-stack> find if
+    end
+  else
+  then
+  >>
+
+  ::module-name-string <moi> find if
+  else
+    "* (import) can not find module : " .s ::module-name-string .s .l
+    end
+  then
+  >::module-path
+
+  64 1024 mul allocate-local-memory >:buffer
+
+  :buffer
+  64 1024 mul
+  ::module-path
+  <file> read >:length
+
+  :buffer :length <module-buffer> get-meta-string >::meta-string
+  :buffer :length <module-buffer> get-code-string >::code-string
+
+  <<
+  入 引入棧
+  >>
+
+  <<
+  遞歸調用發生在 處理 語法關鍵詞 import 時
+  那時需要做兩件事
+  一是 引入
+  二是 化名
+  >>
+
+  <<
+  <pre-module> *rule-set* push-syntax-stack
+    ::meta-string eval-string
+  drop-syntax-stack
+  >>
+
+  *global-naming-stack,pointer* >:global-name-record-begin
+  <basic-REPL> *rule-set* push-syntax-stack
+    ::code-string eval-string
+  drop-syntax-stack
+  *global-naming-stack,pointer* >:global-name-record-end
+
+  <<
+  <post-module> *rule-set* push-syntax-stack
+    ::meta-string eval-string
+  drop-syntax-stack
+  >>
+
+  <<
+  出 引入棧
+  >>
+
+  *module-naming-stack,pointer* >:module-name-record-begin
+  :global-name-record-begin
+  :global-name-record-end
+  :module-prefix
+  <global-naming-stack> prefix-naming
+  *module-naming-stack,pointer* >:module-name-record-end
+
+  :global-name-record-begin
+  :global-name-record-end
+  <global-naming-stack> clear-naming
+
+  *module-stack,pointer* >:module-info
+  *module-stack,unit* address *module-stack,pointer* add-set
+
+  :module-name-record-begin
+  :module-info
+  <module-info> set-name-record-begin
+
+  :module-name-record-end
+  :module-info
+  <module-info> set-name-record-end
+
+  ::meta-string
+  :module-info
+  <module-info> set-meta-string
+
+  :module-name-index
+  :module-info
+  <module-info> set-name
+  end
+; define-function
 
 60 1024 mul
 : *undo-stack,size*
@@ -4089,48 +4430,26 @@ set
   end
 ; define-function
 
-: <undo-point> restore-global-naming-stack,set-jo
-  << old-record, current-record -- >>
-  dup2 equal? if
-    drop2
-    end
-  then
-  *global-naming-stack,unit* sub
-  dup >:name-record
-  :name-record name-record,get-old-jo
-  :name-record name-record,get-name
-  name,set-jo
-  loop
-; define-function
-
 : <undo-point> restore-global-naming-stack
   << undo-point -- >>
   <undo-point> get-global-naming-stack >:old-record
-  :old-record *global-naming-stack,pointer*
-  <undo-point> restore-global-naming-stack,set-jo
+
+  :old-record
+  *global-naming-stack,pointer*
+  <global-naming-stack> clear-naming
+
   :old-record address *global-naming-stack,pointer* set
   end
-; define-function
-
-: <undo-point> restore-module-naming-stack,set-jo
-  << old-record, current-record -- >>
-  dup2 equal? if
-    drop2
-    end
-  then
-  *module-naming-stack,unit* sub
-  dup >:name-record
-  :name-record name-record,get-old-jo
-  :name-record name-record,get-name
-  name,set-jo
-  loop
 ; define-function
 
 : <undo-point> restore-module-naming-stack
   << undo-point -- >>
   <undo-point> get-module-naming-stack >:old-record
-  :old-record *module-naming-stack,pointer*
-  <undo-point> restore-module-naming-stack,set-jo
+
+  :old-record
+  *module-naming-stack,pointer*
+  <module-naming-stack> clear-naming
+
   :old-record address *module-naming-stack,pointer* set
   end
 ; define-function
@@ -4297,11 +4616,11 @@ set
   >:cursor
   >:counter
   >:jo-predicate
-  :cursor name-record,get-new-jo
+  :cursor <name-record> get-new-jo
   :jo-predicate apply if
     "  " .s
     :counter .i ". " .s :counter add1 >:counter
-    :cursor name-record,get-name name->string .s
+    :cursor <name-record> get-name name->string .s
     .l
   then
   :jo-predicate
@@ -4360,7 +4679,7 @@ set
   << -- random-number >>
   0 :syscall-number,times:
   1 syscall
-  9 mod
+  13 mod
   <<
    *hi,random-base*
    *hi,random-base* add1 13 mod
@@ -4379,6 +4698,8 @@ set
   dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
   dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
   dup 7 equal? if drop "  o.o" .s .l end then
+  dup 8 equal? if drop "  O.o" .s .l end then
+  dup 9 equal? if drop "  o.O" .s .l end then
                   drop "  lovely ^3^" .s .l end
 ; define-function
 

@@ -785,3 +785,8 @@
        然後處理 兩個命名棧
        這需要 根文件有關的操作 [知道文件的大小]
        還有 把字符串分離成 兩部分
+  - x ::
+       不能在 eval-string 之前入 *loading-stack*
+       因爲 <module-info> 包含某些信息
+       [即 name-record-begin 和 name-record-end]
+       而這些信息只有在 eval-string 才能知道

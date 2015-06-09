@@ -2,8 +2,10 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* module mechanism
+** <module-stack> find
+** <module-buffer> good-format?
 * todo
-** 基礎設施 之 模塊機制
 ** 基礎設施 之 測試框架
    * 讓所有的測試讀的內容讀起來都有趣味
 ** 基礎設施 之 返回值
@@ -1540,9 +1542,9 @@
      end
    ; define-function
    #+end_src
-** name,record-jo
+** global-naming-stack,record-jo
    #+begin_src cicada-nymph :tangle core.cn
-   : name,record-jo
+   : global-naming-stack,record-jo
      << jo, name -- >>
      dup name,get-jo
      *global-naming-stack,pointer* name-record,set-old-jo
@@ -1550,6 +1552,19 @@
      *global-naming-stack,pointer* name-record,set-name
      *global-naming-stack,pointer* name-record,set-new-jo
      *global-naming-stack,unit* address *global-naming-stack,pointer* add-set
+     end
+   ; define-function
+   #+end_src
+** global-naming-stack,delete-last-record
+   #+begin_src cicada-nymph :tangle core.cn
+   : global-naming-stack,delete-last-record
+     << -- >>
+     *global-naming-stack,unit*
+     address *global-naming-stack,pointer*
+     sub-set
+     *global-naming-stack,pointer* name-record,get-old-jo
+     *global-naming-stack,pointer* name-record,get-name
+     name,set-jo
      end
    ; define-function
    #+end_src
@@ -1592,20 +1607,7 @@
      >:link
      :link link->jo
      :link link->name-string string->name
-     name,record-jo
-     end
-   ; define-function
-   #+end_src
-** global-naming-stack,delete-last-record
-   #+begin_src cicada-nymph :tangle core.cn
-   : global-naming-stack,delete-last-record
-     << -- >>
-     *global-naming-stack,unit*
-     address *global-naming-stack,pointer*
-     sub-set
-     *global-naming-stack,pointer* name-record,get-old-jo
-     *global-naming-stack,pointer* name-record,get-name
-     name,set-jo
+     global-naming-stack,record-jo
      end
    ; define-function
    #+end_src
@@ -2686,7 +2688,7 @@
 
      :jo
      ::name string->name
-     name,record-jo
+     global-naming-stack,record-jo
 
      *jojo-area,current-free-address* >:old-address
 
@@ -2780,7 +2782,7 @@
 
      :jo
      ::name string->name
-     name,record-jo
+     global-naming-stack,record-jo
 
      1 :jo jo,set-length
 
@@ -2843,7 +2845,7 @@
 
      :jo
      ::name string->name
-     name,record-jo
+     global-naming-stack,record-jo
 
      *jojo-area,current-free-address* >:old-address
 
@@ -2879,7 +2881,7 @@
      >:jo
      :jo
      ::alias string->name
-     name,record-jo
+     global-naming-stack,record-jo
      end
    ; define-function
    #+end_src
@@ -3831,6 +3833,22 @@
    "<make-jojo-syntax> integer-string" "syntax,integer-string,make-jojo" alias
 
    "<basic-REPL-syntax> bye" "syntax,bye,basic-REPL" alias
+   #+end_src
+** <name-record>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<name-record> get-old-jo" "name-record,get-old-jo" alias
+   "<name-record> set-old-jo" "name-record,set-old-jo" alias
+
+   "<name-record> get-name" "name-record,get-name" alias
+   "<name-record> set-name" "name-record,set-name" alias
+
+   "<name-record> get-new-jo" "name-record,get-new-jo" alias
+   "<name-record> set-new-jo" "name-record,set-new-jo" alias
+   #+end_src
+** <global-naming-stack>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
+   "<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
    #+end_src
 * stack-REPL
 ** note
@@ -6234,6 +6252,32 @@
    << error >>
    path: +library+ hi.cn ;
    #+end_src
+* <string>
+** <string> full-of-the-same-byte?
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> full-of-the-same-byte?
+     << string[address, length], byte -- bool >>
+     >:byte
+     >::string
+     ::string dup zero? if
+       drop2
+       true
+       end
+     then
+     string-head,byte :byte equal? not if
+       false
+       end
+     then
+     ::string string-tail,byte
+     :byte
+     loop
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "aaa" "a" string-head,byte <string> full-of-the-same-byte?
+   "aba" "a" string-head,byte <string> full-of-the-same-byte?
+   #+end_src
 * ><>< module
 ** 記
 *** 元數據 之 語法
@@ -6390,9 +6434,9 @@
         end
       then
 
-      ::relative-path path,directory? not if
-        "* (<moi> add) the argument must be a relative-path to a existing directory" .s .l
-        "  but the following path is not to a directory : " .s ::relative-path .s .l
+      ::relative-path path,file? not if
+        "* (<moi> add) the argument must be a relative-path to a existing file" .s .l
+        "  but the following path is not to a file : " .s ::relative-path .s .l
         end
       then
 
@@ -6472,9 +6516,9 @@
         end
       then
 
-      ::relative-path path,directory? not if
-        "* (<moi> up) the argument must be a relative-path to a existing directory" .s .l
-        "  but the following directory is not exist : " .s ::relative-path .s .l
+      ::relative-path path,file? not if
+        "* (<moi> up) the argument must be a relative-path to a existing file" .s .l
+        "  but the following file is not exist : " .s ::relative-path .s .l
         end
       then
 
@@ -6587,32 +6631,34 @@
 
     <moi> help
     #+end_src
-** <loading-stack> & <module-info>
-*** *loading-stack*
+** <module-stack> & <module-info>
+*** *module-stack*
     #+begin_src cicada-nymph :tangle core.cn
     10 1024 mul
-    : *loading-stack,size*
+    : *module-stack,size*
     ; define-variable,with-tos
 
-    3 *jo-size* mul
-    : *loading-stack,unit*
+    5 *jo-size* mul
+    : *module-stack,unit*
     ; define-variable,with-tos
 
-    *loading-stack,size*
-    *loading-stack,unit* mul allocate-memory
-    : *loading-stack*
+    *module-stack,size*
+    *module-stack,unit* mul allocate-memory
+    : *module-stack*
     ; define-variable,with-tos
 
-    *loading-stack*
-    : *loading-stack,pointer*
+    *module-stack*
+    : *module-stack,pointer*
     ; define-variable,with-tos
     #+end_src
 *** note <module-info>
-    * *loading-stack* contain module-info
+    * *module-stack* contain module-info
     * structure
       | module-info | meta-string address |
       |             | meta-string length  |
       |             | name                |
+      |             | name-record-begin   |
+      |             | name-record-end     |
 *** <module-info> [get|set]-meta-string
     #+begin_src cicada-nymph :tangle core.cn
     : <module-info> get-meta-string
@@ -6644,17 +6690,49 @@
       end
     ; define-function
     #+end_src
-*** >< <loading-stack> find
-    #+begin_src cicada-nymph
-    : <loading-stack> find
-      << name
-         -- true
+*** <module-info> [get|set]-name-record-begin
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-info> get-name-record-begin
+      << module-info -- name >>
+      *jo-size* 3 mul add
+      get
+      end
+    ; define-function
+
+    : <module-info> set-name-record-begin
+      << name, module-info -- >>
+      *jo-size* 3 mul add
+      set
+      end
+    ; define-function
+    #+end_src
+*** <module-info> [get|set]-name-record-end
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-info> get-name-record-end
+      << module-info -- name >>
+      *jo-size* 4 mul add
+      get
+      end
+    ; define-function
+
+    : <module-info> set-name-record-end
+      << name, module-info -- >>
+      *jo-size* 4 mul add
+      set
+      end
+    ; define-function
+    #+end_src
+*** ><>< <module-stack> find
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-stack> find
+      << name[index]
+         -- module-info, true
          -- false >>
 
       end
     ; define-function
     #+end_src
-** <importing-stack> & <importing-record>
+** >< <importing-stack> & <importing-record>
 *** *importing-stack*
     #+begin_src cicada-nymph :tangle core.cn
     10 1024 mul
@@ -6695,13 +6773,13 @@
     #+begin_src cicada-nymph
     : <importing-stack> find
       << name
-         -- true
+         -- importing-record, true
          -- false >>
 
       end
     ; define-function
     #+end_src
-** <pre-module>
+** >< <pre-module>
 *** <pre-module> *rule-set*
     #+begin_src cicada-nymph :tangle core.cn
     : <pre-module> *rule-set,size*
@@ -6735,7 +6813,7 @@
       end
     ; define-function
     #+end_src
-** <post-module>
+** >< <post-module>
 *** <post-module> *rule-set*
     #+begin_src cicada-nymph :tangle core.cn
     : <post-module> *rule-set,size*
@@ -6754,9 +6832,111 @@
     set
     #+end_src
 *** >< <post-module-syntax>
-** >< <module-buffer>
-*** <module-buffer> get-meta-string
+** <module-buffer>
+*** <string> module-meta-begin?
+    #+begin_src cicada-nymph :tangle core.cn
+    : <string> module-meta-begin?
+      << string[address, length] -- bool >>
+      dup 6 less-than? if
+        drop2
+        false
+        end
+      then
+      ":" string-head,byte
+      <string> full-of-the-same-byte?
+      end
+    ; define-function
+    #+end_src
+*** <string> module-meta-end?
+    #+begin_src cicada-nymph :tangle core.cn
+    : <string> module-meta-end?
+      << string[address, length] -- bool >>
+      dup 6 less-than? if
+        drop2
+        false
+        end
+      then
+      "=" string-head,byte
+      <string> full-of-the-same-byte?
+      end
+    ; define-function
+    #+end_src
+*** test
+    #+begin_src cicada-nymph
+    "::::::" <string> module-meta-begin? . << 1 >>
+    "======" <string> module-meta-end? . << 1 >>
+
+    ":::::" <string> module-meta-begin? . << 0 >>
+    "=====" <string> module-meta-end? . << 0 >>
+
+    ":::><:::" <string> module-meta-begin? . << 0 >>
+    "===><===" <string> module-meta-end? . << 0 >>
+    #+end_src
+*** 記 謂詞
+    * 作用於 module-buffer 的函數
+      均假設 module-buffer 格式良好
+      在調用它們之前
+      應該利用有關謂詞保證其格式良好
+    * 謂詞是針對 module-buffer 的
+      [即 針對字符串的]
+      而不是針對文件的
+      否則就會重複閱讀文件
+*** ><>< <module-buffer> good-format?
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-buffer> good-format?
+      << module-buffer[address, length] -- bool >>
+
+      end
+    ; define-function
+    #+end_src
 *** <module-buffer> get-code-string
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-buffer> get-code-string
+      << module-buffer[address, length] -- meta-string[address, length] >>
+      dup2 string-head,word
+      <string> module-meta-end? if
+        string-tail,word
+        end
+      then
+      string-tail,word
+      loop
+    ; define-function
+    #+end_src
+*** <module-buffer> get-meta-string
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-buffer> get-meta-string,loop
+      << module-buffer[address, length] -- cursor >>
+      dup2 string-head,word
+      <string> module-meta-end? if
+        drop
+        end
+      then
+      string-tail,word
+      loop
+    ; define-function
+
+    : <module-buffer> get-meta-string
+      << module-buffer[address, length] -- meta-string[address, length] >>
+      string-tail,word
+      dup2 <module-buffer> get-meta-string,loop >:cursor
+      drop >:address
+      :address
+      :cursor :address sub
+      end
+    ; define-function
+    #+end_src
+*** test
+    #+begin_src cicada-nymph
+    "
+    :::::::::
+    import: combinator math
+    module: assembler
+    =========
+    hi
+    kkk took my baby away!
+    "
+    <module-buffer> get-code-string .s
+    #+end_src
 ** exception
 *** >< !fail-to-load
     #+begin_src cicada-nymph
@@ -6793,17 +6973,159 @@
      3. 返回
         入 加載棧
         解釋代碼
+** <global-naming-stack> & <module-naming-stack>
+*** ---------------------------------
+*** 記 接口
+    * 每個 模塊 都對應於 module-naming-stack 中的兩個 name-record
+      一個開始
+      一個結束
+      因此接口就要圍繞這對值來設計
+    * undo 中關於 global-naming-stack 和 module-naming-stack 的部分
+      可以利用這裏的接口
+    * (clear-naming)
+      name-record-begin <-- name-record-end
+      (prefix-naming)
+      name-record-begin --> name-record-end
+      (expose-naming)
+      name-record-begin --> name-record-end
+*** ---------------------------------
+*** <module-naming-stack> record-jo
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-naming-stack> record-jo
+      << jo, name -- >>
+      dup name,get-jo
+      *module-naming-stack,pointer* name-record,set-old-jo
+      dup2 name,set-jo
+      *module-naming-stack,pointer* name-record,set-name
+      *module-naming-stack,pointer* name-record,set-new-jo
+      *module-naming-stack,unit* address *module-naming-stack,pointer* add-set
+      end
+    ; define-function
+    #+end_src
+*** <module-naming-stack> delete-last-record
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-naming-stack> delete-last-record
+      << -- >>
+      *module-naming-stack,unit*
+      address *module-naming-stack,pointer*
+      sub-set
+      *module-naming-stack,pointer* name-record,get-old-jo
+      *module-naming-stack,pointer* name-record,get-name
+      name,set-jo
+      end
+    ; define-function
+    #+end_src
+*** ---------------------------------
+*** <global-naming-stack> clear-naming
+    #+begin_src cicada-nymph :tangle core.cn
+    : <global-naming-stack> clear-naming
+      << name-record-begin, name-record-end -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      *global-naming-stack,unit* sub
+      dup >:name-record
+      :name-record <name-record> get-old-jo
+      :name-record <name-record> get-name
+      name,set-jo
+      loop
+    ; define-function
+    #+end_src
+*** <module-naming-stack> clear-naming
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-naming-stack> clear-naming
+      << name-record-begin, name-record-end -- >>
+      dup2 equal? if
+        drop2
+        end
+      then
+      *module-naming-stack,unit* sub
+      dup >:name-record
+      :name-record <name-record> get-old-jo
+      :name-record <name-record> get-name
+      name,set-jo
+      loop
+    ; define-function
+    #+end_src
+*** ---------------------------------
+*** <global-naming-stack> prefix-naming
+    #+begin_src cicada-nymph :tangle core.cn
+    : <global-naming-stack> prefix-naming
+      << name-record-begin, name-record-end, prefix[name-index] -- >>
+      >:prefix
+      >:end
+      >:begin
+      :end :begin equal? if
+        end
+      then
+
+      512 allocate-local-memory >:buffer
+      :prefix name->string " " :begin <name-record> get-name name->string
+      :buffer 3 n-string->buffer! >:length
+
+      :begin <name-record> get-new-jo
+      :buffer :length string->name
+      <module-naming-stack> record-jo
+
+      :begin *global-naming-stack,unit* add
+      :end
+      :prefix
+      loop
+    ; define-function
+    #+end_src
+*** <module-naming-stack> expose-naming
+    #+begin_src cicada-nymph :tangle core.cn
+    : <module-naming-stack> expose-naming
+      << name-record-begin, name-record-end -- >>
+      >:end
+      >:begin
+      :end :begin equal? if
+        end
+      then
+
+      :begin <name-record> get-new-jo
+      :begin <name-record> get-name
+      name->string
+      string-tail,word string-tail,byte
+      string->name
+      <global-naming-stack> record-jo
+
+      :begin *module-naming-stack,unit* add
+      :end
+      loop
+    ; define-function
+    #+end_src
+*** ---------------------------------
+** name->module-prefix
+   #+begin_src cicada-nymph :tangle core.cn
+   : name->module-prefix
+     << name[index] -- module-prefix[index] >>
+     >:name
+
+     512 allocate-local-memory >:buffer
+
+     "|" :name name->string "|"
+     :buffer
+     3 n-string->buffer! >:length
+
+     :buffer
+     :length
+     string->name
+     end
+   ; define-function
+   #+end_src
 ** ><>< import
-   #+begin_src cicada-nymph
+   #+begin_src cicada-nymph :tangle core.cn
    : import
      << module-name-string[address, length] -- >>
      >::module-name-string
-
      ::module-name-string string->name >:module-name-index
+     :module-name-index name->module-prefix >:module-prefix
 
      <<
      檢查加載與否
-     :module-name-index <loading-stack> find if
+     :module-name-index <module-stack> find if
        end
      else
      then
@@ -6826,17 +7148,13 @@
 
      64 1024 mul allocate-local-memory >:buffer
 
-     :buffer 64 1024 mul
+     :buffer
+     64 1024 mul
      ::module-path
-     <file> read >:counter
+     <file> read >:length
 
-     :buffer :counter
-     <module-buffer> get-meta-string >::meta-string
-
-     :buffer :counter
-     <module-buffer> get-code-string >::code-string
-
-     記錄 global-naming-stack 所在位置
+     :buffer :length <module-buffer> get-meta-string >::meta-string
+     :buffer :length <module-buffer> get-code-string >::code-string
 
      <<
      入 引入棧
@@ -6855,13 +7173,11 @@
      drop-syntax-stack
      >>
 
-     <<
-     入 加載棧
-     >>
-
+     *global-naming-stack,pointer* >:global-name-record-begin
      <basic-REPL> *rule-set* push-syntax-stack
        ::code-string eval-string
      drop-syntax-stack
+     *global-naming-stack,pointer* >:global-name-record-end
 
      <<
      <post-module> *rule-set* push-syntax-stack
@@ -6873,12 +7189,60 @@
      出 引入棧
      >>
 
-     移 global-naming-stack 入 module-naming-stack
+     *module-naming-stack,pointer* >:module-name-record-begin
+     :global-name-record-begin
+     :global-name-record-end
+     :module-prefix
+     <global-naming-stack> prefix-naming
+     *module-naming-stack,pointer* >:module-name-record-end
 
-     清理 global-naming-stack
+     :global-name-record-begin
+     :global-name-record-end
+     <global-naming-stack> clear-naming
 
+     *module-stack,pointer* >:module-info
+     *module-stack,unit* address *module-stack,pointer* add-set
+
+     :module-name-record-begin
+     :module-info
+     <module-info> set-name-record-begin
+
+     :module-name-record-end
+     :module-info
+     <module-info> set-name-record-end
+
+     ::meta-string
+     :module-info
+     <module-info> set-meta-string
+
+     :module-name-index
+     :module-info
+     <module-info> set-name
      end
    ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   << in system shell
+   cn moi add hihi play/hi.cn
+   >>
+   "hihi" import
+
+   hihi << undefined >>
+
+   : *test-module-info*
+     *module-stack,pointer*
+     *module-stack,unit* sub
+   ; define-variable
+
+   *test-module-info* <module-info> get-meta-string .s .l
+   *test-module-info* <module-info> get-name name->string .s .l
+
+   *test-module-info* <module-info> get-name-record-begin
+   *test-module-info* <module-info> get-name-record-end
+   <module-naming-stack> expose-naming
+
+   hihi
    #+end_src
 ** >< load
    #+begin_src cicada-nymph
@@ -7162,47 +7526,18 @@
       end
     ; define-function
     #+end_src
-*** <undo-point> restore-global-naming-stack,set-jo
-    #+begin_src cicada-nymph :tangle core.cn
-    : <undo-point> restore-global-naming-stack,set-jo
-      << old-record, current-record -- >>
-      dup2 equal? if
-        drop2
-        end
-      then
-      *global-naming-stack,unit* sub
-      dup >:name-record
-      :name-record name-record,get-old-jo
-      :name-record name-record,get-name
-      name,set-jo
-      loop
-    ; define-function
-    #+end_src
 *** <undo-point> restore-global-naming-stack
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> restore-global-naming-stack
       << undo-point -- >>
       <undo-point> get-global-naming-stack >:old-record
-      :old-record *global-naming-stack,pointer*
-      <undo-point> restore-global-naming-stack,set-jo
+
+      :old-record
+      *global-naming-stack,pointer*
+      <global-naming-stack> clear-naming
+
       :old-record address *global-naming-stack,pointer* set
       end
-    ; define-function
-    #+end_src
-*** <undo-point> restore-module-naming-stack,set-jo
-    #+begin_src cicada-nymph :tangle core.cn
-    : <undo-point> restore-module-naming-stack,set-jo
-      << old-record, current-record -- >>
-      dup2 equal? if
-        drop2
-        end
-      then
-      *module-naming-stack,unit* sub
-      dup >:name-record
-      :name-record name-record,get-old-jo
-      :name-record name-record,get-name
-      name,set-jo
-      loop
     ; define-function
     #+end_src
 *** <undo-point> restore-module-naming-stack
@@ -7210,8 +7545,11 @@
     : <undo-point> restore-module-naming-stack
       << undo-point -- >>
       <undo-point> get-module-naming-stack >:old-record
-      :old-record *module-naming-stack,pointer*
-      <undo-point> restore-module-naming-stack,set-jo
+
+      :old-record
+      *module-naming-stack,pointer*
+      <module-naming-stack> clear-naming
+
       :old-record address *module-naming-stack,pointer* set
       end
     ; define-function
@@ -7592,11 +7930,11 @@
      >:cursor
      >:counter
      >:jo-predicate
-     :cursor name-record,get-new-jo
+     :cursor <name-record> get-new-jo
      :jo-predicate apply if
        "  " .s
        :counter .i ". " .s :counter add1 >:counter
-       :cursor name-record,get-name name->string .s
+       :cursor <name-record> get-name name->string .s
        .l
      then
      :jo-predicate
@@ -7666,7 +8004,7 @@
      << -- random-number >>
      0 :syscall-number,times:
      1 syscall
-     9 mod
+     13 mod
      <<
       *hi,random-base*
       *hi,random-base* add1 13 mod
@@ -7685,6 +8023,8 @@
      dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
      dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
      dup 7 equal? if drop "  o.o" .s .l end then
+     dup 8 equal? if drop "  O.o" .s .l end then
+     dup 9 equal? if drop "  o.O" .s .l end then
                      drop "  lovely ^3^" .s .l end
    ; define-function
 

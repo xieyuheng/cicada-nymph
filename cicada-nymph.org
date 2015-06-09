@@ -3912,6 +3912,7 @@
    }
    #+end_src
 ** char-string?
+   * string of one char
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "char-string?", char_string?
       ;; << string[address, length], char -- bool >>
