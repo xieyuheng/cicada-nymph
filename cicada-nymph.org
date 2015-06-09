@@ -3,7 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** implement comment by syntax extension
 ** refine exception-jo [make good use of local-jo]
 ** add length field into jo in assembly code :maybe:
 ** optimize local-variable by new instruction :maybe:
@@ -91,13 +90,6 @@
 ** div                                :bug:
    * div can not handle the following
      -8 2 div .
-** inline comment                     :bug:
-   * inline comment such as
-     add1 << dup . >> swap
-     will be viewed as
-     add1swap
-** comment in string                  :bug:
-   * << >> can not be in ""
 ** stack                              :limit:
    * there are 64 positions below the all those stacks
      when you are belowing-stack so much
@@ -4534,17 +4526,6 @@
 ** colon & semicolon
    * nested : ; is NOT allow
      and no error check for it
-   * nested << >> must be handled
-   * comment are handled by : ;
-     comment inside : ; are not readed
-   * note that
-     there might be a ; in << >>
-     when this happens
-     the ; must NOT be readed
-   * note that
-     a bar-ket is readed as a word
-     double-quote is special bar-ket
-     but "<" & ">" are not viewed as bar-ket
    #+begin_src fasm :tangle cicada-nymph.fasm
    buffer$colon labeling
       preserve 1024 * 1024
@@ -4555,12 +4536,11 @@
    length$colon:
       xx 0
 
-
    define_function ":", colon
       ;; << -- string[address of buffer$colon, length] >>
       xx literal, buffer$colon
       xx literal, cursor$colon, set
-      xx help__loop__colon
+      xx colon__loop
       ;; address
       xx literal, buffer$colon
       ;; length
@@ -4570,26 +4550,18 @@
       xx dup, literal, length$colon, set
       xx end
 
-
-   define_function "", help__loop__colon
+   define_function "colon,loop", colon__loop
       ;; << -- >>
       xx read_byte
-      xx help__set_byte__colon
-      xx help__meet_end__colon?, false?branch, 7
+      xx colon__set_byte
+      xx colon__meet_end?, false?branch, 7
       xx   literal, 3 ;; for the string " ; "
       xx   literal, cursor$colon
       xx   sub_set
       xx   end
-      xx help__meet_comment__colon?, false?branch, 9
-      xx   literal, 4 ;; for the string " << "
-      xx   literal, cursor$colon
-      xx   sub_set
-      xx   ignore_comment
-      xx   tail_call, help__loop__colon
-      xx tail_call, help__loop__colon
+      xx tail_call, colon__loop
 
-
-   define_function "", help__set_byte__colon
+   define_function "colon,set-byte", colon__set_byte
       ;; << byte -- >>
       xx literal, cursor$colon, get
       xx set_byte
@@ -4598,8 +4570,7 @@
       xx add_set
       xx end
 
-
-   define_function "", help__meet_end__colon?
+   define_function "colon,meet-end?", colon__meet_end?
       ;; << -- bool >>
       xx literal, cursor$colon, get
       xx literal, 3, subtraction
@@ -4610,35 +4581,6 @@
       xx literal, cursor$colon, get
       xx literal, 2, subtraction
       xx get_byte, literal, ';', equal?
-      xx false?, false?branch, 3
-      xx   false
-      xx   end
-      xx literal, cursor$colon, get
-      xx literal, 1, subtraction
-      xx get_byte, space_char?
-      xx false?, false?branch, 3
-      xx   false
-      xx   end
-      xx true
-      xx end
-
-   define_function "", help__meet_comment__colon?
-      ;; << -- bool >>
-      xx literal, cursor$colon, get
-      xx literal, 4, subtraction
-      xx get_byte, space_char?
-      xx false?, false?branch, 3
-      xx   false
-      xx   end
-      xx literal, cursor$colon, get
-      xx literal, 3, subtraction
-      xx get_byte, literal, '<', equal?
-      xx false?, false?branch, 3
-      xx   false
-      xx   end
-      xx literal, cursor$colon, get
-      xx literal, 2, subtraction
-      xx get_byte, literal, '<', equal?
       xx false?, false?branch, 3
       xx   false
       xx   end
@@ -4971,50 +4913,6 @@
      and do side-effect to store data into memory
      and return a shorter string
      [this can be viewed as moving a cursor forward]
-** memory allocation
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$rule_set__make_jojo = 1024 * jo_size
-
-   cursor$rule_set__make_jojo:
-      xx address$rule_set__make_jojo
-   address$rule_set__make_jojo:
-      times size$rule_set__make_jojo db 0
-   #+end_src
-** *rule-set,make-jojo*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
-      xx address$rule_set__make_jojo
-   #+end_src
-** init,rule-set,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
-      ;; << -- >>
-      xx literal, integer_string?
-      xx literal, syntax__integer_string__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx literal, word_is_address?
-      xx literal, syntax__address__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx literal, word_is_jo?
-      xx literal, syntax__jo__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx literal, word_is_double_quote?
-      xx literal, syntax__double_quote__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx literal, local_variable_set_string?
-      xx literal, syntax__local_variable_set__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx literal, local_variable_get_string?
-      xx literal, syntax__local_variable_get__make_jojo
-      xx V__rule_set__make_jojo, add_rule
-
-      xx end
-   #+end_src
 ** ----------------------------------
 ** syntax,integer-string,make-jojo
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -5148,6 +5046,78 @@
       db "* (syntax,double-quote,make-jojo) can not find the ending double-quote"
    .end:
    length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
+   #+end_src
+** ----------------------------------
+** note
+   * comment can not cross ";"
+** syntax,comment,make-jojo
+   * nested << >> must be handled
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
+      ;; << string[address, length], word --
+      ;;    string[address, length] >>
+      xx drop2
+      xx dup2, space_string?, false?branch, 2
+      xx   end
+      xx dup2
+      xx string_tail__word, xxswapxx
+      xx string_head__word
+      xx dup2, comment_end_string?, false?branch, 3
+      xx   drop2
+      xx   end
+      xx dup2, comment_begin_string?, false?branch, 3
+      xx   syntax__comment__make_jojo
+      xx   end
+      xx tail_call, syntax__comment__make_jojo
+   #+end_src
+** ----------------------------------
+** memory allocation
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$rule_set__make_jojo = 1024 * jo_size
+
+   cursor$rule_set__make_jojo:
+      xx address$rule_set__make_jojo
+   address$rule_set__make_jojo:
+      times size$rule_set__make_jojo db 0
+   #+end_src
+** *rule-set,make-jojo*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
+      xx address$rule_set__make_jojo
+   #+end_src
+** init,rule-set,make-jojo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
+      ;; << -- >>
+      xx literal, integer_string?
+      xx literal, syntax__integer_string__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_address?
+      xx literal, syntax__address__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_jo?
+      xx literal, syntax__jo__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, word_is_double_quote?
+      xx literal, syntax__double_quote__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, local_variable_set_string?
+      xx literal, syntax__local_variable_set__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, local_variable_get_string?
+      xx literal, syntax__local_variable_get__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx literal, comment_begin_string?
+      xx literal, syntax__comment__make_jojo
+      xx V__rule_set__make_jojo, add_rule
+
+      xx end
    #+end_src
 ** ----------------------------------
 * make-jojo
