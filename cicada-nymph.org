@@ -1729,7 +1729,7 @@
       ;;;; read_word & write_string
       ;; xx read_word, write_string
       ;; xx literal, 10, write_byte
-      ;; xx read_word_for_REPL, write_string
+      ;; xx read_word, write_string
       ;; xx literal, 10, write_byte
       ;; xx zero
       ;; xx exit_with_TOS
@@ -4245,9 +4245,6 @@
 
    buffer$read_word labeling
       preserve max_word_length
-
-   buffer$read_word_for_REPL labeling
-      preserve max_word_length
    #+end_src
 ** read-word-begin-char
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4317,13 +4314,6 @@
    define_function "read-word", read_word
       ;; << -- word[address of buffer$read_word, length] >>
       xx literal, buffer$read_word, read_word_to_buffer
-      xx end
-   #+end_src
-** read-word-for-REPL
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "read-word-for-REPL", read_word_for_REPL
-      ;; << -- word[address of buffer$read_word_for_REPL, length] >>
-      xx literal, buffer$read_word_for_REPL, read_word_to_buffer
       xx end
    #+end_src
 * link
@@ -4455,7 +4445,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "basic-REPL", basic_REPL
       ;; << unknown -- unknown >>
-      xx read_word_for_REPL
+      xx read_word
       xx eval_word
       xx tail_call, basic_REPL
    #+end_src
@@ -4600,7 +4590,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "<<", ignore_comment
       ;; << -- >>
-      xx read_word_for_REPL
+      xx read_word
       xx dup2, comment_begin_string?, false?branch, 5
       xx   drop2
       xx     ignore_comment ;; for the new nested-comment

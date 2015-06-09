@@ -3,10 +3,13 @@
 #+EMAIL:  xyheme@gmail.com
 
 * module mechanism
-** >< about <importing-stack>
-** >< syntax
+** about <importing-stack>
+** ><>< syntax
 ** >< exception
 * todo
+** 語法擴展機制的接口需要改進
+   * 目前如果 謂詞是匿名函數的話 sub-rule 就沒法用了
+     因爲 add-rule 時的匿名函數是不同的
 ** 基礎設施 之 測試框架
    * 讓所有的測試讀的內容讀起來都有趣味
 ** 基礎設施 之 返回值
@@ -1680,7 +1683,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : basic-REPL,loop
      << unknown -- unknown >>
-     read-word-for-REPL
+     read-word
      eval-word
      loop
    ; define-function
@@ -3485,7 +3488,7 @@
     : <basic-REPL-syntax> jo
       << word:jo -- jo >>
       drop2
-      read-word-for-REPL
+      read-word
       >::word
 
       ::word <word>? if
@@ -3493,7 +3496,7 @@
         ::word dup >:length
         :buffer string->buffer!
         1024 allocate-local-memory >:new-buffer
-        :buffer :length " " read-word-for-REPL
+        :buffer :length " " read-word
         :new-buffer
         3 n-string->buffer! >:new-length
         :new-buffer :new-length >::word
@@ -3540,7 +3543,7 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <basic-REPL-syntax> if,meet-true,else
       << -- >>
-      read-word-for-REPL
+      read-word
       "then" string-equal? if
         end
       then
@@ -3549,7 +3552,7 @@
 
     : <basic-REPL-syntax> if,meet-true
       << -- >>
-      read-word-for-REPL
+      read-word
       dup2 "then" string-equal? if
         drop2
         end
@@ -3567,7 +3570,7 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <basic-REPL-syntax> if,meet-false,else
       << -- >>
-      read-word-for-REPL
+      read-word
       dup2 "then" string-equal? if
         drop2
         end
@@ -3578,7 +3581,7 @@
 
     : <basic-REPL-syntax> if,meet-false
       << -- >>
-      read-word-for-REPL
+      read-word
       dup2 "then" string-equal? if
         drop2
         end
@@ -3720,14 +3723,14 @@
     : <basic-REPL-syntax> address
       << word:address -- address >>
       drop2
-      read-word-for-REPL
+      read-word
       >::word
       ::word <word>? if
         512 allocate-local-memory >:buffer
         ::word dup >:length
         :buffer string->buffer!
         1024 allocate-local-memory >:new-buffer
-        :buffer :length " " read-word-for-REPL
+        :buffer :length " " read-word
         :new-buffer
         3 n-string->buffer! >:new-length
         :new-buffer :new-length >::word
@@ -3780,14 +3783,14 @@
     : <basic-REPL-syntax> name
       << word:name -- name >>
       drop2
-      read-word-for-REPL
+      read-word
       >::word
       ::word <word>? if
         512 allocate-local-memory >:buffer
         ::word dup >:length
         :buffer string->buffer!
         1024 allocate-local-memory >:new-buffer
-        :buffer :length " " read-word-for-REPL
+        :buffer :length " " read-word
         :new-buffer
         3 n-string->buffer! >:new-length
         :new-buffer :new-length >::word
@@ -3831,7 +3834,7 @@
       ::title :buffer string->buffer!
       :buffer ::title swap drop >::title
 
-      read-word-for-REPL >::name
+      read-word >::name
       ::title ::name
       name-hash-table,find-jo,with-title if
         apply
@@ -3985,7 +3988,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : stack-REPL,loop
      << unknown -- unknown >>
-     read-word-for-REPL
+     read-word
      eval-word
      print-argument-stack,pretty
      loop
@@ -4025,7 +4028,7 @@
      tos-reading-stack space-string? if
        end
      then
-     read-word-for-REPL
+     read-word
      eval-word
      loop
    ; define-function
@@ -6195,7 +6198,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : bad-path-syntax-word,loop
      << -- >>
-     read-word-for-REPL
+     read-word
      dup2 ";" string-equal? if
        .s 32 .b
        end
@@ -6252,7 +6255,7 @@
    : <basic-REPL-syntax> path,loop
      << cursor -- cursor >>
      >:cursor
-     read-word-for-REPL >::word
+     read-word >::word
 
      ";" ::word string-equal? if
        :cursor
@@ -6953,59 +6956,107 @@
       end
     ; define-function
     #+end_src
-** >< <pre-module>
-*** <pre-module> *rule-set*
+*** <importing-record> drop
     #+begin_src cicada-nymph :tangle core.cn
-    : <pre-module> *rule-set,size*
-      1024 *jo-size* mul
-    ; define-variable
-
-    << for cursor >>
-    *jo-size* allocate-memory drop
-
-    : <pre-module> *rule-set*
-      <pre-module> *rule-set,size* allocate-memory
-    ; define-variable
-
-    <pre-module> *rule-set*
-    <pre-module> *rule-set* *jo-size* sub
-    set
+    : <importing-record> drop
+      << -- >>
+      *importing-stack,unit* address *importing-stack,pointer* sub-set
+      end
+    ; define-function
     #+end_src
-*** >< <pre-module-syntax> import
-    #+begin_src cicada-nymph
+** module-meta-word?
+   #+begin_src cicada-nymph :tangle core.cn
+   : module-meta-word?
+     << string[address, length] -- bool >>
+     dup 1 less-or-equal? if
+       drop2
+       false
+       end
+     then
+     >:length
+     >:address
+     :address :length add get-byte >:last-byte
+     :address :length add sub1 get-byte >:the-byte-before-last-byte
+     :last-byte
+     ":" string-head,byte equal? not if
+       false
+       end
+     then
+     :the-byte-before-last-byte
+     ":" string-head,byte equal? if
+       false
+       end
+     then
+     true
+     end
+   ; define-function
+   #+end_src
+** <pre-module>
+*** meta-word:import?
+    #+begin_src cicada-nymph :tangle core.cn
+    : meta-word:import?
+      << word[address, length] -- bool >>
+      "import:" <string> equal?
+      end
+    ; define-function
+    #+end_src
+*** ><>< <pre-module-syntax> import
+    #+begin_src cicada-nymph :tangle core.cn
     : <pre-module-syntax> import
       << -- >>
 
       end
     ; define-function
     #+end_src
-*** >< <pre-module-syntax> other
-    #+begin_src cicada-nymph
-    : <pre-module-syntax> other
-      << -- >>
+*** ><>< <pre-module-syntax> unknow-meta-word
+    #+begin_src cicada-nymph :tangle core.cn
+    : <pre-module-syntax> unknow-meta-word
+      << meta-word -- >>
 
       end
     ; define-function
     #+end_src
-** >< <post-module>
-*** <post-module> *rule-set*
+*** <pre-module-syntax> begin
     #+begin_src cicada-nymph :tangle core.cn
-    : <post-module> *rule-set,size*
-      1024 *jo-size* mul
-    ; define-variable
+    : <pre-module-syntax> begin
+      << -- >>
+      jo meta-word:import?
+      jo <pre-module-syntax> import
+      <basic-REPL> *rule-set* add-rule
 
-    << for cursor >>
-    *jo-size* allocate-memory drop
-
-    : <post-module> *rule-set*
-      <post-module> *rule-set,size* allocate-memory
-    ; define-variable
-
-    <post-module> *rule-set*
-    <post-module> *rule-set* *jo-size* sub
-    set
+      jo module-meta-word?
+      jo <pre-module-syntax> unknow-meta-word
+      <basic-REPL> *rule-set* add-rule
+      end
+    ; define-function
     #+end_src
-*** >< <post-module-syntax>
+*** <pre-module-syntax> end
+    #+begin_src cicada-nymph :tangle core.cn
+    : <pre-module-syntax> end
+      << -- >>
+      jo meta-word:import?
+      jo <pre-module-syntax> import
+      <basic-REPL> *rule-set* sub-rule
+
+      jo module-meta-word?
+      jo <pre-module-syntax> unknow-meta-word
+      <basic-REPL> *rule-set* sub-rule
+      end
+    ; define-function
+    #+end_src
+** <post-module>
+*** meta-word:do?
+    #+begin_src cicada-nymph :tangle core.cn
+    : meta-word:do?
+      << word[address, length] -- bool >>
+      "do:" <string> equal?
+      end
+    ; define-function
+    #+end_src
+*** ><>< <post-module-syntax> do
+    #+begin_src cicada-nymph :tangle core.cn
+
+    #+end_src
 ** <module-buffer>
 *** <string> module-meta-begin?
     #+begin_src cicada-nymph :tangle core.cn
@@ -7322,6 +7373,10 @@
    ; define-function
    #+end_src
 ** ><>< import
+   * 遞歸調用發生在 處理 語法關鍵詞 import 時
+     那時需要做兩件事
+     一是 引入
+     二是 化名
    #+begin_src cicada-nymph :tangle core.cn
    : import
      << module-name-string[address, length] -- >>
@@ -7332,19 +7387,14 @@
      :module-name-index <module-stack> find if
        drop
        end
-     else
      then
 
-     <<
-     檢查循環引用
      :module-name-index <importing-stack> find if
+       "* (import) circular import of : " .s ::module-name-string .s .l
        end
-     else
      then
-     >>
 
-     ::module-name-string <moi> find if
-     else
+     ::module-name-string <moi> find not if
        "* (import) can not find module : " .s ::module-name-string .s .l
        end
      then
@@ -7357,8 +7407,7 @@
      ::module-path
      <file> read >:length
 
-     :buffer :length <module-buffer> good-format? if
-     else
+     :buffer :length <module-buffer> good-format? not if
        "* (import) fail to import module : " .s ::module-name-string .s .l
        "  for the file is not well formated cicada-nymph source code" .s .l
        end
@@ -7367,38 +7416,30 @@
      :buffer :length <module-buffer> get-meta-string >::meta-string
      :buffer :length <module-buffer> get-code-string >::code-string
 
-     <<
-     入 引入棧
-     >>
+     *importing-stack,pointer* >:importing-record
+     *importing-stack,unit* address *importing-stack,pointer* add-set
+
+     :module-name-index
+     :importing-record
+     <importing-record> set-name
 
      <<
-     遞歸調用發生在 處理 語法關鍵詞 import 時
-     那時需要做兩件事
-     一是 引入
-     二是 化名
-     >>
-
-     <<
-     <pre-module> *rule-set* push-syntax-stack
-       ::meta-string eval-string
-     drop-syntax-stack
+     <pre-module-syntax> begin
+     ::meta-string eval-string
+     <pre-module-syntax> end
      >>
 
      *global-naming-stack,pointer* >:global-name-record-begin
-     <basic-REPL> *rule-set* push-syntax-stack
-       ::code-string eval-string
-     drop-syntax-stack
+     ::code-string eval-string
      *global-naming-stack,pointer* >:global-name-record-end
 
      <<
-     <post-module> *rule-set* push-syntax-stack
-       ::meta-string eval-string
-     drop-syntax-stack
+     <post-module-syntax> begin
+     ::meta-string eval-string
+     <post-module-syntax> end
      >>
 
-     <<
-     出 引入棧
-     >>
+     <importing-record> drop
 
      *module-naming-stack,pointer* >:module-name-record-begin
      :global-name-record-begin

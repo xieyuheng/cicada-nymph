@@ -1087,7 +1087,7 @@ define_function "little_test", little_test
    ;;;; read_word & write_string
    ;; xx read_word, write_string
    ;; xx literal, 10, write_byte
-   ;; xx read_word_for_REPL, write_string
+   ;; xx read_word, write_string
    ;; xx literal, 10, write_byte
    ;; xx zero
    ;; xx exit_with_TOS
@@ -3091,9 +3091,6 @@ max_word_length = 512
 buffer$read_word labeling
    preserve max_word_length
 
-buffer$read_word_for_REPL labeling
-   preserve max_word_length
-
 define_function "read-word-begin-char", read_word_begin_char
    ;; << -- non-blank-char >>
    xx read_byte
@@ -3155,11 +3152,6 @@ length$read_word_to_buffer = (.end - error$read_word_to_buffer)
 define_function "read-word", read_word
    ;; << -- word[address of buffer$read_word, length] >>
    xx literal, buffer$read_word, read_word_to_buffer
-   xx end
-
-define_function "read-word-for-REPL", read_word_for_REPL
-   ;; << -- word[address of buffer$read_word_for_REPL, length] >>
-   xx literal, buffer$read_word_for_REPL, read_word_to_buffer
    xx end
 
 define_function "last-link?", last_link?
@@ -3251,7 +3243,7 @@ length$undefined_word_report__for_eval_word = (.end - string$undefined_word_repo
 
 define_function "basic-REPL", basic_REPL
    ;; << unknown -- unknown >>
-   xx read_word_for_REPL
+   xx read_word
    xx eval_word
    xx tail_call, basic_REPL
 
@@ -3356,7 +3348,7 @@ define_function "colon,meet-end?", colon__meet_end?
 
 define_function "<<", ignore_comment
    ;; << -- >>
-   xx read_word_for_REPL
+   xx read_word
    xx dup2, comment_begin_string?, false?branch, 5
    xx   drop2
    xx     ignore_comment ;; for the new nested-comment

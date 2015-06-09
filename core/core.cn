@@ -686,7 +686,7 @@ set
 
 : basic-REPL,loop
   << unknown -- unknown >>
-  read-word-for-REPL
+  read-word
   eval-word
   loop
 ; define-function
@@ -1658,7 +1658,7 @@ more,rule-set,make-jojo
 : <basic-REPL-syntax> jo
   << word:jo -- jo >>
   drop2
-  read-word-for-REPL
+  read-word
   >::word
 
   ::word <word>? if
@@ -1666,7 +1666,7 @@ more,rule-set,make-jojo
     ::word dup >:length
     :buffer string->buffer!
     1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word-for-REPL
+    :buffer :length " " read-word
     :new-buffer
     3 n-string->buffer! >:new-length
     :new-buffer :new-length >::word
@@ -1695,7 +1695,7 @@ more,rule-set,basic-REPL
 
 : <basic-REPL-syntax> if,meet-true,else
   << -- >>
-  read-word-for-REPL
+  read-word
   "then" string-equal? if
     end
   then
@@ -1704,7 +1704,7 @@ more,rule-set,basic-REPL
 
 : <basic-REPL-syntax> if,meet-true
   << -- >>
-  read-word-for-REPL
+  read-word
   dup2 "then" string-equal? if
     drop2
     end
@@ -1720,7 +1720,7 @@ more,rule-set,basic-REPL
 
 : <basic-REPL-syntax> if,meet-false,else
   << -- >>
-  read-word-for-REPL
+  read-word
   dup2 "then" string-equal? if
     drop2
     end
@@ -1731,7 +1731,7 @@ more,rule-set,basic-REPL
 
 : <basic-REPL-syntax> if,meet-false
   << -- >>
-  read-word-for-REPL
+  read-word
   dup2 "then" string-equal? if
     drop2
     end
@@ -1827,14 +1827,14 @@ jo word:double-quote? jo <basic-REPL-syntax> double-quote *rule-set,basic-REPL* 
 : <basic-REPL-syntax> address
   << word:address -- address >>
   drop2
-  read-word-for-REPL
+  read-word
   >::word
   ::word <word>? if
     512 allocate-local-memory >:buffer
     ::word dup >:length
     :buffer string->buffer!
     1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word-for-REPL
+    :buffer :length " " read-word
     :new-buffer
     3 n-string->buffer! >:new-length
     :new-buffer :new-length >::word
@@ -1871,14 +1871,14 @@ jo <basic-REPL-syntax> address
 : <basic-REPL-syntax> name
   << word:name -- name >>
   drop2
-  read-word-for-REPL
+  read-word
   >::word
   ::word <word>? if
     512 allocate-local-memory >:buffer
     ::word dup >:length
     :buffer string->buffer!
     1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word-for-REPL
+    :buffer :length " " read-word
     :new-buffer
     3 n-string->buffer! >:new-length
     :new-buffer :new-length >::word
@@ -1899,7 +1899,7 @@ jo <basic-REPL-syntax> name
   ::title :buffer string->buffer!
   :buffer ::title swap drop >::title
 
-  read-word-for-REPL >::name
+  read-word >::name
   ::title ::name
   name-hash-table,find-jo,with-title if
     apply
@@ -2003,7 +2003,7 @@ jo <basic-REPL-syntax> title
 
 : stack-REPL,loop
   << unknown -- unknown >>
-  read-word-for-REPL
+  read-word
   eval-word
   print-argument-stack,pretty
   loop
@@ -2026,7 +2026,7 @@ jo stack-REPL address *lost-exception-REPL* set
   tos-reading-stack space-string? if
     end
   then
-  read-word-for-REPL
+  read-word
   eval-word
   loop
 ; define-function
@@ -3497,7 +3497,7 @@ init-environment-variable-list
 
 : bad-path-syntax-word,loop
   << -- >>
-  read-word-for-REPL
+  read-word
   dup2 ";" string-equal? if
     .s 32 .b
     end
@@ -3550,7 +3550,7 @@ init-environment-variable-list
 : <basic-REPL-syntax> path,loop
   << cursor -- cursor >>
   >:cursor
-  read-word-for-REPL >::word
+  read-word >::word
 
   ";" ::word string-equal? if
     :cursor
@@ -4054,35 +4054,86 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <pre-module> *rule-set,size*
-  1024 *jo-size* mul
-; define-variable
+: <importing-record> drop
+  << -- >>
+  *importing-stack,unit* address *importing-stack,pointer* sub-set
+  end
+; define-function
 
-<< for cursor >>
-*jo-size* allocate-memory drop
+: module-meta-word?
+  << string[address, length] -- bool >>
+  dup 1 less-or-equal? if
+    drop2
+    false
+    end
+  then
+  >:length
+  >:address
+  :address :length add get-byte >:last-byte
+  :address :length add sub1 get-byte >:the-byte-before-last-byte
+  :last-byte
+  ":" string-head,byte equal? not if
+    false
+    end
+  then
+  :the-byte-before-last-byte
+  ":" string-head,byte equal? if
+    false
+    end
+  then
+  true
+  end
+; define-function
 
-: <pre-module> *rule-set*
-  <pre-module> *rule-set,size* allocate-memory
-; define-variable
+: meta-word:import?
+  << word[address, length] -- bool >>
+  "import:" <string> equal?
+  end
+; define-function
 
-<pre-module> *rule-set*
-<pre-module> *rule-set* *jo-size* sub
-set
+: <pre-module-syntax> import
+  << -- >>
 
-: <post-module> *rule-set,size*
-  1024 *jo-size* mul
-; define-variable
+  end
+; define-function
 
-<< for cursor >>
-*jo-size* allocate-memory drop
+: <pre-module-syntax> unknow-meta-word
+  << meta-word -- >>
 
-: <post-module> *rule-set*
-  <post-module> *rule-set,size* allocate-memory
-; define-variable
+  end
+; define-function
 
-<post-module> *rule-set*
-<post-module> *rule-set* *jo-size* sub
-set
+: <pre-module-syntax> begin
+  << -- >>
+  jo meta-word:import?
+  jo <pre-module-syntax> import
+  <basic-REPL> *rule-set* add-rule
+
+  jo module-meta-word?
+  jo <pre-module-syntax> unknow-meta-word
+  <basic-REPL> *rule-set* add-rule
+  end
+; define-function
+
+: <pre-module-syntax> end
+  << -- >>
+  jo meta-word:import?
+  jo <pre-module-syntax> import
+  <basic-REPL> *rule-set* sub-rule
+
+  jo module-meta-word?
+  jo <pre-module-syntax> unknow-meta-word
+  <basic-REPL> *rule-set* sub-rule
+  end
+; define-function
+
+: meta-word:do?
+  << word[address, length] -- bool >>
+  "do:" <string> equal?
+  end
+; define-function
+
+
 
 : <string> module-meta-begin?
   << string[address, length] -- bool >>
@@ -4275,19 +4326,14 @@ set
   :module-name-index <module-stack> find if
     drop
     end
-  else
   then
 
-  <<
-  檢查循環引用
   :module-name-index <importing-stack> find if
+    "* (import) circular import of : " .s ::module-name-string .s .l
     end
-  else
   then
-  >>
 
-  ::module-name-string <moi> find if
-  else
+  ::module-name-string <moi> find not if
     "* (import) can not find module : " .s ::module-name-string .s .l
     end
   then
@@ -4300,8 +4346,7 @@ set
   ::module-path
   <file> read >:length
 
-  :buffer :length <module-buffer> good-format? if
-  else
+  :buffer :length <module-buffer> good-format? not if
     "* (import) fail to import module : " .s ::module-name-string .s .l
     "  for the file is not well formated cicada-nymph source code" .s .l
     end
@@ -4310,38 +4355,30 @@ set
   :buffer :length <module-buffer> get-meta-string >::meta-string
   :buffer :length <module-buffer> get-code-string >::code-string
 
-  <<
-  入 引入棧
-  >>
+  *importing-stack,pointer* >:importing-record
+  *importing-stack,unit* address *importing-stack,pointer* add-set
+
+  :module-name-index
+  :importing-record
+  <importing-record> set-name
 
   <<
-  遞歸調用發生在 處理 語法關鍵詞 import 時
-  那時需要做兩件事
-  一是 引入
-  二是 化名
-  >>
-
-  <<
-  <pre-module> *rule-set* push-syntax-stack
-    ::meta-string eval-string
-  drop-syntax-stack
+  <pre-module-syntax> begin
+  ::meta-string eval-string
+  <pre-module-syntax> end
   >>
 
   *global-naming-stack,pointer* >:global-name-record-begin
-  <basic-REPL> *rule-set* push-syntax-stack
-    ::code-string eval-string
-  drop-syntax-stack
+  ::code-string eval-string
   *global-naming-stack,pointer* >:global-name-record-end
 
   <<
-  <post-module> *rule-set* push-syntax-stack
-    ::meta-string eval-string
-  drop-syntax-stack
+  <post-module-syntax> begin
+  ::meta-string eval-string
+  <post-module-syntax> end
   >>
 
-  <<
-  出 引入棧
-  >>
+  <importing-record> drop
 
   *module-naming-stack,pointer* >:module-name-record-begin
   :global-name-record-begin
