@@ -3681,9 +3681,15 @@ define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
    xx dup2, comment_end_string?, false?branch, 3
    xx   drop2
    xx   end
-   xx dup2, comment_begin_string?, false?branch, 3
-   xx   syntax__comment__make_jojo
+   xx dup2, comment_begin_string?, CICADA__not, false?branch, 3
+   xx   tail_call, syntax__comment__make_jojo
+   ;; nested
+   xx syntax__comment__make_jojo
+   xx dup2, space_string?, false?branch, 2
    xx   end
+   xx dup2
+   xx string_tail__word, xxswapxx
+   xx string_head__word
    xx tail_call, syntax__comment__make_jojo
 
 size$rule_set__make_jojo = 1024 * jo_size

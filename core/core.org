@@ -2,7 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* comment can not be nested ???       :bug:
 * module mechanism
 ** >< about <importing-stack>
 ** >< syntax
@@ -3903,6 +3902,25 @@
    #+begin_src cicada-nymph :tangle core.cn
    "<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
    "<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
+   #+end_src
+* a test of nested comment
+** in function body
+   #+begin_src cicada-nymph
+   : test
+     << -- >>
+     1 << 2 >> 3 . . .l
+     1 << << 2 >> 3 >> 4 . . .l
+     end
+   ; define-function
+   test
+   <<
+   3 1
+   4 1
+   >>
+   #+end_src
+** in REPL
+   #+begin_src cicada-nymph
+   1 << << 2 >> 3 >>  4 . . .l
    #+end_src
 * stack-REPL
 ** note

@@ -5053,6 +5053,14 @@
    * comment can not cross ";"
 ** syntax,comment,make-jojo
    * nested << >> must be handled
+   * note that
+     syntax,comment,make-jojo is a syntax
+     its interface is special
+     thus
+     when implement it as one recursive function
+     the structure of the function is special
+     otherwise
+     just implement it by two functions
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
       ;; << string[address, length], word --
@@ -5066,9 +5074,15 @@
       xx dup2, comment_end_string?, false?branch, 3
       xx   drop2
       xx   end
-      xx dup2, comment_begin_string?, false?branch, 3
-      xx   syntax__comment__make_jojo
+      xx dup2, comment_begin_string?, CICADA__not, false?branch, 3
+      xx   tail_call, syntax__comment__make_jojo
+      ;; nested
+      xx syntax__comment__make_jojo
+      xx dup2, space_string?, false?branch, 2
       xx   end
+      xx dup2
+      xx string_tail__word, xxswapxx
+      xx string_head__word
       xx tail_call, syntax__comment__make_jojo
    #+end_src
 ** ----------------------------------
