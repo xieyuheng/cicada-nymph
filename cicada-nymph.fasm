@@ -3462,7 +3462,27 @@ define_function "find-syntax", find_syntax
    xx   false
    xx   end
    xx tos_syntax_stack
-   xx find_rule
+   xx rule_set__find
+   xx end
+
+define_variable "*rule,unit*", V__rule__unit
+   xx (jo_size * 2)
+
+define_function "rule,get-predicate", rule__get_predicate
+   ;; << rule[address] -- predicate >>
+   xx get
+   xx end
+
+define_function "rule,get-function", rule__get_function
+   ;; << rule[address] -- function >>
+   xx V__jo_size, addition
+   xx get
+   xx end
+
+define_function "rule,get", rule__get
+   ;; << rule[address] -- rule[predicate, function] >>
+   xx V__rule__unit, V__jo_size, division
+   xx n_get
    xx end
 
 define_function "rule-set,get-border", rule_set__get_border
@@ -3477,30 +3497,9 @@ define_function "rule-set,set-border", rule_set__set_border
    xx set
    xx end
 
-define_function "cursor->rule", cursor_to_rule
-   ;; << cursor -- rule[predicate, function] >>
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
-   xx literal, 2
-   xx n_get
-   xx end
-
-define_function "cursor->predicate", cursor_to_predicate
-   ;; << cursor -- predicate >>
-   xx V__jo_size, subtraction
-   xx V__jo_size, subtraction
-   xx get
-   xx end
-
-define_function "cursor->function", cursor_to_function
-   ;; << cursor -- function >>
-   xx V__jo_size, subtraction
-   xx get
-   xx end
-
-define_function "add-rule", add_rule
-   ;; << rule[predicate, function], rule-set -- >>
-   xx xxtuckx
+define_function "rule,add", rule__add
+   ;; << rule-set, rule[predicate, function] -- >>
+   xx xoverxx
    xx rule_set__get_border
    xx literal, 2
    xx n_set
@@ -3512,42 +3511,44 @@ define_function "add-rule", add_rule
    xx rule_set__set_border
    xx end
 
-cursor$find_rule:
+cursor$rule_set__find:
    xx 0
 
-define_function "find-rule", find_rule
+define_function "rule-set,find", rule_set__find
    ;; << word[address, length], rule-set
    ;;    -- function, true
    ;;    -- false >>
    xx dup, rule_set__get_border
-   xx literal, cursor$find_rule, set
-   xx find_rule__loop
+   xx literal, cursor$rule_set__find, set
+   xx rule_set__find__loop
    xx end
 
-define_function "find-rule,loop", find_rule__loop
+define_function "rule-set,find,loop", rule_set__find__loop
    ;; << word[address, length], rule-set
    ;;    -- function, true
    ;;    -- false >>
-   xx literal, cursor$find_rule, get
+   xx literal, cursor$rule_set__find, get
    xx over, equal?, false?branch, 5
    xx   drop, drop2
    xx   false
    xx   end
    xx xxoverx
-   xx literal, cursor$find_rule, get
-   xx cursor_to_predicate
+   xx literal, cursor$rule_set__find, get
+   xx V__rule__unit, subtraction
+   xx rule__get_predicate
    xx apply, false?branch, (.not_found-$)/jo_size
    xx   drop, drop2
-   xx   literal, cursor$find_rule, get
-   xx   cursor_to_function
+   xx   literal, cursor$rule_set__find, get
+   xx   V__rule__unit, subtraction
+   xx   rule__get_function
    xx   true
    xx   end
 .not_found:
-   xx literal, cursor$find_rule, get
+   xx literal, cursor$rule_set__find, get
    xx V__jo_size, subtraction
    xx V__jo_size, subtraction
-   xx literal, cursor$find_rule, set
-   xx tail_call, find_rule__loop
+   xx literal, cursor$rule_set__find, set
+   xx tail_call, rule_set__find__loop
 
 define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
    ;; << string[address, length], word[address, length] --
@@ -3697,33 +3698,41 @@ define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
 
 define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
    ;; << -- >>
+   xx V__rule_set__make_jojo
+
+   xx dup
    xx literal, integer_string?
    xx literal, syntax__integer_string__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
+   xx dup
    xx literal, word_is_address?
    xx literal, syntax__address__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
+   xx dup
    xx literal, word_is_jo?
    xx literal, syntax__jo__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
+   xx dup
    xx literal, word_is_double_quote?
    xx literal, syntax__double_quote__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
+   xx dup
    xx literal, local_variable_set_string?
    xx literal, syntax__local_variable_set__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
+   xx dup
    xx literal, local_variable_get_string?
    xx literal, syntax__local_variable_get__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
    xx literal, comment_begin_string?
    xx literal, syntax__comment__make_jojo
-   xx V__rule_set__make_jojo, add_rule
+   xx rule__add
 
    xx end
 

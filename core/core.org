@@ -6,10 +6,8 @@
 ** about <importing-stack>
 ** ><>< syntax
 ** >< exception
+** >< re-import core every time
 * todo
-** 語法擴展機制的接口需要改進
-   * 目前如果 謂詞是匿名函數的話 sub-rule 就沒法用了
-     因爲 add-rule 時的匿名函數是不同的
 ** 基礎設施 之 測試框架
    * 讓所有的測試讀的內容讀起來都有趣味
 ** 基礎設施 之 返回值
@@ -33,6 +31,9 @@
    * more (define*) about with-title
 ** 基礎設施 之 除錯模式               :maybe:
    * debug-REPL
+** 語法擴展機制的接口需要改進         :maybe:
+   * 目前如果 謂詞是匿名函數的話 <rule> sub 就沒法用了
+     因爲 rule,add 時的匿名函數是不同的
 ** ----------------------------------
 ** 整理結構 之 分組命名
 ** 整理結構 之 使用匿名函數
@@ -948,22 +949,16 @@
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,make-jojo
      << -- >>
-     jo word:if?   jo syntax,if,make-jojo    *rule-set,make-jojo* add-rule
-     jo word:else? jo syntax,else,make-jojo  *rule-set,make-jojo* add-rule
-     jo word:then? jo syntax,then,make-jojo  *rule-set,make-jojo* add-rule
-
-     jo word:prepare-for?
-     jo syntax,prepare-for,make-jojo
-     *rule-set,make-jojo* add-rule
-     jo word:exception-reset-stack?
-     jo syntax,exception-reset-stack,make-jojo
-     *rule-set,make-jojo* add-rule
-
-     jo word:loop?  jo syntax,loop,make-jojo  *rule-set,make-jojo* add-rule
-     jo word:recur? jo syntax,recur,make-jojo *rule-set,make-jojo* add-rule
+     *rule-set,make-jojo*
+     dup jo word:if?    jo syntax,if,make-jojo    rule,add
+     dup jo word:else?  jo syntax,else,make-jojo  rule,add
+     dup jo word:then?  jo syntax,then,make-jojo  rule,add
+     dup jo word:prepare-for?           jo syntax,prepare-for,make-jojo            rule,add
+     dup jo word:exception-reset-stack? jo syntax,exception-reset-stack,make-jojo  rule,add
+     dup jo word:loop?  jo syntax,loop,make-jojo  rule,add
+         jo word:recur? jo syntax,recur,make-jojo rule,add
      end
    ; define-function
-
    more,rule-set,make-jojo
    #+end_src
 * name & name-hash-table
@@ -2424,16 +2419,11 @@
    #+begin_src cicada-nymph :tangle core.cn
    : init,rule-set,basic-REPL
      << -- >>
-     jo integer-string?
-     jo string->integer
-     *rule-set,basic-REPL* add-rule
-
-     jo base#wild-integer-string?
-     jo base#wild-integer-string->integer
-     *rule-set,basic-REPL* add-rule
+     *rule-set,basic-REPL*
+     dup jo integer-string? jo string->integer rule,add
+         jo base#wild-integer-string? jo base#wild-integer-string->integer rule,add
      end
    ; define-function
-
    init,rule-set,basic-REPL
    #+end_src
 ** test
@@ -2903,144 +2893,6 @@
    << error >>
    "ab" "ad" alias
    #+end_src
-* rule-set
-** test endianness of n-get & n-set
-   * big-endian is used
-     in memory
-     | value-1 |
-     | value-2 |
-     | value-3 |
-     on stack
-     << value-1, value-2, value-3 >>
-   #+begin_src cicada-nymph
-   3 *jo-size* mul allocate-memory
-   : *t*
-   ; define-variable,with-tos
-
-   1 2 3 *t* 3 n-set
-
-   << re-occur when geting through >>
-   *t* get .
-   *t* *jo-size* add get .
-   *t* *jo-size* 2 mul add get .
-
-   *t* 3 n-get
-   #+end_src
-** list-rule
-   * 最後寫到規則集合裏的 被最先打印出來
-   * 下面的打印方式 看似有些不簡潔
-     是因爲 我還沒有 integer->string 這樣的函數
-     [因爲 沒有對字符串的動態內存管理]
-   #+begin_src cicada-nymph :tangle core.cn
-   : list-rule,loop
-     << rule-set, cursor, counter -- >>
-     xx|over|x equal? if
-       drop drop2
-       end
-     then
-     "  * " .s
-     "(" .s
-     add1 dup .i
-     ")" .s .l
-     swap
-       dup cursor->predicate
-       "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
-       dup cursor->function
-       "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
-       *jo-size* sub *jo-size* sub
-     swap
-     loop
-   ; define-function
-
-   : list-rule
-     << rule-set -- >>
-     dup rule-set,get-border
-     0 list-rule,loop
-     end
-   ; define-function
-   #+end_src
-** sub-rule
-   * firstly
-     in (sub-rule,loop)
-     cursor move from border down to address of rule-set
-     secondly
-     in (sub-rule,move)
-     cursor move from founded place up to border
-   #+begin_src cicada-nymph :tangle core.cn
-   : sub-rule,move-one
-     << cursor -- >>
-     >:cursor
-     :cursor 2 n-get
-     :cursor *jo-size* 2 mul sub
-     2 n-set
-     end
-   ; define-function
-
-   : sub-rule,move
-     << rule-set, cursor -- >>
-     >:cursor
-     >:rule-set
-     :rule-set rule-set,get-border >:border
-     :cursor :border equal? if
-       :border *jo-size* 2 mul sub
-       :rule-set
-       rule-set,set-border
-       end
-     then
-     :cursor sub-rule,move-one
-     :rule-set
-     :cursor *jo-size* 2 mul add
-     loop
-   ; define-function
-
-   : sub-rule,loop
-     << rule[predicate, function], rule-set, cursor -- >>
-     >:cursor
-     >:rule-set
-     >::rule
-     :cursor :rule-set equal? if
-       end
-     then
-     ::rule :cursor cursor->rule equal2? if
-       :rule-set :cursor
-       sub-rule,move
-       end
-     then
-     ::rule
-     :rule-set
-     :cursor *jo-size* 2 mul sub
-     loop
-   ; define-function
-
-   : sub-rule
-     << rule[predicate, function], rule-set -- >>
-     dup rule-set,get-border
-     sub-rule,loop
-     end
-   ; define-function
-   #+end_src
-** test
-   #+begin_src cicada-nymph
-   *rule-set,basic-REPL* list-rule
-
-   jo word:address?
-   jo <basic-REPL-syntax> address
-   *rule-set,basic-REPL* add-rule
-   jo word:double-quote?
-   jo <basic-REPL-syntax> double-quote
-   *rule-set,basic-REPL* add-rule
-   *rule-set,basic-REPL* list-rule
-
-   jo word:address?
-   jo <basic-REPL-syntax> address
-   *rule-set,basic-REPL* sub-rule
-   *rule-set,basic-REPL* list-rule
-
-   jo word:double-quote?
-   jo <basic-REPL-syntax> double-quote
-   *rule-set,basic-REPL* sub-rule
-   *rule-set,basic-REPL* list-rule
-   #+end_src
 * more syntax for definer
 ** <title>                            :syntax:
 *** note
@@ -3105,12 +2957,10 @@
     #+begin_src cicada-nymph :tangle core.cn
     : more,rule-set,make-jojo
       << -- >>
-      jo <word>?
-      jo syntax,title,make-jojo
-      *rule-set,make-jojo* add-rule
+      *rule-set,make-jojo*
+      jo <word>? jo syntax,title,make-jojo rule,add
       end
     ; define-function
-
     more,rule-set,make-jojo
     #+end_src
 *** test
@@ -3278,12 +3128,9 @@
     #+begin_src cicada-nymph :tangle core.cn
     : more,rule-set,make-jojo
       << -- >>
-      jo word:square-bar?
-      jo <make-jojo-syntax> square-bar
-      *rule-set,make-jojo* add-rule
-      jo word:square-ket?
-      jo <make-jojo-syntax> square-ket
-      *rule-set,make-jojo* add-rule
+      *rule-set,make-jojo*
+      dup jo word:square-bar? jo <make-jojo-syntax> square-bar rule,add
+          jo word:square-ket? jo <make-jojo-syntax> square-ket rule,add
       end
     ; define-function
 
@@ -3367,12 +3214,11 @@
     #+begin_src cicada-nymph :tangle core.cn
     : more,rule-set,make-jojo
       << -- >>
-      ["name" string-equal? end]
-      jo <make-jojo-syntax> name
-      *rule-set,make-jojo* add-rule
+      *rule-set,make-jojo*
+      ["name" string-equal? end] jo <make-jojo-syntax> name
+      rule,add
       end
     ; define-function
-
     more,rule-set,make-jojo
     #+end_src
 *** test
@@ -3401,12 +3247,12 @@
     #+begin_src cicada-nymph :tangle core.cn
     : more,rule-set,make-jojo
       << -- >>
+      *rule-set,make-jojo*
       jo base#wild-integer-string?
       jo <make-jojo-syntax> base#wild-integer-string
-      *rule-set,make-jojo* add-rule
+      rule,add
       end
     ; define-function
-
     more,rule-set,make-jojo
     #+end_src
 *** test
@@ -3512,16 +3358,15 @@
     #+begin_src cicada-nymph :tangle core.cn
     : more,rule-set,basic-REPL
       << -- >>
-      ["bye" string-equal? end]
-      jo syntax,bye,basic-REPL
-      *rule-set,basic-REPL* add-rule
+      *rule-set,basic-REPL*
+      ["bye" string-equal? end] jo syntax,bye,basic-REPL
+      rule,add
 
-      ["jo" string-equal? end]
-      jo <basic-REPL-syntax> jo
-      *rule-set,basic-REPL* add-rule
+      *rule-set,basic-REPL*
+      ["jo" string-equal? end] jo <basic-REPL-syntax> jo
+      rule,add
       end
     ; define-function
-
     more,rule-set,basic-REPL
     #+end_src
 ** if & else & then                   :syntax:
@@ -3606,9 +3451,11 @@
       end
     ; define-function
     #+end_src
-*** add-rule to *rule-set,basic-REPL*
+*** rule,add to *rule-set,basic-REPL*
     #+begin_src cicada-nymph :tangle core.cn
-    jo word:if? jo <basic-REPL-syntax> if *rule-set,basic-REPL* add-rule
+    *rule-set,basic-REPL*
+    jo word:if? jo <basic-REPL-syntax> if
+    rule,add
     #+end_src
 *** test
     #+begin_src cicada-nymph
@@ -3696,9 +3543,11 @@
       end
     ; define-function
     #+end_src
-*** add-rule to *rule-set,basic-REPL*
+*** rule,add to *rule-set,basic-REPL*
     #+begin_src cicada-nymph :tangle core.cn
-    jo word:double-quote? jo <basic-REPL-syntax> double-quote *rule-set,basic-REPL* add-rule
+    *rule-set,basic-REPL*
+    jo word:double-quote? jo <basic-REPL-syntax> double-quote
+    rule,add
     #+end_src
 *** test
     #+begin_src cicada-nymph
@@ -3753,11 +3602,12 @@
       end
     ; define-function
     #+end_src
-*** add-rule to *rule-set,basic-REPL*
+*** rule,add to *rule-set,basic-REPL*
     #+begin_src cicada-nymph :tangle core.cn
+    *rule-set,basic-REPL*
     jo word:address?
     jo <basic-REPL-syntax> address
-    *rule-set,basic-REPL* add-rule
+    rule,add
     #+end_src
 *** test
     #+begin_src cicada-nymph
@@ -3799,11 +3649,12 @@
       end
     ; define-function
     #+end_src
-*** add-rule to *rule-set,basic-REPL*
+*** rule,add to *rule-set,basic-REPL*
     #+begin_src cicada-nymph :tangle core.cn
+    *rule-set,basic-REPL*
     jo word:name?
     jo <basic-REPL-syntax> name
-    *rule-set,basic-REPL* add-rule
+    rule,add
     #+end_src
 *** test
     #+begin_src cicada-nymph
@@ -3845,11 +3696,12 @@
       end
     ; define-function
     #+end_src
-*** add-rule to *rule-set,basic-REPL*
+*** rule,add to *rule-set,basic-REPL*
     #+begin_src cicada-nymph :tangle core.cn
+    *rule-set,basic-REPL*
     jo <word>?
     jo <basic-REPL-syntax> title
-    *rule-set,basic-REPL* add-rule
+    rule,add
     #+end_src
 *** test
     #+begin_src cicada-nymph
@@ -3860,6 +3712,155 @@
     ; define-function
     <test-title> test-name
     #+end_src
+* -----------------------------------
+* <rule-set> & <rule>
+** test endianness of n-get & n-set
+   * big-endian is used
+     in memory
+     | value-1 |
+     | value-2 |
+     | value-3 |
+     on stack
+     << value-1, value-2, value-3 >>
+   #+begin_src cicada-nymph
+   3 *jo-size* mul allocate-memory
+   : *t*
+   ; define-variable,with-tos
+
+   1 2 3 *t* 3 n-set
+
+   << re-occur when geting through >>
+   *t* get .
+   *t* *jo-size* add get .
+   *t* *jo-size* 2 mul add get .
+
+   *t* 3 n-get
+   #+end_src
+** <rule-set> list
+   * 最後寫到規則集合裏的 被最先打印出來
+   * 下面的打印方式 看似有些不簡潔
+     是因爲 我還沒有 integer->string 這樣的函數
+     [因爲 沒有對字符串的動態內存管理]
+   #+begin_src cicada-nymph :tangle core.cn
+   : <rule-set> list,loop
+     << rule-set, cursor, counter -- >>
+     xx|over|x equal? if
+       drop drop2
+       end
+     then
+     "  * " .s
+     "(" .s
+     add1 dup .i
+     ")" .s .l
+     swap
+       dup *rule,unit* sub rule,get-predicate
+       "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
+       dup *rule,unit* sub rule,get-function
+       "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
+       *jo-size* sub *jo-size* sub
+     swap
+     loop
+   ; define-function
+
+   : <rule-set> list
+     << rule-set -- >>
+     dup rule-set,get-border
+     0 <rule-set> list,loop
+     end
+   ; define-function
+   #+end_src
+** <rule> sub
+   * firstly
+     in (<rule> sub,loop)
+     cursor move from border down to address of rule-set
+     secondly
+     in (<rule> sub,move)
+     cursor move from founded place up to border
+   #+begin_src cicada-nymph :tangle core.cn
+   : <rule> sub,move-one
+     << cursor -- >>
+     >:cursor
+     :cursor 2 n-get
+     :cursor *jo-size* 2 mul sub
+     2 n-set
+     end
+   ; define-function
+
+   : <rule> sub,move
+     << rule-set, cursor -- >>
+     >:cursor
+     >:rule-set
+     :rule-set rule-set,get-border >:border
+     :cursor :border equal? if
+       :border *jo-size* 2 mul sub
+       :rule-set
+       rule-set,set-border
+       end
+     then
+     :cursor <rule> sub,move-one
+     :rule-set
+     :cursor *jo-size* 2 mul add
+     loop
+   ; define-function
+
+   : <rule> sub,loop
+     << rule-set, rule[predicate, function], cursor -- >>
+     >:cursor
+     >::rule
+     >:rule-set
+     :cursor :rule-set equal? if
+       end
+     then
+     ::rule
+     :cursor *rule,unit* sub rule,get
+     equal2? if
+       :rule-set :cursor
+       <rule> sub,move
+       end
+     then
+     :rule-set
+     ::rule
+     :cursor *jo-size* 2 mul sub
+     loop
+   ; define-function
+
+   : <rule> sub
+     << rule-set, rule[predicate, function] -- >>
+     x|over|xx rule-set,get-border
+     <rule> sub,loop
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   *rule-set,basic-REPL* <rule-set> list
+
+   *rule-set,basic-REPL*
+   jo word:address?
+   jo <basic-REPL-syntax> address
+   rule,add
+
+   *rule-set,basic-REPL*
+   jo word:double-quote?
+   jo <basic-REPL-syntax> double-quote
+   rule,add
+
+   *rule-set,basic-REPL* <rule-set> list
+
+   *rule-set,basic-REPL*
+   jo word:address?
+   jo <basic-REPL-syntax> address
+   <rule> sub
+
+   *rule-set,basic-REPL* <rule-set> list
+
+   *rule-set,basic-REPL*
+   jo word:double-quote?
+   jo <basic-REPL-syntax> double-quote
+   <rule> sub
+
+   *rule-set,basic-REPL* <rule-set> list
+   #+end_src
 * to define some alias
 ** <string>
    #+begin_src cicada-nymph :tangle core.cn
@@ -3878,6 +3879,19 @@
    "<string> empty?" "empty-string?" alias
 
    "<string> find-byte" "string,find-byte" alias
+   #+end_src
+** <rule-set> & <rule>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<rule-set> get-border" "rule-set,get-border" alias
+   "<rule-set> set-border" "rule-set,set-border" alias
+   "<rule-set> find" "rule-set,find" alias
+
+   "<rule> add" "rule,add" alias
+
+   "<rule> *unit*" "*rule,unit*" alias
+   "<rule> get" "rule,get" alias
+   "<rule> get-predicate" "rule,get-predicate" alias
+   "<rule> get-function" "rule,get-function" alias
    #+end_src
 ** *rule-set*
    #+begin_src cicada-nymph :tangle core.cn
@@ -4117,15 +4131,17 @@
      snapshot-the-stack-pointer
      *the-stack-pointer-snapshot* >:old-snapshot
 
+     *rule-set,basic-REPL*
      jo word:double-quote?
      jo syntax,double-quote,define-variable
-     *rule-set,basic-REPL* add-rule
+     <rule> add
 
      ::body eval-string
 
+     *rule-set,basic-REPL*
      jo word:double-quote?
      jo syntax,double-quote,define-variable
-     *rule-set,basic-REPL* sub-rule
+     <rule> sub
 
      snapshot-the-stack-pointer
      *the-stack-pointer-snapshot* >:new-snapshot
@@ -6317,9 +6333,10 @@
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,basic-REPL
      << -- >>
+     *rule-set,basic-REPL*
      ["path:" <string> equal? end]
      jo <basic-REPL-syntax> path
-     *rule-set,basic-REPL* add-rule
+     <rule> add
      end
    ; define-function
    more,rule-set,basic-REPL
@@ -6519,6 +6536,51 @@
      end
    ; define-function
    test
+   #+end_src
+* <rule-set>
+** <rule-set> mixin
+   #+begin_src cicada-nymph :tangle core.cn
+   : <rule-set> mixin,loop
+     << base-rule-set, border, cursor -- >>
+     dup2 equal? if
+       drop2
+       drop
+       end
+     then
+     dup <rule> get >::rule
+     x|over|xx ::rule <rule> add
+     <rule> *unit* add
+     loop
+   ; define-function
+
+   : <rule-set> mixin
+     << base-rule-set, rule-set -- >>
+     dup <rule-set> get-border swap
+     <rule-set> mixin,loop
+     end
+   ; define-function
+   #+end_src
+** <rule-set> mixout
+   #+begin_src cicada-nymph :tangle core.cn
+   : <rule-set> mixout,loop
+     << base-rule-set, border, cursor -- >>
+     dup2 equal? if
+       drop2
+       drop
+       end
+     then
+     dup <rule> get >::rule
+     x|over|xx ::rule <rule> sub
+     <rule> *unit* add
+     loop
+   ; define-function
+
+   : <rule-set> mixout
+     << base-rule-set, rule-set -- >>
+     dup <rule-set> get-border swap
+     <rule-set> mixout,loop
+     end
+   ; define-function
    #+end_src
 * ><>< module
 ** 記
@@ -7111,33 +7173,40 @@
       end
     ; define-function
     #+end_src
-*** ><>< <pre-module-syntax> import
+*** 記
+    * 注意這裏形成動態調用的方式
+      這在於
+      (<pre-module-syntax> import) 必須在 (import) 之後定義
+      所以在 (import) 中
+      對 (<pre-module-syntax> import) 的調用必須是間接的
+      這是通過 一個全局變量
+      還有 下面的兩個標記語法變更的函數 來實現的
+    * 語法變更不是 入 新 *rule-set* 到 語法棧
+      而是把 一個 新 *rule-set* 中的全部規則
+      複製到 <basic-REPL> *rule-set* 中
+      這樣就是算是 *rule-set* 之間的繼承
+*** <pre-module> *rule-set*
     #+begin_src cicada-nymph :tangle core.cn
-    : <pre-module-syntax> import
-      << -- >>
+    : <pre-module> *rule-set,size*
+      1024 *jo-size* mul
+    ; define-variable
 
-      end
-    ; define-function
-    #+end_src
-*** ><>< <pre-module-syntax> unknow-meta-word
-    #+begin_src cicada-nymph :tangle core.cn
-    : <pre-module-syntax> unknow-meta-word
-      << meta-word -- >>
+    << for cursor >>
+    *jo-size* allocate-memory drop
 
-      end
-    ; define-function
+    : <pre-module> *rule-set*
+      <pre-module> *rule-set,size* allocate-memory
+    ; define-variable
+
+    <pre-module> *rule-set*
+    <pre-module> *rule-set* *jo-size* sub
+    set
     #+end_src
 *** <pre-module-syntax> begin
     #+begin_src cicada-nymph :tangle core.cn
     : <pre-module-syntax> begin
       << -- >>
-      jo meta-word:import?
-      jo <pre-module-syntax> import
-      <basic-REPL> *rule-set* add-rule
 
-      jo module-meta-word?
-      jo <pre-module-syntax> unknow-meta-word
-      <basic-REPL> *rule-set* add-rule
       end
     ; define-function
     #+end_src
@@ -7145,13 +7214,7 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <pre-module-syntax> end
       << -- >>
-      jo meta-word:import?
-      jo <pre-module-syntax> import
-      <basic-REPL> *rule-set* sub-rule
 
-      jo module-meta-word?
-      jo <pre-module-syntax> unknow-meta-word
-      <basic-REPL> *rule-set* sub-rule
       end
     ; define-function
     #+end_src
@@ -7161,9 +7224,25 @@
     : meta-word:do?
       << word[address, length] -- bool >>
       "do:" <string> equal?
-
       end
     ; define-function
+    #+end_src
+*** <post-module> *rule-set*
+    #+begin_src cicada-nymph :tangle core.cn
+    : <post-module> *rule-set,size*
+      1024 *jo-size* mul
+    ; define-variable
+
+    << for cursor >>
+    *jo-size* allocate-memory drop
+
+    : <post-module> *rule-set*
+      <post-module> *rule-set,size* allocate-memory
+    ; define-variable
+
+    <post-module> *rule-set*
+    <post-module> *rule-set* *jo-size* sub
+    set
     #+end_src
 *** ><>< <post-module-syntax> do
     #+begin_src cicada-nymph :tangle core.cn
@@ -7535,6 +7614,12 @@
      :importing-record
      <importing-record> set-name
 
+
+     *global-naming-stack,pointer* >:global-name-record-before-import
+     <<
+     recursive call to import
+     and expose-naming
+     >>
      <<
      <pre-module-syntax> begin
      ::meta-string eval-string
@@ -7545,6 +7630,7 @@
      ::code-string eval-string
      *global-naming-stack,pointer* >:global-name-record-end
 
+     << do >>
      <<
      <post-module-syntax> begin
      ::meta-string eval-string
@@ -7560,9 +7646,11 @@
      <global-naming-stack> prefix-naming
      *module-naming-stack,pointer* >:module-name-record-end
 
-     :global-name-record-begin
-     :global-name-record-end
+     :global-name-record-before-import
+     *global-naming-stack,pointer*
      <global-naming-stack> clear-naming
+
+     :global-name-record-before-import address *global-naming-stack,pointer* set
 
      *module-stack,pointer* >:module-info
      *module-stack,unit* address *module-stack,pointer* add-set
@@ -7585,11 +7673,73 @@
      end
    ; define-function
    #+end_src
+** <pre-module-syntax>
+*** ><>< <pre-module-syntax> import
+    * import module and expose-naming
+      one by one
+    #+begin_src cicada-nymph :tangle core.cn
+    : <pre-module-syntax> import,loop
+      << -- unknow >>
+      read-word >::word
+      ::word module-meta-word? if
+        unread-word
+        end
+      then
+      ::word import
+      ::word string->name <module-stack> find not if
+
+        end
+      then
+      >:module-info
+      :module-info <module-info> get-name-record-begin
+      :module-info <module-info> get-name-record-end
+      <module-naming-stack> expose-naming
+      loop
+    ; define-function
+
+    : <pre-module-syntax> import
+      << meta-word:import -- unknow >>
+      drop2
+      <pre-module-syntax> import,loop
+      end
+    ; define-function
+    #+end_src
+*** <pre-module-syntax> unknow-meta-word
+    #+begin_src cicada-nymph :tangle core.cn
+    : <pre-module-syntax> unknow-meta-word,loop
+      << -- >>
+      read-word module-meta-word? if
+        unread-word
+        end
+      then
+      loop
+    ; define-function
+
+    : <pre-module-syntax> unknow-meta-word
+      << meta-word -- >>
+      drop2
+      <pre-module-syntax> unknow-meta-word,loop
+      end
+    ; define-function
+    #+end_src
+*** >< add rule
+    #+begin_src cicada-nymph
+    <pre-module> *rule-set*
+    jo meta-word:import?
+    jo <pre-module-syntax> import
+    <rule> add
+
+    <pre-module> *rule-set*
+    jo module-meta-word?
+    jo <pre-module-syntax> unknow-meta-word
+    <rule> add
+    #+end_src
 ** test
    #+begin_src cicada-nymph
    << in system shell
    cn moi add hihi play/hi.cn
    >>
+
    "hihi" import
 
    hihi << undefined >>
@@ -7603,6 +7753,8 @@
 
    *test-module-info* <module-info> get-meta-string .s .l
    *test-module-info* <module-info> get-name name->string .s .l
+
+   hihi << undefined >>
 
    *test-module-info* <module-info> get-name-record-begin
    *test-module-info* <module-info> get-name-record-end
@@ -7793,7 +7945,7 @@
     : <undo-point> create,copy-syntax,one-rule-set
       << rule-set -- >>
       >:rule-set
-      :rule-set rule-set,get-border >:border
+      :rule-set <rule-set> get-border >:border
       :border :rule-set sub
       *jo-size* div >:n
 
@@ -7967,7 +8119,7 @@
       *jo-size*
       :n mul
       :rule-set add
-      :rule-set rule-set,set-border
+      :rule-set <rule-set> set-border
 
       :cursor *jo-size* add
       :rule-set-copy *jo-size* :n 2 add mul add
@@ -8076,9 +8228,10 @@
    : *undo-point*
    ; define-variable,with-tos
 
+   *rule-set,basic-REPL*
    jo integer-string?
    jo hi
-   *rule-set,basic-REPL* add-rule
+   <rule> add
 
    *rule-set,basic-REPL* push-syntax-stack
 
@@ -8274,11 +8427,11 @@
    : <report> syntax
      << -- >>
      "* *rule-set,make-jojo* :" .s .l
-        *rule-set,make-jojo* list-rule
+        *rule-set,make-jojo* <rule-set> list
      "* *rule-set,basic-REPL* :" .s .l
-        *rule-set,basic-REPL* list-rule
+        *rule-set,basic-REPL* <rule-set> list
      "* tos-syntax-stack :" .s .l
-        tos-syntax-stack list-rule
+        tos-syntax-stack <rule-set> list
      end
    ; define-function
    #+end_src
