@@ -3735,6 +3735,14 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
+: unread-word
+  << -- >>
+  pop-reading-stack
+  <string> word-back
+  push-reading-stack
+  end
+; define-function
+
 100 1024 mul
 : *module-naming-stack,size*
 ; define-variable,with-tos
