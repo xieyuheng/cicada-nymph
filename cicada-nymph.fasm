@@ -2642,7 +2642,7 @@ define_function "load-core-file", load_core_file
    xx push_reading_stack
    xx end
 
-define_function "space-char?", space_char?
+define_function "space-byte?", space_byte?
    ;; << char -- bool >>
    xx literal, 0
    xx literal, 32
@@ -2754,15 +2754,22 @@ define_function "string-equal?", string_equal?
    xx false
    xx end
 
-define_function "string-head,byte", string_head__byte
+define_function "string,byte", string__byte
    ;; << string[address, length] -- char >>
    xx drop, get_byte
    xx end
 
-define_function "string-tail,byte", string_tail__byte
-   ;; << string[address, length] -- [address + 1, length + 1] >>
+define_function "string,byte-tail", string__byte_tail
+   ;; << string[address, length] -- [address + 1, length - 1] >>
    xx sub1, swap
    xx add1
+   xx swap
+   xx end
+
+define_function "string,byte-back", string__byte_back
+   ;; << string[address, length] -- [address - 1, length + 1] >>
+   xx add1, swap
+   xx sub1
    xx swap
    xx end
 
@@ -2836,7 +2843,7 @@ define_function "char-string?", char_string?
    xx   drop2, drop
    xx   false
    xx   end
-   xx string_head__byte, equal?, false?branch, 3
+   xx string__byte, equal?, false?branch, 3
    xx   true
    xx   end
    xx false
@@ -2848,10 +2855,10 @@ define_function "zero-string?", zero_string?
    xx   drop2, true
    xx   end
    xx dup2
-   xx string_head__byte, literal, '-', equal?, false?, false?branch, 4
+   xx string__byte, literal, '-', equal?, false?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx string_tail__byte, literal, '0', char_string?
+   xx string__byte_tail, literal, '0', char_string?
    xx end
 
 define_function "digit-string?", digit_string?
@@ -2860,7 +2867,7 @@ define_function "digit-string?", digit_string?
    xx   drop2, true
    xx   end
    xx over, get_byte, digit_char?, false?branch, 4
-   xx   string_tail__byte
+   xx   string__byte_tail
    xx   tail_call, digit_string?
    xx drop2, false
    xx end
@@ -2873,8 +2880,8 @@ define_function "integer-string?", integer_string?
    xx dup2, literal, '-', char_string?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx dup2, string_head__byte, literal, '-', equal?, false?branch, 4
-   xx   string_tail__byte
+   xx dup2, string__byte, literal, '-', equal?, false?branch, 4
+   xx   string__byte_tail
    xx   digit_string?
    xx   end
    xx digit_string?
@@ -2905,7 +2912,7 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx   drop2
    xx   end
 
-   xx dup2, string_head__byte, digit_char_to_number
+   xx dup2, string__byte, digit_char_to_number
    xx   literal, 10
    xx   literal, counter$digit_string_to_number, get
    xx     one
@@ -2917,15 +2924,15 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx literal, sum$digit_string_to_number
    xx add_set
 
-   xx string_tail__byte
+   xx string__byte_tail
    xx tail_call, help__digit_string_to_number
 
 define_function "string->integer", string_to_integer
    ;; << string[address, length] -- integer >>
-   xx dup2, string_head__byte, literal, '-', equal?, false?, false?branch, 3
+   xx dup2, string__byte, literal, '-', equal?, false?, false?branch, 3
    xx   digit_string_to_number
    xx   end
-   xx string_tail__byte
+   xx string__byte_tail
    xx digit_string_to_number
    xx negate
    xx end
@@ -2944,7 +2951,7 @@ define_function "string,find-char", string__find_char
   xx   true
   xx   end
   xx xxswapx
-  xx string_tail__byte
+  xx string__byte_tail
   xx xswapxx
   xx tail_call, string__find_char
 
@@ -2958,61 +2965,64 @@ define_function "space-string?", space_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, true
    xx   end
-   xx dup2, string_head__byte, space_char?, false?branch, 4
-   xx   string_tail__byte
+   xx dup2, string__byte, space_byte?, false?branch, 4
+   xx   string__byte_tail
    xx   tail_call, space_string?
    xx drop2, false
    xx end
 
-define_function "string->word-begin", string_to_word_begin
+define_function "string,word-begin", string__word_begin
    ;; << string[address, length] -- string[address, length] >>
    xx dup, zero?, false?branch, 2
    ;;   no error handling
+   ;;   the same empty-string is returned
    xx   end
-   xx dup2, string_head__byte
-   xx space_char?, false?, false?branch, 2
+   xx dup2
+   xx string__byte, space_byte?, false?, false?branch, 2
    xx   end
-   xx string_tail__byte
-   xx tail_call, string_to_word_begin
+   xx string__byte_tail
+   xx tail_call, string__word_begin
 
-define_function "string->word-end", string_to_word_end
+define_function "string,word-end,loop", string__word_end__loop
    ;; << string[address, length] -- string[address, length] >>
    xx dup, zero?, false?branch, 2
    ;;   no error handling
+   ;;   the current empty-string is returned
    xx   end
-   xx dup2, string_head__byte
-   xx bar_ket_byte?, false?branch, 3
-   xx   string_tail__byte
+   xx dup2
+   xx string__byte, space_byte?, false?branch, 2
    xx   end
-   xx help__string_to_word_end
+   xx dup2
+   xx string__byte, bar_ket_byte?, false?branch, 2
+   xx   end
+   xx string__byte_tail
+   xx tail_call, string__word_end__loop
+
+define_function "string,word-end", string__word_end
+   ;; << string[address, length] -- string[address, length] >>
+   xx dup, zero?, false?branch, 2
+   ;;   no error handling
+   ;;   the same empty-string is returned
+   xx   end
+   xx dup2
+   xx string__byte, bar_ket_byte?, false?branch, 3
+   xx   string__byte_tail
+   xx   end
+   xx string__word_end__loop
    xx end
 
-define_function "help,string->word-end", help__string_to_word_end
-   ;; << string[address, length] -- address >>
-   xx dup, zero?, false?branch, 2
-   ;;   no error handling
-   xx   end
-   xx dup2, string_head__byte
-   xx space_char?, false?branch, 2
-   xx   end
-   xx dup2, string_head__byte
-   xx bar_ket_byte?, false?branch, 2
-   xx   end
-   xx string_tail__byte
-   xx tail_call, help__string_to_word_end
-
-define_function "string-head,word", string_head__word
+define_function "string,word", string__word
    ;; << string[address, length] -- word[address, length] >>
-   xx string_to_word_begin
-   xx dup2, string_to_word_end
+   xx string__word_begin
+   xx dup2, string__word_end
    xx swap, drop
    xx subtraction
    xx end
 
-define_function "string-tail,word", string_tail__word
+define_function "string,word-tail", string__word_tail
    ;; << string[address, length] -- string[address, length] >>
-   xx string_to_word_begin
-   xx string_to_word_end
+   xx string__word_begin
+   xx string__word_end
    xx end
 
 ;; 2 ^ 64 = 18446744073709551616
@@ -3091,21 +3101,12 @@ max_word_length = 512
 buffer$read_word labeling
    preserve max_word_length
 
-define_function "read-word-begin-char", read_word_begin_char
-   ;; << -- non-blank-char >>
-   xx read_byte
-   xx dup, literal, 32 ;; ascii.space
-   xx greater_than?, false?branch, 2
-   xx   end
-   xx drop
-   xx tail_call, read_word_begin_char
-
 define_function "read-word->buffer", read_word_to_buffer
    ;; << buffer -- word[address, length] >>
    xx pop_reading_stack
    xx dup2, space_string?, CICADA__not, false?branch, (.bad_tos-$)/jo_size
-   xx   dup2, string_tail__word, push_reading_stack
-   xx   string_head__word
+   xx   dup2, string__word_tail, push_reading_stack
+   xx   string__word
    xx   xoverxx, xxoverx
    xx   xswapxx
    xx   string_to_buffer!
@@ -3327,7 +3328,7 @@ define_function "colon,meet-end?", colon__meet_end?
    ;; << -- bool >>
    xx literal, cursor$colon, get
    xx literal, 3, subtraction
-   xx get_byte, space_char?
+   xx get_byte, space_byte?
    xx false?, false?branch, 3
    xx   false
    xx   end
@@ -3339,7 +3340,7 @@ define_function "colon,meet-end?", colon__meet_end?
    xx   end
    xx literal, cursor$colon, get
    xx literal, 1, subtraction
-   xx get_byte, space_char?
+   xx get_byte, space_byte?
    xx false?, false?branch, 3
    xx   false
    xx   end
@@ -3640,7 +3641,7 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    xx   xxswapx
    xx   addition
    xx   swap
-   xx   string_tail__byte ;; over the ending double-quote
+   xx   string__byte_tail ;; over the ending double-quote
    xx   end
 
    .not_found:
@@ -3668,8 +3669,8 @@ define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
    xx dup2, space_string?, false?branch, 2
    xx   end
    xx dup2
-   xx string_tail__word, xxswapxx
-   xx string_head__word
+   xx string__word_tail, xxswapxx
+   xx string__word
    xx dup2, comment_end_string?, false?branch, 3
    xx   drop2
    xx   end
@@ -3680,8 +3681,8 @@ define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
    xx dup2, space_string?, false?branch, 2
    xx   end
    xx dup2
-   xx string_tail__word, xxswapxx
-   xx string_head__word
+   xx string__word_tail, xxswapxx
+   xx string__word
    xx tail_call, syntax__comment__make_jojo
 
 size$rule_set__make_jojo = 1024 * jo_size
@@ -3771,9 +3772,9 @@ define_function "make-jojo,loop", make_jojo__loop
    xx   drop2, drop
    xx   end
    xx dup2
-   xx string_tail__word
+   xx string__word_tail
    xx xxswapxx
-   xx string_head__word
+   xx string__word
    ;; << tail[address, length], head[address, length] >>
    xx make_jojo__dispatch_word
    xx tail_call, make_jojo__loop
@@ -3826,7 +3827,7 @@ define_function "define-function", CICADA__define_function
 
    xx dup2
 
-   xx dup2, string_head__word
+   xx dup2, string__word
    ;; << string[address, length]
    ;;    name-string[address, length] >>
    xx make_string
@@ -3869,7 +3870,7 @@ define_function "define-function", CICADA__define_function
 
    xx dup
    xx xxswapxx
-   xx string_tail__word
+   xx string__word_tail
    xx V__jojo_area__current_free_address
    xx xxxswapx
    ;; << jo
@@ -3907,7 +3908,7 @@ define_function "define-exception", CICADA__define_exception
 
    xx dup2
 
-   xx dup2, string_head__word
+   xx dup2, string__word
    ;; << string[address, length]
    ;;    name-string[address, length] >>
    xx make_string
@@ -3950,7 +3951,7 @@ define_function "define-exception", CICADA__define_exception
 
    xx dup
    xx xxswapxx
-   xx string_tail__word
+   xx string__word_tail
    xx V__jojo_area__current_free_address
    xx xxxswapx
    ;; << jo
@@ -3975,7 +3976,7 @@ define_function "define-exception", CICADA__define_exception
 define_function "define-variable,with-tos", CICADA__define_variable__with_tos
    ;; << value, string[address, length] -- >>
 
-   xx dup2, string_head__word
+   xx dup2, string__word
    ;; << string[address, length]
    ;;    name-string[address, length] >>
    xx make_string
@@ -4229,12 +4230,12 @@ define_function "count-front-colon,loop", count_front_colon__loop
    xx over, zero?, false?branch, 4
    xx   xxswapx, drop2
    xx   end
-   xx xxoverx, string_head__byte
+   xx xxoverx, string__byte
    xx literal, ':', equal?, false?, false?branch, 4
    xx   xxswapx, drop2
    xx   end
    xx add1, xxswapx
-   xx string_tail__byte, xswapxx
+   xx string__byte_tail, xswapxx
    xx tail_call, count_front_colon__loop
 
 define_function "local-variable-get-string?", local_variable_get_string?
@@ -4301,11 +4302,11 @@ define_function "local-variable-set-string?", local_variable_set_string?
    xx equal?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx dup2, string_head__byte
+   xx dup2, string__byte
    xx literal, '>', equal?, false?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx string_tail__byte
+   xx string__byte_tail
    xx dup2, count_front_colon
    xx dup, literal, 0, greater_than?, false?, false?branch, 5
    xx   drop, drop2, false
@@ -4318,7 +4319,7 @@ define_function "local-variable-set-string?", local_variable_set_string?
 define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
-   xx string_tail__byte
+   xx string__byte_tail
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
    ;;   literal, <offese>, literal, n, n_set__local_jo

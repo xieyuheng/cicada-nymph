@@ -2,6 +2,12 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* renaming
+  * char is about encoding
+    byte is not
+    since we have no ending now
+    the following renaming is needed
+    (char) --> (byte)
 * module mechanism
 ** about <importing-stack>
 ** ><>< syntax
@@ -49,7 +55,6 @@
      因爲他們的名字
      已經越來越不能展示他們的接口了
 ** design a way to remove magic numbers [not variable, but file by file like erlang ?]
-** need more lib functions about string processing and better factoring for string processing
 ** only one error-code->string is not enough :maybe:
 ** language-level support for creating and managing processes :maybe:
 * ===================================
@@ -1230,12 +1235,12 @@
         drop 0 << re-start from 0 >>
       then
       xx|over|x
-      string-head,byte over
+      string,byte over
       2 swap power
       mul
       x|swap|xxxx add xxx|swap|x
       add1 xx|swap|x
-      string-tail,byte x|swap|xx
+      string,byte-tail x|swap|xx
       loop
     ; define-function
 
@@ -1775,11 +1780,11 @@
     : test,remove-char!
       << -- >>
       "2#1001_1001"
-      "_" string-head,byte
+      "_" string,byte
       remove-char! .s << 2#1001_1001 >>
       .l
       "___2#1001___1001___"
-      "_" string-head,byte
+      "_" string,byte
       remove-char! .s << 2#1001_1001 >>
       .l
       end
@@ -1790,19 +1795,19 @@
     #+begin_src cicada-nymph :tangle core.cn
     : latin-char?
       << char -- bool >>
-      dup "A" string-head,byte less-than? if
+      dup "A" string,byte less-than? if
         drop false
         end
       then
-      dup "Z" string-head,byte less-or-equal? if
+      dup "Z" string,byte less-or-equal? if
         drop true
         end
       then
-      dup "a" string-head,byte less-than? if
+      dup "a" string,byte less-than? if
         drop false
         end
       then
-      dup "z" string-head,byte less-or-equal? if
+      dup "z" string,byte less-or-equal? if
         drop true
         end
       then
@@ -1814,26 +1819,26 @@
     #+begin_src cicada-nymph :tangle core.cn
     : latin-char->number
       << latin-char -- number >>
-      dup "A" string-head,byte less-than? if
+      dup "A" string,byte less-than? if
         "* (latin-char->number) the argument must be a latin-char" .s .l
         "  but the following char is less-than 'A' : " .s
         .i .l
         end
       then
-      dup "Z" string-head,byte less-or-equal? if
-        "A" string-head,byte
+      dup "Z" string,byte less-or-equal? if
+        "A" string,byte
         sub
         10 add
         end
       then
-      dup "a" string-head,byte less-than? if
+      dup "a" string,byte less-than? if
         "* (latin-char->number) the argument must be a latin-char" .s .l
         "  but the following char is less-than 'a' but greater-then 'Z' : " .s
         .i .l
         end
       then
-      dup "z" string-head,byte less-or-equal? if
-        "a" string-head,byte
+      dup "z" string,byte less-or-equal? if
+        "a" string,byte
         sub
         10 add
         end
@@ -1849,7 +1854,7 @@
     : number->latin-char
       << number -- latin-char >>
       10 sub
-      "a" string-head,byte
+      "a" string,byte
       add
       end
     ; define-function
@@ -1866,7 +1871,7 @@
       dup digit-char?
       swap latin-char?
       or if
-        string-tail,byte
+        string,byte-tail
         loop
       then
       drop2
@@ -1882,10 +1887,10 @@
         drop2 false
         end
       then
-      dup2 string-head,byte
-      "-" string-head,byte
+      dup2 string,byte
+      "-" string,byte
       equal? if
-        string-tail,byte
+        string,byte-tail
         wild-digit-string?
         end
       then
@@ -1926,14 +1931,14 @@
       :string-address
       string->buffer!
       :string-address swap
-      "_" string-head,byte
+      "_" string,byte
       remove-char!
       >:new-string-length
       >:new-string-address
       << dup2 .s .l 0 end >>
       :new-string-address
       :new-string-length
-      "#" string-head,byte
+      "#" string,byte
       string,find-char if
       else
         false
@@ -1991,7 +1996,7 @@
       >:address
       :address
       :length
-      "#" string-head,byte
+      "#" string,byte
       string,find-char if
       else
         "* (base#wild-integer-string->base-string)" .s .l
@@ -2017,7 +2022,7 @@
       >:address
       :address
       :length
-      "#" string-head,byte
+      "#" string,byte
       string,find-char if
       else
         "* (base#wild-integer-string->wild-integer-string)" .s .l
@@ -2102,10 +2107,10 @@
         0
         end
       then
-      dup2 string-head,byte
-      "-" string-head,byte
+      dup2 string,byte
+      "-" string,byte
       equal? if
-        string-tail,byte
+        string,byte-tail
         -1 >:sign
       else
         1 >:sign
@@ -2129,7 +2134,7 @@
       tuck :address string->buffer!
         >:length
       :address :length
-      "_" string-head,byte remove-char!
+      "_" string,byte remove-char!
         >::string
       ::string
       base#wild-integer-string->base-string
@@ -2517,8 +2522,8 @@
        false
        end
      then
-     string-head,byte
-     "<" string-head,byte equal?
+     string,byte
+     "<" string,byte equal?
      end
    ; define-function
    #+end_src
@@ -2566,9 +2571,9 @@
         end
       then
       dup2
-      string-tail,word
+      string,word-tail
       xx|swap|xx
-      string-head,word
+      string,word
       make-jojo,dispatch-word
       loop
     ; define-function
@@ -2674,17 +2679,17 @@
 
      dup2 >::string
 
-     ::string string-head,word >::title
-     ::string string-tail,word string-head,word >::name
-     ::string string-tail,word string-tail,word >::body
+     ::string string,word >::title
+     ::string string,word-tail string,word >::name
+     ::string string,word-tail string,word-tail >::body
 
      ::title " " ::name
      512 allocate-local-memory dup >:buffer
      3 n-string->buffer! >:length
      :buffer :length >::name
      ::title <word>? not if
-       ::string string-head,word >::name
-       ::string string-tail,word >::body
+       ::string string,word >::name
+       ::string string,word-tail >::body
      then
 
      *explainer,function* 0
@@ -2770,8 +2775,8 @@
      >::string
      >:value
 
-     ::string string-head,word >::title
-     ::string string-tail,word string-head,word >::name
+     ::string string,word >::title
+     ::string string,word-tail string,word >::name
 
      ::title " " ::name
      512 allocate-local-memory dup >:buffer
@@ -2829,9 +2834,9 @@
 
      dup2 >::string
 
-     ::string string-head,word >::title
-     ::string string-tail,word string-head,word >::name
-     ::string string-tail,word string-tail,word >::body
+     ::string string,word >::title
+     ::string string,word-tail string,word >::name
+     ::string string,word-tail string,word-tail >::body
 
      ::title " " ::name
      512 allocate-local-memory dup >:buffer
@@ -2840,8 +2845,8 @@
      :buffer :length >::name
 
      ::title <word>? not if
-       ::string string-head,word >::name
-       ::string string-tail,word >::body
+       ::string string,word >::name
+       ::string string,word-tail >::body
      then
 
      *explainer,exception* 0
@@ -3087,18 +3092,18 @@
       >::title
       >::string
       >:jo
-      ::title ::string string-head,word
+      ::title ::string string,word
       name-hash-table,find-jo,with-title if
         jojo-area,stay
       else
         "* (syntax,title,make-jojo) meet undefined" .s .l
         "  title : " .s ::title .s .l
-        "  name  : " .s ::string string-head,word .s .l
+        "  name  : " .s ::string string,word .s .l
         global-naming-stack,delete-last-record
         !undo-make-jojo
       then
       :jo
-      ::string string-tail,word
+      ::string string,word-tail
       end
     ; define-function
     #+end_src
@@ -3158,13 +3163,13 @@
         false
         end
       then
-      xx|over|xx string-head,word
+      xx|over|xx string,word
       xx|over|xx string-equal? if
         drop2
         true
         end
       then
-      xx|swap|xx string-tail,word
+      xx|swap|xx string,word-tail
       xx|swap|xx
       loop
     ; define-function
@@ -3172,15 +3177,15 @@
 *** test
     #+begin_src cicada-nymph
     "111 222 333" "222" string,find-word if
-      string-head,word .s
+      string,word .s
     then
 
     "111 222 333" "444" string,find-word if
-      string-head,word .s
+      string,word .s
     then
 
     "111 222 [] 333" "[" string,find-word if
-      string-head,word .s
+      string,word .s
     then
     #+end_src
 *** note side-effect
@@ -3357,10 +3362,10 @@
       jo instruction,literal
         jojo-area,stay
       dup2
-      string-head,word
+      string,word
       string->name
         jojo-area,stay
-      string-tail,word
+      string,word-tail
       end
     ; define-function
     #+end_src
@@ -3864,7 +3869,19 @@
 * to define some alias
 ** <string>
    #+begin_src cicada-nymph :tangle core.cn
+   "<string> byte" "string,byte" alias
+   "<string> byte-tail" "string,byte-tail" alias
+   "<string> byte-back" "string,byte-back" alias
+
+   "<string> word" "string,word" alias
+   "<string> word-begin" "string,word-begin" alias
+   "<string> word-end" "string,word-end" alias
+   "<string> word-tail" "string,word-tail" alias
+
    "<string> equal?" "string-equal?" alias
+
+   "<string> space?" "space-string?" alias
+   "<string> empty?" "empty-string?" alias
    #+end_src
 ** *rule-set*
    #+begin_src cicada-nymph :tangle core.cn
@@ -4088,9 +4105,9 @@
      << string[address, length] -- >>
      >::string
 
-     ::string string-head,word >::title
-     ::string string-tail,word string-head,word >::name
-     ::string string-tail,word string-tail,word >::body
+     ::string <string> word >::title
+     ::string <string> word-tail <string> word >::name
+     ::string <string> word-tail <string> word-tail >::body
 
      ::title " " ::name
      512 allocate-local-memory dup >:buffer
@@ -4098,7 +4115,7 @@
      :buffer :len >::name
      ::title <word>? not if
        ::title >::name
-       ::string string-tail,word >::body
+       ::string <string> word-tail >::body
      then
 
      snapshot-the-stack-pointer
@@ -5400,7 +5417,7 @@
        loop
      then
      :cursor :length add get-byte
-     "=" string-head,byte
+     "=" <string> byte
      equal? not if
        :address :length
        :cursor 0 cursor->next-matching-byte add1
@@ -5474,8 +5491,8 @@
        drop2
        end
      then
-     dup2 string-head,word .s 32 .b
-     string-tail,word
+     dup2 <string> word .s 32 .b
+     <string> word-tail
      loop
    ; define-function
 
@@ -5829,7 +5846,7 @@
        false
        end
      then
-     string-head,byte
+     <string> byte
      47 equal? not
      end
    ; define-function
@@ -5844,7 +5861,7 @@
        false
        end
      then
-     string-head,byte
+     <string> byte
      47 equal?
      end
    ; define-function
@@ -6141,13 +6158,13 @@
        end
      then
      over get-byte
-     "+" string-head,byte equal? not if
+     "+" <string> byte equal? not if
        drop2
        false
        end
      then
      add sub1 get-byte
-     "+" string-head,byte equal?
+     "+" <string> byte equal?
      end
    ; define-function
    #+end_src
@@ -6268,7 +6285,7 @@
 
      :cursor :length add
        dup
-       "/" string-head,byte
+       "/" <string> byte
        swap
        set-byte
      add1
@@ -6339,19 +6356,19 @@
        true
        end
      then
-     string-head,byte :byte equal? not if
+     <string> byte :byte equal? not if
        false
        end
      then
-     ::string string-tail,byte
+     ::string <string> byte-tail
      :byte
      loop
    ; define-function
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "aaa" "a" string-head,byte <string> full-of-the-same-byte?
-   "aba" "a" string-head,byte <string> full-of-the-same-byte?
+   "aaa" "a" <string> byte <string> full-of-the-same-byte?
+   "aba" "a" <string> byte <string> full-of-the-same-byte?
    #+end_src
 ** <string> any-word
    #+begin_src cicada-nymph :tangle core.cn
@@ -6365,11 +6382,11 @@
        false
        end
      then
-     ::string string-head,word :function apply if
+     ::string <string> word :function apply if
        true
        end
      then
-     ::string string-tail,word
+     ::string <string> word-tail
      :function
      loop
    ; define-function
@@ -6386,11 +6403,11 @@
        true
        end
      then
-     ::string string-head,word :function apply not if
+     ::string <string> word :function apply not if
        false
        end
      then
-     ::string string-tail,word
+     ::string <string> word-tail
      :function
      loop
    ; define-function
@@ -6405,6 +6422,104 @@
      "name name name" ["name" <string> equal? not end] <string> every-word . << 0 >>
      "no no name no" ["name" <string> equal? end] <string> every-word . << 0 >>
      .l
+     end
+   ; define-function
+   test
+   #+end_src
+** <string> word-end-back
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> word-end-back
+     << string[address, length] -- string[address, length] >>
+     dup zero? if
+       <<
+       no error handling
+       the same empty-string is returned
+       >>
+       end
+     then
+     dup2 <string> byte-back
+     <string> byte space-byte? not if
+       end
+     then
+     <string> byte-back
+     loop
+   ; define-function
+   #+end_src
+** <string> word-begin-back
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> word-begin-back,loop
+     << string[address, length] -- string[address, length] >>
+     dup zero? if
+       <<
+       no error handling
+       the current empty-string is returned
+       >>
+       end
+     then
+     dup2 <string> byte-back
+     <string> byte space-byte? if
+       end
+     then
+     dup2 <string> byte-back
+     <string> byte bar-ket-byte? if
+       end
+     then
+     <string> byte-back
+     loop
+   ; define-function
+
+   : <string> word-begin-back
+     << string[address, length] -- string[address, length] >>
+     dup zero? if
+       <<
+       no error handling
+       the same empty-string is returned
+       >>
+       end
+     then
+     dup2 <string> byte-back
+     <string> byte bar-ket-byte? if
+       <string> byte-back
+       end
+     then
+     <string> word-begin-back,loop
+     end
+   ; define-function
+   #+end_src
+** <string> word-back
+   #+begin_src cicada-nymph :tangle core.cn
+   : <string> word-back
+     << string[address, length] -- string[address, length] >>
+     <string> word-end-back
+     <string> word-begin-back
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   "   aaa   aaa   aaa"
+   <string> word-tail dup2 .s << "   aaa   aaa" >>
+   <string> word-back dup2 .s << "aaa   aaa   aaa" >>
+   <string> word .s << "aaa" >>
+   #+end_src
+* reading-stack
+** unread-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : unread-word
+     << -- >>
+     pop-reading-stack
+     <string> word-back
+     push-reading-stack
+     end
+   ; define-function
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : test
+     << -- >>
+     read-word "* read-word : " .s .s .l
+     unread-word
+     read-word "* read-word again : " .s .s .l
      end
    ; define-function
    test
@@ -6978,12 +7093,12 @@
      :address :length add get-byte >:last-byte
      :address :length add sub1 get-byte >:the-byte-before-last-byte
      :last-byte
-     ":" string-head,byte equal? not if
+     ":" <string> byte equal? not if
        false
        end
      then
      :the-byte-before-last-byte
-     ":" string-head,byte equal? if
+     ":" <string> byte equal? if
        false
        end
      then
@@ -7067,7 +7182,7 @@
         false
         end
       then
-      ":" string-head,byte
+      ":" <string> byte
       <string> full-of-the-same-byte?
       end
     ; define-function
@@ -7081,7 +7196,7 @@
         false
         end
       then
-      "=" string-head,byte
+      "=" <string> byte
       <string> full-of-the-same-byte?
       end
     ; define-function
@@ -7115,7 +7230,7 @@
         false
         end
       then
-      dup2 string-head,word
+      dup2 <string> word
       <string> module-meta-begin? not if
         drop2
         false
@@ -7150,12 +7265,12 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <module-buffer> get-code-string
       << module-buffer[address, length] -- meta-string[address, length] >>
-      dup2 string-head,word
+      dup2 <string> word
       <string> module-meta-end? if
-        string-tail,word
+        <string> word-tail
         end
       then
-      string-tail,word
+      <string> word-tail
       loop
     ; define-function
     #+end_src
@@ -7163,18 +7278,18 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <module-buffer> get-meta-string,loop
       << module-buffer[address, length] -- cursor >>
-      dup2 string-head,word
+      dup2 <string> word
       <string> module-meta-end? if
         drop
         end
       then
-      string-tail,word
+      <string> word-tail
       loop
     ; define-function
 
     : <module-buffer> get-meta-string
       << module-buffer[address, length] -- meta-string[address, length] >>
-      string-tail,word
+      <string> word-tail
       dup2 <module-buffer> get-meta-string,loop >:cursor
       drop >:address
       :address
@@ -7344,7 +7459,7 @@
       :begin <name-record> get-new-jo
       :begin <name-record> get-name
       name->string
-      string-tail,word string-tail,byte
+      <string> word-tail <string> byte-tail
       string->name
       <global-naming-stack> record-jo
 
@@ -8305,8 +8420,8 @@
      << -- >>
      "* (cicada-nymph) unknow command-line-function : " .s
      get-command-line
-     string-tail,word
-     string-head,word .s .l
+     <string> word-tail
+     <string> word .s .l
      "  good bye ^-^/" .s .l
      bye
    ; define-function
@@ -8349,16 +8464,16 @@
    : <command-function> poi
      << -- >>
      get-command-line
-     string-tail,word
-     string-tail,word >::command-line
+     <string> word-tail
+     <string> word-tail >::command-line
 
      ::command-line space-string? if
        <poi> help
        bye
      then
 
-     ::command-line string-head,word >::sub-function-name
-     ::command-line string-tail,word >::command-line-arguments
+     ::command-line <string> word >::sub-function-name
+     ::command-line <string> word-tail >::command-line-arguments
 
      ::sub-function-name "help" string-equal? if
        <poi> help
@@ -8366,27 +8481,27 @@
      then
 
      ::sub-function-name "add" string-equal? if
-       ::command-line-arguments string-head,word
-       ::command-line-arguments string-tail,word string-head,word
+       ::command-line-arguments <string> word
+       ::command-line-arguments <string> word-tail <string> word
        <poi> add
        bye
      then
 
      ::sub-function-name "sub" string-equal? if
-       ::command-line-arguments string-head,word
+       ::command-line-arguments <string> word
        <poi> sub
        bye
      then
 
      ::sub-function-name "up" string-equal? if
-       ::command-line-arguments string-head,word
-       ::command-line-arguments string-tail,word string-head,word
+       ::command-line-arguments <string> word
+       ::command-line-arguments <string> word-tail <string> word
        <poi> up
        bye
      then
 
      ::sub-function-name "find" string-equal? if
-       ::command-line-arguments string-head,word
+       ::command-line-arguments <string> word
        <poi> find if
          .s .l
        else
@@ -8419,16 +8534,16 @@
    : <command-function> moi
      << -- >>
      get-command-line
-     string-tail,word
-     string-tail,word >::command-line
+     <string> word-tail
+     <string> word-tail >::command-line
 
      ::command-line space-string? if
        <moi> help
        bye
      then
 
-     ::command-line string-head,word >::sub-function-name
-     ::command-line string-tail,word >::command-line-arguments
+     ::command-line <string> word >::sub-function-name
+     ::command-line <string> word-tail >::command-line-arguments
 
      ::sub-function-name "help" string-equal? if
        <moi> help
@@ -8436,27 +8551,27 @@
      then
 
      ::sub-function-name "add" string-equal? if
-       ::command-line-arguments string-head,word
-       ::command-line-arguments string-tail,word string-head,word
+       ::command-line-arguments <string> word
+       ::command-line-arguments <string> word-tail <string> word
        <moi> add
        bye
      then
 
      ::sub-function-name "sub" string-equal? if
-       ::command-line-arguments string-head,word
+       ::command-line-arguments <string> word
        <moi> sub
        bye
      then
 
      ::sub-function-name "up" string-equal? if
-       ::command-line-arguments string-head,word
-       ::command-line-arguments string-tail,word string-head,word
+       ::command-line-arguments <string> word
+       ::command-line-arguments <string> word-tail <string> word
        <moi> up
        bye
      then
 
      ::sub-function-name "find" string-equal? if
-       ::command-line-arguments string-head,word
+       ::command-line-arguments <string> word
        <moi> find if
          .s .l
        else
@@ -8493,13 +8608,13 @@
    : <command> dispatch
      << -- >>
      get-command-line
-     string-tail,word
+     <string> word-tail
      dup2 space-string? if
        drop2
        <command-function> no-function
        end
      then
-     string-head,word
+     <string> word
      >::1st-word
      ::1st-word "basic-REPL" string-equal? if
        <command-function> basic-REPL
