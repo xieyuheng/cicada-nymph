@@ -3385,7 +3385,7 @@
    define_primitive_function "write-byte", write_byte
       ;; << byte -- >>
       pop_argument_stack rax
-      ;; write can not just write the char in al to stdout
+      ;; write can not just write the byte in al to stdout
       ;; write needs the address of the byte to write
       mov [buffer$write_byte], al
       mov linux64_sys_3_rdx, 1                 ;; max length to be write
@@ -3408,7 +3408,7 @@
       ;; << byte -- >>
       ;; just calls the Linux write system call
       pop_argument_stack rax
-      ;; write can not just write the char in al to stdout
+      ;; write can not just write the byte in al to stdout
       ;; write needs the address of the byte to write
       mov [buffer$write_byte], al
       mov linux32_sys_3_edx, 1                 ;; max length to be write
@@ -3674,19 +3674,19 @@
      xx end
   #+end_src
 * -----------------------------------
-* char
+* byte
 ** space-byte?
    * as for space-byte
      I only use two
      ASCII 10 (newline)
      ASCII 32 (whitespace)
    * note that
-     I use the term "whitespace" to denotes the char
-     I use the term "space" to denotes the set of chars
+     I use the term "whitespace" to denotes the byte
+     I use the term "space" to denotes the set of bytes
    * I will simply view number less-or-equal 32 as space-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "space-byte?", space_byte?
-      ;; << char -- bool >>
+      ;; << byte -- bool >>
       xx literal, 0
       xx literal, 32
       xx within?
@@ -3698,7 +3698,7 @@
    * double-quote is viewed as special bar-ket-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "bar-ket-byte?", bar_ket_byte?
-      ;; << char -- bool >>
+      ;; << byte -- bool >>
       xx dup, literal, '(', equal?, false?branch, 4
       xx   drop, true
       xx   end
@@ -3723,25 +3723,25 @@
       xx drop, false
       xx end
    #+end_src
-** digit-char?
+** digit-byte?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "digit-char?", digit_char?
-      ;; << char -- bool >>
+   define_function "digit-byte?", digit_byte?
+      ;; << byte -- bool >>
       xx literal, '0'
       xx literal, '9'
       xx within?
       xx end
    #+end_src
-** digit-char->number & number->digit-char
+** digit-byte->number & number->digit-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "digit-char->number", digit_char_to_number
-      ;; << char -- decimal-digit >>
+   define_function "digit-byte->number", digit_byte_to_number
+      ;; << byte -- number >>
       xx literal, '0'
       xx subtraction
       xx end
 
-   define_function "number->digit-char", number_to_digit_char
-      ;; << decimal-digit -- char >>
+   define_function "number->digit-byte", number_to_digit_byte
+      ;; << number -- byte >>
       xx literal, '0'
       xx addition
       xx end
@@ -3831,7 +3831,7 @@
 ** string,byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string,byte", string__byte
-      ;; << string[address, length] -- char >>
+      ;; << string[address, length] -- byte >>
       xx drop, get_byte
       xx end
    #+end_src
@@ -3923,11 +3923,10 @@
 
    }
    #+end_src
-** char-string?
-   * string of one char
+** one-byte-string?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "char-string?", char_string?
-      ;; << string[address, length], char -- bool >>
+   define_function "one-byte-string?", one_byte_string?
+      ;; << string[address, length], byte -- bool >>
       xx xxswapx
       xx dup, one?, false?, false?branch, 5
       xx   drop2, drop
@@ -3946,14 +3945,14 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "zero-string?", zero_string?
       ;; << string[address, length] -- bool >>
-      xx dup2, literal, '0', char_string?, false?branch, 4
+      xx dup2, literal, '0', one_byte_string?, false?branch, 4
       xx   drop2, true
       xx   end
       xx dup2
       xx string__byte, literal, '-', equal?, false?, false?branch, 4
       xx   drop2, false
       xx   end
-      xx string__byte_tail, literal, '0', char_string?
+      xx string__byte_tail, literal, '0', one_byte_string?
       xx end
    #+end_src
 ** digit-string?
@@ -3963,7 +3962,7 @@
       xx dup, zero?, false?branch, 4
       xx   drop2, true
       xx   end
-      xx over, get_byte, digit_char?, false?branch, 4
+      xx over, get_byte, digit_byte?, false?branch, 4
       xx   string__byte_tail
       xx   tail_call, digit_string?
       xx drop2, false
@@ -3976,7 +3975,7 @@
       xx dup, zero?, false?branch, 4
       xx   drop2, false
       xx   end
-      xx dup2, literal, '-', char_string?, false?branch, 4
+      xx dup2, literal, '-', one_byte_string?, false?branch, 4
       xx   drop2, false
       xx   end
       xx dup2, string__byte, literal, '-', equal?, false?branch, 4
@@ -4013,7 +4012,7 @@
       xx   drop2
       xx   end
 
-      xx dup2, string__byte, digit_char_to_number
+      xx dup2, string__byte, digit_byte_to_number
       xx   literal, 10
       xx   literal, counter$digit_string_to_number, get
       xx     one
@@ -4041,10 +4040,10 @@
       xx end
    #+end_src
 ** ----------------------------------
-** string,find-char
+** string,find-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,find-char", string__find_char
-     ;; << string[address, length], char
+   define_function "string,find-byte", string__find_byte
+     ;; << string[address, length], byte
      ;;    -- address, true
      ;;    -- false >>
      xx over, zero?, false?branch, 5
@@ -4059,18 +4058,18 @@
      xx xxswapx
      xx string__byte_tail
      xx xswapxx
-     xx tail_call, string__find_char
+     xx tail_call, string__find_byte
    #+end_src
 ** test
    #+begin_src cicada-nymph
    : XIE Yuheng ;
-   32 string,find-char . << 1 >>
+   32 string,find-byte . << 1 >>
    get-byte . << 32 >>
    #+end_src
 ** string-end,byte
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "string-end,byte", string_end__byte
-      ;; << string[address, length] -- char >>
+      ;; << string[address, length] -- byte >>
       xx addition, sub1, get_byte
       xx end
    #+end_src
@@ -4192,7 +4191,7 @@
       ;; << rest-number -- >>
       xx literal, 10, divmod
 
-      xx number_to_digit_char
+      xx number_to_digit_byte
       xx literal, buffer$write_number
       xx literal, counter$write_number, get
       xx addition
@@ -4483,13 +4482,13 @@
    define_function "colon-string?", colon_string?
       ;; << string[address, length] -- bool >>
       xx literal, ':'
-      xx char_string?
+      xx one_byte_string?
       xx end
 
    define_function "semicolon-string?", semicolon_string?
       ;; << string[address, length] -- bool >>
       xx literal, ';'
-      xx char_string?
+      xx one_byte_string?
       xx end
    #+end_src
 ** comment-[begin|end]-string?
@@ -4993,7 +4992,7 @@
       xx drop2
 
       xx dup2
-      xx literal, '"', string__find_char
+      xx literal, '"', string__find_byte
       xx false?branch, (.not_found-$)/jo_size
       xx   xoverxx, subtraction
       ;;   << string[address, length], new-length >>

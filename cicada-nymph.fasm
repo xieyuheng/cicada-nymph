@@ -2419,7 +2419,7 @@ buffer$write_byte:
 define_primitive_function "write-byte", write_byte
    ;; << byte -- >>
    pop_argument_stack rax
-   ;; write can not just write the char in al to stdout
+   ;; write can not just write the byte in al to stdout
    ;; write needs the address of the byte to write
    mov [buffer$write_byte], al
    mov linux64_sys_3_rdx, 1                 ;; max length to be write
@@ -2440,7 +2440,7 @@ define_primitive_function "write-byte", write_byte
    ;; << byte -- >>
    ;; just calls the Linux write system call
    pop_argument_stack rax
-   ;; write can not just write the char in al to stdout
+   ;; write can not just write the byte in al to stdout
    ;; write needs the address of the byte to write
    mov [buffer$write_byte], al
    mov linux32_sys_3_edx, 1                 ;; max length to be write
@@ -2643,14 +2643,14 @@ define_function "load-core-file", load_core_file
    xx end
 
 define_function "space-byte?", space_byte?
-   ;; << char -- bool >>
+   ;; << byte -- bool >>
    xx literal, 0
    xx literal, 32
    xx within?
    xx end
 
 define_function "bar-ket-byte?", bar_ket_byte?
-   ;; << char -- bool >>
+   ;; << byte -- bool >>
    xx dup, literal, '(', equal?, false?branch, 4
    xx   drop, true
    xx   end
@@ -2675,21 +2675,21 @@ define_function "bar-ket-byte?", bar_ket_byte?
    xx drop, false
    xx end
 
-define_function "digit-char?", digit_char?
-   ;; << char -- bool >>
+define_function "digit-byte?", digit_byte?
+   ;; << byte -- bool >>
    xx literal, '0'
    xx literal, '9'
    xx within?
    xx end
 
-define_function "digit-char->number", digit_char_to_number
-   ;; << char -- decimal-digit >>
+define_function "digit-byte->number", digit_byte_to_number
+   ;; << byte -- number >>
    xx literal, '0'
    xx subtraction
    xx end
 
-define_function "number->digit-char", number_to_digit_char
-   ;; << decimal-digit -- char >>
+define_function "number->digit-byte", number_to_digit_byte
+   ;; << number -- byte >>
    xx literal, '0'
    xx addition
    xx end
@@ -2755,7 +2755,7 @@ define_function "string-equal?", string_equal?
    xx end
 
 define_function "string,byte", string__byte
-   ;; << string[address, length] -- char >>
+   ;; << string[address, length] -- byte >>
    xx drop, get_byte
    xx end
 
@@ -2836,8 +2836,8 @@ define_primitive_function "string-reverse!", string_reverse!
 
 }
 
-define_function "char-string?", char_string?
-   ;; << string[address, length], char -- bool >>
+define_function "one-byte-string?", one_byte_string?
+   ;; << string[address, length], byte -- bool >>
    xx xxswapx
    xx dup, one?, false?, false?branch, 5
    xx   drop2, drop
@@ -2851,14 +2851,14 @@ define_function "char-string?", char_string?
 
 define_function "zero-string?", zero_string?
    ;; << string[address, length] -- bool >>
-   xx dup2, literal, '0', char_string?, false?branch, 4
+   xx dup2, literal, '0', one_byte_string?, false?branch, 4
    xx   drop2, true
    xx   end
    xx dup2
    xx string__byte, literal, '-', equal?, false?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx string__byte_tail, literal, '0', char_string?
+   xx string__byte_tail, literal, '0', one_byte_string?
    xx end
 
 define_function "digit-string?", digit_string?
@@ -2866,7 +2866,7 @@ define_function "digit-string?", digit_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, true
    xx   end
-   xx over, get_byte, digit_char?, false?branch, 4
+   xx over, get_byte, digit_byte?, false?branch, 4
    xx   string__byte_tail
    xx   tail_call, digit_string?
    xx drop2, false
@@ -2877,7 +2877,7 @@ define_function "integer-string?", integer_string?
    xx dup, zero?, false?branch, 4
    xx   drop2, false
    xx   end
-   xx dup2, literal, '-', char_string?, false?branch, 4
+   xx dup2, literal, '-', one_byte_string?, false?branch, 4
    xx   drop2, false
    xx   end
    xx dup2, string__byte, literal, '-', equal?, false?branch, 4
@@ -2912,7 +2912,7 @@ define_function "help,digit-string->number", help__digit_string_to_number
    xx   drop2
    xx   end
 
-   xx dup2, string__byte, digit_char_to_number
+   xx dup2, string__byte, digit_byte_to_number
    xx   literal, 10
    xx   literal, counter$digit_string_to_number, get
    xx     one
@@ -2937,8 +2937,8 @@ define_function "string->integer", string_to_integer
    xx negate
    xx end
 
-define_function "string,find-char", string__find_char
-  ;; << string[address, length], char
+define_function "string,find-byte", string__find_byte
+  ;; << string[address, length], byte
   ;;    -- address, true
   ;;    -- false >>
   xx over, zero?, false?branch, 5
@@ -2953,10 +2953,10 @@ define_function "string,find-char", string__find_char
   xx xxswapx
   xx string__byte_tail
   xx xswapxx
-  xx tail_call, string__find_char
+  xx tail_call, string__find_byte
 
 define_function "string-end,byte", string_end__byte
-   ;; << string[address, length] -- char >>
+   ;; << string[address, length] -- byte >>
    xx addition, sub1, get_byte
    xx end
 
@@ -3059,7 +3059,7 @@ define_function "write-number,loop", write_number__loop
    ;; << rest-number -- >>
    xx literal, 10, divmod
 
-   xx number_to_digit_char
+   xx number_to_digit_byte
    xx literal, buffer$write_number
    xx literal, counter$write_number, get
    xx addition
@@ -3251,13 +3251,13 @@ define_function "basic-REPL", basic_REPL
 define_function "colon-string?", colon_string?
    ;; << string[address, length] -- bool >>
    xx literal, ':'
-   xx char_string?
+   xx one_byte_string?
    xx end
 
 define_function "semicolon-string?", semicolon_string?
    ;; << string[address, length] -- bool >>
    xx literal, ';'
-   xx char_string?
+   xx one_byte_string?
    xx end
 
 string$comment_begin:
@@ -3616,7 +3616,7 @@ define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
    xx drop2
 
    xx dup2
-   xx literal, '"', string__find_char
+   xx literal, '"', string__find_byte
    xx false?branch, (.not_found-$)/jo_size
    xx   xoverxx, subtraction
    ;;   << string[address, length], new-length >>

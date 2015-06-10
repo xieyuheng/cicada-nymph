@@ -2,12 +2,6 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
-* renaming
-  * char is about encoding
-    byte is not
-    since we have no ending now
-    the following renaming is needed
-    (char) --> (byte)
 * module mechanism
 ** about <importing-stack>
 ** ><>< syntax
@@ -1739,37 +1733,37 @@
       even greater then 36
       but when the base is greater then 36
       not all integer can be represented under this base
-      for we only have 36 chars
-*** remove-char!
+      for we only have 36 bytes
+*** remove-byte!
     #+begin_src cicada-nymph :tangle core.cn
-    : remove-char!,loop
-      << cursor, length, char -- cursor >>
-      >:char
+    : remove-byte!,loop
+      << cursor, length, byte -- cursor >>
+      >:byte
       >:length
       >:cursor
       :length zero? if
         :cursor
         end
       then
-      :cursor get-byte :char equal? if
+      :cursor get-byte :byte equal? if
         :cursor add1 :length sub1
         :cursor
         string->buffer!
         :cursor
         :length sub1
-        :char
+        :byte
       else
         :cursor add1
         :length sub1
-        :char
+        :byte
       then
       loop
     ; define-function
 
-    : remove-char!
-      << string[address, length], char -- string[address, length] >>
+    : remove-byte!
+      << string[address, length], byte -- string[address, length] >>
       x|over|xx >:address
-      remove-char!,loop >:cursor
+      remove-byte!,loop >:cursor
       :address
       :cursor :address sub
       end
@@ -1777,24 +1771,24 @@
     #+end_src
 *** test
     #+begin_src cicada-nymph
-    : test,remove-char!
+    : test,remove-byte!
       << -- >>
       "2#1001_1001"
       "_" string,byte
-      remove-char! .s << 2#1001_1001 >>
+      remove-byte! .s << 2#1001_1001 >>
       .l
       "___2#1001___1001___"
       "_" string,byte
-      remove-char! .s << 2#1001_1001 >>
+      remove-byte! .s << 2#1001_1001 >>
       .l
       end
     ; define-function
-    test,remove-char!
+    test,remove-byte!
     #+end_src
-*** latin-char?
+*** latin-byte?
     #+begin_src cicada-nymph :tangle core.cn
-    : latin-char?
-      << char -- bool >>
+    : latin-byte?
+      << byte -- bool >>
       dup "A" string,byte less-than? if
         drop false
         end
@@ -1815,13 +1809,13 @@
       end
     ; define-function
     #+end_src
-*** latin-char->number
+*** latin-byte->number
     #+begin_src cicada-nymph :tangle core.cn
-    : latin-char->number
-      << latin-char -- number >>
+    : latin-byte->number
+      << latin-byte -- number >>
       dup "A" string,byte less-than? if
-        "* (latin-char->number) the argument must be a latin-char" .s .l
-        "  but the following char is less-than 'A' : " .s
+        "* (latin-byte->number) the argument must be a latin-byte" .s .l
+        "  but the following byte is less-than 'A' : " .s
         .i .l
         end
       then
@@ -1832,8 +1826,8 @@
         end
       then
       dup "a" string,byte less-than? if
-        "* (latin-char->number) the argument must be a latin-char" .s .l
-        "  but the following char is less-than 'a' but greater-then 'Z' : " .s
+        "* (latin-byte->number) the argument must be a latin-byte" .s .l
+        "  but the following byte is less-than 'a' but greater-then 'Z' : " .s
         .i .l
         end
       then
@@ -1843,16 +1837,16 @@
         10 add
         end
       then
-      "* (latin-char->number) the argument must be a latin-char" .s .l
-      "  but the following char is greater-then 'z' : " .s
+      "* (latin-byte->number) the argument must be a latin-byte" .s .l
+      "  but the following byte is greater-then 'z' : " .s
       .i .l
       end
     ; define-function
     #+end_src
-*** number->latin-char
+*** number->latin-byte
     #+begin_src cicada-nymph :tangle core.cn
-    : number->latin-char
-      << number -- latin-char >>
+    : number->latin-byte
+      << number -- latin-byte >>
       10 sub
       "a" string,byte
       add
@@ -1868,8 +1862,8 @@
         end
       then
       over get-byte
-      dup digit-char?
-      swap latin-char?
+      dup digit-byte?
+      swap latin-byte?
       or if
         string,byte-tail
         loop
@@ -1932,14 +1926,14 @@
       string->buffer!
       :string-address swap
       "_" string,byte
-      remove-char!
+      remove-byte!
       >:new-string-length
       >:new-string-address
       << dup2 .s .l 0 end >>
       :new-string-address
       :new-string-length
       "#" string,byte
-      string,find-char if
+      string,find-byte if
       else
         false
         end
@@ -1997,7 +1991,7 @@
       :address
       :length
       "#" string,byte
-      string,find-char if
+      string,find-byte if
       else
         "* (base#wild-integer-string->base-string)" .s .l
         "  the argument must be a base#wild-integer-string" .s .l
@@ -2023,7 +2017,7 @@
       :address
       :length
       "#" string,byte
-      string,find-char if
+      string,find-byte if
       else
         "* (base#wild-integer-string->wild-integer-string)" .s .l
         "  the argument must be a base#wild-integer-string" .s .l
@@ -2080,12 +2074,12 @@
         :sum
         end
       then
-      :address get-byte >:char
-      :char digit-char? if
-        :char digit-char->number
+      :address get-byte >:byte
+      :byte digit-byte? if
+        :byte digit-byte->number
       then
-      :char latin-char? if
-        :char latin-char->number
+      :byte latin-byte? if
+        :byte latin-byte->number
       then
       :base :counter power
       mul
@@ -2134,7 +2128,7 @@
       tuck :address string->buffer!
         >:length
       :address :length
-      "_" string,byte remove-char!
+      "_" string,byte remove-byte!
         >::string
       ::string
       base#wild-integer-string->base-string
@@ -2231,9 +2225,9 @@
       :base
       divmod >:mod >:div
       :mod 10 less-than? if
-        :mod number->digit-char
+        :mod number->digit-byte
       else
-        :mod number->latin-char
+        :mod number->latin-byte
       then
       :cursor
       set-byte
@@ -3882,6 +3876,8 @@
 
    "<string> space?" "space-string?" alias
    "<string> empty?" "empty-string?" alias
+
+   "<string> find-byte" "string,find-byte" alias
    #+end_src
 ** *rule-set*
    #+begin_src cicada-nymph :tangle core.cn
@@ -4042,7 +4038,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : eval-string,loop
      << unknown -- unknown >>
-     tos-reading-stack space-string? if
+     tos-reading-stack <string> space? if
        end
      then
      read-word
@@ -4308,7 +4304,7 @@
    : file-type-code->string
      << file-type-code -- string[address, length] >>
      dup 1  equal?  << DT_FIFO  >>  if drop "named pipe i.e. FIFO"  end then
-     dup 2  equal?  << DT_CHR   >>  if drop "character device"      end then
+     dup 2  equal?  << DT_CHR   >>  if drop "Character device"      end then
      dup 4  equal?  << DT_DIR   >>  if drop "directory"             end then
      dup 6  equal?  << DT_BLK   >>  if drop "block device"          end then
      dup 8  equal?  << DT_REG   >>  if drop "regular file"          end then
@@ -4886,7 +4882,7 @@
      "+getdents64,d_name+ : "   .s
      +getdents64,d_name+
      dup 256
-     0 string,find-char
+     0 <string> find-byte
      drop  << drop 0 >>
      over sub .s .l
      .l
@@ -5071,7 +5067,7 @@
        "  " .s
        +getdents64,d_name+
        dup 256
-       0 string,find-char
+       0 <string> find-byte
        drop  << drop 0 >>
        over sub .s .l
      then
@@ -5090,7 +5086,7 @@
          "  " .s
          +getdents64,d_name+
          dup 256
-         0 string,find-char
+         0 <string> find-byte
          drop  << drop 0 >>
          over sub .s .l
        then
@@ -5108,13 +5104,13 @@
        4 equal? if
          +getdents64,d_name+
          dup 256
-         0 string,find-char
+         0 <string> find-byte
          drop  << drop 0 >>
          over sub >::name
-         ".." ::name string-equal? if
+         ".." ::name <string> equal? if
            end
          then
-         "." ::name string-equal? if
+         "." ::name <string> equal? if
            end
          then
          "  " .s ::name .s .l
@@ -5167,7 +5163,7 @@
        then
        :file-name,address :file-name,lenght
        +getdents64,d_name+ :file-name,lenght
-       string-equal? if
+       <string> equal? if
          :file-name,address
          :file-name,lenght
          true
@@ -5206,7 +5202,7 @@
        then
        :file-name,address :file-name,lenght
        +getdents64,d_name+ :file-name,lenght
-       string-equal? if
+       <string> equal? if
          :file-name,address
          :file-name,lenght
          true
@@ -5457,7 +5453,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <report> environment-variable,loop
      << environment-variable-list[address, length]-- >>
-     dup2 space-string? if
+     dup2 <string> space? if
        drop2
        end
      then
@@ -5465,7 +5461,7 @@
      >:length
      >:address
 
-     :address :length 0 string,find-char drop add1 >:cursor
+     :address :length 0 <string> find-byte drop add1 >:cursor
      :cursor :address sub >:length-of-one-variable
 
      :address
@@ -5487,7 +5483,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <report> command-line,loop
      << command-line[address, length] -- >>
-     dup2 space-string? if
+     dup2 <string> space? if
        drop2
        end
      then
@@ -5883,7 +5879,7 @@
    * poi denotes path-organizer
      it can give a name to a path
      one path one name
-   * a path as a string must not contain any space chars
+   * a path as a string must not contain any space bytes
    * a name should only consist of number or letter or "-"
 ** *poi-directory*
    * one directory to store the name path record
@@ -6072,15 +6068,15 @@
          512 allocate-local-memory >:path-buffer
          +getdents64,d_name+
          dup 256
-         0 string,find-char
+         0 <string> find-byte
          drop  << drop 0 >>
          over sub >::name
 
-         ".." ::name string-equal? if
+         ".." ::name <string> equal? if
            end
          then
 
-         "." ::name string-equal? if
+         "." ::name <string> equal? if
            end
          then
 
@@ -6216,7 +6212,7 @@
    : bad-path-syntax-word,loop
      << -- >>
      read-word
-     dup2 ";" string-equal? if
+     dup2 ";" <string> equal? if
        .s 32 .b
        end
      then
@@ -6240,19 +6236,19 @@
    : path-syntax-word->path
      << word[address, length] -- path[address, length] >>
      >::word
-     ::word "+root+" string-equal? if
+     ::word "+root+" <string> equal? if
        "/"
        end
      then
-     ::word "+work+" string-equal? if
+     ::word "+work+" <string> equal? if
        get-work-directory
        end
      then
-     ::word "+home+" string-equal? if
+     ::word "+home+" <string> equal? if
        *home-directory*
        end
      then
-     ::word "+back+" string-equal? if
+     ::word "+back+" <string> equal? if
        ".."
        end
      then
@@ -6274,7 +6270,7 @@
      >:cursor
      read-word >::word
 
-     ";" ::word string-equal? if
+     ";" ::word <string> equal? if
        :cursor
        end
      then
@@ -6321,7 +6317,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : more,rule-set,basic-REPL
      << -- >>
-     ["path:" string-equal? end]
+     ["path:" <string> equal? end]
      jo <basic-REPL-syntax> path
      *rule-set,basic-REPL* add-rule
      end
@@ -6378,7 +6374,7 @@
         -- bool >>
      >:function
      >::string
-     ::string space-string? if
+     ::string <string> space? if
        false
        end
      then
@@ -6399,7 +6395,7 @@
         -- bool >>
      >:function
      >::string
-     ::string space-string? if
+     ::string <string> space? if
        true
        end
      then
@@ -6802,15 +6798,15 @@
           512 allocate-local-memory >:path-buffer
           +getdents64,d_name+
           dup 256
-          0 string,find-char
+          0 <string> find-byte
           drop  << drop 0 >>
           over sub >::name
 
-          ".." ::name string-equal? if
+          ".." ::name <string> equal? if
             end
           then
 
-          "." ::name string-equal? if
+          "." ::name <string> equal? if
             end
           then
 
@@ -7165,6 +7161,7 @@
     : meta-word:do?
       << word[address, length] -- bool >>
       "do:" <string> equal?
+
       end
     ; define-function
     #+end_src
@@ -7225,7 +7222,7 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <module-buffer> good-format?
       << module-buffer[address, length] -- bool >>
-      dup2 space-string? if
+      dup2 <string> space? if
         drop2
         false
         end
@@ -8467,7 +8464,7 @@
      <string> word-tail
      <string> word-tail >::command-line
 
-     ::command-line space-string? if
+     ::command-line <string> space? if
        <poi> help
        bye
      then
@@ -8475,32 +8472,32 @@
      ::command-line <string> word >::sub-function-name
      ::command-line <string> word-tail >::command-line-arguments
 
-     ::sub-function-name "help" string-equal? if
+     ::sub-function-name "help" <string> equal? if
        <poi> help
        bye
      then
 
-     ::sub-function-name "add" string-equal? if
+     ::sub-function-name "add" <string> equal? if
        ::command-line-arguments <string> word
        ::command-line-arguments <string> word-tail <string> word
        <poi> add
        bye
      then
 
-     ::sub-function-name "sub" string-equal? if
+     ::sub-function-name "sub" <string> equal? if
        ::command-line-arguments <string> word
        <poi> sub
        bye
      then
 
-     ::sub-function-name "up" string-equal? if
+     ::sub-function-name "up" <string> equal? if
        ::command-line-arguments <string> word
        ::command-line-arguments <string> word-tail <string> word
        <poi> up
        bye
      then
 
-     ::sub-function-name "find" string-equal? if
+     ::sub-function-name "find" <string> equal? if
        ::command-line-arguments <string> word
        <poi> find if
          .s .l
@@ -8510,7 +8507,7 @@
        bye
      then
 
-     ::sub-function-name "list" string-equal? if
+     ::sub-function-name "list" <string> equal? if
        <poi> list
        bye
      then
@@ -8537,7 +8534,7 @@
      <string> word-tail
      <string> word-tail >::command-line
 
-     ::command-line space-string? if
+     ::command-line <string> space? if
        <moi> help
        bye
      then
@@ -8545,32 +8542,32 @@
      ::command-line <string> word >::sub-function-name
      ::command-line <string> word-tail >::command-line-arguments
 
-     ::sub-function-name "help" string-equal? if
+     ::sub-function-name "help" <string> equal? if
        <moi> help
        bye
      then
 
-     ::sub-function-name "add" string-equal? if
+     ::sub-function-name "add" <string> equal? if
        ::command-line-arguments <string> word
        ::command-line-arguments <string> word-tail <string> word
        <moi> add
        bye
      then
 
-     ::sub-function-name "sub" string-equal? if
+     ::sub-function-name "sub" <string> equal? if
        ::command-line-arguments <string> word
        <moi> sub
        bye
      then
 
-     ::sub-function-name "up" string-equal? if
+     ::sub-function-name "up" <string> equal? if
        ::command-line-arguments <string> word
        ::command-line-arguments <string> word-tail <string> word
        <moi> up
        bye
      then
 
-     ::sub-function-name "find" string-equal? if
+     ::sub-function-name "find" <string> equal? if
        ::command-line-arguments <string> word
        <moi> find if
          .s .l
@@ -8580,7 +8577,7 @@
        bye
      then
 
-     ::sub-function-name "list" string-equal? if
+     ::sub-function-name "list" <string> equal? if
        <moi> list
        bye
      then
@@ -8609,26 +8606,26 @@
      << -- >>
      get-command-line
      <string> word-tail
-     dup2 space-string? if
+     dup2 <string> space? if
        drop2
        <command-function> no-function
        end
      then
      <string> word
      >::1st-word
-     ::1st-word "basic-REPL" string-equal? if
+     ::1st-word "basic-REPL" <string> equal? if
        <command-function> basic-REPL
        end
      then
-     ::1st-word "stack-REPL" string-equal? if
+     ::1st-word "stack-REPL" <string> equal? if
        <command-function> stack-REPL
        end
      then
-     ::1st-word "poi" string-equal? if
+     ::1st-word "poi" <string> equal? if
        <command-function> poi
        end
      then
-     ::1st-word "moi" string-equal? if
+     ::1st-word "moi" <string> equal? if
        <command-function> moi
        end
      then
