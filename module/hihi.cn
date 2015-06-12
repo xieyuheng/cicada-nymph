@@ -1,0 +1,13 @@
+::::::::
+auther: XIE Yuheng
+import: hi
+do:
+hihi
+"do the hihi module" .s .l
+========
+
+: hihi
+  << -- >>
+  "* (hihi) hihi O.o" .s .l
+  end
+; define-function

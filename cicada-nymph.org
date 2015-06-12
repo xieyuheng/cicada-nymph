@@ -3,10 +3,11 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
-** refine exception-jo [make good use of local-jo]
 ** add length field into jo in assembly code :maybe:
 ** optimize local-variable by new instruction :maybe:
    * too many literal is too waste of memory
+   * 目前 [current_free_address$local_jo] 只是用以在運行時計算 offset
+     也許有更好的辦法使得 offset 可以在編譯時被計算出來
 * ===================================
 * note
 ** notation
@@ -27,7 +28,6 @@
      "string-reverse"
      "string-equal?"
    * side-effect of structured data is postfixed by "!"
-   * exception is prefix be "!"
 ** convention in assembly code
    * using underline to compose big word from small words
    * using "$" as prefix and postfix separator
@@ -54,7 +54,6 @@
      | word borderfix "* *" | variable                  |
      | word borderfix "+ +" | variable                  |
      | word borderfix ": :" | variable                  |
-     | word prefix "!"      | exception                 |
      | word postfix "!"     | some of the side-effect   |
      | word postfix "?"     | predicate                 |
      |----------------------+---------------------------|
@@ -241,7 +240,6 @@
    preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
    #+end_src
 ** ----------------------------------
-* -----------------------------------
 * note stack
   * when doing "push"
     a stack-pointer moves to lower address
@@ -435,7 +433,6 @@
 
    }
    #+end_src
-* -----------------------------------
 * next
   #+begin_src fasm :tangle cicada-nymph.fasm
   match =64bit, machine {
@@ -549,7 +546,6 @@
   10. it is really simple
       ^-^
       is it not ?
-* -----------------------------------
 * note jo
   * jo as data-structure
     |----+----------------|
@@ -562,12 +558,8 @@
       assembly code
     * function-jo
       jojo
-    * exception-jo
-      jojo
     * variable-jo
       value-list
-  * for exception-jo
-    the [other] is a pointer into argument-stack
 * offset of jo
   #+begin_src fasm :tangle cicada-nymph.fasm
   offset__jo$other          = - (jo_size * 2)
@@ -591,7 +583,6 @@
   offset__link$string_address = (jo_size * 2)
   offset__link$string_length  = (jo_size * 3)
   #+end_src
-* -----------------------------------
 * null link
   #+begin_src fasm :tangle cicada-nymph.fasm
   ;; initial link to point to 0 (as null)
@@ -808,288 +799,6 @@
 
    }
    #+end_src
-* exception-jo
-** 記
-   * (prepare-for) 展開
-   * (exception_head) 無爲
-   * (!exception)
-     其 jo 本身用以搜索到位置
-     而 定義其 jo 的 jojo 被植入到所搜索到的位置
-   * 提供一個函數
-     使得 每個 (!exception) 可以
-     以明顯的方式 在需要的時候 重置參數棧
-     這樣每個 (!exception) 使用參數的方式就是
-     1. 先以未被重置時的參數棧中的值爲參數
-        這些參數可以是調用這個 (!exception) 的函傳遞給 (!exception) 的
-     2. 之後再以重置之後的參數棧中的值爲參數
-        這些參數是等待 (!exception) 的函爲 (!exception) 所準備的
-** 記 找不到時
-   * 用一個全局變量記錄一個函數 在找不到的時候調用
-     這樣 再解釋器中實現了 debug-REPL 時
-     就可以在此調用 debug-REPL
-** note
-   * explain$exception will
-     1. search the return-stack for that exception
-     2. special side-effect on return-stack
-        to do exception handling
-** define_exception
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   macro define_exception string, jo {
-
-   link__#jo:
-      xx link
-      link = link__#jo
-
-      xx jo
-
-      ASSEMBLY__length_string string
-      .address = current_free_address$string_area
-      xx .address
-      xx .length
-      ASSEMBLY__make_string string
-
-
-      ;; xx (end__#jo - jo)/jo_size
-      xx 0
-
-   jo:
-      xx explain$exception
-
-      ;; here follows a jojo as function-body
-
-   }
-   #+end_src
-** note return-stack in action
-   1. when "explain$exception" is called
-      jojo by jojo
-      it searchs the jo stored in "rax" in the return-stack
-      of course
-      only jojo with "exception_head" as head needs to be searched
-   2. for example
-      we have
-      #+begin_src fasm
-      define_exception "!exception-1", !exception_1
-         xx fun1
-         xx fun2
-         xx end
-      #+end_src
-   3. return-stack
-      #+begin_src return-stack
-                                          (prepare_for)
-                                            (exception_head)
-                                            (!exception_1)
-                                            (!exception_2)
-                                            (end)
-           (prepare_for)                  (function_1)
-      - [@][ (exception_head) ] - [@][@][ (function_2) ] - ... - [@][@][ (!exception_1) ]
-             (!exception_1)               (end)                          (end)
-             (!exception_2)
-             (end)
-           (function_1)
-           (function_2)
-           (end)
-      #+end_src
-   4. next
-      * pointer$argument_stack
-        should be set to the above [@]
-      * and
-        to call "next" again
-        the return-stack should be change to
-        #+begin_src return-stack
-        - [@][@][ (fun1) ]
-                  (fun2)
-                  (end)
-        #+end_src
-** note the plan
-   * so
-     we need a two-level loop
-   * note that
-     although
-     we have to use assembly code
-     to write primitive functions
-     but
-     we still can use argument-stack
-     to pass arguments
-** note reset stack
-   * this instruction shoud be should followed by an exception-jo
-     for an extra field in exception-jo
-     is dedicated to instruction,reset-stack,exception
-** *lost-exception-REPL*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*lost-exception-REPL*", V__lost_exception_REPL
-      xx basic_REPL
-
-   string$lost_exception_REPL:
-      db "* an exception has lost itself", 10
-      db "  the function-jo stored in *lost-exception-REPL*", 10
-      db "  is reseted to", 10
-      db "  as a top-level-REPL", 10
-   .end:
-   length$lost_exception_REPL = (.end - string$lost_exception_REPL)
-   #+end_src
-** instruction,exception-reset-stack  :64bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
-      ;; << -- >>
-      pop_return_stack rbx
-        mov rax, [rbx]
-        add rax, offset__jo$other
-        mov pointer$argument_stack, [rax]
-      add rbx, jo_size
-      push_return_stack rbx
-      next
-
-   }
-   #+end_src
-** instruction,exception-reset-stack  :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "instruction,exception-reset-stack", exception_reset_stack
-      ;; << -- >>
-      pop_return_stack rbx
-        mov rax, [rbx]
-        add rax, offset__jo$other
-        mov rax, [rax]
-        mov [pointer$argument_stack], rax
-      add rbx, jo_size
-      push_return_stack rbx
-      next
-
-   }
-   #+end_src
-** explain$exception                  :64bit:
-   * no error handling for now
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   explain$exception:
-      mov rsi, rax
-
-   .next_jojo:
-      pop_return_stack rbx
-      mov rax, qword [rbx]
-      cmp rax, exception_head
-      je .next_jo
-      cmp pointer$return_stack, address$return_stack
-      je .not_found
-      jmp .next_jojo
-
-
-   .next_jo:
-      ;; expecting
-      ;;   rbx jojo
-      ;;   rsi jo (to cmp)
-      add rbx, jo_size
-      mov rax, qword [rbx]
-      cmp rax, rsi
-      je .found
-      test rax, rax
-      jz .next_jojo
-      jmp .next_jo
-
-
-   .found:
-      ;; expecting
-      ;;   pointer$return_stack
-      ;;   rsi jo
-      pop_return_stack rax
-      ;; mov pointer$argument_stack, rax
-      mov rbx, rsi
-      add rbx, offset__jo$other
-      mov [rbx], rax
-
-      mov rbx, [current_free_address$local_jo]
-      push_return_stack rbx
-
-      mov rbx, [current_free_address$local_byte]
-      push_return_stack rbx
-
-      add rsi, jo_size
-      push_return_stack rsi
-      next
-
-   .not_found:
-      mov rax, string$lost_exception_REPL
-      push_argument_stack rax
-      mov rax, length$lost_exception_REPL
-      push_argument_stack rax
-      call __write_string
-
-      mov rax, [V__lost_exception_REPL + jo_size]
-      push_argument_stack rax
-      call (reset_top_level_REPL + jo_size)
-
-   }
-   #+end_src
-** explain$exception                  :32bit:
-   * no error handling for now
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   explain$exception:
-      mov rsi, rax
-
-   .next_jojo:
-      pop_return_stack rbx
-      mov rax, dword [rbx]
-      cmp rax, exception_head
-      je .next_jo
-      mov rdx, [pointer$return_stack]
-      cmp rdx, address$return_stack
-      je .not_found
-      jmp .next_jojo
-
-
-   .next_jo:
-      ;; expecting
-      ;;   rbx jojo
-      ;;   rsi jo (to cmp)
-      add rbx, jo_size
-      mov rax, dword [rbx]
-      cmp rax, rsi
-      je .found
-      test rax, rax
-      jz .next_jojo
-      jmp .next_jo
-
-
-   .found:
-      ;; expecting
-      ;;   pointer$return_stack
-      ;;   rsi jo
-      pop_return_stack rax
-      ;; mov [pointer$argument_stack], rax
-      mov rbx, rsi
-      add rbx, offset__jo$other
-      mov [rbx], rax
-
-      mov rbx, [current_free_address$local_jo]
-      push_return_stack rbx
-
-      mov rbx, [current_free_address$local_byte]
-      push_return_stack rbx
-
-      add rsi, jo_size
-      push_return_stack rsi
-      next
-
-   .not_found:
-      mov rax, string$lost_exception_REPL
-      push_argument_stack rax
-      mov rax, length$lost_exception_REPL
-      push_argument_stack rax
-      call __write_string
-
-      mov rax, [V__lost_exception_REPL + jo_size]
-      push_argument_stack rax
-      call (reset_top_level_REPL + jo_size)
-
-      }
-   #+end_src
-* -----------------------------------
 * jo
 ** apply
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1176,15 +885,6 @@
       xx equal?
       xx end
    #+end_src
-** exception-jo?
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "exception-jo?", exception_jo?
-      ;; << jo -- bool >>
-      xx jo_to_explainer
-      xx literal, explain$exception
-      xx equal?
-      xx end
-   #+end_src
 ** variable-jo?
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "variable-jo?", variable_jo?
@@ -1239,8 +939,7 @@
       xx string_area__stay
       xx end
    #+end_src
-* -----------------------------------
-* end & tail-call
+* return-stack & end & tail-call
 ** 記 結尾珠
    * end 和 tail-call 這兩個結尾珠代表將執行退出操作
      在退出時
@@ -1262,6 +961,192 @@
        用一串新的珠珠
        代替返回棧頂的一串珠珠
        [三個值一組的存在]
+   * 結尾珠 涉及到局部變元的實現方式
+     1. 當一個 jojo 被入返回棧時
+        jojo 本身
+        還有當時的 [current_free_address$local_jo]
+        和 [current_free_address$local_byte]
+        三者共同組成 一個 return-point
+     2. 在遇到結尾詞而退出對這次 jojo 的執行的時候
+        return-point 中的 local_jo 和 local_byte
+        會被用來重置 [current_free_address$local_jo]
+        和 [current_free_address$local_byte]
+     3. 也就是說
+        在一個 jojo 被執行的過程中
+        它可以通過遞增 [current_free_address$local_jo]
+        和 [current_free_address$local_byte]
+        而隨意分配內存以保存其局部數據
+        因爲反正當函數退出時 這兩個指針會被重置
+** note return-point
+   * structure
+     | return-point | local-byte |
+     |              | local-jo   |
+     |              | jojo       |
+   * the interface is implemented by needs
+** *return-stack,unit*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*return-stack,unit*", V__return_stack__unit
+      xx (jo_size * 3)
+   #+end_src
+** 記 插 珠珠 人返回棧 到某珠珠的前面 [等效替換法 以理解]
+   * 有了下面的 (return-stack,insert-jo) 這個素函數之後
+     即便是在非素函數中也能夠對返回棧進行有限的操作了
+   * before insert-jo
+     | return-point-1 | local-byte-1 |
+     |                | local-jo-1   |
+     |                | jojo-1       |
+     | return-point-2 | local-byte-2 |
+     |                | local-jo-2   |
+     |                | jojo-2       |
+   * after
+     jo return-point-2 (return-stack,insert-jo)
+     | return-point-1  | local-byte-1 |
+     |                 | local-jo-1   |
+     |                 | jojo-1       |
+     | return-point-in | local-byte-2 |
+     |                 | local-jo-2   |
+     |                 | jojo of jo   |
+     | return-point-2  | local-byte-2 |
+     |                 | local-jo-2   |
+     |                 | jojo-2       |
+   * 之所以有這樣的效果
+     是因爲
+     這個 素函數 是爲了 實現 expect 而作
+     它可能不具有一般性
+     這要看能不能在被插入的珠珠中使用局部變元
+     答案看來是肯定的
+     但是 這想來並不合理
+     爲什麼我能夠隨意在返回棧中插入珠珠
+     並且還能在這個珠珠中使用局部變元呢
+     下面的考慮方式能夠讓人放心
+     即 返回棧中的各個返回點
+     是在展開函數體的過程中
+     用以記錄調用子函數之後應該返回的地址的
+     其中返回點的序關係 記錄了 函數之間的調用關係
+     (1) 調用 (2)
+     因而 (1) 在 (2) 之前
+     然而插入而得的效果
+     (1) (in) (2)
+     並不是 (1) 調用 (in) 調用 (2)
+     (in) 與周圍的兩個函數之間並沒有調用關係
+     但是我可以假想出等效的調用關係
+     [等效替換法 或 等量代換法]
+     即 插入而得的效果
+     (1) (in) (2)
+     可以被想爲是
+     (1) 調用 (in)
+     (in) 調用 (2)
+     並且 (in) 在調用 (2) 之前
+     沒有使用局部數據區域來爲任何局部變元分配空間
+   * 上面的討論就證明了這種實現方式性質良好
+** return-stack,insert-jo
+   * 先在個循環中複製 return-stack 之後的部分
+     以空出一個位置
+     然後把 jo 插入到空位
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
+      ;; << jo, return-stack-pointer -- >>
+      pop_argument_stack rbx
+      mov rcx, pointer$return_stack
+      sub rcx, rbx
+      mov rax, jo_size
+      idiv rcx
+      ;; the remainder is stored in rdx
+      ;; the quotient  is stored in rax
+      mov rcx, rax
+      mov rsi, pointer$return_stack
+      sub rsi, jo_size
+      add pointer$return_stack, (jo_size * 3)
+      mov rdi, pointer$return_stack
+      sub rdi, jo_size
+   .loop:
+      mov rdi, qword [rsi]
+      sub rsi, jo_size
+      sub rdi, jo_size
+      loop .loop
+      pop_argument_stack rax
+      add rax, jo_size
+      mov qword [rbx + (jo_size* 2)], rax
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
+      ;; << jo, return-stack-pointer -- >>
+      pop_argument_stack rbx
+      mov rcx, [pointer$return_stack]
+      sub rcx, rbx
+      mov rax, jo_size
+      idiv rcx
+      ;; the remainder is stored in rdx
+      ;; the quotient  is stored in rax
+      mov rcx, rax
+      mov rax, [pointer$return_stack]
+      mov rsi, rax
+      sub rsi, jo_size
+      add rax, (jo_size * 3)
+      mov [pointer$return_stack], rax
+      mov rdi, rax
+      sub rdi, jo_size
+   .loop:
+      mov rdi, dword [rsi]
+      sub rsi, jo_size
+      sub rdi, jo_size
+      loop .loop
+      pop_argument_stack rax
+      add rax, jo_size
+      mov dword [rbx + (jo_size* 2)], rax
+      next
+
+   }
+   #+end_src
+** get-return-stack-pointer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "get-return-stack-pointer", get_return_stack_pointer
+      push_argument_stack pointer$return_stack
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "get-return-stack-pointer", get_return_stack_pointer
+      mov rax, [pointer$return_stack]
+      push_argument_stack rax
+      next
+
+   }
+   #+end_src
+** apply-with-return-point
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "apply-with-return-point", apply_with_return_point
+      ;; << return-point, function -- >>
+      pop_argument_stack rax
+      pop_argument_stack rbx
+      mov pointer$return_stack, rbx
+      jmp qword [rax]
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "apply-with-return-point", apply_with_return_point
+      ;; << return-point, function -- >>
+      pop_argument_stack rax
+      pop_argument_stack rbx
+      mov [pointer$return_stack], rbx
+      jmp dword [rax]
+
+   }
+   #+end_src
 ** end
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "end", end
@@ -1366,7 +1251,6 @@
       is the same as (5.)
       it is clear how the example function
       is actually a loop now
-* -----------------------------------
 * helper function in assembly code
 ** __exit_with_tos                    :linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1528,7 +1412,6 @@
       mov [current_free_address$local_byte], rax
       ret
    #+end_src
-* -----------------------------------
 * *the-story-begin*
 ** ----------------------------------
 ** 記 匯編代碼中的初始化
@@ -1778,9 +1661,7 @@
       ;;;; 1 2 add .
    #+end_src
 ** ----------------------------------
-* -----------------------------------
 * instruction
-** ----------------------------------
 ** note side-effect
    * an instruction
      is a special primitive function
@@ -1792,7 +1673,6 @@
    * the naming convention in assembly code
      of instruction
      is the same as it of jo
-** ----------------------------------
 ** literal
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "instruction,literal", literal
@@ -1816,7 +1696,6 @@
       push_return_stack rbx
       next
    #+end_src
-** ----------------------------------
 ** branch
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "instruction,branch", branch
@@ -1848,180 +1727,9 @@
       push_return_stack rbx
       next
    #+end_src
-** ----------------------------------
-** note action of prepare_for
-   1. proper exception handling
-      is implemented by doing side-effect on return-stack
-   2. when executing the following code block
-      #+begin_src fasm
-      xx prepare_for
-      xx exception_head
-      xx   !exception_1
-      xx   !exception_2
-      xx   end
-      xx function_1
-      xx function_2
-      xx end
-      #+end_src
-   3. note that
-      for (prepare_for)
-      (end) is used as an unique id
-      but not a ending-jo
-   3. return-stack
-      #+begin_src return-stack
-      - [@][@][ (prepare_for) ]
-                  (exception_head)
-                  (!exception_1)
-                  (!exception_2)
-                  (end)
-                (function_1)
-                (function_2)
-                (end)
-      #+end_src
-   4. next
-      * this is how the return-stack looks
-        right before exception_head is executed
-        #+begin_src return-stack
-                (prepare_for)
-        - [@][@][ (exception_head) ]
-                  (!exception_1)
-                  (!exception_2)
-                  (end)
-                (function_1)
-                (function_2)
-                (end)
-        #+end_src
-      * after exception_head is executed
-        #+begin_src return-stack
-                                            (prepare_for)
-                                              (exception_head)
-                                              (!exception_1)
-                                              (!exception_2)
-             (prepare_for)                    (end)
-        - [@][ (exception_head) ] - [@][@][ (function_1) ]
-               (!exception_1)               (function_2)
-               (!exception_2)               (end)
-               (end)
-             (function_1)
-             (function_2)
-             (end)
-        #+end_src
-** prepare_for                        :64bit:
-   * prepare for a list of exceptions
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =64bit, machine {
-
-   define_primitive_function "instruction,prepare-for", prepare_for
-      ;; << -- >>
-      pop_return_stack rbx
-
-      pop_return_stack rcx
-      pop_return_stack rdx
-
-      push_return_stack pointer$argument_stack
-      push_return_stack rbx
-
-      push_return_stack rdx
-      push_return_stack rcx
-
-   .next:
-      add rbx, jo_size
-      mov rax, qword [rbx]
-      cmp rax, end
-      je .then
-      jmp .next
-   .then:
-      add rbx, jo_size
-      push_return_stack rbx
-      next
-
-   }
-   #+end_src
-** prepare_for                        :32bit:
-   * prepare for a list of exceptions
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   match =32bit, machine {
-
-   define_primitive_function "instruction,prepare-for", prepare_for
-      ;; << -- >>
-      pop_return_stack ebx
-
-      pop_return_stack ecx
-      pop_return_stack edx
-
-      mov eax, [pointer$argument_stack]
-      push_return_stack eax
-      push_return_stack ebx
-
-      push_return_stack edx
-      push_return_stack ecx
-
-   .next:
-      add ebx, jo_size
-      mov eax, dword [ebx]
-      cmp eax, end
-      je .then
-      jmp .next
-   .then:
-      add ebx, jo_size
-      push_return_stack ebx
-      next
-
-   }
-   #+end_src
-** note action of exception_head
-   * return-stack
-     #+begin_src return-stack
-          (prepare_for)
-     - [@][ (exception_head) ]
-            (!exception_1)
-            (!exception_2)
-            (end)
-          (function_1)
-          (function_2)
-          (end)
-     #+end_src
-   * next
-     * this is how the return-stack looks
-       right before exception_head is executed
-       #+begin_src return-stack
-            (prepare_for)
-              (exception_head)
-       - [@][ (!exception_1) ]
-              (!exception_2)
-              (end)
-            (function_1)
-            (function_2)
-            (end)
-       #+end_src
-     * after exception_head is executed
-       the above two value in return-stack is removed
-       note that
-       only two value (not three)
-       #+begin_src return-stack
-       - [ ]
-       #+end_src
-** exception_head
-   * this jo is served as a label in return-stack
-     when explained
-     it pops the jojo itself in
-     and
-     it pops the argument-stack pointer after it
-   * and "explain$exception" will search for them
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "instruction,exception-head", exception_head
-      ;; << -- >>
-      pop_return_stack rax
-      pop_return_stack rax
-      next
-   #+end_src
-** ----------------------------------
-* -----------------------------------
 * the stack
-** ----------------------------------
 ** note
    * the stack is the argument-stack
-** ----------------------------------
 ** drop
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "drop", drop
@@ -2397,13 +2105,12 @@
       push_argument_stack rdx
       next
    #+end_src
-** ----------------------------------
 ** address
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*the-stack*", V__the_stack
       xx address$argument_stack
    #+end_src
-** pointer                            :64bit:
+** pointer
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
@@ -2416,9 +2123,7 @@
       next
 
    }
-   #+end_src
-** pointer                            :32bit:
-   #+begin_src fasm :tangle cicada-nymph.fasm
+
    match =32bit, machine {
 
    define_variable "*the-stack-pointer-snapshot*", V__the_stack_pointer_snapshot
@@ -2432,7 +2137,27 @@
 
    }
    #+end_src
-** ----------------------------------
+** set-argument-stack-pointer
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "set-argument-stack-pointer", set_argument_stack_pointer
+      ;; << address -- >>
+      pop_argument_stack pointer$argument_stack
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "set-argument-stack-pointer", set_argument_stack_pointer
+      ;; << address -- >>
+      pop_argument_stack rbx
+      mov [pointer$argument_stack], rbx
+      next
+
+   }
+   #+end_src
 * bool
 ** false & true
    * they are defined as function
@@ -3373,7 +3098,6 @@
    2#00000000 find-lowest-set-bit
    2#00000000 find-highest-set-bit
    #+end_src
-* -----------------------------------
 * write-byte
 ** write-byte                         :64bit:linux:
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -3673,7 +3397,6 @@
      xx push_reading_stack
      xx end
   #+end_src
-* -----------------------------------
 * byte
 ** space-byte?
    * as for space-byte
@@ -4232,7 +3955,6 @@
       xx pretty_write_integer
       xx end
    #+end_src
-* -----------------------------------
 * word
 ** note io about word
    * words are separated by spaces
@@ -4449,7 +4171,6 @@
       xx eval_word
       xx tail_call, basic_REPL
    #+end_src
-* -----------------------------------
 * colon semicolon
 ** note
    * from the aesthetics point of view
@@ -4609,7 +4330,6 @@
    : kkk << 989 << 989 >> >> ; .s
    << kkk >>
    #+end_src
-* -----------------------------------
 * jojo-area
 ** note
    * you can see how the naming convention is used
@@ -4682,7 +4402,6 @@
      xx   jojo_area__stay
      xx end
   #+end_src
-* -----------------------------------
 * syntax-stack
 ** 記
    * *syntax-stack* 轉換語境
@@ -5029,7 +4748,7 @@
       .not_found:
       xx write_not_integer_string_report__for_double_quote
       xx literal, 10, write_byte
-      xx !undo_make_jojo
+      xx end
 
 
    define_function "write-not-integer-string-report,for-double-quote", write_not_integer_string_report__for_double_quote
@@ -5167,7 +4886,7 @@
       xx write_undefined_word_report__for_make_jojo
       xx write_string
       xx literal, 10, write_byte
-      xx !undo_make_jojo
+      xx end
 
    define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
       ;; << -- >>
@@ -5204,41 +4923,6 @@
       xx make_jojo__dispatch_word
       xx tail_call, make_jojo__loop
    #+end_src
-* !undo-make-jojo
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  define_exception "!undo-make-jojo", !undo_make_jojo
-     xx exception_reset_stack, !undo_make_jojo
-     ;; << old V__string_area__current_free_address
-     ;;    old V__jojo_area__current_free_address
-     ;;    old V__link
-     ;;    string[address, length]
-     ;;    -- >>
-
-     xx drop_syntax_stack
-
-     xx literal, string$undo_make_jojo_report
-     xx literal, length$undo_make_jojo_report
-     xx write_string
-
-     xx write_string
-     xx literal, 10, write_byte
-     xx literal, ';', write_byte
-     xx literal, 10, write_byte
-
-     xx address, V__link, set
-     xx address, V__jojo_area__current_free_address, set
-     xx address, V__string_area__current_free_address
-     xx set
-     xx end
-
-  string$undo_make_jojo_report:
-     db "  the following jojo is not made :"
-     db 10
-     db ":"
-  .end:
-  length$undo_make_jojo_report = (.end - string$undo_make_jojo_report)
-  #+end_src
-* -----------------------------------
 * define-function
 ** note
    * for the following function
@@ -5248,19 +4932,6 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "define-function", CICADA__define_function
       ;; << string[address, length] -- >>
-      xx V__string_area__current_free_address, xxswapx
-      xx V__jojo_area__current_free_address, xxswapx
-      xx V__link, xxswapx
-      ;; << old V__string_area__current_free_address
-      ;;    old V__jojo_area__current_free_address
-      ;;    old V__link
-      ;;    string[address, length] >>
-      xx prepare_for
-      xx   exception_head
-      xx   !undo_make_jojo
-      xx   end
-
-      xx dup2
 
       xx dup2, string__word
       ;; << string[address, length]
@@ -5321,10 +4992,6 @@
       xx V__jo_size, division
       xx swap, jo__set_length
 
-      xx drop2
-      xx drop
-      xx drop
-      xx drop
       xx end
    #+end_src
 ** test
@@ -5351,90 +5018,6 @@
      end
    ; define-function
    test,double-quote
-   #+end_src
-* define-exception
-** define-exception
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "define-exception", CICADA__define_exception
-      ;; << string[address, length] -- >>
-      xx V__string_area__current_free_address, xxswapx
-      xx V__jojo_area__current_free_address, xxswapx
-      xx V__link, xxswapx
-      ;; << old V__string_area__current_free_address
-      ;;    old V__jojo_area__current_free_address
-      ;;    old V__link
-      ;;    string[address, length] >>
-      xx prepare_for
-      xx   exception_head
-      xx   !undo_make_jojo
-      xx   end
-
-      xx dup2
-
-      xx dup2, string__word
-      ;; << string[address, length]
-      ;;    name-string[address, length] >>
-      xx make_string
-      ;; << string[address, length]
-      ;;    name-string[address, length] >>
-
-      xx dup2
-      xx V__link
-      xx literal, 0
-      ;; << string[address, length]
-      ;;    name-string[address, length]
-      ;;    name-string[address, length], next-link, jo >>
-      xx make_link
-      ;; << string[address, length]
-      ;;    name-string[address, length]
-      ;;    link >>
-
-      xx xxtuckx
-      xx address, V__link, set
-      xx drop2
-      xx literal, explain$exception
-      xx literal, 0
-      ;; << string[address, length]
-      ;;    link
-      ;;    name-string[address, length], explainer, 0 >>
-      xx make_jo_head
-      ;; << string[address, length]
-      ;;    link
-      ;;    jo >>
-
-      xx tuck
-      xx swap
-      ;; << string[address, length]
-      ;;    jo
-      ;;    jo
-      ;;    link >>
-      xx link__set_jo
-      ;; << string[address, length]
-      ;;    jo >>
-
-      xx dup
-      xx xxswapxx
-      xx string__word_tail
-      xx V__jojo_area__current_free_address
-      xx xxxswapx
-      ;; << jo
-      ;;    V__jojo_area__current_free_address
-      ;;    jo
-      ;;    body[address, length] >>
-      xx make_jojo
-      ;; << jo
-      ;;    V__jojo_area__current_free_address >>
-
-      xx V__jojo_area__current_free_address
-      xx swap, subtraction
-      xx V__jo_size, division
-      xx swap, jo__set_length
-
-      xx drop2
-      xx drop
-      xx drop
-      xx drop
-      xx end
    #+end_src
 * define-variable,with-tos
 ** define-variable,with-tos
@@ -5513,7 +5096,6 @@
    : jo-*three* jo *three* apply . end ; define-function
    jo-*three*
    #+end_src
-* -----------------------------------
 * 記 有名字的局部變量 與 變長的局部數據
   * local-jo
     用來實現 有名字的局部變量
@@ -5533,12 +5115,6 @@
      同時在這串珠子底部加上
      current_free_address$local_jo
      即 在 explain$function 中需要做特殊處理
-     注意
-     explain$exception
-     等等
-     和 explain$function 並沒有區別
-     只是名字不一樣而已
-     所以也需要做特殊處理
    * 這個值在函數退出時
      [即 在 end 這個函數中]
      用以重置 current_free_address$local_jo
@@ -5562,12 +5138,6 @@
      可以發現
      這樣的話
      我就能很容易地臨時改變語法了
-** 注意
-   * 需要重寫的部分還有 exception-handling
-     這包括
-     1. explain$exception
-     2. prepare_for
-     3. exception_head
 * 記 總結
 ** interface
    * 首先要滿足最基本的
@@ -6072,7 +5642,7 @@
       xx write_local_variable_not_bound_report
       xx write_string
       xx literal, 10, write_byte
-      xx !undo_make_jojo
+      xx end
 
    define_function "write-local-variable-not-bound-report", write_local_variable_not_bound_report
       xx literal, string$local_variable_not_bound_report
@@ -6240,7 +5810,6 @@
    40218545
    >>
    #+end_src
-* -----------------------------------
 * syscall
 ** note
    * there are two ways to treat the syscall
@@ -6464,15 +6033,11 @@
 
    }
    #+end_src
-* -----------------------------------
 * epilog
 ** constant
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*explainer,function*", CICADA__explain$function
       xx explain$function
-
-   define_variable "*explainer,exception*", CICADA__explain$exception
-      xx explain$exception
 
    define_variable "*explainer,variable*", CICADA__explain$variable
       xx explain$variable
