@@ -3162,7 +3162,7 @@
    address$reading_stack labeling
       preserve size$reading_stack
 
-   pointer$reading_stack:
+   define_variable "*reading-stack,pointer*", V__reading_stack__pointer
       xx address$reading_stack
    #+end_src
 ** push & pop & drop                  :64bit:
@@ -3172,30 +3172,30 @@
    define_primitive_function "push-reading-stack", push_reading_stack
       ;; << string[address, length] -- >>
       pop_argument_stack rax
-      mov rbx, [pointer$reading_stack]
+      mov rbx, [V__reading_stack__pointer + jo_size]
       mov [rbx], rax
-      add qword [pointer$reading_stack], jo_size
+      add qword [V__reading_stack__pointer + jo_size], jo_size
       pop_argument_stack rax
-      mov rbx, [pointer$reading_stack]
+      mov rbx, [V__reading_stack__pointer + jo_size]
       mov [rbx], rax
-      add qword [pointer$reading_stack], jo_size
+      add qword [V__reading_stack__pointer + jo_size], jo_size
       next
 
    define_primitive_function "pop-reading-stack", pop_reading_stack
       ;; << -- string[address, length] >>
-      sub qword [pointer$reading_stack], jo_size
-      mov rbx, [pointer$reading_stack]
+      sub qword [V__reading_stack__pointer + jo_size], jo_size
+      mov rbx, [V__reading_stack__pointer + jo_size]
       mov rax, [rbx]
       push_argument_stack rax
-      sub qword [pointer$reading_stack], jo_size
-      mov rbx, [pointer$reading_stack]
+      sub qword [V__reading_stack__pointer + jo_size], jo_size
+      mov rbx, [V__reading_stack__pointer + jo_size]
       mov rax, [rbx]
       push_argument_stack rax
       next
 
    define_primitive_function "drop-reading-stack", drop_reading_stack
       ;; << -- >>
-      sub qword [pointer$reading_stack], (jo_size * 2)
+      sub qword [V__reading_stack__pointer + jo_size], (jo_size * 2)
       next
 
    }
@@ -3207,30 +3207,30 @@
    define_primitive_function "push-reading-stack", push_reading_stack
       ;; << string[address, length] -- >>
       pop_argument_stack rax
-      mov rsi, [pointer$reading_stack]
+      mov rsi, [V__reading_stack__pointer + jo_size]
       mov [rsi], rax
-      add dword [pointer$reading_stack], jo_size
+      add dword [V__reading_stack__pointer + jo_size], jo_size
       pop_argument_stack rax
-      mov rsi, [pointer$reading_stack]
+      mov rsi, [V__reading_stack__pointer + jo_size]
       mov [rsi], rax
-      add dword [pointer$reading_stack], jo_size
+      add dword [V__reading_stack__pointer + jo_size], jo_size
       next
 
    define_primitive_function "pop-reading-stack", pop_reading_stack
       ;; << -- string[address, length] >>
-      sub dword [pointer$reading_stack], jo_size
-      mov rsi, [pointer$reading_stack]
+      sub dword [V__reading_stack__pointer + jo_size], jo_size
+      mov rsi, [V__reading_stack__pointer + jo_size]
       mov rax, [rsi]
       push_argument_stack rax
-      sub dword [pointer$reading_stack], jo_size
-      mov rsi, [pointer$reading_stack]
+      sub dword [V__reading_stack__pointer + jo_size], jo_size
+      mov rsi, [V__reading_stack__pointer + jo_size]
       mov rax, [rsi]
       push_argument_stack rax
       next
 
    define_primitive_function "drop-reading-stack", drop_reading_stack
       ;; << -- >>
-      sub dword [pointer$reading_stack], (jo_size * 2)
+      sub dword [V__reading_stack__pointer + jo_size], (jo_size * 2)
       next
 
    }
@@ -3239,11 +3239,11 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "tos-reading-stack", tos_reading_stack
       ;; << -- string[address, length] >>
-      mov rbx, [pointer$reading_stack]
+      mov rbx, [V__reading_stack__pointer + jo_size]
       sub rbx, jo_size
       mov rax, [rbx]
       push_argument_stack rax
-      mov rbx, [pointer$reading_stack]
+      mov rbx, [V__reading_stack__pointer + jo_size]
       sub rbx, jo_size
       sub rbx, jo_size
       mov rax, [rbx]
@@ -3255,7 +3255,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "reading-stack-empty?", reading_stack_empty?
       ;; << -- bool >>
-      xx literal, pointer$reading_stack, get
+      xx literal, V__reading_stack__pointer + jo_size, get
       xx literal, address$reading_stack
       xx equal?
       xx end

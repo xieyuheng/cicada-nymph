@@ -4890,7 +4890,7 @@ set
   :buffer :length <module-buffer> get-meta-string >::meta-string
   :buffer :length <module-buffer> get-code-string >::code-string
 
-  *importing-stack,pointer* dup .i >:importing-record
+  *importing-stack,pointer* >:importing-record
   *importing-stack,unit* address *importing-stack,pointer* add-set
 
   :module-name-index
@@ -5074,18 +5074,30 @@ jo <post-module-syntax> do
 
 : load
   << module-name-string[address, length] -- >>
+  >::module-name-string
+
+  ::module-name-string
   <undo-point> create
-  << module-name-string[address, length], undo-point -- >>
+  *reading-stack,pointer*
+  << module-name-string[address, length],
+     undo-point
+     *reading-stack,pointer*
+     -- >>
 
   [ action,reset-the-stack
-    << module-name-string[address, length], undo-point -- >>
+    << module-name-string[address, length],
+       undo-point
+       *reading-stack,pointer*
+       -- >>
+    address *reading-stack,pointer* set
     undo
     "* (load) can not load : " .s .s .l
     end ]
   'fail-to-load await
 
-  xx|over|x import
+  ::module-name-string import
 
+  drop
   drop
   drop2
   end
