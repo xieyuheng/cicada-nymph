@@ -1870,6 +1870,17 @@ jo word:name?
 jo <basic-REPL-syntax> name
 rule,add
 
+: <basic-REPL-syntax> quote
+  << quote-word -- name >>
+  string,byte-tail string->name
+  end
+; define-function
+
+*rule-set,eval-word*
+jo quote-word?
+jo <basic-REPL-syntax> quote
+rule,add
+
 : <basic-REPL-syntax> title
   << <title>[address, length] -- unknown >>
   >::title
@@ -5380,6 +5391,18 @@ jo <post-module-syntax> do
   *importing-stack,unit* sub
   <importing-record> get-testing-flag if
     define-variable
+    end
+  then
+  drop2
+  end
+; define-function
+
+: test-variable,with-tos
+  << string[address, length] -- >>
+  *importing-stack,pointer*
+  *importing-stack,unit* sub
+  <importing-record> get-testing-flag if
+    define-variable,with-tos
     end
   then
   drop2

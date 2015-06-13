@@ -1,0 +1,502 @@
+::::::::
+auther: XIE Yuheng
+do: "* (core-test) finished" .s .l
+========
+
+: .12
+  << 1 2 -- >>
+  2 equal? if
+    "(^-^)" .s
+    1 equal? if
+      "\^o^/" .s
+    else
+      "     " .s
+    then
+  else
+    "     " .s
+    1 equal? if
+      "\^o^/" .s
+    else
+      "     " .s
+    then
+  then
+  end
+; test-function
+
+: "* (testing) nested if & else & then" .s .l
+  1 2 .12 .l
+  6 2 .12 .l
+  1 6 .12 .l
+  6 6 .12 .l
+  end
+; test-do
+
+: factorial
+  << number -- number >>
+  dup
+  one? if
+    end
+  then
+  dup sub1 factorial
+  mul
+  end
+; test-function
+
+: "* (testing) if & else & then by factorial" .s .l
+  1 factorial 1   equal?
+  2 factorial 2   equal? and
+  3 factorial 6   equal? and
+  4 factorial 24  equal? and
+  5 factorial 120 equal? and
+  6 factorial 720 equal? and test
+  end
+; test-do
+
+: recur-factorial
+  << number -- number >>
+  dup
+  one? if
+    end
+  then
+  dup sub1 recur mul
+  end
+; test-function
+
+: "* (testing) recur by factorial" .s .l
+  1 recur-factorial 1   equal?
+  2 recur-factorial 2   equal? and
+  3 recur-factorial 6   equal? and
+  4 recur-factorial 24  equal? and
+  5 recur-factorial 120 equal? and
+  6 recur-factorial 720 equal? and test
+  end
+; test-do
+
+: loop-factorial,loop
+  << counter, product -- product >>
+  over one? if
+    swap drop
+    end
+  then
+  over mul
+  swap sub1 swap
+  loop
+; define-function
+
+: loop-factorial
+  << number -- number >>
+  1 loop-factorial,loop
+  end
+; define-function
+
+: "* (testing) loop by factorial" .s .l
+  1 loop-factorial 1   equal?
+  2 loop-factorial 2   equal? and
+  3 loop-factorial 6   equal? and
+  4 loop-factorial 24  equal? and
+  5 loop-factorial 120 equal? and
+  6 loop-factorial 720 equal? and test
+  end
+; test-do
+
+: "* (testing) string->name & name->string" .s .l
+  "a-000" dup2 string->name name->string <string> equal?
+  "a-111" dup2 string->name name->string <string> equal? and
+  "a-222" dup2 string->name name->string <string> equal? and
+  "a-333" dup2 string->name name->string <string> equal? and
+  "a-444" dup2 string->name name->string <string> equal? and
+  "a-555" dup2 string->name name->string <string> equal? and
+  "a-666" dup2 string->name name->string <string> equal? and
+  "a-777" dup2 string->name name->string <string> equal? and
+  "a-888" dup2 string->name name->string <string> equal? and
+  "a-999" dup2 string->name name->string <string> equal? and
+  "b-000" dup2 string->name name->string <string> equal? and
+  "b-111" dup2 string->name name->string <string> equal? and
+  "b-222" dup2 string->name name->string <string> equal? and
+  "b-333" dup2 string->name name->string <string> equal? and
+  "b-444" dup2 string->name name->string <string> equal? and
+  "b-555" dup2 string->name name->string <string> equal? and
+  "b-666" dup2 string->name name->string <string> equal? and
+  "b-777" dup2 string->name name->string <string> equal? and
+  "b-888" dup2 string->name name->string <string> equal? and
+  "b-999" dup2 string->name name->string <string> equal? and test
+  end
+; test-do
+
+<<
+name-hash-table,report
+>>
+
+: "* (testing) make-jojo-syntax,quote" .s .l
+  'testing--make-jojo-syntax,quote name->string
+  "testing--make-jojo-syntax,quote" <string> equal? test
+; test-do
+
+: testing-awake
+  << -- >>
+  'signal awake
+  end
+; test-function
+
+: testing-await
+  << -- >>
+  "after reset-the-stack"
+  [ "before reset-the-stack" <string> equal? test
+    action,reset-the-stack
+    "after reset-the-stack" <string> equal? test
+    end ]
+  'signal await
+  "something in the stack"
+  "before reset-the-stack"
+  testing-awake
+  end
+; test-function
+
+: "* (testing) await & awake" .s .l
+  testing-await
+; test-do
+
+: "* (testing) remove-byte!" .s .l
+  "2#1001_1001"
+  "_" string,byte remove-byte!
+  "2#10011001" <string> equal?
+  "___2#1001___1001___"
+  "_" string,byte remove-byte!
+  "2#10011001" <string> equal? and test
+; test-do
+
+: "* (testing) wild-integer-string?" .s .l
+  ""        wild-integer-string? false?
+  " "       wild-integer-string? false? and
+  "_asd"    wild-integer-string? false? and
+  " asd"    wild-integer-string? false? and
+  "asd"     wild-integer-string? true?  and
+  "123"     wild-integer-string? true?  and
+  "123asd"  wild-integer-string? true?  and test
+; test-do
+
+: "* (testing) base#wild-integer-string?" .s .l
+  "#"     base#wild-integer-string? false?
+  "##"    base#wild-integer-string? false? and
+  "#___#" base#wild-integer-string? false? and
+  "   "   base#wild-integer-string? false? and
+  "______#__1___" base#wild-integer-string? false? and
+  "___2___#__1___c29bf210019___漢字" base#wild-integer-string? false? and
+
+  "1#1" base#wild-integer-string? true? and
+  "123#1c29bf219g42" base#wild-integer-string? true? and
+  "___2___#__1___c29bf210019___g42" base#wild-integer-string? true? and test
+; test-do
+
+: "* (testing) base#wild-integer-string->base-string" .s .l
+  << error
+  "___2___ __1___c29bf210019___漢字" base#wild-integer-string->base-string
+  >>
+
+  "1#1" base#wild-integer-string->base-string
+  "1" <string> equal?
+
+  "123#1c29bf219g42" base#wild-integer-string->base-string
+  "123" <string> equal? and
+
+  "___2___#__1___c29bf210019___g42" base#wild-integer-string->base-string
+  "___2___" <string> equal? and test
+; test-do
+
+: "* (testing) base#wild-integer-string->wild-integer-string" .s .l
+  << error
+  "___2___ __1___c29bf210019___漢字" base#wild-integer-string->wild-integer-string
+  >>
+
+  "1#1" base#wild-integer-string->wild-integer-string
+  "1" <string> equal?
+
+  "123#1c29bf219g42" base#wild-integer-string->wild-integer-string
+  "1c29bf219g42" <string> equal? and
+
+  "___2___#__1___c29bf210019___g42" base#wild-integer-string->wild-integer-string
+  "__1___c29bf210019___g42" <string> equal? and test
+; test-do
+
+: "* (testing) base#wild-integer-string->integer" .s .l
+  "0#111" base#wild-integer-string->integer
+  0 0 power 1 mul
+  0 1 power 1 mul add
+  0 2 power 1 mul add
+  equal?
+
+  "1#111" base#wild-integer-string->integer
+  1 0 power 1 mul
+  1 1 power 1 mul add
+  1 2 power 1 mul add
+  equal?
+  and
+
+  "10#123" base#wild-integer-string->integer
+  "_1_0__#_1__2_3_" base#wild-integer-string->integer
+  10 0 power 3 mul
+  10 1 power 2 mul add
+  10 2 power 1 mul add
+  tuck equal?
+  xx|swap|x equal? and
+  and
+
+  "2#1000" base#wild-integer-string->integer
+  "2#_1000_" base#wild-integer-string->integer
+  2 0 power 0 mul
+  2 1 power 0 mul add
+  2 2 power 0 mul add
+  2 3 power 1 mul add
+  tuck equal?
+  xx|swap|x equal? and
+  and
+
+  "2#1111_1111" base#wild-integer-string->integer
+  2 0 power 1 mul
+  2 1 power 1 mul add
+  2 2 power 1 mul add
+  2 3 power 1 mul add
+  2 4 power 1 mul add
+  2 5 power 1 mul add
+  2 6 power 1 mul add
+  2 7 power 1 mul add
+  equal?
+  and
+
+  "16#f_f" base#wild-integer-string->integer
+  16 0 power 15 mul
+  16 1 power 15 mul add
+  equal?
+  and
+
+  "100#111" base#wild-integer-string->integer
+  100 0 power 1 mul
+  100 1 power 1 mul add
+  100 2 power 1 mul add
+  equal?
+  and
+
+  "64#zzz" base#wild-integer-string->integer
+  64 0 power 35 mul
+  64 1 power 35 mul add
+  64 2 power 35 mul add
+  equal?
+  and
+
+  "36#zzzz" base#wild-integer-string->integer
+  36 0 power 35 mul
+  36 1 power 35 mul add
+  36 2 power 35 mul add
+  36 3 power 35 mul add
+  equal?
+  and test
+; test-do
+
+: "* (testing) .#" .s .l
+  .s .l
+  0#111        0  .# .l
+  << error
+  1#111        1  .# .l
+  >>
+  10#123       10 .# .l
+  10#0         10 .# .l
+  2#1000       2  .# .l
+  2#1111_1111  2  .# .l
+  16#f_f       16 .# .l
+  36#zzzz      36 .# .l
+
+  2#1111_1111  .#2  .l
+  8#123        .#8  .l
+  16#fff       .#16 .l
+; dup2 test-do
+
+: "* (testing) REPL" .s .l
+  0#111
+  0 0 power 1 mul
+  0 1 power 1 mul add
+  0 2 power 1 mul add
+  equal?
+
+  1#111
+  1 0 power 1 mul
+  1 1 power 1 mul add
+  1 2 power 1 mul add
+  equal? and
+
+  10#123
+  _1_0__#_1__2_3_
+  equal? and
+
+  _1_0__#_1__2_3_
+  10 0 power 3 mul
+  10 1 power 2 mul add
+  10 2 power 1 mul add
+  equal? and
+
+  2#1000
+  2#_1000_
+  equal? and
+
+  2#_1000_
+  2 0 power 0 mul
+  2 1 power 0 mul add
+  2 2 power 0 mul add
+  2 3 power 1 mul add
+  equal? and
+
+  2#1111_1111
+  2 0 power 1 mul
+  2 1 power 1 mul add
+  2 2 power 1 mul add
+  2 3 power 1 mul add
+  2 4 power 1 mul add
+  2 5 power 1 mul add
+  2 6 power 1 mul add
+  2 7 power 1 mul add
+  equal? and
+
+  16#f_f
+  16 0 power 15 mul
+  16 1 power 15 mul add
+  equal? and
+
+  100#111
+  100 0 power 1 mul
+  100 1 power 1 mul add
+  100 2 power 1 mul add
+  equal? and
+
+  64#zzz
+  64 0 power 35 mul
+  64 1 power 35 mul add
+  64 2 power 35 mul add
+  equal? and
+
+  36#zzzz
+  36 0 power 35 mul
+  36 1 power 35 mul add
+  36 2 power 35 mul add
+  36 3 power 35 mul add
+  equal? and test
+; test-do
+
+: *test,buffer*
+  512 allocate-memory
+; test-variable
+
+: "* (testing) n-string->buffer!" .s .l
+  "/home"
+  "/xyh"
+  "/cicada"
+  *test,buffer* 3 n-string->buffer!
+  *test,buffer* swap
+  "/home/xyh/cicada"
+  <string> equal? test
+; test-do
+
+233
+: *three*
+; test-variable,with-tos
+
+: add-three
+  *three* add
+  end
+; test-function
+
+: fix-*three*
+  3
+  address *three*
+  set
+  end
+; test-function
+
+: "* (testing) define-variable,with-tos" .s .l
+  1 add-three
+  234 equal?
+
+  fix-*three* 1 add-three
+  4 equal? and test
+; test-do
+
+233
+: <test-title> *three*
+; test-variable,with-tos
+
+: add-three
+  <test-title> *three*
+  add
+  end
+; test-function
+
+: "* (testing) define-variable,with-tos with-title" .s .l
+  1 add-three
+  234 equal? test
+; test-do
+
+: "* (testing) alias" .s .l
+  "adba" "add" alias
+  1 2 adba
+  3 equal?
+
+  "<test-title> add" "add" alias
+  1 2 <test-title> add
+  3 equal? and test
+; test-do
+
+<< error
+"ab" "ad" alias
+>>
+
+: "* (testing) string,find-word" .s .l
+  "111 222 333" "222" string,find-word if
+    " 222 333" <string> equal? test
+  else
+    false test
+  then
+
+  "111 222 333" "444" string,find-word if
+    .l .s .l
+    false test
+  else
+    true test
+  then
+
+  "111 222 [] 333" "[" string,find-word if
+    " [] 333" <string> equal? test
+  else
+    false test
+  then
+; test-do
+
+: testing-square-bar
+  ["testing square-bar & square-ket" end]
+  end
+; test-function
+
+: "* (testing) square-bar & square-ket" .s .l
+  testing-square-bar apply
+  "testing square-bar & square-ket"
+  <string> equal? test
+; test-do
+
+: apply-factorial
+  << number -- number >>
+  [dup
+   one? if
+     end
+   then
+   dup sub1 recur
+   mul
+   end] apply
+  end
+; test-function
+
+: "* (testing) square-bar & square-ket by factorial" .s .l
+  1 apply-factorial 1   equal?
+  2 apply-factorial 2   equal? and
+  3 apply-factorial 6   equal? and
+  4 apply-factorial 24  equal? and
+  5 apply-factorial 120 equal? and
+  6 apply-factorial 720 equal? and test
+  end
+; test-do
