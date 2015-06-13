@@ -2,10 +2,11 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* >< the size of file
+* >< view the core as a special module
+  * re-import core every time
+* >< command-line interface of module mechanism
 * todo
-** >< the size of file
-** >< view the core as a special module
-   * re-import core every time
 ** 基礎設施 之 返回值
 ** 基礎設施 之 靜態類型
    * do we need stack balancer at all ?
