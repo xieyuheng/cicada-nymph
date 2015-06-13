@@ -1,0 +1,89 @@
+::::::::
+auther: XIE Yuheng
+do: "gamber gamber gary-coded number ^-^" .s .l
+========
+
+: number->gamber
+  << number -- gamber >>
+  dup 1 bit-right
+  bit-xor
+  end
+; define-function
+
+: gamber->number,loop
+  << gamber, number, cursor -- number >>
+  dup negative? if
+    drop
+    swap drop
+    end
+  then
+  >:cursor
+  >:number
+  >:gamber
+  :gamber :cursor get-bit
+  :number :cursor add1 get-bit
+  xor if
+    :number :cursor set-bit >:number
+  then
+  :gamber
+  :number
+  :cursor sub1
+  loop
+; define-function
+
+: gamber->number
+  << gamber -- number >>
+  dup find-highest-set-bit
+  dup negative? if
+    drop
+    end
+  then
+  0 over set-bit
+  swap sub1
+  gamber->number,loop
+  end
+; define-function
+
+: <test> gamber
+  << -- >>
+  2#0000 number->gamber .#2 .l
+  2#0001 number->gamber .#2 .l
+  2#0010 number->gamber .#2 .l
+  2#0011 number->gamber .#2 .l
+  2#0100 number->gamber .#2 .l
+  2#0101 number->gamber .#2 .l
+  2#0110 number->gamber .#2 .l
+  2#0111 number->gamber .#2 .l
+  2#1000 number->gamber .#2 .l
+  2#1001 number->gamber .#2 .l
+  2#1010 number->gamber .#2 .l
+  2#1011 number->gamber .#2 .l
+  2#1100 number->gamber .#2 .l
+  2#1101 number->gamber .#2 .l
+  2#1110 number->gamber .#2 .l
+  2#1111 number->gamber .#2 .l
+  .l
+  true test
+  2#0000 number->gamber gamber->number .#2 .l
+  2#0001 number->gamber gamber->number .#2 .l
+  2#0010 number->gamber gamber->number .#2 .l
+  2#0011 number->gamber gamber->number .#2 .l
+  2#0100 number->gamber gamber->number .#2 .l
+  2#0101 number->gamber gamber->number .#2 .l
+  2#0110 number->gamber gamber->number .#2 .l
+  2#0111 number->gamber gamber->number .#2 .l
+  2#1000 number->gamber gamber->number .#2 .l
+  2#1001 number->gamber gamber->number .#2 .l
+  2#1010 number->gamber gamber->number .#2 .l
+  2#1011 number->gamber gamber->number .#2 .l
+  2#1100 number->gamber gamber->number .#2 .l
+  2#1101 number->gamber gamber->number .#2 .l
+  2#1110 number->gamber gamber->number .#2 .l
+  2#1111 number->gamber gamber->number .#2 .l
+  .l
+  true test
+  end
+; test-function
+
+: <test> gamber
+; test-do

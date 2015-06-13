@@ -1209,47 +1209,6 @@ set
 : .#8  8  .# " " .s end ; define-function
 : .#16 16 .# " " .s end ; define-function
 
-: number->gamber
-  << number -- gamber >>
-  dup 1 bit-right
-  bit-xor
-  end
-; define-function
-
-: gamber->number,loop
-  << gamber, number, cursor -- number >>
-  dup negative? if
-    drop
-    swap drop
-    end
-  then
-  >:cursor
-  >:number
-  >:gamber
-  :gamber :cursor get-bit
-  :number :cursor add1 get-bit
-  xor if
-    :number :cursor set-bit >:number
-  then
-  :gamber
-  :number
-  :cursor sub1
-  loop
-; define-function
-
-: gamber->number
-  << gamber -- number >>
-  dup find-highest-set-bit
-  dup negative? if
-    drop
-    end
-  then
-  0 over set-bit
-  swap sub1
-  gamber->number,loop
-  end
-; define-function
-
 : init,rule-set,basic-REPL
   << -- >>
   *rule-set,eval-word*
@@ -5208,6 +5167,7 @@ jo <post-module-syntax> do
   false
   *importing-stack,pointer*
   <importing-record> set-testing-flag
+  :module-name-index
   *importing-stack,pointer*
   <importing-record> set-name
   *importing-stack,unit* address *importing-stack,pointer* add-set

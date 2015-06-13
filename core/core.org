@@ -1,17 +1,15 @@
 #+TITLE:  小蟬之核 / core of cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-
+* 整理結構
+  分組命名
+  分散文件
+  良好測試
+  讓所有的測試讀的內容讀起來都有趣味
 * todo
-** 整理結構
-   分組命名
-   分散文件
-   良好測試
 ** >< the size of file
 ** >< view the core as a special module
    * re-import core every time
-** 基礎設施 之 測試框架
-   * 讓所有的測試讀的內容讀起來都有趣味
 ** 基礎設施 之 返回值
 ** 基礎設施 之 靜態類型
    * do we need stack balancer at all ?
@@ -2495,139 +2493,6 @@
     2#1111_1111  .#2
     8#123        .#8
     16#fff       .#16
-    #+end_src
-*** 記 bit-xor
-    * 對 bit-xor 的解釋
-      1. 對稱地看
-         diff
-      2. 非對稱地看
-         後者是 1 則 求 invert
-      結構上 對於同樣的抽象函數
-      認識上 可以有不同的理解方式
-*** 記 gamber
-    * gray code 很有趣
-      尤其是其生成方式
-      即 先取對稱 再加前綴
-      是利用 對稱性 和 不變量[不變性] 的典型例子
-    * 同樣的一個 0 1 字符串
-      比如 "100"
-      把它做爲自然編碼的二進制數 其值爲 4 這個是 number
-      把它做爲 gray code 編碼的二進制數 其值爲 7 這個我稱之爲 gamber
-    * 這樣 我們就有如下兩個函數
-      string->number
-      string->gamber
-      同時這兩個函數還引出了下面兩個函數
-      number->gamber
-      gamber->number
-    * 下面的的算法是通過把數字列表之後
-      逐 bit 觀察每列的接連 bit 值的規則而得來的
-      比如
-      以生成規則爲定義
-      然後總結一下所發現的每一列的規律
-      就可以得到對下面的算法的有效性的嚴格證明
-    * 注意
-      兩個方向的運算迥然不同
-      還是要以生成方式爲核心來理解這一點
-      只要把生成過程中
-      每次在做完對稱後
-      所添加的 一串前綴 1 看成是一個整體
-      就能理解了
-      可以把每次的 一串前綴 1 看成是一根棍子
-      一根棍子 一根棍子 地 來觀察所生成的列表 就行了
-      可以發現
-      棍子 其實就是 自然編碼時
-      逐 bit 觀察列表時的 接連 bit 值
-      那麼就能理解到
-      爲什麼 number->gamber 比 gamber->number 容易計算了
-    * 另外還要注意
-      從最高位向最低位去計算
-      是爲了逐步確定數在序關係中的位置
-*** number->gamber
-    #+begin_src cicada-nymph :tangle core.cn
-    : number->gamber
-      << number -- gamber >>
-      dup 1 bit-right
-      bit-xor
-      end
-    ; define-function
-    #+end_src
-*** gamber->number
-    #+begin_src cicada-nymph :tangle core.cn
-    : gamber->number,loop
-      << gamber, number, cursor -- number >>
-      dup negative? if
-        drop
-        swap drop
-        end
-      then
-      >:cursor
-      >:number
-      >:gamber
-      :gamber :cursor get-bit
-      :number :cursor add1 get-bit
-      xor if
-        :number :cursor set-bit >:number
-      then
-      :gamber
-      :number
-      :cursor sub1
-      loop
-    ; define-function
-
-    : gamber->number
-      << gamber -- number >>
-      dup find-highest-set-bit
-      dup negative? if
-        drop
-        end
-      then
-      0 over set-bit
-      swap sub1
-      gamber->number,loop
-      end
-    ; define-function
-    #+end_src
-*** test
-    #+begin_src cicada-nymph
-    : test,gamber
-      << -- >>
-      2#0000 number->gamber .#2 .l
-      2#0001 number->gamber .#2 .l
-      2#0010 number->gamber .#2 .l
-      2#0011 number->gamber .#2 .l
-      2#0100 number->gamber .#2 .l
-      2#0101 number->gamber .#2 .l
-      2#0110 number->gamber .#2 .l
-      2#0111 number->gamber .#2 .l
-      2#1000 number->gamber .#2 .l
-      2#1001 number->gamber .#2 .l
-      2#1010 number->gamber .#2 .l
-      2#1011 number->gamber .#2 .l
-      2#1100 number->gamber .#2 .l
-      2#1101 number->gamber .#2 .l
-      2#1110 number->gamber .#2 .l
-      2#1111 number->gamber .#2 .l
-      .l
-      2#0000 number->gamber gamber->number .#2 .l
-      2#0001 number->gamber gamber->number .#2 .l
-      2#0010 number->gamber gamber->number .#2 .l
-      2#0011 number->gamber gamber->number .#2 .l
-      2#0100 number->gamber gamber->number .#2 .l
-      2#0101 number->gamber gamber->number .#2 .l
-      2#0110 number->gamber gamber->number .#2 .l
-      2#0111 number->gamber gamber->number .#2 .l
-      2#1000 number->gamber gamber->number .#2 .l
-      2#1001 number->gamber gamber->number .#2 .l
-      2#1010 number->gamber gamber->number .#2 .l
-      2#1011 number->gamber gamber->number .#2 .l
-      2#1100 number->gamber gamber->number .#2 .l
-      2#1101 number->gamber gamber->number .#2 .l
-      2#1110 number->gamber gamber->number .#2 .l
-      2#1111 number->gamber gamber->number .#2 .l
-      .l
-      end
-    ; define-function
-    test,gamber
     #+end_src
 ** init,rule-set,basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
@@ -8684,6 +8549,7 @@
      false
      *importing-stack,pointer*
      <importing-record> set-testing-flag
+     :module-name-index
      *importing-stack,pointer*
      <importing-record> set-name
      *importing-stack,unit* address *importing-stack,pointer* add-set
@@ -9009,6 +8875,10 @@
    "hihi" load-with-test
 
    <report> memory
+   #+end_src
+** test with gamber
+   #+begin_src cicada-nymph
+   "gamber" load-with-test
    #+end_src
 * -----------------------------------
 * report
