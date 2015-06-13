@@ -1,14 +1,12 @@
 #+TITLE:  小蟬之核 / core of cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
-
-* >< the size of file
+* the size of file
+* re-factoring (load) & (import)
+* better structure for IO functions
 * todo
 ** 基礎設施 之 返回值
 ** 基礎設施 之 靜態類型
-   * do we need stack balancer at all ?
-     (<basic-REPL-syntax> address) is using
-     (<basic-REPL-syntax> jo) is not
 ** 基礎設施 之 利用類型來優化 [提前作用]
 ** 重新實現關於局部變元的語法 以在匿名函數中使用 修復 if 的問題 並增加語法
    * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
@@ -32,6 +30,7 @@
 ** 整理結構 之 使用匿名函數
 ** 整理結構 之 使用返回值
 ** ----------------------------------
+** 在 不知有 name-hash-table 之前所設計的很多東西 需要改進
 ** view the core as a special module  :maybe:
    * re-import core every time
 ** better names for (make-*)
@@ -3245,14 +3244,18 @@
     ; define-function
     more,rule-set,make-jojo
     #+end_src
-*** test
-    #+begin_src cicada-nymph
-    : test
-      << -- >>
-      name test-test-test name->string .s
+*** test <make-jojo-syntax> name
+    #+begin_src cicada-nymph :tangle core-test.cn
+    : <make-jojo-syntax> name,test
+      << -- string[address, length] >>
+      name test-name name->string
       end
-    ; define-function
-    test
+    ; test-function
+
+    : "* (testing) <make-jojo-syntax> name" .s .l
+      <make-jojo-syntax> name,test
+      "test-name" <string> equal? test
+    ; test-do
     #+end_src
 ** base#wild-integer-string           :syntax:
 *** <make-jojo-syntax> base#wild-integer-string
@@ -3410,17 +3413,23 @@
     jo word:if? jo <basic-REPL-syntax> if
     rule,add
     #+end_src
-*** test
-    #+begin_src cicada-nymph
-    one? if
-      111 . .l
-    then
+*** test <basic-REPL-syntax> if & else & then
+    #+begin_src cicada-nymph :tangle core-test.cn
+    : "* (testing) <basic-REPL-syntax> if & else & then" .s .l
+      1
+      one? if
+        111
+      then
+      111 equal? test
 
-    one? if
-      111 . .l
-    else
-      666 . .l
-    then
+      0
+      one? if
+        111
+      else
+        666
+      then
+      666 equal? test
+    ; test-do
     #+end_src
 ** *circular-string-area*
 *** note
@@ -3502,25 +3511,27 @@
     jo word:double-quote? jo <basic-REPL-syntax> double-quote
     rule,add
     #+end_src
-*** test
-    #+begin_src cicada-nymph
-    one? if
-      "111" .s .l
-    then
+*** test <basic-REPL-syntax> double-quote
+    #+begin_src cicada-nymph :tangle core-test.cn
+    : "* (testing) <basic-REPL-syntax> double-quote" .s .l
+      1
+      one? if
+        "111"
+      then
+      "111" <string> equal? test
 
-    one? if
-      "111" .s .l
-    else
-      "___" .s .l
-    then
+      0
+      one? if
+        "111"
+      else
+        "___"
+      then
+      "___" <string> equal? test
+    ; test-do
     #+end_src
 ** address                            :syntax:
 *** <basic-REPL-syntax> address
     #+begin_src cicada-nymph :tangle core.cn
-    0
-    : <basic-REPL-syntax> *address,stack-balancer*
-    ; define-variable,with-tos
-
     : <basic-REPL-syntax> address
       << word:address -- address >>
       drop2
@@ -3540,7 +3551,6 @@
       ::word name-hash-table,find-jo if
       else
         "* (<basic-REPL-syntax> address) meet undefined word : " .s ::word .s .l
-        address <basic-REPL-syntax> *address,stack-balancer*
         end
       then
 
@@ -3548,7 +3558,6 @@
       :jo variable-jo? if
       else
         "* (<basic-REPL-syntax> address) meet a not variable-jo : " .s ::word .s .l
-        address <basic-REPL-syntax> *address,stack-balancer*
         end
       then
       :jo *jo-size* add
@@ -3562,14 +3571,22 @@
     jo <basic-REPL-syntax> address
     rule,add
     #+end_src
-*** test
-    #+begin_src cicada-nymph
-    666
-    address <basic-REPL-syntax> *address,stack-balancer* set
-    <basic-REPL-syntax> *address,stack-balancer*
+*** test <basic-REPL-syntax> address
+    #+begin_src cicada-nymph :tangle core-test.cn
+    0
+    : <basic-REPL-syntax> *testing-variable*
+    ; test-variable,with-tos
 
-    << error >>
+    : "* (testing) <basic-REPL-syntax> address" .s .l
+      666
+      address <basic-REPL-syntax> *testing-variable* set
+      <basic-REPL-syntax> *testing-variable*
+      666 equal? test
+    ; test-do
+
+    << error
     address kkk
+    >>
     #+end_src
 ** word:name?
    #+begin_src cicada-nymph :tangle core.cn
@@ -3609,16 +3626,16 @@
     jo <basic-REPL-syntax> name
     rule,add
     #+end_src
-*** test
-    #+begin_src cicada-nymph
-    name add
-    name->string .s .l
-
-    name <basic-REPL-syntax> *name,stack-balancer*
-    name->string .s .l
-
-    name kkk
-    name->string .s .l
+*** test <basic-REPL-syntax> name
+    #+begin_src cicada-nymph :tangle core-test.cn
+    : "* (testing) <basic-REPL-syntax> name" .s .l
+      name add
+      name->string "add" <string> equal? test
+      name <basic-REPL-syntax> *testing-variable*
+      name->string "<basic-REPL-syntax> *testing-variable*" <string> equal? test
+      name kkk
+      name->string "kkk" <string> equal? test
+    ; test-do
     #+end_src
 ** quote
 *** <basic-REPL-syntax> quote
@@ -3635,6 +3652,15 @@
     jo quote-word?
     jo <basic-REPL-syntax> quote
     rule,add
+    #+end_src
+*** test <basic-REPL-syntax> quote
+    #+begin_src cicada-nymph :tangle core-test.cn
+    : "* (testing) <basic-REPL-syntax> name" .s .l
+      'add
+      name->string "add" <string> equal? test
+      'kkk
+      name->string "kkk" <string> equal? test
+    ; test-do
     #+end_src
 ** <title>                            :syntax:
 *** note
@@ -3672,14 +3698,18 @@
     jo <basic-REPL-syntax> title
     rule,add
     #+end_src
-*** test
-    #+begin_src cicada-nymph
+*** test <basic-REPL-syntax> title
+    #+begin_src cicada-nymph :tangle core-test.cn
     : <test-title> test-name
       << -- >>
-      "TEST" .s .l
+      "TEST"
       end
-    ; define-function
-    <test-title> test-name
+    ; test-function
+
+    : "* (testing) <basic-REPL-syntax> title" .s .l
+      <test-title> test-name
+      "TEST" <string> equal? test
+    ; test-do
     #+end_src
 * -----------------------------------
 * <rule-set> & <rule>
@@ -3691,19 +3721,28 @@
      | value-3 |
      on stack
      << value-1, value-2, value-3 >>
-   #+begin_src cicada-nymph
+   #+begin_src cicada-nymph :tangle core-test.cn
    3 *jo-size* mul allocate-memory
    : *t*
-   ; define-variable,with-tos
+   ; test-variable,with-tos
 
-   1 2 3 *t* 3 n-set
+   : "* (testing) endianness of n-get & n-set" .s .l
+     1 2 3 *t* 3 n-set
+     << re-occur when geting through >>
+     *t* get
+     1 equal?
 
-   << re-occur when geting through >>
-   *t* get .
-   *t* *jo-size* add get .
-   *t* *jo-size* 2 mul add get .
+     *t* *jo-size* add get
+     2 equal? and
 
-   *t* 3 n-get
+     *t* *jo-size* 2 mul add get
+     3 equal? and test
+
+     *t* 3 n-get
+     3 equal? test
+     2 equal? test
+     1 equal? test
+   ; test-do
    #+end_src
 ** <rule-set> list
    * 最後寫到規則集合裏的 被最先打印出來
@@ -4023,12 +4062,18 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "1 2 3 add add . " eval-string << 6 >>
-   "1 2 3 add add ." eval-string  << 6 >>
-   ": k 1 2 3 add add . end ; define-function k" eval-string << 6 >>
-   k << 6 >>
+** test eval-string
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) eval-string" .s .l
+     "1 2 3 add add" eval-string 6 equal? test
+     "  1 2 3 add add  " eval-string  6 equal? test
+     " k
+       1 2 3 add add
+       end
+     "
+     "define-function k" eval-string 6 equal? test
+     k 6 equal? test
+   ; test-do
    #+end_src
 * define-variable
 ** note string allocation
@@ -5470,11 +5515,6 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   <report> environment-variable
-   <report> command-line
-   #+end_src
 ** work-directory
 *** get-work-directory
     #+begin_src cicada-nymph :tangle core.cn
@@ -5833,12 +5873,14 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "/home" relative-path? .
-   "/home" full-path? .
-   "home" relative-path? .
-   "home" full-path? .
+** test full-path?
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) full-path?" .s .l
+     "/home" relative-path? false?
+     "/home" full-path?     true? and
+     "home"  relative-path? true? and
+     "home"  full-path?     false? and test
+   ; test-do
    #+end_src
 * poi
 ** 記
@@ -6326,10 +6368,12 @@
      loop
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "aaa" "a" <string> byte <string> full-of-the-same-byte?
-   "aba" "a" <string> byte <string> full-of-the-same-byte?
+** test <string> full-of-the-same-byte?
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) <string> full-of-the-same-byte?" .s .l
+     "aaa" "a" <string> byte <string> full-of-the-same-byte? true?
+     "aba" "a" <string> byte <string> full-of-the-same-byte? false? add test
+   ; test-do
    #+end_src
 ** <string> any-word
    #+begin_src cicada-nymph :tangle core.cn
@@ -6373,19 +6417,31 @@
      loop
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test
+** test <string> every-word
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : <string> every-word,testing
      << -- >>
-     "no no name no" ["name" <string> equal? end] <string> any-word . << 1 >>
-     "name name name" ["name" <string> equal? end] <string> every-word . << 1 >>
-     .l
-     "name name name" ["name" <string> equal? not end] <string> every-word . << 0 >>
-     "no no name no" ["name" <string> equal? end] <string> every-word . << 0 >>
-     .l
+     "no no name no"
+     ["name" <string> equal? end]
+     <string> any-word true?
+
+     "name name name"
+     ["name" <string> equal? end]
+     <string> every-word true? and
+
+     "name name name"
+     ["name" <string> equal? not end]
+     <string> every-word false? and
+
+     "no no name no"
+     ["name" <string> equal? end]
+     <string> every-word false? and test
      end
-   ; define-function
-   test
+   ; test-function
+
+   : "* (testing) <string> every-word" .s .l
+     <string> every-word,testing
+   ; test-do
    #+end_src
 ** <string> word-end-back
    #+begin_src cicada-nymph :tangle core.cn
@@ -6456,12 +6512,14 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "   aaa   aaa   aaa"
-   <string> word-tail dup2 .s << "   aaa   aaa" >>
-   <string> word-back dup2 .s << "aaa   aaa   aaa" >>
-   <string> word .s << "aaa" >>
+** test <string> word-back
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) <string> word-back" .s .l
+     "   aaa   aaa   aaa"
+     <string> word-tail dup2 "   aaa   aaa" <string> equal? test
+     <string> word-back dup2 "aaa   aaa   aaa" <string> equal? test
+     <string> word "aaa" <string> equal? test
+   ; test-do
    #+end_src
 * reading-stack
 ** unread-word
@@ -6476,8 +6534,9 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test
+   : unread-word,test
      << -- >>
+     "type a word : " .s
      read-word "* read-word : " .s .s .l
      unread-word
      read-word "* read-word again : " .s .s .l
@@ -6485,7 +6544,7 @@
      read-word "* read-word again : " .s .s .l
      end
    ; define-function
-   test
+   unread-word,test
    #+end_src
 * <rule-set>
 ** <rule-set> mixin
@@ -7989,16 +8048,18 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "::::::" module-meta-begin-word? . << 1 >>
-   "======" module-meta-end-word? . << 1 >>
+** test module-meta-begin-word? & module-meta-begin-word?
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) module-meta-begin-word? & module-meta-begin-word?" .s .l
+     "::::::" module-meta-begin-word? true?
+     "======" module-meta-end-word? true? and
 
-   ":::::" module-meta-begin-word? . << 0 >>
-   "=====" module-meta-end-word? . << 0 >>
+     ":::::" module-meta-begin-word? false? and
+     "=====" module-meta-end-word? false? and
 
-   ":::><:::" module-meta-begin-word? . << 0 >>
-   "===><===" module-meta-end-word? . << 0 >>
+     ":::><:::" module-meta-begin-word? false? and
+     "===><===" module-meta-end-word? false? and test
+   ; test-do
    #+end_src
 ** 記 謂詞
    * 作用於 module-buffer 的函數
@@ -8028,26 +8089,28 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "
-   :::::::::
-   import: combinator math
-   module: assembler
-   =========
-   hi
-   kkk took my baby away!
-   "
-   <module-buffer> good-format? . << 1 >>
+** test <module-buffer> good-format?
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) <module-buffer> good-format" .s .l
+     "
+     :::::::::
+     import: combinator math
+     module: assembler
+     =========
+     hi
+     kkk took my baby away!
+     "
+     <module-buffer> good-format? true?
 
-   "
-   :::::::::
-   import: combinator math
-   module: assembler
-   hi
-   kkk took my baby away!
-   "
-   <module-buffer> good-format? . << 0 >>
+     "
+     :::::::::
+     import: combinator math
+     module: assembler
+     hi
+     kkk took my baby away!
+     "
+     <module-buffer> good-format? false? and test
+   ; test-do
    #+end_src
 ** <module-buffer> get-code-string
    #+begin_src cicada-nymph :tangle core.cn
@@ -8085,17 +8148,25 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   "
-   :::::::::
-   import: combinator math
-   module: assembler
-   =========
-   hi
-   kkk took my baby away!
-   "
-   <module-buffer> get-meta-string .s
+** test <module-buffer> get-meta-string
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) <module-buffer> get-meta-string" .s .l
+     "
+     :::::::::
+     import: combinator math
+     module: assembler
+     =========
+     hi
+     kkk took my baby away!
+     "
+     <module-buffer> get-meta-string
+     "
+     :::::::::
+     import: combinator math
+     module: assembler
+     ========="
+     <string> equal? test
+   ; test-do
    #+end_src
 * import & load & load-with-test
 ** 記 避免相互遞歸函數
@@ -8827,7 +8898,7 @@
    "gamber" load-with-test
    #+end_src
 * -----------------------------------
-* report
+* <report>
 ** <report> memory
    #+begin_src cicada-nymph :tangle core.cn
    : <report> memory
@@ -8870,38 +8941,6 @@
           *jojo-area,current-free-address*
           *jojo-area*
           sub sub . .l
-     end
-   ; define-function
-   #+end_src
-** <report> platform
-   #+begin_src cicada-nymph :tangle core.cn
-   : <report> platform
-     << -- >>
-     "* platform : " .s
-     platform .s
-     .l
-     end
-   ; define-function
-   #+end_src
-** <report> jo-size
-   #+begin_src cicada-nymph :tangle core.cn
-   : <report> jo-size
-     << -- >>
-     "* jo-size : " .s
-     *jo-size* write-number
-     " bytes" .s
-     .l
-     end
-   ; define-function
-   #+end_src
-** <report> machine-word-size
-   #+begin_src cicada-nymph :tangle core.cn
-   : <report> machine-word-size
-     << -- >>
-     "* machine-word-size : " .s
-     *jo-size* 8 mul write-number
-     " bits" .s
-     .l
      end
    ; define-function
    #+end_src
@@ -8977,9 +9016,11 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <report> system
      << -- >>
-     <report> platform
-     <report> machine-word-size
-     <report> jo-size
+     "* (system) " .s
+     *jo-size* 8 mul .i "bit" .s
+     " " .s
+     platform .s
+     .l
      end
    ; define-function
    #+end_src
@@ -9322,8 +9363,11 @@
   "core-test" load-with-test
 
   << report >>
+  <report> system
   <report> memory
-  <report> syntax
   <report> global-naming-stack
+  <report> syntax
+  <report> command-line
+  <report> environment-variable
   #+end_src
 * ===================================

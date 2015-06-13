@@ -500,3 +500,214 @@ name-hash-table,report
   6 apply-factorial 720 equal? and test
   end
 ; test-do
+
+: <make-jojo-syntax> name,test
+  << -- string[address, length] >>
+  name test-name name->string
+  end
+; test-function
+
+: "* (testing) <make-jojo-syntax> name" .s .l
+  <make-jojo-syntax> name,test
+  "test-name" <string> equal? test
+; test-do
+
+: "* (testing) <basic-REPL-syntax> if & else & then" .s .l
+  1
+  one? if
+    111
+  then
+  111 equal? test
+
+  0
+  one? if
+    111
+  else
+    666
+  then
+  666 equal? test
+; test-do
+
+: "* (testing) <basic-REPL-syntax> double-quote" .s .l
+  1
+  one? if
+    "111"
+  then
+  "111" <string> equal? test
+
+  0
+  one? if
+    "111"
+  else
+    "___"
+  then
+  "___" <string> equal? test
+; test-do
+
+0
+: <basic-REPL-syntax> *testing-variable*
+; test-variable,with-tos
+
+: "* (testing) <basic-REPL-syntax> address" .s .l
+  666
+  address <basic-REPL-syntax> *testing-variable* set
+  <basic-REPL-syntax> *testing-variable*
+  666 equal? test
+; test-do
+
+<< error
+address kkk
+>>
+
+: "* (testing) <basic-REPL-syntax> name" .s .l
+  name add
+  name->string "add" <string> equal? test
+  name <basic-REPL-syntax> *testing-variable*
+  name->string "<basic-REPL-syntax> *testing-variable*" <string> equal? test
+  name kkk
+  name->string "kkk" <string> equal? test
+; test-do
+
+: "* (testing) <basic-REPL-syntax> name" .s .l
+  'add
+  name->string "add" <string> equal? test
+  'kkk
+  name->string "kkk" <string> equal? test
+; test-do
+
+: <test-title> test-name
+  << -- >>
+  "TEST"
+  end
+; test-function
+
+: "* (testing) <basic-REPL-syntax> title" .s .l
+  <test-title> test-name
+  "TEST" <string> equal? test
+; test-do
+
+3 *jo-size* mul allocate-memory
+: *t*
+; test-variable,with-tos
+
+: "* (testing) endianness of n-get & n-set" .s .l
+  1 2 3 *t* 3 n-set
+  << re-occur when geting through >>
+  *t* get
+  1 equal?
+
+  *t* *jo-size* add get
+  2 equal? and
+
+  *t* *jo-size* 2 mul add get
+  3 equal? and test
+
+  *t* 3 n-get
+  3 equal? test
+  2 equal? test
+  1 equal? test
+; test-do
+
+: "* (testing) eval-string" .s .l
+  "1 2 3 add add" eval-string 6 equal? test
+  "  1 2 3 add add  " eval-string  6 equal? test
+  " k
+    1 2 3 add add
+    end
+  "
+  "define-function k" eval-string 6 equal? test
+  k 6 equal? test
+; test-do
+
+: "* (testing) full-path?" .s .l
+  "/home" relative-path? false?
+  "/home" full-path?     true? and
+  "home"  relative-path? true? and
+  "home"  full-path?     false? and test
+; test-do
+
+: "* (testing) <string> full-of-the-same-byte?" .s .l
+  "aaa" "a" <string> byte <string> full-of-the-same-byte? true?
+  "aba" "a" <string> byte <string> full-of-the-same-byte? false? add test
+; test-do
+
+: <string> every-word,testing
+  << -- >>
+  "no no name no"
+  ["name" <string> equal? end]
+  <string> any-word true?
+
+  "name name name"
+  ["name" <string> equal? end]
+  <string> every-word true? and
+
+  "name name name"
+  ["name" <string> equal? not end]
+  <string> every-word false? and
+
+  "no no name no"
+  ["name" <string> equal? end]
+  <string> every-word false? and test
+  end
+; test-function
+
+: "* (testing) <string> every-word" .s .l
+  <string> every-word,testing
+; test-do
+
+: "* (testing) <string> word-back" .s .l
+  "   aaa   aaa   aaa"
+  <string> word-tail dup2 "   aaa   aaa" <string> equal? test
+  <string> word-back dup2 "aaa   aaa   aaa" <string> equal? test
+  <string> word "aaa" <string> equal? test
+; test-do
+
+: "* (testing) module-meta-begin-word? & module-meta-begin-word?" .s .l
+  "::::::" module-meta-begin-word? true?
+  "======" module-meta-end-word? true? and
+
+  ":::::" module-meta-begin-word? false? and
+  "=====" module-meta-end-word? false? and
+
+  ":::><:::" module-meta-begin-word? false? and
+  "===><===" module-meta-end-word? false? and test
+; test-do
+
+: "* (testing) <module-buffer> good-format" .s .l
+  "
+  :::::::::
+  import: combinator math
+  module: assembler
+  =========
+  hi
+  kkk took my baby away!
+  "
+  <module-buffer> good-format? true?
+
+  "
+  :::::::::
+  import: combinator math
+  module: assembler
+  hi
+  kkk took my baby away!
+  "
+  <module-buffer> good-format? false? and test
+; test-do
+
+: "* (testing) <module-buffer> get-meta-string" .s .l
+  "
+  :::::::::
+  import: combinator math
+  module: assembler
+  =========
+  hi
+  kkk took my baby away!
+  "
+  <module-buffer> get-meta-string
+  "
+  :::::::::
+  import: combinator math
+  module: assembler
+  ========="
+  <string> equal? test
+; test-do

@@ -1796,10 +1796,6 @@ rule,add
 jo word:double-quote? jo <basic-REPL-syntax> double-quote
 rule,add
 
-0
-: <basic-REPL-syntax> *address,stack-balancer*
-; define-variable,with-tos
-
 : <basic-REPL-syntax> address
   << word:address -- address >>
   drop2
@@ -1819,7 +1815,6 @@ rule,add
   ::word name-hash-table,find-jo if
   else
     "* (<basic-REPL-syntax> address) meet undefined word : " .s ::word .s .l
-    address <basic-REPL-syntax> *address,stack-balancer*
     end
   then
 
@@ -1827,7 +1822,6 @@ rule,add
   :jo variable-jo? if
   else
     "* (<basic-REPL-syntax> address) meet a not variable-jo : " .s ::word .s .l
-    address <basic-REPL-syntax> *address,stack-balancer*
     end
   then
   :jo *jo-size* add
@@ -5476,32 +5470,6 @@ jo <post-module-syntax> do
   end
 ; define-function
 
-: <report> platform
-  << -- >>
-  "* platform : " .s
-  platform .s
-  .l
-  end
-; define-function
-
-: <report> jo-size
-  << -- >>
-  "* jo-size : " .s
-  *jo-size* write-number
-  " bytes" .s
-  .l
-  end
-; define-function
-
-: <report> machine-word-size
-  << -- >>
-  "* machine-word-size : " .s
-  *jo-size* 8 mul write-number
-  " bits" .s
-  .l
-  end
-; define-function
-
 : <report> syntax
   << -- >>
   "* *rule-set,make-jojo* :" .s .l
@@ -5563,9 +5531,11 @@ jo <post-module-syntax> do
 
 : <report> system
   << -- >>
-  <report> platform
-  <report> machine-word-size
-  <report> jo-size
+  "* (system) " .s
+  *jo-size* 8 mul .i "bit" .s
+  " " .s
+  platform .s
+  .l
   end
 ; define-function
 
