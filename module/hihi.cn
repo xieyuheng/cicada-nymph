@@ -11,3 +11,16 @@ hihi
   "* (hihi) hihi O.o" .s .l
   end
 ; define-function
+
+: test-hihi
+  << -- >>
+  "(test-function) is working :)" .s .l
+  true test
+  end
+; test-function
+
+: "(test-do) is working :)" .s .l
+  "testing hihi" .s .l
+  test-hihi
+  true test
+; test-do

@@ -4125,7 +4125,7 @@ more,rule-set,basic-REPL
 : *module-stack,size*
 ; define-variable,with-tos
 
-5 *jo-size* mul
+8 *jo-size* mul
 : *module-stack,unit*
 ; define-variable,with-tos
 
@@ -4193,6 +4193,64 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
+: <module-info> get-tested-flag
+  << module-info -- name >>
+  *jo-size* 5 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-tested-flag
+  << name, module-info -- >>
+  *jo-size* 5 mul add
+  set
+  end
+; define-function
+
+: <module-info> get-success-counter
+  << module-info -- name >>
+  *jo-size* 6 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-success-counter
+  << name, module-info -- >>
+  *jo-size* 6 mul add
+  set
+  end
+; define-function
+
+: <module-info> inc-success-counter
+  << module-info -- >>
+  *jo-size* 6 mul add
+  1 swap
+  add-set
+  end
+; define-function
+
+: <module-info> get-fail-counter
+  << module-info -- name >>
+  *jo-size* 7 mul add
+  get
+  end
+; define-function
+
+: <module-info> set-fail-counter
+  << name, module-info -- >>
+  *jo-size* 7 mul add
+  set
+  end
+; define-function
+
+: <module-info> inc-fail-counter
+  << module-info -- >>
+  *jo-size* 7 mul add
+  1 swap
+  add-set
+  end
+; define-function
+
 : <module-stack> find,loop
   << name, cursor
      -- module-info, true
@@ -4228,7 +4286,7 @@ more,rule-set,basic-REPL
 : *importing-stack,size*
 ; define-variable,with-tos
 
-1 *jo-size* mul
+2 *jo-size* mul
 : *importing-stack,unit*
 ; define-variable,with-tos
 
@@ -4250,6 +4308,18 @@ more,rule-set,basic-REPL
 : <importing-record> set-name
   << name, module-info -- >>
   set
+  end
+; define-function
+
+: <importing-record> get-testing-flag
+  << module-info -- bool >>
+  *jo-size* add get
+  end
+; define-function
+
+: <importing-record> set-testing-flag
+  << bool, module-info -- >>
+  *jo-size* add set
   end
 ; define-function
 
@@ -4890,12 +4960,17 @@ set
   :buffer :length <module-buffer> get-meta-string >::meta-string
   :buffer :length <module-buffer> get-code-string >::code-string
 
-  *importing-stack,pointer* >:importing-record
-  *importing-stack,unit* address *importing-stack,pointer* add-set
+  false
+  *module-stack,pointer*
+  <module-info> set-tested-flag
 
+  false
+  *importing-stack,pointer*
+  <importing-record> set-testing-flag
   :module-name-index
-  :importing-record
+  *importing-stack,pointer*
   <importing-record> set-name
+  *importing-stack,unit* address *importing-stack,pointer* add-set
 
   *global-naming-stack,pointer* >:global-name-record-before-import
 
@@ -4928,24 +5003,19 @@ set
 
   :global-name-record-before-import address *global-naming-stack,pointer* set
 
-  *module-stack,pointer* >:module-info
-  *module-stack,unit* address *module-stack,pointer* add-set
-
   :module-name-record-begin
-  :module-info
+  *module-stack,pointer*
   <module-info> set-name-record-begin
-
   :module-name-record-end
-  :module-info
+  *module-stack,pointer*
   <module-info> set-name-record-end
-
   ::meta-string
-  :module-info
+  *module-stack,pointer*
   <module-info> set-meta-string
-
   :module-name-index
-  :module-info
+  *module-stack,pointer*
   <module-info> set-name
+  *module-stack,unit* address *module-stack,pointer* add-set
   end
 ; define-function
 
@@ -5095,11 +5165,288 @@ jo <post-module-syntax> do
     end ]
   'fail-to-load await
 
-  ::module-name-string import
+  ::module-name-string string->name >:module-name-index
+  :module-name-index name->module-prefix >:module-prefix
+
+  :module-name-index <module-stack> find if
+    drop
+    "* (load) the following module is already loaded : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+
+  :module-name-index <importing-stack> find if
+    "* (load) circular import of : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+
+  ::module-name-string <moi> find not if
+    "* (load) can not find module : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+  >::module-path
+
+  64 1024 mul allocate-local-memory >:buffer
+
+  :buffer
+  64 1024 mul
+  ::module-path
+  <file> read >:length
+
+  :buffer :length <module-buffer> good-format? not if
+    "* (load) fail to import module : " .s ::module-name-string .s .l
+    "  for the file is not well formated cicada-nymph source code" .s .l
+    'fail-to-load awake
+  then
+
+  :buffer :length <module-buffer> get-meta-string >::meta-string
+  :buffer :length <module-buffer> get-code-string >::code-string
+
+  false
+  *module-stack,pointer*
+  <module-info> set-tested-flag
+
+  false
+  *importing-stack,pointer*
+  <importing-record> set-testing-flag
+  *importing-stack,pointer*
+  <importing-record> set-name
+  *importing-stack,unit* address *importing-stack,pointer* add-set
+
+  *global-naming-stack,pointer* >:global-name-record-before-import
+
+  <pre-module> *rule-set* push-syntax-stack
+  ::meta-string eval-string
+  drop-syntax-stack
+
+  *global-naming-stack,pointer* >:global-name-record-begin
+  <eval-word> *rule-set* push-syntax-stack
+  ::code-string eval-string
+  drop-syntax-stack
+  *global-naming-stack,pointer* >:global-name-record-end
+
+  <post-module> *rule-set* push-syntax-stack
+  ::meta-string eval-string
+  drop-syntax-stack
+
+  <importing-record> drop
+
+  *module-naming-stack,pointer* >:module-name-record-begin
+  :global-name-record-begin
+  :global-name-record-end
+  :module-prefix
+  <global-naming-stack> prefix-naming
+  *module-naming-stack,pointer* >:module-name-record-end
+
+  :global-name-record-before-import
+  *global-naming-stack,pointer*
+  <global-naming-stack> clear-naming
+
+  :global-name-record-before-import address *global-naming-stack,pointer* set
+
+  :module-name-record-begin
+  *module-stack,pointer*
+  <module-info> set-name-record-begin
+  :module-name-record-end
+  *module-stack,pointer*
+  <module-info> set-name-record-end
+  ::meta-string
+  *module-stack,pointer*
+  <module-info> set-meta-string
+  :module-name-index
+  *module-stack,pointer*
+  <module-info> set-name
+  *module-stack,unit* address *module-stack,pointer* add-set
+
 
   drop
   drop
   drop2
+  end
+; define-function
+
+: load-with-test
+  << module-name-string[address, length] -- >>
+  >::module-name-string
+
+  ::module-name-string
+  <undo-point> create
+  *reading-stack,pointer*
+  << module-name-string[address, length],
+     undo-point
+     *reading-stack,pointer*
+     -- >>
+
+  [ action,reset-the-stack
+    << module-name-string[address, length],
+       undo-point
+       *reading-stack,pointer*
+       -- >>
+    address *reading-stack,pointer* set
+    undo
+    "* (load-with-test) can not load : " .s .s .l
+    end ]
+  'fail-to-load await
+
+  ::module-name-string string->name >:module-name-index
+  :module-name-index name->module-prefix >:module-prefix
+
+  :module-name-index <module-stack> find if
+    drop
+    "* (load-with-test) the following module is already loaded : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+
+  :module-name-index <importing-stack> find if
+    "* (load-with-test) circular import of : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+
+  ::module-name-string <moi> find not if
+    "* (load-with-test) can not find module : " .s ::module-name-string .s .l
+    'fail-to-load awake
+  then
+  >::module-path
+
+  64 1024 mul allocate-local-memory >:buffer
+
+  :buffer
+  64 1024 mul
+  ::module-path
+  <file> read >:length
+
+  :buffer :length <module-buffer> good-format? not if
+    "* (load-with-test) fail to import module : " .s ::module-name-string .s .l
+    "  for the file is not well formated cicada-nymph source code" .s .l
+    'fail-to-load awake
+  then
+
+  :buffer :length <module-buffer> get-meta-string >::meta-string
+  :buffer :length <module-buffer> get-code-string >::code-string
+
+  true
+  *module-stack,pointer*
+  <module-info> set-tested-flag
+  0
+  *module-stack,pointer*
+  <module-info> set-success-counter
+  0
+  *module-stack,pointer*
+  <module-info> set-fail-counter
+
+  true
+  *importing-stack,pointer*
+  <importing-record> set-testing-flag
+  :module-name-index
+  *importing-stack,pointer*
+  <importing-record> set-name
+  *importing-stack,unit* address *importing-stack,pointer* add-set
+
+  *global-naming-stack,pointer* >:global-name-record-before-import
+
+  <pre-module> *rule-set* push-syntax-stack
+  ::meta-string eval-string
+  drop-syntax-stack
+
+  *global-naming-stack,pointer* >:global-name-record-begin
+  <eval-word> *rule-set* push-syntax-stack
+  ::code-string eval-string
+  drop-syntax-stack
+  *global-naming-stack,pointer* >:global-name-record-end
+
+  <post-module> *rule-set* push-syntax-stack
+  ::meta-string eval-string
+  drop-syntax-stack
+
+  <importing-record> drop
+
+  *module-naming-stack,pointer* >:module-name-record-begin
+  :global-name-record-begin
+  :global-name-record-end
+  :module-prefix
+  <global-naming-stack> prefix-naming
+  *module-naming-stack,pointer* >:module-name-record-end
+
+  :global-name-record-before-import
+  *global-naming-stack,pointer*
+  <global-naming-stack> clear-naming
+
+  :global-name-record-before-import address *global-naming-stack,pointer* set
+
+  :module-name-record-begin
+  *module-stack,pointer*
+  <module-info> set-name-record-begin
+  :module-name-record-end
+  *module-stack,pointer*
+  <module-info> set-name-record-end
+  ::meta-string
+  *module-stack,pointer*
+  <module-info> set-meta-string
+  :module-name-index
+  *module-stack,pointer*
+  <module-info> set-name
+
+  "* (load-with-test) load : " .s ::module-name-string .s .l
+  "  success : " .s
+  *module-stack,pointer* <module-info> get-success-counter
+  .i .l
+  "  fali : " .s
+  *module-stack,pointer* <module-info> get-fail-counter
+  .i .l
+
+  *module-stack,unit* address *module-stack,pointer* add-set
+
+
+  drop
+  drop
+  drop2
+  end
+; define-function
+
+: test-function
+  << string[address, length] -- >>
+  *importing-stack,pointer*
+  *importing-stack,unit* sub
+  <importing-record> get-testing-flag if
+    define-function
+    end
+  then
+  drop2
+  end
+; define-function
+
+: test-variable
+  << string[address, length] -- >>
+  *importing-stack,pointer*
+  *importing-stack,unit* sub
+  <importing-record> get-testing-flag if
+    define-variable
+    end
+  then
+  drop2
+  end
+; define-function
+
+: test-do
+  << string[address, length] -- >>
+  *importing-stack,pointer*
+  *importing-stack,unit* sub
+  <importing-record> get-testing-flag if
+    eval-string
+    end
+  then
+  drop2
+  end
+; define-function
+
+: test
+  << bool -- >>
+  if
+    "* (test) success" .s .l
+    *module-stack,pointer* <module-info> inc-success-counter
+  else
+    "* (test) fail" .s .l
+    *module-stack,pointer* <module-info> inc-fail-counter
+  then
   end
 ; define-function
 
