@@ -5709,8 +5709,8 @@ jo <post-module-syntax> do
     bye
   then
 
-  "* (poi) meets argument that (poi) can not understand" .s .l
-  "  it is the following command-line that is confusing (poi) :" .s .l
+  "* (<command-function> poi) meets argument that (<command-function> poi) can not understand" .s .l
+  "  it is the following command-line that is confusing (<command-function> poi) :" .s .l
   "    " .s <report> command-line .l
   "  to get some help info  you can type :" .s .l
   "    cn poi help" .s .l
@@ -5772,12 +5772,40 @@ jo <post-module-syntax> do
     bye
   then
 
-  "* (module) meets argument that (module) can not understand" .s .l
-  "  it is the following command-line that is confusing (module) :" .s .l
+  "* (<command-function> moi) meets argument that (<command-function> moi) can not understand" .s .l
+  "  it is the following command-line that is confusing (<command-function> moi) :" .s .l
   "    " .s <report> command-line .l
   "  to get some help info  you can type :" .s .l
   "    cn module help" .s .l
   "  good bye ^-^/" .s .l
+  bye
+; define-function
+
+: <command-function> load
+  << -- >>
+  get-command-line
+  <string> word-tail
+  <string> word-tail >::command-line
+  ::command-line <string> space? if
+    "* (<command-function> load) is called with no argument" .s .l
+    "  it should be called with a name of module" .s .l
+    bye
+  then
+  ::command-line <string> word load
+  bye
+; define-function
+
+: <command-function> load-with-test
+  << -- >>
+  get-command-line
+  <string> word-tail
+  <string> word-tail >::command-line
+  ::command-line <string> space? if
+    "* (<command-function> load-with-test) is called with no argument" .s .l
+    "  it should be called with a name of module" .s .l
+    bye
+  then
+  ::command-line <string> word load-with-test
   bye
 ; define-function
 
@@ -5812,6 +5840,14 @@ jo <post-module-syntax> do
   then
   ::1st-word "moi" <string> equal? if
     <command-function> moi
+    end
+  then
+  ::1st-word "load" <string> equal? if
+    <command-function> load
+    end
+  then
+  ::1st-word "load-with-test" <string> equal? if
+    <command-function> load-with-test
     end
   then
   <command-function> unknow-function

@@ -3,9 +3,6 @@
 #+EMAIL:  xyheme@gmail.com
 
 * >< the size of file
-* >< view the core as a special module
-  * re-import core every time
-* >< command-line interface of module mechanism
 * todo
 ** 基礎設施 之 返回值
 ** 基礎設施 之 靜態類型
@@ -35,6 +32,8 @@
 ** 整理結構 之 使用匿名函數
 ** 整理結構 之 使用返回值
 ** ----------------------------------
+** view the core as a special module  :maybe:
+   * re-import core every time
 ** better names for (make-*)
 ** 利用 alias 來實現中文支持
 ** 基礎設施 之 匿名函數 之 *circular-jojo-area* :maybe:
@@ -3279,77 +3278,6 @@
       end
     ; define-function
     more,rule-set,make-jojo
-    #+end_src
-*** test
-    #+begin_src cicada-nymph
-    : test
-      << -- >>
-      0#111
-      0 0 power 1 mul
-      0 1 power 1 mul add
-      0 2 power 1 mul add
-      . . .l
-
-      1#111
-      1 0 power 1 mul
-      1 1 power 1 mul add
-      1 2 power 1 mul add
-      . . .l
-
-      10#123
-      _1_0__#_1__2_3_
-      10 0 power 3 mul
-      10 1 power 2 mul add
-      10 2 power 1 mul add
-      . . .l .
-
-      2#1000
-      2#_1000_
-      2 0 power 0 mul
-      2 1 power 0 mul add
-      2 2 power 0 mul add
-      2 3 power 1 mul add
-      . . .l .
-
-      2#1111_1111
-      2 0 power 1 mul
-      2 1 power 1 mul add
-      2 2 power 1 mul add
-      2 3 power 1 mul add
-      2 4 power 1 mul add
-      2 5 power 1 mul add
-      2 6 power 1 mul add
-      2 7 power 1 mul add
-      . . .l
-
-      16#f_f
-      16 0 power 15 mul
-      16 1 power 15 mul add
-      . . .l
-
-      100#111
-      100 0 power 1 mul
-      100 1 power 1 mul add
-      100 2 power 1 mul add
-      . . .l
-
-      64#zzz
-      64 0 power 35 mul
-      64 1 power 35 mul add
-      64 2 power 35 mul add
-      . . .l
-
-      36#zzzz
-      36 0 power 35 mul
-      36 1 power 35 mul add
-      36 2 power 35 mul add
-      36 3 power 35 mul add
-      . . .l
-
-      end
-    ; define-function
-
-    test
     #+end_src
 * more syntax for REPL
 ** jo                                 :syntax:
@@ -9115,7 +9043,7 @@
    ; define-function
    #+end_src
 * command-function
-** unknow-function
+** <command-function> unknow-function
    #+begin_src cicada-nymph :tangle core.cn
    : <command-function> unknow-function
      << -- >>
@@ -9127,7 +9055,7 @@
      bye
    ; define-function
    #+end_src
-** stack-REPL
+** <command-function> stack-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : <command-function> stack-REPL
      << -- >>
@@ -9142,7 +9070,7 @@
      reset-top-level-REPL
    ; define-function
    #+end_src
-** basic-REPL
+** <command-function> basic-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : <command-function> basic-REPL
      << -- >>
@@ -9155,7 +9083,7 @@
      reset-top-level-REPL
    ; define-function
    #+end_src
-** poi
+** <command-function> poi
    * cn poi add  <name> <relative-path>
    * cn poi sub  <name>
    * cn poi up   <name> <relative-path>
@@ -9216,8 +9144,8 @@
        bye
      then
 
-     "* (poi) meets argument that (poi) can not understand" .s .l
-     "  it is the following command-line that is confusing (poi) :" .s .l
+     "* (<command-function> poi) meets argument that (<command-function> poi) can not understand" .s .l
+     "  it is the following command-line that is confusing (<command-function> poi) :" .s .l
      "    " .s <report> command-line .l
      "  to get some help info  you can type :" .s .l
      "    cn poi help" .s .l
@@ -9225,7 +9153,7 @@
      bye
    ; define-function
    #+end_src
-** module
+** <command-function> moi
    * cn module add  <name> <relative-path>
    * cn module sub  <name>
    * cn module up   <name> <relative-path>
@@ -9286,8 +9214,8 @@
        bye
      then
 
-     "* (module) meets argument that (module) can not understand" .s .l
-     "  it is the following command-line that is confusing (module) :" .s .l
+     "* (<command-function> moi) meets argument that (<command-function> moi) can not understand" .s .l
+     "  it is the following command-line that is confusing (<command-function> moi) :" .s .l
      "    " .s <report> command-line .l
      "  to get some help info  you can type :" .s .l
      "    cn module help" .s .l
@@ -9295,7 +9223,39 @@
      bye
    ; define-function
    #+end_src
-** no-function
+** <command-function> load
+   #+begin_src cicada-nymph :tangle core.cn
+   : <command-function> load
+     << -- >>
+     get-command-line
+     <string> word-tail
+     <string> word-tail >::command-line
+     ::command-line <string> space? if
+       "* (<command-function> load) is called with no argument" .s .l
+       "  it should be called with a name of module" .s .l
+       bye
+     then
+     ::command-line <string> word load
+     bye
+   ; define-function
+   #+end_src
+** <command-function> load-with-test
+   #+begin_src cicada-nymph :tangle core.cn
+   : <command-function> load-with-test
+     << -- >>
+     get-command-line
+     <string> word-tail
+     <string> word-tail >::command-line
+     ::command-line <string> space? if
+       "* (<command-function> load-with-test) is called with no argument" .s .l
+       "  it should be called with a name of module" .s .l
+       bye
+     then
+     ::command-line <string> word load-with-test
+     bye
+   ; define-function
+   #+end_src
+** <command-function> no-function
    #+begin_src cicada-nymph :tangle core.cn
    : <command-function> no-function
      << -- >>
@@ -9331,6 +9291,14 @@
      then
      ::1st-word "moi" <string> equal? if
        <command-function> moi
+       end
+     then
+     ::1st-word "load" <string> equal? if
+       <command-function> load
+       end
+     then
+     ::1st-word "load-with-test" <string> equal? if
+       <command-function> load-with-test
        end
      then
      <command-function> unknow-function
