@@ -1,0 +1,110 @@
+* 題解
+  * 函數 使用與返回 結構化數據
+  * 每個函數在作用時
+    其返回點中保存函數未作用時 *local-byte,current-free-address*
+    函數退出時要利用這個地址來重置 *local-byte,current-free-address*
+    而在函數作用過程中
+    通過遞增 *local-byte,current-free-address*
+    [以 (allocate-local-memory) 爲接口]
+    就可以空出來一片可用的內存
+  * 函數可使用 結構化數據
+    保存這些數據需要內存
+    分配其內存的方式有兩種
+    1. 一種在定義函數時 就在函數體內佈置好
+    2. 一種在函數運行時 通過 (allocate-local-memory) 來分配內存
+       然後再在這些內存中製作結構化的數據
+  * 函數可返回 結構化數據
+    所謂 返回
+    涉及到函數之間的調用關係
+    主調者稱主函數
+    被調者稱子函數
+    子函數若 通過遞增 *local-byte,current-free-address* 而使用了局部內存
+    並在其中製作了結構化數據
+    當子函數退出時 而重置 *local-byte,current-free-address*
+    其所製作的結構化數據就丟失了
+    正確的處理方式是
+    在重置 *local-byte,current-free-address* 之後
+    馬上 重新遞增 *local-byte,current-free-address*
+    將所要返回的結構化數據複製到 新分配的地方
+    我目前能想到兩種方式來實現這一特性
+    1. 統一壓縮
+       在退出前做好標記 統一壓縮
+       也就是說不 重置 *local-byte,current-free-address*
+       而 壓縮 *local-byte,current-free-address*
+    2. 奇偶複製
+       區分 奇偶 兩個運行時的 *local-byte*
+       每次 重置 *local-byte,current-free-address* 之前
+       在奇偶間複製所要返回的值
+    其優點各異
+    奇偶複製 複製可以不在末尾進行
+    統一壓縮 可以優化
+    我想去嘗試 統一壓縮 這種方法
+    [畢竟 返回值都應該在末尾進行才合理]
+  * 使用 統一壓縮 或稱 綜合壓縮 來處理
+    需要設計特殊語法於句末
+    因爲是 統一處理
+    這裏不能單純用後綴表達式
+    必須用邊以劃界
+    即某種邊綴表達式
+    return ... end
+    但是 非結構化的返回值 又可能夾雜其中
+    所以不好
+    那麼 我可以讓 結尾詞 來處理 最後的 綜合壓縮
+    只要在函數運行時 做好記錄
+    讓 綜合壓縮 有足夠的信息 就行
+    把 return 做爲一個新的結尾詞
+    以強調差異
+    並避免重新實現 end
+* 討論 <2015-06-15>
+  * k ::
+       我發現最簡單的方式就是
+       直接讓 return 不重置 *local-byte,current-free-address*
+       但是這顯然是錯誤的實現方式
+  * x ::
+       我發現 用 奇偶複製 的話
+       需要被返回的內存就可以直接分配到 對偶局部數據區域中
+       [這樣 結尾詞 就可以單用 不用 return 了]
+       這看來是更好的設計
+       此時的特點是
+       每次分配一個數據區域的時候 都必須知道這個內存是否需要返回
+       就這種設計我還有一點疑慮
+       這樣 (allocate-local-memory) 就又兩個版本
+       另一個姑且叫做 (allocate-conjugate-local-memory)
+       我害怕接口上設計不好
+       但是其實在接口設計上根本沒有選擇的餘地
+       這在於
+       前面說 需要被返回的內存就可以直接分配到 對偶局部數據區域中
+       其實是錯誤的
+       因爲 主函數的 對偶局部數據區域
+       是 子函數的 局部數據區域
+       假設我想要寫函數來直接利用局部內存
+       那麼 我必須 調用 (allocate-local-memory) 來分配內存做計算
+       然後調用 (allocate-conjugate-local-memory) 分配一些內存
+       然後把計算結果複製到 對偶局部內存 中
+       然後退出 在退出時 結尾詞 將回收 (allocate-local-memory) 所分配的內存
+       而不回收 (allocate-conjugate-local-memory) 所分配的內存
+       也就是說
+       一個 子函數 如果返回了結構化的值
+       那麼它就只能把值返回到 主函數 的 局部內存 中
+       而不能返回到 共軛局部內存
+  * k ::
+       所以這又回到了之前意義上的奇偶複製
+       這是有趣的設計
+       看看能不能找出合適的語法
+       如果能的話
+       我們就採納這種設計
+  * x ::
+       我想重申一下爲什麼放棄 綜合壓縮 方法
+       簡單來說 就是語法上的負擔太重
+       而 奇偶複製 的語法可以很簡單
+       只要一個 (allocate-conjugate-local-memory) 就可以了
+       每一個 類型的數據 都可以有自己的 return
+       這個 return 調用 (allocate-conjugate-local-memory)
+       並把一個東西複製到所分配的內存中
+       比如 (<aaa> return) : << aaa[address] -- copy-of-aaa[address] >>
+       或者 (<aaa> ready)
+       這些可以在之後在考慮
+       一定有滿意的解法的
+  * k ::
+       那麼
+       就決定用這種方式了

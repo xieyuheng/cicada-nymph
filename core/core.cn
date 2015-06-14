@@ -4077,11 +4077,11 @@ more,rule-set,basic-REPL
 : <moi> help
   << -- >>
   "* (<moi> help)" .s .l
-  "  * cn module add  <new-name> <relative-path-to-existing-directory>" .s .l
-  "  * cn module sub  <old-name>" .s .l
-  "  * cn module up   <old-name> <relative-path-to-existing-directory>" .s .l
-  "  * cn module find <old-name>" .s .l
-  "  * cn module list" .s .l
+  "  * cn moi add  <new-name> <relative-path-to-existing-directory>" .s .l
+  "  * cn moi sub  <old-name>" .s .l
+  "  * cn moi up   <old-name> <relative-path-to-existing-directory>" .s .l
+  "  * cn moi find <old-name>" .s .l
+  "  * cn moi list" .s .l
   end
 ; define-function
 
@@ -5418,10 +5418,10 @@ jo <post-module-syntax> do
 : test
   << bool -- >>
   if
-    "* (test) success" .s .l
+    "  (success)" .s .l
     *module-stack,pointer* <module-info> inc-success-counter
   else
-    "* (test) fail" .s .l
+    "  (fail)" .s .l
     *module-stack,pointer* <module-info> inc-fail-counter
   then
   end
@@ -5539,12 +5539,6 @@ jo <post-module-syntax> do
   end
 ; define-function
 
-: welcome
-  << -- >>
-  "* welcome to cicada-nymph" .s .l
-  end
-; define-function
-
 0
 : *hi,random-base*
 ; define-variable,with-tos
@@ -5564,17 +5558,17 @@ jo <post-module-syntax> do
 
 : hi,say
   << number -- >>
-  dup 0 equal? if drop "  cica cica da yaya !!!" .s .l end then
-  dup 1 equal? if drop "  hi ^-^" .s .l end then
-  dup 2 equal? if drop "  hello :)" .s .l end then
-  dup 3 equal? if drop "  hey *^-^*" .s .l end then
-  dup 4 equal? if drop "  hiya \^o^/" .s .l end then
-  dup 5 equal? if drop "  I wish you a lovely day" .s .l end then
-  dup 6 equal? if drop "  I wish you a lovely day { or night :P }" .s .l end then
-  dup 7 equal? if drop "  o.o" .s .l end then
-  dup 8 equal? if drop "  O.o" .s .l end then
-  dup 9 equal? if drop "  o.O" .s .l end then
-                  drop "  lovely ^3^" .s .l end
+  dup 0 equal? if drop "cica cica da yaya !!!" .s .l end then
+  dup 1 equal? if drop "hi ^-^" .s .l end then
+  dup 2 equal? if drop "hello :)" .s .l end then
+  dup 3 equal? if drop "hey *^-^*" .s .l end then
+  dup 4 equal? if drop "hiya \^o^/" .s .l end then
+  dup 5 equal? if drop "I wish you a lovely day" .s .l end then
+  dup 6 equal? if drop "I wish you a lovely day { or night :P }" .s .l end then
+  dup 7 equal? if drop "o.o" .s .l end then
+  dup 8 equal? if drop "O.o" .s .l end then
+  dup 9 equal? if drop "o.O" .s .l end then
+                  drop "lovely ^3^" .s .l end
 ; define-function
 
 : hi
@@ -5604,9 +5598,9 @@ jo <post-module-syntax> do
 : <command-function> stack-REPL
   << -- >>
   .l
-  welcome hi .l
-  <report> system .l
-  "* you are in the (stack-REPL)" .s .l
+  "* (cicada-nymph) " .s hi
+  <report> system
+  "* (stack-REPL) is where you are in" .s .l
   "  every time after a word is executed" .s .l
   "  the argument-stack get printed" .s .l
   print-argument-stack,pretty
@@ -5617,9 +5611,9 @@ jo <post-module-syntax> do
 : <command-function> basic-REPL
   << -- >>
   .l
-  welcome hi .l
-  <report> system .l
-  "* you are in the (basic-REPL)" .s .l
+  "* (cicada-nymph) " .s hi
+  <report> system
+  "* (basic-REPL) is where you are in" .s .l
   "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL
   reset-top-level-REPL
@@ -5824,10 +5818,4 @@ jo <post-module-syntax> do
   end
 ; define-function
 
-: the-story-begin
-  << -- >>
-  <command> dispatch
-  end
-; define-function
-
-the-story-begin
+<command> dispatch

@@ -10,14 +10,14 @@ do: "* (core-test) finished" .s .l
     1 equal? if
       "\^o^/" .s
     else
-      "     " .s
+      "_____" .s
     then
   else
-    "     " .s
+    "_____" .s
     1 equal? if
       "\^o^/" .s
     else
-      "     " .s
+      "_____" .s
     then
   then
   end
@@ -28,7 +28,6 @@ do: "* (core-test) finished" .s .l
   6 2 .12 .l
   1 6 .12 .l
   6 6 .12 .l
-  end
 ; test-do
 
 : factorial

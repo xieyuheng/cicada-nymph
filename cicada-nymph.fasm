@@ -352,7 +352,7 @@ jo:
 }
 
 explain$function:
-   mov rbx, [current_free_address$local_byte]
+   mov rbx, [V__local_memory__current_free_address + jo_size]
    push_return_stack rbx
    mov rbx, [current_free_address$local_jo]
    push_return_stack rbx
@@ -653,7 +653,7 @@ define_primitive_function "end", end
    pop_return_stack rax
    mov [current_free_address$local_jo], rax
    pop_return_stack rax
-   mov [current_free_address$local_byte], rax
+   mov [V__local_memory__current_free_address + jo_size], rax
    next
 
 match =64bit, machine {
@@ -663,7 +663,7 @@ define_primitive_function "tail-call", tail_call
    pop_return_stack rax
    mov [current_free_address$local_jo], rax
    pop_return_stack rax
-   mov [current_free_address$local_byte], rax
+   mov [V__local_memory__current_free_address + jo_size], rax
    mov rax, [rbx]
    jmp qword [rax]
 }
@@ -676,7 +676,7 @@ define_primitive_function "tail-call", tail_call
    pop_return_stack rcx
    mov [current_free_address$local_jo], rcx
    pop_return_stack rcx
-   mov [current_free_address$local_byte], rcx
+   mov [V__local_memory__current_free_address + jo_size], rcx
    mov rax, [rbx]
    jmp dword [rax]
 
@@ -829,10 +829,10 @@ __reset_local_jo:
    mov [current_free_address$local_jo], rax
    ret
 
-__reset_local_byte:
+__reset_local_memory:
    ;; << -- >>
-   mov rax, address$local_byte
-   mov [current_free_address$local_byte], rax
+   mov rax, address$local_memory
+   mov [V__local_memory__current_free_address + jo_size], rax
    ret
 
 match =linux, platform {
@@ -848,7 +848,7 @@ begin_to_interpret_threaded_code:
    mov rax, jojo_for__report_return_stack_is_empty_and_exit
    push_return_stack rax
 
-   mov rax, address$local_byte
+   mov rax, address$local_memory
    push_return_stack rax
 
    mov rax, address$local_jo
@@ -896,7 +896,7 @@ define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    call __reset_return_stack
    call __reset_syntax_stack
    call __reset_local_jo
-   call __reset_local_byte
+   call __reset_local_memory
    pop_argument_stack rax
    jmp qword [rax]
 
@@ -909,7 +909,7 @@ define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    call __reset_return_stack
    call __reset_syntax_stack
    call __reset_local_jo
-   call __reset_local_byte
+   call __reset_local_memory
    pop_argument_stack rax
    jmp dword [rax]
 
@@ -4103,20 +4103,20 @@ define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_se
    xx     jojo_area__stay
    xx end
 
-size$local_byte = 1024 * 1024 * 6
+size$local_memory = 1024 * 1024 * 6
 
-address$local_byte labeling
-   preserve size$local_byte
+address$local_memory labeling
+   preserve size$local_memory
 
-current_free_address$local_byte:
-   xx address$local_byte
+define_variable "*local-memory,current-free-address*", V__local_memory__current_free_address
+   xx address$local_memory
 
 define_primitive_function "allocate-local-memory", allocate_local_memory
    ;; << size -- address >>
    pop_argument_stack rbx
-   mov rax, [current_free_address$local_byte]
+   mov rax, [V__local_memory__current_free_address + jo_size]
    push_argument_stack rax
-   add [current_free_address$local_byte], rbx
+   add [V__local_memory__current_free_address + jo_size], rbx
    next
 
 string$string_to_syscall_string:

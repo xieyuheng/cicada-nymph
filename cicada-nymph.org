@@ -4,10 +4,6 @@
 
 * todo
 ** add length field into jo in assembly code :maybe:
-** optimize local-variable by new instruction :maybe:
-   * too many literal is too waste of memory
-   * 目前 [current_free_address$local_jo] 只是用以在運行時計算 offset
-     也許有更好的辦法使得 offset 可以在編譯時被計算出來
 * ===================================
 * note
 ** notation
@@ -680,7 +676,7 @@
      which stores a jo
    #+begin_src fasm :tangle cicada-nymph.fasm
    explain$function:
-      mov rbx, [current_free_address$local_byte]
+      mov rbx, [V__local_memory__current_free_address + jo_size]
       push_return_stack rbx
       mov rbx, [current_free_address$local_jo]
       push_return_stack rbx
@@ -950,9 +946,9 @@
      2. local_jo 中的一個地址
         用於重置
         [current_free_address$local_jo]
-     3. local_byte 中的一個地址
+     3. local_memory 中的一個地址
         用於重置
-        [current_free_address$local_byte]
+        [V__local_memory__current_free_address + jo_size]
    * end 和 tail-call 的區別在於
      * end
        入返回棧一串新的珠珠
@@ -965,21 +961,21 @@
      1. 當一個 jojo 被入返回棧時
         jojo 本身
         還有當時的 [current_free_address$local_jo]
-        和 [current_free_address$local_byte]
+        和 [V__local_memory__current_free_address + jo_size]
         三者共同組成 一個 return-point
      2. 在遇到結尾詞而退出對這次 jojo 的執行的時候
-        return-point 中的 local_jo 和 local_byte
+        return-point 中的 local_jo 和 local_memory
         會被用來重置 [current_free_address$local_jo]
-        和 [current_free_address$local_byte]
+        和 [V__local_memory__current_free_address + jo_size]
      3. 也就是說
         在一個 jojo 被執行的過程中
         它可以通過遞增 [current_free_address$local_jo]
-        和 [current_free_address$local_byte]
+        和 [V__local_memory__current_free_address + jo_size]
         而隨意分配內存以保存其局部數據
         因爲反正當函數退出時 這兩個指針會被重置
 ** note return-point
    * structure
-     | return-point | local-byte |
+     | return-point | local-memory |
      |              | local-jo   |
      |              | jojo       |
    * the interface is implemented by needs
@@ -992,23 +988,23 @@
    * 有了下面的 (return-stack,insert-jo) 這個素函數之後
      即便是在非素函數中也能夠對返回棧進行有限的操作了
    * before insert-jo
-     | return-point-1 | local-byte-1 |
-     |                | local-jo-1   |
-     |                | jojo-1       |
-     | return-point-2 | local-byte-2 |
-     |                | local-jo-2   |
-     |                | jojo-2       |
+     | return-point-1 | local-memory-1 |
+     |                | local-jo-1     |
+     |                | jojo-1         |
+     | return-point-2 | local-memory-2 |
+     |                | local-jo-2     |
+     |                | jojo-2         |
    * after
      jo return-point-2 (return-stack,insert-jo)
-     | return-point-1  | local-byte-1 |
-     |                 | local-jo-1   |
-     |                 | jojo-1       |
-     | return-point-in | local-byte-2 |
-     |                 | local-jo-2   |
-     |                 | jojo of jo   |
-     | return-point-2  | local-byte-2 |
-     |                 | local-jo-2   |
-     |                 | jojo-2       |
+     | return-point-1  | local-memory-1 |
+     |                 | local-jo-1     |
+     |                 | jojo-1         |
+     | return-point-in | local-memory-2 |
+     |                 | local-jo-2     |
+     |                 | jojo of jo     |
+     | return-point-2  | local-memory-2 |
+     |                 | local-jo-2     |
+     |                 | jojo-2         |
    * 之所以有這樣的效果
      是因爲
      這個 素函數 是爲了 實現 expect 而作
@@ -1154,7 +1150,7 @@
       pop_return_stack rax
       mov [current_free_address$local_jo], rax
       pop_return_stack rax
-      mov [current_free_address$local_byte], rax
+      mov [V__local_memory__current_free_address + jo_size], rax
       next
    #+end_src
 ** tail-call
@@ -1167,7 +1163,7 @@
       pop_return_stack rax
       mov [current_free_address$local_jo], rax
       pop_return_stack rax
-      mov [current_free_address$local_byte], rax
+      mov [V__local_memory__current_free_address + jo_size], rax
       mov rax, [rbx]
       jmp qword [rax]
    }
@@ -1180,7 +1176,7 @@
       pop_return_stack rcx
       mov [current_free_address$local_jo], rcx
       pop_return_stack rcx
-      mov [current_free_address$local_byte], rcx
+      mov [V__local_memory__current_free_address + jo_size], rcx
       mov rax, [rbx]
       jmp dword [rax]
 
@@ -1404,12 +1400,12 @@
       mov [current_free_address$local_jo], rax
       ret
    #+end_src
-** __reset_local_byte
+** __reset_local_memory
    #+begin_src fasm :tangle cicada-nymph.fasm
-   __reset_local_byte:
+   __reset_local_memory:
       ;; << -- >>
-      mov rax, address$local_byte
-      mov [current_free_address$local_byte], rax
+      mov rax, address$local_memory
+      mov [V__local_memory__current_free_address + jo_size], rax
       ret
    #+end_src
 * *the-story-begin*
@@ -1432,7 +1428,7 @@
       mov rax, jojo_for__report_return_stack_is_empty_and_exit
       push_return_stack rax
 
-      mov rax, address$local_byte
+      mov rax, address$local_memory
       push_return_stack rax
 
       mov rax, address$local_jo
@@ -1498,7 +1494,7 @@
       xx report_return_stack_is_empty_and_exit
    #+end_src
 ** reset-top-level-REPL
-   * local_jo & local_byte
+   * local_jo & local_memory
      will get reseted in by this function
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -1508,7 +1504,7 @@
       call __reset_return_stack
       call __reset_syntax_stack
       call __reset_local_jo
-      call __reset_local_byte
+      call __reset_local_memory
       pop_argument_stack rax
       jmp qword [rax]
 
@@ -1521,7 +1517,7 @@
       call __reset_return_stack
       call __reset_syntax_stack
       call __reset_local_jo
-      call __reset_local_byte
+      call __reset_local_memory
       pop_argument_stack rax
       jmp dword [rax]
 
@@ -5103,7 +5099,7 @@
     到這個 local-jo 中的 offset 做爲變量的值
     有 *local-variable-table* 這個數據結構
     幫助計算 offset
-  * local-byte
+  * local-memory
     用來分配 變長的局部數據
     在運行時計算 offset
   * 兩個機制配合使用
@@ -5735,13 +5731,13 @@
       xx end
    #+end_src
 ** ----------------------------------
-* *local-byte*
+* *local-memory*
 ** 記
    * 並不需要給這裏的接口設計特殊的語法擴展
      直接使用函數就可以了
    * 但是接口必須是 primitive-function
      因爲 否則 遇到 end 和 tail_call 的時候
-     current_free_address$local_byte 就又被初始化了
+     V__local_memory__current_free_address + jo_size 就又被初始化了
 ** 記 使用
    * 在一個函數內
      用 allocate-local-memory 所申請的局部數據空間
@@ -5756,22 +5752,24 @@
      所申請的 allocate-local-memory 是相同的
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_byte = 1024 * 1024 * 6
+   size$local_memory = 1024 * 1024 * 6
 
-   address$local_byte labeling
-      preserve size$local_byte
-
-   current_free_address$local_byte:
-      xx address$local_byte
+   address$local_memory labeling
+      preserve size$local_memory
+   #+end_src
+** *local-memory,current-free-address*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_variable "*local-memory,current-free-address*", V__local_memory__current_free_address
+      xx address$local_memory
    #+end_src
 ** allocate-local-memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "allocate-local-memory", allocate_local_memory
       ;; << size -- address >>
       pop_argument_stack rbx
-      mov rax, [current_free_address$local_byte]
+      mov rax, [V__local_memory__current_free_address + jo_size]
       push_argument_stack rax
-      add [current_free_address$local_byte], rbx
+      add [V__local_memory__current_free_address + jo_size], rbx
       next
    #+end_src
 ** test
