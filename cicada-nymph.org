@@ -4,77 +4,6 @@
 
 * todo
 ** add length field into jo in assembly code :maybe:
-* ===================================
-* note
-** notation
-   * "nature number" is just called "number"
-** jo & jojo
-   * use "jo" to denote bead
-     and use "jojo" to denote a thread of beads
-     [which reads like "珠珠" in Chinese]
-** naming convention
-   * a predicate of a type
-     which denotes a subtype of that type
-     uses that type as postfix
-     such as
-     "space-byte?"
-   * a function of a type
-     uses that type as prefix
-     such as
-     "string-reverse"
-     "string-equal?"
-   * side-effect of structured data is postfixed by "!"
-** convention in assembly code
-   * using underline to compose big word from small words
-   * using "$" as prefix and postfix separator
-   * indentation level = 3
-   * naming convention of jo
-     | convention   | jo type  |
-     |--------------+----------|
-     | prefix "V__" | variable |
-   * but I use
-     1. "zero" instead of "V__zero"
-     2. "true" instead of "V__true"
-** convention in cicada-nymph code
-   * using dash to compose big word from small words
-   * using "," as prefix and postfix separator
-   * indentation style = free
-   * words are separated by space
-     except for bar-ket
-     every bar-ket is viewed as a word
-** syntax of cicada-nymph
-   * table
-     |----------------------+---------------------------|
-     | syntax               | semantic                  |
-     |----------------------+---------------------------|
-     | word borderfix "* *" | variable                  |
-     | word borderfix "+ +" | variable                  |
-     | word borderfix ": :" | variable                  |
-     | word postfix "!"     | some of the side-effect   |
-     | word postfix "?"     | predicate                 |
-     |----------------------+---------------------------|
-     | bar-ket ( )          | not use                   |
-     | bar-ket [ ]          | not use                   |
-     | bar-ket { }          | not use                   |
-     | double-quote         | viewed as special bar-ket |
-     |                      | (bar is the same as ket)  |
-     |                      | to support string literal |
-     |----------------------+---------------------------|
-   * but I use
-     1. "true" instead of "*true*"
-     2. "false" instead of "*false*"
-** unique id
-   * if one wish to get a named unique id
-     a jo maybe used
-     for a jo is an address in memory
-     it is unique as a memory address
-   * but there is not effort made
-     to distinguish address and fixnum
-     as different type of things
-     thus
-     this kind of unique id is not fit
-     for some tasks
-* note problem
 ** memory                             :limit:
    * need to protect the overloading of a variety of memories
 ** reading-stack                      :limit:
@@ -236,19 +165,18 @@
    preserve  equ current_free_address$un_initialized_memory = current_free_address$un_initialized_memory +
    #+end_src
 ** ----------------------------------
-* note stack
-  * when doing "push"
-    a stack-pointer moves to lower address
-  * note that another style is that
-    when doing "push"
-    a stack-pointer moves to higher address
-  * the stack-pointer
-    always stores the address of current-free-address of the stack
-  * note that another style is that
-    under the stack-pointer
-    there always stores the value of the-top-of-the-stack
 * argument-stack
-** ----------------------------------
+** note stack
+   * when doing "push"
+     a stack-pointer moves to lower address
+   * note that another style is that
+     when doing "push"
+     a stack-pointer moves to higher address
+   * the stack-pointer
+     always stores the address of current-free-address of the stack
+   * note that another style is that
+     under the stack-pointer
+     there always stores the value of the-top-of-the-stack
 ** memory allocation
    * for we do not build border-check
      into the interface of pop and push
@@ -260,7 +188,6 @@
    address$argument_stack labeling
       preserve size$argument_stack
    #+end_src
-** ----------------------------------
 ** pointer                            :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
@@ -288,7 +215,6 @@
 
    }
    #+end_src
-** ----------------------------------
 ** pointer                            :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
@@ -340,7 +266,6 @@
 
    }
    #+end_src
-** ----------------------------------
 * return-stack
 ** 記
    * jo 的詮釋者
@@ -430,207 +355,208 @@
    }
    #+end_src
 * next
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  match =64bit, machine {
-
-  macro next \{
-     pop_return_stack rbx
-       mov rax, [rbx]
-     add rbx, jo_size
-     push_return_stack rbx
-       jmp qword [rax]
-  \}
-
-  }
-
-
-  match =32bit, machine {
-
-  macro next \{
-     pop_return_stack rbx
-       mov rax, [rbx]
-     add rbx, jo_size
-     push_return_stack rbx
-       jmp dword [rax]
-  \}
-
-  }
-  #+end_src
-* note play with jo & jojo
-  1. at the beginning
-     * argument-stack
-       << 2 >>
-     * return-stack
-       #+begin_src return-stack
-       - [@][@][ (square) ]
-                 (square)
-                 (end)
-       #+end_src
-  2. next
-     * argument-stack
-       << 2 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)
-       - [@][@][ (square) ] - [@][@][ (dup) ]
-                 (end)                (mul)
-                                      (end)
-       #+end_src
-  3. next
-     * argument-stack
-       << 2, 2 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)             (dup)
-       - [@][@][ (square) ] - [@][@][ (mul) ]
-                 (end)                (end)
-       #+end_src
-  4. next
-     * argument-stack << 4 >>
-     * return-stack
-       #+begin_src return-stack
-                                      (dup)
-                 (square)             (mul)
-       - [@][@][ (square) ] - [@][@][ (end) ]
-                 (end)
-       #+end_src
-  5. next
-     * argument-stack << 4 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)
-                 (square)
-       - [@][@][ (end) ] - [@][@][ (dup) ]
-                                   (mul)
-                                   (end)
-       #+end_src
-  6. next
-     * argument-stack
-       << 4, 4 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)
-                 (square)          (dup)
-       - [@][@][ (end) ] - [@][@][ (mul) ]
-                                   (end)
-       #+end_src
-  7. next
-     * argument-stack
-       << 16 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)          (dup)
-                 (square)          (mul)
-       - [@][@][ (end) ] - [@][@][ (end) ]
-       #+end_src
-  8. next
-     * argument-stack
-       << 16 >>
-     * return-stack
-       #+begin_src return-stack
-                 (square)
-                 (square)
-       - [@][@][ (end) ]
-       #+end_src
-  9. next
-     * argument-stack
-       << 16 >>
-     * return-stack
-       #+begin_src return-stack
-       - [  ]
-       #+end_src
-  10. it is really simple
-      ^-^
-      is it not ?
-* note jo
-  * jo as data-structure
-    |----+----------------|
-    |    | length         |
-    | jo | explainer      |
-    |    | body           |
-    |----+----------------|
-  * the body for
-    * primitive-function-jo
-      assembly code
-    * function-jo
-      jojo
-    * variable-jo
-      value-list
-* offset of jo
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  offset__jo$other          = - (jo_size * 2)
-  offset__jo$length         = - (jo_size * 1)
-  offset__jo$body           = (jo_size * 1)
-  #+end_src
-* note link
-  * link as data-structure
-    |------+----------------|
-    | link | link           |
-    |------+----------------|
-    |      | jo             |
-    |      | string-address |
-    |      | string-length  |
-    |------+----------------|
-  * if the link field of a link is 0
-    the link is the last-link
-* offset of link
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  offset__link$jo             = (jo_size * 1)
-  offset__link$string_address = (jo_size * 2)
-  offset__link$string_length  = (jo_size * 3)
-  #+end_src
-* null link
-  #+begin_src fasm :tangle cicada-nymph.fasm
-  ;; initial link to point to 0 (as null)
-  link = 0
-  #+end_src
-* *string-area*
-** memory allocation
+** macro next
    #+begin_src fasm :tangle cicada-nymph.fasm
-   address$string_area:
-      times 64 * 1024 db 0
+   match =64bit, machine {
 
-   address$core_file:
-      file "core/core.cn"
-   end$core_file:
+   macro next \{
+      pop_return_stack rbx
+        mov rax, [rbx]
+      add rbx, jo_size
+      push_return_stack rbx
+        jmp qword [rax]
+   \}
 
-   end$string_area:
+   }
 
-   current_free_address$string_area = address$string_area
-   #+end_src
-** ASSEMBLY__length_string
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   macro ASSEMBLY__length_string string {
 
-   virtual at 0
-   .start$string:
-      db string
-   .end$string:
-      dw (.end$string - .start$string)
-      load .length word from (.end$string)
-   finish virtual
+   match =32bit, machine {
+
+   macro next \{
+      pop_return_stack rbx
+        mov rax, [rbx]
+      add rbx, jo_size
+      push_return_stack rbx
+        jmp dword [rax]
+   \}
 
    }
    #+end_src
-** ASSEMBLY__make_string
-   * note that
-     the following is using local label
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   macro ASSEMBLY__make_string string {
-
-   repeat .length
-      virtual at 0
-         db string
-         load .char byte from (% - 1)
-      finish virtual
-      store byte .char at (current_free_address$string_area)
-      current_free_address$string_area = current_free_address$string_area + 1
-   finish repeat
-      store byte 0 at (current_free_address$string_area)
-      current_free_address$string_area = current_free_address$string_area + 1
-   }
-   #+end_src
+** note play with jo & jojo
+   1. at the beginning
+      * argument-stack
+        << 2 >>
+      * return-stack
+        #+begin_src return-stack
+        - [@][@][ (square) ]
+                  (square)
+                  (end)
+        #+end_src
+   2. next
+      * argument-stack
+        << 2 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)
+        - [@][@][ (square) ] - [@][@][ (dup) ]
+                  (end)                (mul)
+                                       (end)
+        #+end_src
+   3. next
+      * argument-stack
+        << 2, 2 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)             (dup)
+        - [@][@][ (square) ] - [@][@][ (mul) ]
+                  (end)                (end)
+        #+end_src
+   4. next
+      * argument-stack << 4 >>
+      * return-stack
+        #+begin_src return-stack
+                                       (dup)
+                  (square)             (mul)
+        - [@][@][ (square) ] - [@][@][ (end) ]
+                  (end)
+        #+end_src
+   5. next
+      * argument-stack << 4 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)
+                  (square)
+        - [@][@][ (end) ] - [@][@][ (dup) ]
+                                    (mul)
+                                    (end)
+        #+end_src
+   6. next
+      * argument-stack
+        << 4, 4 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)
+                  (square)          (dup)
+        - [@][@][ (end) ] - [@][@][ (mul) ]
+                                    (end)
+        #+end_src
+   7. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)          (dup)
+                  (square)          (mul)
+        - [@][@][ (end) ] - [@][@][ (end) ]
+        #+end_src
+   8. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+                  (square)
+                  (square)
+        - [@][@][ (end) ]
+        #+end_src
+   9. next
+      * argument-stack
+        << 16 >>
+      * return-stack
+        #+begin_src return-stack
+        - [  ]
+        #+end_src
+   10. it is really simple
+       ^-^
+       is it not ?
 * function-jo
+** note jo
+   * jo as data-structure
+     |----+----------------|
+     |    | length         |
+     | jo | explainer      |
+     |    | body           |
+     |----+----------------|
+   * the body for
+     * primitive-function-jo
+       assembly code
+     * function-jo
+       jojo
+     * variable-jo
+       value-list
+** offset of jo
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   offset__jo$other          = - (jo_size * 2)
+   offset__jo$length         = - (jo_size * 1)
+   offset__jo$body           = (jo_size * 1)
+   #+end_src
+** note link
+   * link as data-structure
+     |------+----------------|
+     | link | link           |
+     |------+----------------|
+     |      | jo             |
+     |      | string-address |
+     |      | string-length  |
+     |------+----------------|
+   * if the link field of a link is 0
+     the link is the last-link
+** offset of link
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   offset__link$jo             = (jo_size * 1)
+   offset__link$string_address = (jo_size * 2)
+   offset__link$string_length  = (jo_size * 3)
+   #+end_src
+** null link
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   ;; initial link to point to 0 (as null)
+   link = 0
+   #+end_src
+** *string-area*
+*** memory allocation
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    address$string_area:
+       times 64 * 1024 db 0
+
+    address$core_file:
+       file "core/core.cn"
+    end$core_file:
+
+    end$string_area:
+
+    current_free_address$string_area = address$string_area
+    #+end_src
+*** ASSEMBLY__length_string
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    macro ASSEMBLY__length_string string {
+
+    virtual at 0
+    .start$string:
+       db string
+    .end$string:
+       dw (.end$string - .start$string)
+       load .length word from (.end$string)
+    finish virtual
+
+    }
+    #+end_src
+*** ASSEMBLY__make_string
+    * note that
+      the following is using local label
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    macro ASSEMBLY__make_string string {
+
+    repeat .length
+       virtual at 0
+          db string
+          load .char byte from (% - 1)
+       finish virtual
+       store byte .char at (current_free_address$string_area)
+       current_free_address$string_area = current_free_address$string_area + 1
+    finish repeat
+       store byte 0 at (current_free_address$string_area)
+       current_free_address$string_area = current_free_address$string_area + 1
+    }
+    #+end_src
 ** note
    * note that
      after a "next" "jmp" to a explainer
@@ -5092,102 +5018,102 @@
    : jo-*three* jo *three* apply . end ; define-function
    jo-*three*
    #+end_src
-* 記 有名字的局部變量 與 變長的局部數據
-  * local-jo
-    用來實現 有名字的局部變量
-    在編譯時計算 offset
-    到這個 local-jo 中的 offset 做爲變量的值
-    有 *local-variable-table* 這個數據結構
-    幫助計算 offset
-  * local-memory
-    用來分配 變長的局部數據
-    在運行時計算 offset
-  * 兩個機制配合使用
-* 記 再增加局部變元支持之後 需要重寫的部分
-** 詮釋者 與 收尾詞
-   * 在進行時
-     每次進入一個函數體的執行
-     即 每次將一串珠珠入棧時
-     同時在這串珠子底部加上
-     current_free_address$local_jo
-     即 在 explain$function 中需要做特殊處理
-   * 這個值在函數退出時
-     [即 在 end 這個函數中]
-     用以重置 current_free_address$local_jo
-     也就是 釋放在這次函數作用過程中所分配的內存
-   * 每次 >:name 的時候
-     都更新 current_free_address$local_jo
-     以分配內存就行了
-   * 也就是說
-     return-stack 中的大多數有效值
-     都是以兩個值一對的方式存在的
-   * 兩個結尾詞是 end 和 tail_call
-     對於 tail_call
-     即 對於明顯的尾遞歸調用
-     需要利用棧中的值重置 current_free_address$local_jo
-     但是並不入棧新值
-** 語法擴展方面的支持
-   * 這裏需要識別 >:name 還有 :name 等等
-     並對它們做特殊處理
-     這些東西應該藉助設計良好的語法擴展機制來實現
-   * 我將使用一個 語法謂詞 的棧
-     可以發現
-     這樣的話
-     我就能很容易地臨時改變語法了
-* 記 總結
-** interface
-   * 首先要滿足最基本的
-     長度爲 *jo-size* 的倍數的
-     局部變量的需求
-     其次
-     還要能夠在所申請的局部空間裏使用字符串
-     這兩種長度的數據結構需要共存
-     使用 offset 就行了
-   * 底層
-     local-data-allocate,jo
-     這個只讓 current_free_address$local_jo 前進
-     而不後退
-   * 注意
-     最爲重要的特點是
-     所有的對 局部數據堆 的使用
-     都必須在編譯時期被靜態地算出來
-     所以必須設計語法幫助編譯器作計算
-     >:name :name 用以 分配 和 使用
-     *jo-size* 倍數大小的內存
-   * 語義方面
-     >:name 的重複出現有兩種語義
-     1. 更新這個局部變元的值
-     2. 覆蓋上一個局部變元綁定
-     我選擇第一種
-     因爲這樣
-     我就不必設計額外的語法來更新局部變元的值了
-     比較簡潔
-** 語義特點總結
-   * 所有有名局部變元的名字與值的對應
-     都由編譯器處理
-   * 每個函數體就是一個非常線性的東西
-     函數體中不能嵌套別的函數體
-** 語用特點總結
-   * 所有的函數都是全局的
-     包括輔助函數
-   * 所以設計輔助函數的時候
-     應該格外小心
-     儘量使得輔助函數能夠被重用
-   * 改代碼並調整對輔助函數的使用
-     就被稱作是 "re-factoring"
-     即 函數的因子的重新分解
-* 記 關於分支結構
-  * 對 包含 >:name 的函數體的處理是純線性的
-    根本沒有考慮到 函數體中 因 if else then 而產生的分支結構
-    但是這並不會引起錯誤
-    原因如下
-  * 對 >:name 和 :name 的處理是純粹在編譯時期進行的
-  * 所保證的特性是
-    1. 每一個 name 在 一個函數體中的出現
-       都是在編譯時期對 local-jo 的 一個 offset 的分配
-    2. 同一個 name 在 一個函數體中的出現
-       會得到相同的 offset
 * *local-jo*
+** 記 有名字的局部變量 與 變長的局部數據
+   * local-jo
+     用來實現 有名字的局部變量
+     在編譯時計算 offset
+     到這個 local-jo 中的 offset 做爲變量的值
+     有 *local-variable-table* 這個數據結構
+     幫助計算 offset
+   * local-memory
+     用來分配 變長的局部數據
+     在運行時計算 offset
+   * 兩個機制配合使用
+** 記 再增加局部變元支持之後 需要重寫的部分
+*** 詮釋者 與 收尾詞
+    * 在進行時
+      每次進入一個函數體的執行
+      即 每次將一串珠珠入棧時
+      同時在這串珠子底部加上
+      current_free_address$local_jo
+      即 在 explain$function 中需要做特殊處理
+    * 這個值在函數退出時
+      [即 在 end 這個函數中]
+      用以重置 current_free_address$local_jo
+      也就是 釋放在這次函數作用過程中所分配的內存
+    * 每次 >:name 的時候
+      都更新 current_free_address$local_jo
+      以分配內存就行了
+    * 也就是說
+      return-stack 中的大多數有效值
+      都是以兩個值一對的方式存在的
+    * 兩個結尾詞是 end 和 tail_call
+      對於 tail_call
+      即 對於明顯的尾遞歸調用
+      需要利用棧中的值重置 current_free_address$local_jo
+      但是並不入棧新值
+*** 語法擴展方面的支持
+    * 這裏需要識別 >:name 還有 :name 等等
+      並對它們做特殊處理
+      這些東西應該藉助設計良好的語法擴展機制來實現
+    * 我將使用一個 語法謂詞 的棧
+      可以發現
+      這樣的話
+      我就能很容易地臨時改變語法了
+** 記 總結
+*** interface
+    * 首先要滿足最基本的
+      長度爲 *jo-size* 的倍數的
+      局部變量的需求
+      其次
+      還要能夠在所申請的局部空間裏使用字符串
+      這兩種長度的數據結構需要共存
+      使用 offset 就行了
+    * 底層
+      local-data-allocate,jo
+      這個只讓 current_free_address$local_jo 前進
+      而不後退
+    * 注意
+      最爲重要的特點是
+      所有的對 局部數據堆 的使用
+      都必須在編譯時期被靜態地算出來
+      所以必須設計語法幫助編譯器作計算
+      >:name :name 用以 分配 和 使用
+      *jo-size* 倍數大小的內存
+    * 語義方面
+      >:name 的重複出現有兩種語義
+      1. 更新這個局部變元的值
+      2. 覆蓋上一個局部變元綁定
+      我選擇第一種
+      因爲這樣
+      我就不必設計額外的語法來更新局部變元的值了
+      比較簡潔
+*** 語義特點總結
+    * 所有有名局部變元的名字與值的對應
+      都由編譯器處理
+    * 每個函數體就是一個非常線性的東西
+      函數體中不能嵌套別的函數體
+*** 語用特點總結
+    * 所有的函數都是全局的
+      包括輔助函數
+    * 所以設計輔助函數的時候
+      應該格外小心
+      儘量使得輔助函數能夠被重用
+    * 改代碼並調整對輔助函數的使用
+      就被稱作是 "re-factoring"
+      即 函數的因子的重新分解
+** 記 關於分支結構
+   * 對 包含 >:name 的函數體的處理是純線性的
+     根本沒有考慮到 函數體中 因 if else then 而產生的分支結構
+     但是這並不會引起錯誤
+     原因如下
+   * 對 >:name 和 :name 的處理是純粹在編譯時期進行的
+   * 所保證的特性是
+     1. 每一個 name 在 一個函數體中的出現
+        都是在編譯時期對 local-jo 的 一個 offset 的分配
+     2. 同一個 name 在 一個函數體中的出現
+        會得到相同的 offset
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$local_jo = 1024 * 1024 * jo_size
@@ -5379,358 +5305,358 @@
    ; define-function
    k2 << 9 10 >>
    #+end_src
-* 記 問題
-** nested block
-   * 因爲使用全局的 local-variable-table
-     所以沒法在 nested block 中使用 local-variable
-** branch
-   * example
-     #+begin_src cicada-nymph
-     : example
-       << number1, number2, number3, number4
-          -- number1, number2 >>
-       >::var2
-       >::var2
-       ::var2
-       end
-     ; define-function
-     #+end_src
-   * result
-     #+begin_src fasm
-     define_function "example", example
+** 記 問題
+*** nested block
+    * 因爲使用全局的 local-variable-table
+      所以沒法在 nested block 中使用 local-variable
+*** branch
+    * example
+      #+begin_src cicada-nymph
+      : example
+        << number1, number2, number3, number4
+           -- number1, number2 >>
+        >::var2
+        >::var2
+        ::var2
+        end
+      ; define-function
+      #+end_src
+    * result
+      #+begin_src fasm
+      define_function "example", example
 
-        ;; >::var2
-        xx literal, 2, local_data_allocate__jo
-        xx literal, 0, literal, 2, n_set__local_jo
+         ;; >::var2
+         xx literal, 2, local_data_allocate__jo
+         xx literal, 0, literal, 2, n_set__local_jo
 
-        ;; >::var2
-        xx literal, 0, literal, 2, n_set__local_jo
+         ;; >::var2
+         xx literal, 0, literal, 2, n_set__local_jo
 
-        ;; ::var2
-        xx literal, 0, literal, 2, n_get__local_jo
+         ;; ::var2
+         xx literal, 0, literal, 2, n_get__local_jo
 
-        xx end
-     #+end_src
-   * 看上面的例子
-     可以發現
-     #+begin_src cicada-nymph
-     : example
-       if
-         >::var2
-       else
-         >::var2
-       then
-       ::var2
-       end
-     ; define-function
-     #+end_src
-     之中
-     第一個是
-     ;; >::var2
-     xx literal, 2, local_data_allocate__jo
-     xx literal, 0, literal, 2, n_set__local_jo
-     第二個是
-     ;; >::var2
-     xx literal, 0, literal, 2, n_set__local_jo
-     也就是說 不同分支下
-     局部變元的編譯效果不等同了
-* local-variable-table
-** 記
-   * 只有一個 local-variable-table
-     用以在編譯時期解決局部變元的名與值的對應
-     這個數據結構被 syntax__local_variable_set__make_jojo
-     和 syntax__local_variable_get__make_jojo 所使用
-   * 其中保存
-     * offset-in-local-jo
-     * length-of-string
-     * address-of-string
-   * 並且每次在定義一個新的函數體的時候
-     這個 local-variable-table 會被初始化
-** 記 接口
-   * (clear)
-     清空 offset 和 border
-   * (insert)
-     插入字符串 和 offset-in-local-jo
-   * (find)
-     通過字符串尋找 offset-in-local-jo
-   * 有兩個全局變量幫助實現這些接口
-     * (cursor)
-       每次 find 的時候使用一個新的 cursor 來做循環
-     * (border)
-       insert 會擴大 border
-       find 以 border 爲邊界
-   * 另外 還有一個全局變量
-     * (offset)
-       用以計算 offset-in-local-jo
-** memory allocation
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_variable_table = 100 * 1024
+         xx end
+      #+end_src
+    * 看上面的例子
+      可以發現
+      #+begin_src cicada-nymph
+      : example
+        if
+          >::var2
+        else
+          >::var2
+        then
+        ::var2
+        end
+      ; define-function
+      #+end_src
+      之中
+      第一個是
+      ;; >::var2
+      xx literal, 2, local_data_allocate__jo
+      xx literal, 0, literal, 2, n_set__local_jo
+      第二個是
+      ;; >::var2
+      xx literal, 0, literal, 2, n_set__local_jo
+      也就是說 不同分支下
+      局部變元的編譯效果不等同了
+** local-variable-table
+*** 記
+    * 只有一個 local-variable-table
+      用以在編譯時期解決局部變元的名與值的對應
+      這個數據結構被 syntax__local_variable_set__make_jojo
+      和 syntax__local_variable_get__make_jojo 所使用
+    * 其中保存
+      * offset-in-local-jo
+      * length-of-string
+      * address-of-string
+    * 並且每次在定義一個新的函數體的時候
+      這個 local-variable-table 會被初始化
+*** 記 接口
+    * (clear)
+      清空 offset 和 border
+    * (insert)
+      插入字符串 和 offset-in-local-jo
+    * (find)
+      通過字符串尋找 offset-in-local-jo
+    * 有兩個全局變量幫助實現這些接口
+      * (cursor)
+        每次 find 的時候使用一個新的 cursor 來做循環
+      * (border)
+        insert 會擴大 border
+        find 以 border 爲邊界
+    * 另外 還有一個全局變量
+      * (offset)
+        用以計算 offset-in-local-jo
+*** memory allocation
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    size$local_variable_table = 100 * 1024
 
-   address$local_variable_table labeling
-      preserve size$local_variable_table
-   #+end_src
-** local-variable-table,clear
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   border$local_variable_table:
-      xx address$local_variable_table
+    address$local_variable_table labeling
+       preserve size$local_variable_table
+    #+end_src
+*** local-variable-table,clear
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    border$local_variable_table:
+       xx address$local_variable_table
 
-   offset$local_variable_table:
-      xx 0
+    offset$local_variable_table:
+       xx 0
 
-   define_function "local-variable-table,clear", local_variable_table__clear
-      ;; << -- >>
-      xx literal, address$local_variable_table
-      xx literal, border$local_variable_table, set
-      xx literal, 0
-      xx literal, offset$local_variable_table, set
-      xx end
-   #+end_src
-** local-variable-table,insert
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-table,insert", local_variable_table__insert
-      ;; << string[address, length] -- offset >>
+    define_function "local-variable-table,clear", local_variable_table__clear
+       ;; << -- >>
+       xx literal, address$local_variable_table
+       xx literal, border$local_variable_table, set
+       xx literal, 0
+       xx literal, offset$local_variable_table, set
+       xx end
+    #+end_src
+*** local-variable-table,insert
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "local-variable-table,insert", local_variable_table__insert
+       ;; << string[address, length] -- offset >>
 
-      ;; leave offset
-      xx literal, offset$local_variable_table, get
-      xx   xxtuckx ;; return value
-      xx literal, border$local_variable_table, get, set
-      xx V__jo_size
-      xx literal, border$local_variable_table, add_set
+       ;; leave offset
+       xx literal, offset$local_variable_table, get
+       xx   xxtuckx ;; return value
+       xx literal, border$local_variable_table, get, set
+       xx V__jo_size
+       xx literal, border$local_variable_table, add_set
 
-      ;; update offset$local_variable_table
-      xx dup2
-      xx   count_front_colon
-      xx   V__jo_size, multiple
-      xx   literal, offset$local_variable_table, add_set
+       ;; update offset$local_variable_table
+       xx dup2
+       xx   count_front_colon
+       xx   V__jo_size, multiple
+       xx   literal, offset$local_variable_table, add_set
 
-      ;; leave length
-      xx dup
-      xx literal, border$local_variable_table, get, set
-      xx V__jo_size
-      xx literal, border$local_variable_table, add_set
+       ;; leave length
+       xx dup
+       xx literal, border$local_variable_table, get, set
+       xx V__jo_size
+       xx literal, border$local_variable_table, add_set
 
-      xx tuck ;; for to update border$local_variable_table
+       xx tuck ;; for to update border$local_variable_table
 
-      ;; leave string
-      xx literal, border$local_variable_table, get
-      xx string_to_buffer!
+       ;; leave string
+       xx literal, border$local_variable_table, get
+       xx string_to_buffer!
 
-      ;; update border$local_variable_table
-      xx literal, border$local_variable_table, add_set
+       ;; update border$local_variable_table
+       xx literal, border$local_variable_table, add_set
 
-      xx end
-   #+end_src
-** local-variable-table,find
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   cursor$local_variable_table:
-      xx address$local_variable_table
+       xx end
+    #+end_src
+*** local-variable-table,find
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    cursor$local_variable_table:
+       xx address$local_variable_table
 
-   define_function "local-variable-table,find", local_variable_table__find
-      ;; << string[address, length]
-      ;;    -- offset, true
-      ;;    -- false >>
-      xx literal, address$local_variable_table
-      xx literal, cursor$local_variable_table, set
-      xx local_variable_table__find__loop
-      xx end
+    define_function "local-variable-table,find", local_variable_table__find
+       ;; << string[address, length]
+       ;;    -- offset, true
+       ;;    -- false >>
+       xx literal, address$local_variable_table
+       xx literal, cursor$local_variable_table, set
+       xx local_variable_table__find__loop
+       xx end
 
-   define_function "local-variable-table,find,loop", local_variable_table__find__loop
-      ;; << string[address, length]
-      ;;    -- offset, true
-      ;;    -- false >>
-      xx literal, cursor$local_variable_table, get
-      xx literal, border$local_variable_table, get
-      xx greater_or_equal?, false?branch, 4
-      xx   drop2
-      xx   false
-      xx   end
-      xx dup2
-      xx literal, cursor$local_variable_table, get
-      xx   V__jo_size, addition
-      xx   V__jo_size, addition ;; address of string
-      xx literal, cursor$local_variable_table, get
-      xx   V__jo_size, addition
-      xx   get ;; length of string
-      xx string_equal?, false?branch, 8
-      xx   drop2
-      xx   literal, cursor$local_variable_table, get
-      xx     get ;; offset
-      xx   true
-      xx   end
-      xx literal, cursor$local_variable_table, get
-      xx   V__jo_size, addition
-      xx   get ;; length of string
-      xx V__jo_size, addition
-      xx V__jo_size, addition
-      xx literal, cursor$local_variable_table, add_set
-      xx tail_call, local_variable_table__find__loop
-   #+end_src
-** count-front-colon
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "count-front-colon", count_front_colon
-      ;; << string[address, length] -- number >>
-      xx literal, 0 ;; counter
-      xx count_front_colon__loop
-      xx end
+    define_function "local-variable-table,find,loop", local_variable_table__find__loop
+       ;; << string[address, length]
+       ;;    -- offset, true
+       ;;    -- false >>
+       xx literal, cursor$local_variable_table, get
+       xx literal, border$local_variable_table, get
+       xx greater_or_equal?, false?branch, 4
+       xx   drop2
+       xx   false
+       xx   end
+       xx dup2
+       xx literal, cursor$local_variable_table, get
+       xx   V__jo_size, addition
+       xx   V__jo_size, addition ;; address of string
+       xx literal, cursor$local_variable_table, get
+       xx   V__jo_size, addition
+       xx   get ;; length of string
+       xx string_equal?, false?branch, 8
+       xx   drop2
+       xx   literal, cursor$local_variable_table, get
+       xx     get ;; offset
+       xx   true
+       xx   end
+       xx literal, cursor$local_variable_table, get
+       xx   V__jo_size, addition
+       xx   get ;; length of string
+       xx V__jo_size, addition
+       xx V__jo_size, addition
+       xx literal, cursor$local_variable_table, add_set
+       xx tail_call, local_variable_table__find__loop
+    #+end_src
+*** count-front-colon
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "count-front-colon", count_front_colon
+       ;; << string[address, length] -- number >>
+       xx literal, 0 ;; counter
+       xx count_front_colon__loop
+       xx end
 
-   define_function "count-front-colon,loop", count_front_colon__loop
-      ;; << string[address, length], counter -- number >>
-      xx over, zero?, false?branch, 4
-      xx   xxswapx, drop2
-      xx   end
-      xx xxoverx, string__byte
-      xx literal, ':', equal?, false?, false?branch, 4
-      xx   xxswapx, drop2
-      xx   end
-      xx add1, xxswapx
-      xx string__byte_tail, xswapxx
-      xx tail_call, count_front_colon__loop
-   #+end_src
-* two syntaxes
-** ----------------------------------
-** local-variable-get-string?
-   * :name
-     ::name
-   * but not
-     :name:
-     ::name:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-get-string?", local_variable_get_string?
-      ;; << string[address, length] -- bool >>
-      xx dup, zero?, false?branch, 4
-      xx   drop2, false
-      xx   end
-      xx dup2, addition, sub1
-      xx get_byte, literal, ':'
-      xx equal?, false?branch, 4
-      xx   drop2, false
-      xx   end
-      xx dup2, count_front_colon
-      xx dup, literal, 0, greater_than?, false?, false?branch, 5
-      xx   drop, drop2, false
-      xx   end
-      xx subtraction
-      xx swap, drop
-      xx literal, 0, greater_than?
-      xx end
-   #+end_src
-** syntax,local-variable-get,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_get__make_jojo
-      ;; << string[address, length], word[address, length] --
-      ;;    string[address, length] >>
-      xx dup2
-      xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_get__local_jo
-      xx     literal, literal
-      xx       jojo_area__stay
-      ;;     offset
-      xx       jojo_area__stay
-      xx     literal, literal
-      xx       jojo_area__stay
-      ;;     n
-      xx     count_front_colon
-      xx       jojo_area__stay
-      xx     literal, n_get__local_jo
-      xx       jojo_area__stay
-      xx   end
-   .not_found:
-      xx write_local_variable_not_bound_report
-      xx write_string
-      xx literal, 10, write_byte
-      xx end
+    define_function "count-front-colon,loop", count_front_colon__loop
+       ;; << string[address, length], counter -- number >>
+       xx over, zero?, false?branch, 4
+       xx   xxswapx, drop2
+       xx   end
+       xx xxoverx, string__byte
+       xx literal, ':', equal?, false?, false?branch, 4
+       xx   xxswapx, drop2
+       xx   end
+       xx add1, xxswapx
+       xx string__byte_tail, xswapxx
+       xx tail_call, count_front_colon__loop
+    #+end_src
+** two syntaxes
+*** ----------------------------------
+*** local-variable-get-string?
+    * :name
+      ::name
+    * but not
+      :name:
+      ::name:
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "local-variable-get-string?", local_variable_get_string?
+       ;; << string[address, length] -- bool >>
+       xx dup, zero?, false?branch, 4
+       xx   drop2, false
+       xx   end
+       xx dup2, addition, sub1
+       xx get_byte, literal, ':'
+       xx equal?, false?branch, 4
+       xx   drop2, false
+       xx   end
+       xx dup2, count_front_colon
+       xx dup, literal, 0, greater_than?, false?, false?branch, 5
+       xx   drop, drop2, false
+       xx   end
+       xx subtraction
+       xx swap, drop
+       xx literal, 0, greater_than?
+       xx end
+    #+end_src
+*** syntax,local-variable-get,make-jojo
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_get__make_jojo
+       ;; << string[address, length], word[address, length] --
+       ;;    string[address, length] >>
+       xx dup2
+       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+       ;;   literal, <offese>, literal, n, n_get__local_jo
+       xx     literal, literal
+       xx       jojo_area__stay
+       ;;     offset
+       xx       jojo_area__stay
+       xx     literal, literal
+       xx       jojo_area__stay
+       ;;     n
+       xx     count_front_colon
+       xx       jojo_area__stay
+       xx     literal, n_get__local_jo
+       xx       jojo_area__stay
+       xx   end
+    .not_found:
+       xx write_local_variable_not_bound_report
+       xx write_string
+       xx literal, 10, write_byte
+       xx end
 
-   define_function "write-local-variable-not-bound-report", write_local_variable_not_bound_report
-      xx literal, string$local_variable_not_bound_report
-      xx literal, length$local_variable_not_bound_report
-      xx write_string
-      xx end
+    define_function "write-local-variable-not-bound-report", write_local_variable_not_bound_report
+       xx literal, string$local_variable_not_bound_report
+       xx literal, length$local_variable_not_bound_report
+       xx write_string
+       xx end
 
-   string$local_variable_not_bound_report:
-      db "* local-variable not bound : "
-   .end:
-   length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
-   #+end_src
-** ----------------------------------
-** local-variable-set-string?
-   * >:name
-     >::name
-   * but not
-     >:name:
-     >::name:
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "local-variable-set-string?", local_variable_set_string?
-      ;; << string[address, length] -- bool >>
-      xx dup, zero?, false?branch, 4
-      xx   drop2, false
-      xx   end
-      xx dup2, addition, sub1
-      xx get_byte, literal, ':'
-      xx equal?, false?branch, 4
-      xx   drop2, false
-      xx   end
-      xx dup2, string__byte
-      xx literal, '>', equal?, false?, false?branch, 4
-      xx   drop2, false
-      xx   end
-      xx string__byte_tail
-      xx dup2, count_front_colon
-      xx dup, literal, 0, greater_than?, false?, false?branch, 5
-      xx   drop, drop2, false
-      xx   end
-      xx subtraction
-      xx swap, drop
-      xx literal, 0, greater_than?
-      xx end
-   #+end_src
-** syntax,local-variable-set,make-jojo
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
-      ;; << string[address, length], word[address, length] --
-      ;;    string[address, length] >>
-      xx string__byte_tail
-      xx dup2
-      xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-      ;;   literal, <offese>, literal, n, n_set__local_jo
-      xx     literal, literal
-      xx       jojo_area__stay
-      ;;     offset
-      xx       jojo_area__stay
-      xx     literal, literal
-      xx       jojo_area__stay
-      ;;     n
-      xx     count_front_colon
-      xx       jojo_area__stay
-      xx     literal, n_set__local_jo
-      xx       jojo_area__stay
-      xx   end
-   .not_found:
-      xx dup2
-      xx local_variable_table__insert
-      xx xxswapx
-      xx count_front_colon
-      ;; literal, <number>, local_data_allocate__jo
-      xx   literal, literal
-      xx     jojo_area__stay
-      ;;   number of jo
-      xx     dup, jojo_area__stay
-      xx   literal, local_data_allocate__jo
-      xx     jojo_area__stay
-      ;; literal, <offese>, literal, n, set_local_data
-      xx   literal, literal
-      xx     jojo_area__stay
-      ;;   offset
-      xx   swap
-      xx     jojo_area__stay
-      xx   literal, literal
-      xx     jojo_area__stay
-      ;;   n
-      xx     jojo_area__stay
-      xx   literal, n_set__local_jo
-      xx     jojo_area__stay
-      xx end
-   #+end_src
-** ----------------------------------
+    string$local_variable_not_bound_report:
+       db "* local-variable not bound : "
+    .end:
+    length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
+    #+end_src
+*** ----------------------------------
+*** local-variable-set-string?
+    * >:name
+      >::name
+    * but not
+      >:name:
+      >::name:
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "local-variable-set-string?", local_variable_set_string?
+       ;; << string[address, length] -- bool >>
+       xx dup, zero?, false?branch, 4
+       xx   drop2, false
+       xx   end
+       xx dup2, addition, sub1
+       xx get_byte, literal, ':'
+       xx equal?, false?branch, 4
+       xx   drop2, false
+       xx   end
+       xx dup2, string__byte
+       xx literal, '>', equal?, false?, false?branch, 4
+       xx   drop2, false
+       xx   end
+       xx string__byte_tail
+       xx dup2, count_front_colon
+       xx dup, literal, 0, greater_than?, false?, false?branch, 5
+       xx   drop, drop2, false
+       xx   end
+       xx subtraction
+       xx swap, drop
+       xx literal, 0, greater_than?
+       xx end
+    #+end_src
+*** syntax,local-variable-set,make-jojo
+    #+begin_src fasm :tangle cicada-nymph.fasm
+    define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
+       ;; << string[address, length], word[address, length] --
+       ;;    string[address, length] >>
+       xx string__byte_tail
+       xx dup2
+       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+       ;;   literal, <offese>, literal, n, n_set__local_jo
+       xx     literal, literal
+       xx       jojo_area__stay
+       ;;     offset
+       xx       jojo_area__stay
+       xx     literal, literal
+       xx       jojo_area__stay
+       ;;     n
+       xx     count_front_colon
+       xx       jojo_area__stay
+       xx     literal, n_set__local_jo
+       xx       jojo_area__stay
+       xx   end
+    .not_found:
+       xx dup2
+       xx local_variable_table__insert
+       xx xxswapx
+       xx count_front_colon
+       ;; literal, <number>, local_data_allocate__jo
+       xx   literal, literal
+       xx     jojo_area__stay
+       ;;   number of jo
+       xx     dup, jojo_area__stay
+       xx   literal, local_data_allocate__jo
+       xx     jojo_area__stay
+       ;; literal, <offese>, literal, n, set_local_data
+       xx   literal, literal
+       xx     jojo_area__stay
+       ;;   offset
+       xx   swap
+       xx     jojo_area__stay
+       xx   literal, literal
+       xx     jojo_area__stay
+       ;;   n
+       xx     jojo_area__stay
+       xx   literal, n_set__local_jo
+       xx     jojo_area__stay
+       xx end
+    #+end_src
+*** ----------------------------------
 * *local-memory*
 ** 記
    * 並不需要給這裏的接口設計特殊的語法擴展
