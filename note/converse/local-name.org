@@ -1,0 +1,93 @@
+* 題解
+  * named-loacl-variable
+* 討論 <2015-06-15>
+  - x ::
+       之前命名有失誤 不該說 local-jo 而 應該說 loacl-name
+       但是以不必更改命名
+       而在解釋器中替換 loacl-name 有關的語法
+  - k ::
+       並且這次我們需要儘量優化內存使用
+       之前的實現方式太浪費內存了
+       too many literal is too waste of memory
+       maybe we can optimize local-name by new instruction
+  - x ::
+       目前 [current_free_address$local_jo] 只是用以在運行時計算 offset
+       也許有更好的辦法使得 offset 可以在編譯時被計算出來
+       現在在解釋器中我們有 name-hash-table 可以使用了
+  - k ::
+       其實之前計算 offset 的方式有點愚蠢
+       它並沒有對 函數體 作出充分的分析
+  - x ::
+       沒錯
+       我們現在還要解決匿名函數的問題
+       也就是說 需要處理 scope
+       之前因爲無奈而使用 local-variable-table
+       現在可以利用 name-hash-table 了
+  - k ::
+       之前沒能處理好 scope 就在於 local-variable-table 是全局的
+       爲了配合 匿名函數中的 有名局部變元
+       我想我們需要一個 scope-stack
+       每次入棧的是一個 東西用來記錄 命名所對應的 offset
+  - x ::
+       我想
+       說 之前 [current_free_address$local_jo] 只是用以在運行時計算 offset
+       其實 是在運行時 分次 遞增 [current_free_address$local_jo] 而已
+       就像 *local-memory,current-free-address* 一樣
+       在重新實現 loacl-name 的過程中
+       我們並不需要改進這一點
+  - k ::
+       沒錯
+       我們需要保證 能夠遞歸調用
+       這當然就用到了全局的 scope-stack
+       scope-stack 中所保存的東西 不是字符串 而是 name 了
+       這樣就剩下一個問題了
+       就是關於 分支
+       分支應該怎麼處理
+  - x ::
+       進入分支時 不是進入新的 scope
+       還是在之前的 scope 中
+       對於分支 有一個 退出 概念
+       進入另一個分支 就 退出了 前面的分支
+       也就是說 每個 scope-stack 中的每個 scope 是一個集合
+       退出分支時需要從這個集合中刪除元素
+       但是 其實不必如此
+       所有所需要的數據都可以分配在 scope-stack
+  - k ::
+       這樣結構就是
+       | offset-record | name   |
+       |               | offset |
+  - x ::
+       這樣
+       對 有名局部變元 的處理
+       就 自治於 影響到 有名局部變元 的語法關鍵詞中了
+       關於 將所有的數據都保存在 scope-stack 中
+       需要有特殊的 offset-record 來提示新的 scope 的開始
+       新的 scope 開始之後
+       >:name 就找不到之前 >:name 的 offset 了
+       進而可以分配一個新的 offset-record
+       也就是說尋找的時候會以特殊的 offset-record 爲終點
+       特殊的 offset-record 稱爲 scope-delimiter
+       | scope-delimiter | 0 |
+       |                 | 0 |
+  - k ::
+       你所說的 自治 是什麼意思
+  - x ::
+       以 if else then
+       和 [ ] 爲例
+    1. 首先
+       函數定義 開始時 會入棧新的 scope-delimiter
+       函數定義 結束時 重置 *scope-stack,pointer* 到之前 scope-delimiter 的位置
+    2. if 不會入棧新的 scope-delimiter
+       但是會記錄 當時的 *scope-stack,pointer* 以在退出時返回
+       所謂退出時 即 遇到 else 時
+       而遇到 then 時 不算退出
+       這樣 在 if 和 then 之間的命名就可以被 之後用到
+    3. "[" 會 會入棧新的 scope-delimiter 如同有名函數定義的開始
+       "]" 也類似
+  - k ::
+       那麼現在可以動手實現了
+       注意
+       重新實現 >:name 和 :name 是在 name-hash-table 的定義之後
+       之後還需要
+       重新實現 if then else
+       並且更新 "[" "]"

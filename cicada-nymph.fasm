@@ -354,7 +354,7 @@ jo:
 explain$function:
    mov rbx, [V__local_memory__current_free_address + jo_size]
    push_return_stack rbx
-   mov rbx, [current_free_address$local_jo]
+   mov rbx, [current_free_address$local_variable]
    push_return_stack rbx
    add rax, jo_size
    push_return_stack rax
@@ -651,7 +651,7 @@ define_primitive_function "apply-with-return-point", apply_with_return_point
 define_primitive_function "end", end
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_jo], rax
+   mov [current_free_address$local_variable], rax
    pop_return_stack rax
    mov [V__local_memory__current_free_address + jo_size], rax
    next
@@ -661,7 +661,7 @@ match =64bit, machine {
 define_primitive_function "tail-call", tail_call
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_jo], rax
+   mov [current_free_address$local_variable], rax
    pop_return_stack rax
    mov [V__local_memory__current_free_address + jo_size], rax
    mov rax, [rbx]
@@ -674,7 +674,7 @@ match =32bit, machine {
 define_primitive_function "tail-call", tail_call
    pop_return_stack rbx
    pop_return_stack rcx
-   mov [current_free_address$local_jo], rcx
+   mov [current_free_address$local_variable], rcx
    pop_return_stack rcx
    mov [V__local_memory__current_free_address + jo_size], rcx
    mov rax, [rbx]
@@ -687,7 +687,7 @@ define_primitive_function "tail-call", tail_call
 ;; define_primitive_function "tail-call", tail_call
 ;;    pop_return_stack ebx
 ;;    pop_return_stack eax
-;;    mov [current_free_address$local_jo], eax
+;;    mov [current_free_address$local_variable], eax
 ;;    mov eax, [ebx]
 ;;    jmp dword [eax]
 
@@ -823,10 +823,10 @@ __reset_syntax_stack:
    mov [V__syntax_stack__pointer + jo_size], rax
    ret
 
-__reset_local_jo:
+__reset_local_variable:
    ;; << -- >>
-   mov rax, address$local_jo
-   mov [current_free_address$local_jo], rax
+   mov rax, address$local_variable
+   mov [current_free_address$local_variable], rax
    ret
 
 __reset_local_memory:
@@ -851,7 +851,7 @@ begin_to_interpret_threaded_code:
    mov rax, address$local_memory
    push_return_stack rax
 
-   mov rax, address$local_jo
+   mov rax, address$local_variable
    push_return_stack rax
 
    mov rax, first_jojo
@@ -895,7 +895,7 @@ define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    ;; << top_level_REPL [jo] -- >>
    call __reset_return_stack
    call __reset_syntax_stack
-   call __reset_local_jo
+   call __reset_local_variable
    call __reset_local_memory
    pop_argument_stack rax
    jmp qword [rax]
@@ -908,7 +908,7 @@ define_primitive_function "reset-top-level-REPL", reset_top_level_REPL
    ;; << top_level_REPL [jo] -- >>
    call __reset_return_stack
    call __reset_syntax_stack
-   call __reset_local_jo
+   call __reset_local_variable
    call __reset_local_memory
    pop_argument_stack rax
    jmp dword [rax]
@@ -3773,29 +3773,32 @@ define_function "define-variable,with-tos", CICADA__define_variable__with_tos
 
    xx end
 
-size$local_jo = 1024 * 1024 * jo_size
+size$local_variable = 1024 * 1024 * jo_size
 
-address$local_jo labeling
-   preserve size$local_jo
+address$local_variable labeling
+   preserve size$local_variable
 
-current_free_address$local_jo:
-   xx address$local_jo
+current_free_address$local_variable:
+   xx address$local_variable
 
-define_primitive_function "local-data-allocate,jo", local_data_allocate__jo
+define_primitive_function "allocate-local-variable", allocate_local_variable
    ;; << number -- >>
    pop_argument_stack rax
    imul rax, jo_size
-   add [current_free_address$local_jo], rax
+   add [current_free_address$local_variable], rax
    next
 
 match =64bit, machine {
 
-define_primitive_function "n-get,local-jo", n_get__local_jo
-   ;; << offset, n -- value-1, ..., value-n >>
-   mov rbx, [pointer$return_stack - (2 * jo_size)]
+define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+   ;; << -- value-1, ..., value-n >>
+   pop_return_stack rbx
+     mov rdx, [rbx]           ;; offset
+     mov rcx, [rbx + jo_size] ;; numebr
+   add rbx, (jo_size * 2)
+   push_return_stack rbx
 
-   pop_argument_stack rcx
-   pop_argument_stack rdx
+   mov rbx, [pointer$return_stack - (2 * jo_size)]
    add rbx, rdx
 .loop:
    mov rax, [rbx]
@@ -3804,12 +3807,15 @@ define_primitive_function "n-get,local-jo", n_get__local_jo
    loop .loop
    next
 
-define_primitive_function "n-set,local-jo", n_set__local_jo
-   ;; << value-n, ..., value-1, offset, n -- >>
-   mov rbx, [pointer$return_stack - (2 * jo_size)]
+define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+   ;; << value-n, ..., value-1 -- >>
+   pop_return_stack rbx
+     mov rdx, [rbx]           ;; offset
+     mov rcx, [rbx + jo_size] ;; numebr
+   add rbx, (jo_size * 2)
+   push_return_stack rbx
 
-   pop_argument_stack rcx
-   pop_argument_stack rdx
+   mov rbx, [pointer$return_stack - (2 * jo_size)]
    add rbx, rdx
      mov rax, jo_size
      imul rax, rcx
@@ -3828,13 +3834,16 @@ define_primitive_function "n-set,local-jo", n_set__local_jo
 
 match =32bit, machine {
 
-define_primitive_function "n-get,local-jo", n_get__local_jo
-   ;; << offset, n -- value-1, ..., value-n >>
+define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+   ;; << -- value-1, ..., value-n >>
+   pop_return_stack rbx
+     mov rdx, [rbx]           ;; offset
+     mov rcx, [rbx + jo_size] ;; numebr
+   add rbx, (jo_size * 2)
+   push_return_stack rbx
+
    mov rax, [pointer$return_stack]
    mov rbx, [rax - (2 * jo_size)]
-
-   pop_argument_stack rcx
-   pop_argument_stack rdx
    add rbx, rdx
 .loop:
    mov rax, [rbx]
@@ -3843,13 +3852,16 @@ define_primitive_function "n-get,local-jo", n_get__local_jo
    loop .loop
    next
 
-define_primitive_function "n-set,local-jo", n_set__local_jo
-   ;; << value-n, ..., value-1, offset, n -- >>
+define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+   ;; << value-n, ..., value-1 -- >>
+   pop_return_stack rbx
+     mov rdx, [rbx]           ;; offset
+     mov rcx, [rbx + jo_size] ;; numebr
+   add rbx, (jo_size * 2)
+   push_return_stack rbx
    mov rax, [pointer$return_stack]
    mov rbx, [rax - (2 * jo_size)]
 
-   pop_argument_stack rcx
-   pop_argument_stack rdx
    add rbx, rdx
      mov rax, jo_size
      imul rax, rcx
@@ -4004,17 +4016,13 @@ define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_ge
    ;;    string[address, length] >>
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-   ;;   literal, <offese>, literal, n, n_get__local_jo
-   xx     literal, literal
+   ;;   instruction__local_variable__n_get, <offese>, n
+   xx     literal, instruction__local_variable__n_get
    xx       jojo_area__stay
    ;;     offset
    xx       jojo_area__stay
-   xx     literal, literal
-   xx       jojo_area__stay
    ;;     n
    xx     count_front_colon
-   xx       jojo_area__stay
-   xx     literal, n_get__local_jo
    xx       jojo_area__stay
    xx   end
 .not_found:
@@ -4064,17 +4072,13 @@ define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_se
    xx string__byte_tail
    xx dup2
    xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
-   ;;   literal, <offese>, literal, n, n_set__local_jo
-   xx     literal, literal
+   ;;   instruction__local_variable__n_set, <offese>, n
+   xx     literal, instruction__local_variable__n_set
    xx       jojo_area__stay
    ;;     offset
    xx       jojo_area__stay
-   xx     literal, literal
-   xx       jojo_area__stay
    ;;     n
    xx     count_front_colon
-   xx       jojo_area__stay
-   xx     literal, n_set__local_jo
    xx       jojo_area__stay
    xx   end
 .not_found:
@@ -4082,24 +4086,20 @@ define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_se
    xx local_variable_table__insert
    xx xxswapx
    xx count_front_colon
-   ;; literal, <number>, local_data_allocate__jo
+   ;; literal, <number>, allocate_local_variable
    xx   literal, literal
    xx     jojo_area__stay
    ;;   number of jo
    xx     dup, jojo_area__stay
-   xx   literal, local_data_allocate__jo
+   xx   literal, allocate_local_variable
    xx     jojo_area__stay
-   ;; literal, <offese>, literal, n, set_local_data
-   xx   literal, literal
+   ;; instruction__local_variable__n_set, <offese>, n
+   xx   literal, instruction__local_variable__n_set
    xx     jojo_area__stay
    ;;   offset
    xx   swap
    xx     jojo_area__stay
-   xx   literal, literal
-   xx     jojo_area__stay
    ;;   n
-   xx     jojo_area__stay
-   xx   literal, n_set__local_jo
    xx     jojo_area__stay
    xx end
 

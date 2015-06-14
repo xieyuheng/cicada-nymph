@@ -2,10 +2,9 @@
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 
+* return-structured-value
 * the size of file
 * better structure for IO functions
-* fix and optimize local-name
-* return-structured-value
 * type check
 * todo
 ** write-with-color                   :maybe:
@@ -13,7 +12,7 @@
 ** 重新實現關於局部變元的語法 以在匿名函數中使用 修復 if 的問題 並增加語法
    * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
      注意
-     被代入的東西 其實是在 *local-jo* 中的
+     被代入的東西 其實是在 *local-variable* 中的
      如果想要形成兩端函數的 concatenate
      那麼就必須在 複製的時候去處理這種 concatenate
      也就是說
@@ -48,13 +47,15 @@
 ** only one error-code->string is not enough :maybe:
 ** language-level support for creating and managing processes :maybe:
 * ===================================
-* module-meta of core-test
-  #+begin_src cicada-nymph :tangle core-test.cn
-  ::::::::
-  auther: XIE Yuheng
-  do: "* (core-test) finished" .s .l
-  ========
-  #+end_src
+* module-meta
+** core-test
+   #+begin_src cicada-nymph :tangle core-test.cn
+   ::::::::
+   auther: XIE Yuheng
+   do: "* (core-test) finished" .s .l
+   ========
+   #+end_src
+* -----------------------------------
 * writers
 ** note name of writers
    * the use of "." as prefix
