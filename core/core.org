@@ -4,47 +4,34 @@
 
 * the size of file
 * better structure for IO functions
-* type check
-* todo
-** write-with-color                   :maybe:
-   * for better report
-** 重新實現關於局部變元的語法 以在匿名函數中使用 修復 if 的問題 並增加語法
-   * 還有 標記語言語法的實現 以向嵌套的匿名函數中代入東西
-     注意
-     被代入的東西 其實是在 *local-variable* 中的
-     如果想要形成兩端函數的 concatenate
-     那麼就必須在 複製的時候去處理這種 concatenate
-     也就是說
-     代入的方式可以各種各樣
-     一套設計良好的標記語言語法 就能完成這個特性
-   * 還有 各種返回方式的實現
-** 基礎設施
-*** 返回值
-*** 靜態類型
-*** 利用類型來優化 [提前作用]
-*** 代碼生成
-    * new way to do data-structure
-*** 除錯模式                          :maybe:
-    * debug-REPL
-*** 語法擴展機制的接口需要改進        :maybe:
-    * 目前如果 謂詞是匿名函數的話 <rule> sub 就沒法用了
-      因爲 rule,add 時的匿名函數是不同的
-** 整理結構
-*** 使用匿名函數
-*** 使用返回值
-** 在 不知有 name-hash-table 之前所設計的很多東西 需要改進
-** view the core as a special module  :maybe:
-   * re-import core every time
-** better names for (make-*)
-** 利用 alias 來實現中文支持
-** 基礎設施 之 匿名函數 之 *circular-jojo-area* :maybe:
-   * make-jojo 需要重寫
-   * 也許 make-jojo make-link make-jo-head
-     這一系列函數的名字都應該重新做
-     因爲他們的名字
-     已經越來越不能展示他們的接口了
 ** only one error-code->string is not enough :maybe:
-** language-level support for creating and managing processes :maybe:
+* write-with-color
+  * for better report
+* type check
+* better names for (make-*)
+  * make-jojo make-link make-jo-head
+    這一系列函數的名字都應該重新做
+    因爲他們的名字
+    已經越來越不能展示他們的接口了
+* fast tangle
+* 標記語言語法的實現 以向嵌套的匿名函數中代入東西
+  注意
+  被代入的東西 其實是在 *local-variable* 中的
+  如果想要形成兩端函數的 concatenate
+  那麼就必須在 複製的時候去處理這種 concatenate
+  也就是說
+  代入的方式可以各種各樣
+  一套設計良好的標記語言語法 就能完成這個特性
+* todo
+** 利用類型信息來提前作用
+** 代碼生成
+   * new way to do data-structure
+** 除錯模式
+   * debug-REPL
+** 利用 alias 來實現中文支持
+** view the core as a special module
+   * re-import core every time
+** language-level support for creating and managing processes
 * ===================================
 * module-meta
 ** core-test
@@ -2253,7 +2240,7 @@
    ; define-function
    #+end_src
 ** init,name-hash-table,by-link
-   * the function should be executed right after
+   * the function should be evaled right after
      (define-function) is redefined
    * be ware of
      the interface of (name-hash-table,search)
@@ -2792,13 +2779,6 @@
    >>
    #+end_src
 * make-jojo-syntax,title
-** note
-   * <title> in *rule-set,make-jojo*
-     <title> name
-     set a jo into *jojo-area*
-   * <title> in *rule-set,eval-word*
-     <title> name
-     execute a jo
 ** name-hash-table,find-jo,with-title
    #+begin_src cicada-nymph :tangle core.cn
    : name-hash-table,find-jo,with-title
@@ -3224,8 +3204,8 @@
       things are different from function body
       and there is no such thing as
       the end of a function body in the REPL
-*** note executing (end) in REPL
-    * when executing (end) in REPL
+*** note (end) in REPL
+    * when use (end) in REPL
       nothing will happen
       this is because (eval-word) calls (end)
       and the jojo (eval-word) is pop out of return-stack
@@ -3554,13 +3534,6 @@
     ; test-do
     #+end_src
 ** <title>                            :syntax:
-*** note
-    * <title> in *rule-set,make-jojo*
-      <title> name
-      set a jo into *jojo-area*
-    * <title> in *rule-set,eval-word*
-      <title> name
-      execute a jo
 *** <eval-word-syntax> title
     #+begin_src cicada-nymph :tangle core.cn
     : <eval-word-syntax> title
@@ -4899,7 +4872,7 @@
    #+end_src
 ** <directory> map
    #+begin_src cicada-nymph :tangle core.cn
-   : <directory> map,loop,execute
+   : <directory> map,loop,apply
      << end, cursor, function -- >>
      >:function
      dup2 less-or-equal? if
@@ -4938,7 +4911,7 @@
      :getdents64-structure-list add
      :getdents64-structure-list
      :function
-     <directory> map,loop,execute
+     <directory> map,loop,apply
      :port
      :function
      loop
@@ -9007,9 +8980,8 @@
      .l
      "* (cicada-nymph) " .s hi
      <report> system
-     "* (stack-REPL) is where you are in" .s .l
-     "  every time after a word is executed" .s .l
-     "  the argument-stack get printed" .s .l
+     "* (stack-REPL) is where you are now" .s .l
+     "  eval a word print the stack" .s .l
      print-argument-stack,pretty
      jo stack-REPL
      reset-top-level-REPL
@@ -9022,7 +8994,7 @@
      .l
      "* (cicada-nymph) " .s hi
      <report> system
-     "* (basic-REPL) is where you are in" .s .l
+     "* (basic-REPL) is where you are now" .s .l
      "  this REPL does not print any thing automaticly" .s .l
      jo basic-REPL
      reset-top-level-REPL

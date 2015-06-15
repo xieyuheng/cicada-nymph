@@ -2999,7 +2999,7 @@ then
   end
 ; define-function
 
-: <directory> map,loop,execute
+: <directory> map,loop,apply
   << end, cursor, function -- >>
   >:function
   dup2 less-or-equal? if
@@ -3038,7 +3038,7 @@ then
   :getdents64-structure-list add
   :getdents64-structure-list
   :function
-  <directory> map,loop,execute
+  <directory> map,loop,apply
   :port
   :function
   loop
@@ -5919,9 +5919,8 @@ jo <post-module-syntax> do
   .l
   "* (cicada-nymph) " .s hi
   <report> system
-  "* (stack-REPL) is where you are in" .s .l
-  "  every time after a word is executed" .s .l
-  "  the argument-stack get printed" .s .l
+  "* (stack-REPL) is where you are now" .s .l
+  "  eval a word print the stack" .s .l
   print-argument-stack,pretty
   jo stack-REPL
   reset-top-level-REPL
@@ -5932,7 +5931,7 @@ jo <post-module-syntax> do
   .l
   "* (cicada-nymph) " .s hi
   <report> system
-  "* (basic-REPL) is where you are in" .s .l
+  "* (basic-REPL) is where you are now" .s .l
   "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL
   reset-top-level-REPL
