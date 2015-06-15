@@ -607,6 +607,78 @@ address kkk
   1 equal? test
 ; test-do
 
+: "* (testing) nested comment in REPL" .s .l
+  1 << 2    3    4 >> 5
+  1 << 2 << 3 >> 4 >> 5
+  5 equal?
+  1 equal? add
+  5 equal? add
+  1 equal? add test
+  end
+; test-do
+
+: nested-comment-function-body
+  1 << 2    3    4 >> 5
+  1 << 2 << 3 >> 4 >> 5
+  5 equal?
+  1 equal? add
+  5 equal? add
+  1 equal? add test
+  end
+; test-function
+
+: "* (testing) nested comment in function body" .s .l
+  nested-comment-function-body
+  end
+; test-do
+
+: callee
+  << -- string[address, length] >>
+  512 allocate-conjugate-local-memory >:buffer
+  "(callee ^-^) " >:length >:address
+  :address :length
+  :buffer
+  string->buffer!
+  :buffer :length
+  end
+; test-function
+
+: caller
+  << -- string[address, length] >>
+  512 allocate-local-memory >:buffer
+  "(caller O.o) " >:length >:address
+  :address :length
+  :buffer
+  string->buffer!
+  :buffer :length >::caller-string-1
+
+  callee >::callee-string
+
+  512 allocate-local-memory >:buffer
+  "(caller o.O) " >:length >:address
+  :address :length
+  :buffer
+  string->buffer!
+  :buffer :length >::caller-string-2
+
+  512 allocate-local-memory >:buffer
+  ::caller-string-1
+  ::callee-string
+  ::caller-string-2
+  :buffer
+  3 n-string->buffer! >:length
+
+  :buffer
+  :length
+  end
+; test-function
+
+: "* (testing) return structured value" .s .l
+  caller
+  "(caller O.o) (callee ^-^) (caller o.O) "
+  <string> equal? test
+; test-do
+
 : "* (testing) eval-string" .s .l
   "1 2 3 add add" eval-string 6 equal? test
   "  1 2 3 add add  " eval-string  6 equal? test

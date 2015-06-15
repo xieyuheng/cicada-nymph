@@ -239,15 +239,19 @@ macro push_return_stack register \{
 
 macro pop_return_stack register \{
    if register in <eax>
+   push ebx
    mov ebx, [pointer$return_stack]
    sub ebx, jo_size
    mov register, [ebx]
    mov [pointer$return_stack], ebx
+   pop ebx
    else
+   push eax
    mov eax, [pointer$return_stack]
    sub eax, jo_size
    mov register, [eax]
    mov [pointer$return_stack], eax
+   pop eax
    finish if
 \}
 
@@ -351,14 +355,67 @@ jo:
 
 }
 
+match =64bit, machine {
+
 explain$function:
-   mov rbx, [V__local_memory__current_free_address + jo_size]
+   mov rbx, pointer$return_stack
+   sub rbx, address$return_stack
+   test rbx, unit__return_point
+   jz .return_stack_even
+
+   mov rbx, [V__local_memory_odd__current_free_address + jo_size]
    push_return_stack rbx
-   mov rbx, [current_free_address$local_variable]
+   mov rbx, [V__local_memory_even__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [local_variable$current_free_address]
    push_return_stack rbx
    add rax, jo_size
    push_return_stack rax
    next
+
+.return_stack_even:
+   mov rbx, [V__local_memory_even__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [local_variable$current_free_address]
+   push_return_stack rbx
+   add rax, jo_size
+   push_return_stack rax
+   next
+
+}
+
+match =32bit, machine {
+
+explain$function:
+   mov rbx, [pointer$return_stack]
+   sub rbx, address$return_stack
+   test rbx, unit__return_point
+   jz .return_stack_even
+
+   mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [V__local_memory_even__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [local_variable$current_free_address]
+   push_return_stack rbx
+   add rax, jo_size
+   push_return_stack rax
+   next
+
+.return_stack_even:
+   mov rbx, [V__local_memory_even__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+   push_return_stack rbx
+   mov rbx, [local_variable$current_free_address]
+   push_return_stack rbx
+   add rax, jo_size
+   push_return_stack rax
+   next
+
+}
 
 macro define_primitive_function string, jo {
 
@@ -546,8 +603,18 @@ define_function "make-string", make_string
    xx string_area__stay
    xx end
 
+offset__return_point$conjugate_local_memory   = (jo_size * 0)
+offset__return_point$local_memory             = (jo_size * 1)
+offset__return_point$local_variable           = (jo_size * 2)
+offset__return_point$jojo                     = (jo_size * 3)
+
+unit__return_point = (jo_size * 4)
+
 define_variable "*return-stack,unit*", V__return_stack__unit
-   xx (jo_size * 3)
+   xx unit__return_point
+
+define_function "nothing", nothing
+   xx end
 
 match =64bit, machine {
 
@@ -556,7 +623,7 @@ define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
    pop_argument_stack rbx
 
    mov rsi, pointer$return_stack
-   add pointer$return_stack, (jo_size * 3)
+   add pointer$return_stack, (jo_size * 4 * 2)
    mov rdi, pointer$return_stack
 
 .loop:
@@ -571,7 +638,17 @@ define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
 
    pop_argument_stack rax
    add rax, jo_size
-   mov qword [rsi + (jo_size* 2)], rax
+   mov qword [rsi + (jo_size * 3)], rax
+
+   mov rax, qword [rsi + (jo_size * 1)]
+   mov qword [rsi + (jo_size * 4)], rax
+   mov rax, qword [rsi + (jo_size * 0)]
+   mov qword [rsi + (jo_size * 5)], rax
+   mov rax, qword [rsi + (jo_size * 2)]
+   mov qword [rsi + (jo_size * 6)], rax
+   mov rax, nothing + jo_size
+   mov qword [rsi + (jo_size * 7)], rax
+
    next
 
 }
@@ -584,7 +661,7 @@ define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
 
    mov rcx, [pointer$return_stack]
    mov rsi, rcx
-   add rcx, (jo_size * 3)
+   add rcx, (jo_size * 4 * 2)
    mov rdi, rcx
    mov [pointer$return_stack], rcx
 
@@ -600,7 +677,17 @@ define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
 
    pop_argument_stack rax
    add rax, jo_size
-   mov dword [rsi + (jo_size* 2)], rax
+   mov dword [rsi + (jo_size * 3)], rax
+
+   mov rax, dword [rsi + (jo_size * 1)]
+   mov dword [rsi + (jo_size * 4)], rax
+   mov rax, dword [rsi + (jo_size * 0)]
+   mov dword [rsi + (jo_size * 5)], rax
+   mov rax, dword [rsi + (jo_size * 2)]
+   mov dword [rsi + (jo_size * 6)], rax
+   mov rax, nothing + jo_size
+   mov dword [rsi + (jo_size * 7)], rax
+
    next
 
 }
@@ -644,48 +731,115 @@ define_primitive_function "apply-with-return-point", apply_with_return_point
 
 }
 
+match =64bit, machine {
+
 define_primitive_function "end", end
+   mov rax, pointer$return_stack
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_variable], rax
+   mov [local_variable$current_free_address], rax
    pop_return_stack rax
-   mov [V__local_memory__current_free_address + jo_size], rax
+   pop_return_stack rax
+   mov [V__local_memory_odd__current_free_address + jo_size], rax
    next
+
+.return_stack_even:
+   pop_return_stack rbx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_even__current_free_address + jo_size], rax
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "end", end
+   mov rax, [pointer$return_stack]
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
+   pop_return_stack rbx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_odd__current_free_address + jo_size], rax
+   next
+
+.return_stack_even:
+   pop_return_stack rbx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_even__current_free_address + jo_size], rax
+   next
+
+}
 
 match =64bit, machine {
 
 define_primitive_function "tail-call", tail_call
+   mov rax, pointer$return_stack
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
    pop_return_stack rbx
    pop_return_stack rax
-   mov [current_free_address$local_variable], rax
+   mov [local_variable$current_free_address], rax
    pop_return_stack rax
-   mov [V__local_memory__current_free_address + jo_size], rax
+   pop_return_stack rax
+   mov [V__local_memory_odd__current_free_address + jo_size], rax
    mov rax, [rbx]
    jmp qword [rax]
-}
 
+.return_stack_even:
+   pop_return_stack rbx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_even__current_free_address + jo_size], rax
+   mov rax, [rbx]
+   jmp qword [rax]
+
+}
 
 match =32bit, machine {
 
 define_primitive_function "tail-call", tail_call
+   mov rax, [pointer$return_stack]
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
    pop_return_stack rbx
-   pop_return_stack rcx
-   mov [current_free_address$local_variable], rcx
-   pop_return_stack rcx
-   mov [V__local_memory__current_free_address + jo_size], rcx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_odd__current_free_address + jo_size], rax
    mov rax, [rbx]
    jmp dword [rax]
 
-;;;; old note
-;; ><><>< can not be the following
-;; maybe still something wrong with pop_return_stack
-;; but I care less about this now
-;; define_primitive_function "tail-call", tail_call
-;;    pop_return_stack ebx
-;;    pop_return_stack eax
-;;    mov [current_free_address$local_variable], eax
-;;    mov eax, [ebx]
-;;    jmp dword [eax]
+.return_stack_even:
+   pop_return_stack rbx
+   pop_return_stack rax
+   mov [local_variable$current_free_address], rax
+   pop_return_stack rax
+   pop_return_stack rax
+   mov [V__local_memory_even__current_free_address + jo_size], rax
+   mov rax, [rbx]
+   jmp dword [rax]
 
 }
 
@@ -798,7 +952,7 @@ match =linux =64bit, platform machine {
 
 __reset_return_stack:
    ;; << -- >>
-   mov pointer$return_stack,    address$return_stack
+   mov pointer$return_stack, address$return_stack
    ret
 
 }
@@ -822,13 +976,15 @@ __reset_syntax_stack:
 __reset_local_variable:
    ;; << -- >>
    mov rax, address$local_variable
-   mov [current_free_address$local_variable], rax
+   mov [local_variable$current_free_address], rax
    ret
 
 __reset_local_memory:
    ;; << -- >>
-   mov rax, address$local_memory
-   mov [V__local_memory__current_free_address + jo_size], rax
+   mov rax, address$local_memory_even
+   mov [V__local_memory_even__current_free_address + jo_size], rax
+   mov rax, address$local_memory_odd
+   mov [V__local_memory_odd__current_free_address + jo_size], rax
    ret
 
 match =linux, platform {
@@ -841,17 +997,28 @@ begin_to_interpret_threaded_code:
    call __reset_return_stack
 
    pop_return_stack rax
+   pop_return_stack rax
+   pop_return_stack rax
+   pop_return_stack rax
+
+   mov rax, address$local_memory_odd
+   push_return_stack rax
+   mov rax, address$local_memory_even
+   push_return_stack rax
+   mov rax, address$local_variable
+   push_return_stack rax
    mov rax, jojo_for__report_return_stack_is_empty_and_exit
    push_return_stack rax
 
-   mov rax, address$local_memory
+   mov rax, address$local_memory_even
    push_return_stack rax
-
+   mov rax, address$local_memory_odd
+   push_return_stack rax
    mov rax, address$local_variable
    push_return_stack rax
-
    mov rax, first_jojo
    push_return_stack rax
+
    next
 
 first_jojo:
@@ -1059,9 +1226,9 @@ define_primitive_function "instruction,address", address
 
 define_primitive_function "instruction,branch", branch
    pop_return_stack rbx
-   mov rax, [rbx]
-   imul rax, jo_size
-   add rbx, rax
+     mov rax, [rbx]
+     imul rax, jo_size
+     add rbx, rax
    push_return_stack rbx
    next
 
@@ -1072,15 +1239,15 @@ define_primitive_function "instruction,false?branch", false?branch
    jnz help__false?branch__not_to_branch
 
    pop_return_stack rbx
-   mov rax, [rbx]
-   imul rax, jo_size
-   add rbx, rax
+     mov rax, [rbx]
+     imul rax, jo_size
+     add rbx, rax
    push_return_stack rbx
    next
 
 help__false?branch__not_to_branch:
    pop_return_stack rbx
-   add rbx, jo_size
+     add rbx, jo_size
    push_return_stack rbx
    next
 
@@ -3774,14 +3941,14 @@ size$local_variable = 1024 * 1024 * jo_size
 address$local_variable labeling
    preserve size$local_variable
 
-current_free_address$local_variable:
+local_variable$current_free_address:
    xx address$local_variable
 
 define_primitive_function "allocate-local-variable", allocate_local_variable
    ;; << number -- >>
    pop_argument_stack rax
    imul rax, jo_size
-   add [current_free_address$local_variable], rax
+   add [local_variable$current_free_address], rax
    next
 
 match =64bit, machine {
@@ -3794,7 +3961,7 @@ define_primitive_function "instruction,local-variable,n-get", instruction__local
    add rbx, (jo_size * 2)
    push_return_stack rbx
 
-   mov rbx, [pointer$return_stack - (2 * jo_size)]
+   mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
    add rbx, rdx
 .loop:
    mov rax, [rbx]
@@ -3811,7 +3978,7 @@ define_primitive_function "instruction,local-variable,n-set", instruction__local
    add rbx, (jo_size * 2)
    push_return_stack rbx
 
-   mov rbx, [pointer$return_stack - (2 * jo_size)]
+   mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
    add rbx, rdx
      mov rax, jo_size
      imul rax, rcx
@@ -3839,7 +4006,7 @@ define_primitive_function "instruction,local-variable,n-get", instruction__local
    push_return_stack rbx
 
    mov rax, [pointer$return_stack]
-   mov rbx, [rax - (2 * jo_size)]
+   mov rbx, [rax - unit__return_point + offset__return_point$local_variable]
    add rbx, rdx
 .loop:
    mov rax, [rbx]
@@ -3856,7 +4023,7 @@ define_primitive_function "instruction,local-variable,n-set", instruction__local
    add rbx, (jo_size * 2)
    push_return_stack rbx
    mov rax, [pointer$return_stack]
-   mov rbx, [rax - (2 * jo_size)]
+   mov rbx, [rax - unit__return_point + offset__return_point$local_variable]
 
    add rbx, rdx
      mov rax, jo_size
@@ -4099,37 +4266,117 @@ define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_v
    xx     jojo_area__stay
    xx end
 
-size$local_memory_x = 1024 * 1024 * 6
+size$local_memory_even = 1024 * 1024 * 6
 
-address$local_memory_x labeling
-   preserve size$local_memory_x
+address$local_memory_even labeling
+   preserve size$local_memory_even
 
-define_variable "*local-memory-x,current-free-address*", V__local_memory_x__current_free_address
-   xx address$local_memory_x
+define_variable "*local-memory-even,current-free-address*", V__local_memory_even__current_free_address
+   xx address$local_memory_even
 
-size$local_memory_y = 1024 * 1024 * 6
+size$local_memory_odd = 1024 * 1024 * 6
 
-address$local_memory_y labeling
-   preserve size$local_memory_y
+address$local_memory_odd labeling
+   preserve size$local_memory_odd
 
-define_variable "*local-memory-y,current-free-address*", V__local_memory_y__current_free_address
-   xx address$local_memory_y
+define_variable "*local-memory-odd,current-free-address*", V__local_memory_odd__current_free_address
+   xx address$local_memory_odd
 
-size$local_memory = 1024 * 1024 * 6
-
-address$local_memory labeling
-   preserve size$local_memory
-
-define_variable "*local-memory,current-free-address*", V__local_memory__current_free_address
-   xx address$local_memory
+match =64bit, machine {
 
 define_primitive_function "allocate-local-memory", allocate_local_memory
    ;; << size -- address >>
+   mov rax, pointer$return_stack
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
    pop_argument_stack rbx
-   mov rax, [V__local_memory__current_free_address + jo_size]
+   mov rax, [V__local_memory_odd__current_free_address + jo_size]
    push_argument_stack rax
-   add [V__local_memory__current_free_address + jo_size], rbx
+   add [V__local_memory_odd__current_free_address + jo_size], rbx
    next
+
+.return_stack_even:
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_even__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_even__current_free_address + jo_size], rbx
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "allocate-local-memory", allocate_local_memory
+   ;; << size -- address >>
+   mov rax, [pointer$return_stack]
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_odd__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_odd__current_free_address + jo_size], rbx
+   next
+
+.return_stack_even:
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_even__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_even__current_free_address + jo_size], rbx
+   next
+
+}
+
+match =64bit, machine {
+
+define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
+   ;; << size -- address >>
+   mov rax, pointer$return_stack
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_even__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_even__current_free_address + jo_size], rbx
+   next
+
+.return_stack_even:
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_odd__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_odd__current_free_address + jo_size], rbx
+   next
+
+}
+
+match =32bit, machine {
+
+define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
+   ;; << size -- address >>
+   mov rax, [pointer$return_stack]
+   sub rax, address$return_stack
+   test rax, unit__return_point
+   jnz .return_stack_even
+
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_even__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_even__current_free_address + jo_size], rbx
+   next
+
+.return_stack_even:
+   pop_argument_stack rbx
+   mov rax, [V__local_memory_odd__current_free_address + jo_size]
+   push_argument_stack rax
+   add [V__local_memory_odd__current_free_address + jo_size], rbx
+   next
+
+}
 
 string$string_to_syscall_string:
    times 256 db 0

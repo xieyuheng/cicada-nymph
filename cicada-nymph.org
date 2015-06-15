@@ -341,15 +341,19 @@
 
    macro pop_return_stack register \{
       if register in <eax>
+      push ebx
       mov ebx, [pointer$return_stack]
       sub ebx, jo_size
       mov register, [ebx]
       mov [pointer$return_stack], ebx
+      pop ebx
       else
+      push eax
       mov eax, [pointer$return_stack]
       sub eax, jo_size
       mov register, [eax]
       mov [pointer$return_stack], eax
+      pop eax
       finish if
    \}
 
@@ -596,20 +600,72 @@
    }
    #+end_src
 ** explain$function
-   * find a jojo from a function-jo
-     and push the jojo to return-stack
+   * push the jojo of a jo to return-stack
    * a jojo can not be of size 0
    * use rax as an argument
      which stores a jo
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
    explain$function:
-      mov rbx, [V__local_memory__current_free_address + jo_size]
+      mov rbx, pointer$return_stack
+      sub rbx, address$return_stack
+      test rbx, unit__return_point
+      jz .return_stack_even
+
+      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
       push_return_stack rbx
-      mov rbx, [current_free_address$local_variable]
+      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [local_variable$current_free_address]
       push_return_stack rbx
       add rax, jo_size
       push_return_stack rax
       next
+
+   .return_stack_even:
+      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [local_variable$current_free_address]
+      push_return_stack rbx
+      add rax, jo_size
+      push_return_stack rax
+      next
+
+   }
+
+   match =32bit, machine {
+
+   explain$function:
+      mov rbx, [pointer$return_stack]
+      sub rbx, address$return_stack
+      test rbx, unit__return_point
+      jz .return_stack_even
+
+      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [local_variable$current_free_address]
+      push_return_stack rbx
+      add rax, jo_size
+      push_return_stack rax
+      next
+
+   .return_stack_even:
+      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      push_return_stack rbx
+      mov rbx, [local_variable$current_free_address]
+      push_return_stack rbx
+      add rax, jo_size
+      push_return_stack rax
+      next
+
+   }
    #+end_src
 * primitive-function-jo
 ** note
@@ -862,44 +918,7 @@
       xx string_area__stay
       xx end
    #+end_src
-* return-stack & end & tail-call
-** 記 結尾珠
-   * end 和 tail-call 這兩個結尾珠代表將執行退出操作
-     在退出時
-     它們將會從返回棧頂取出三個值
-     從棧頂開始數 這三個值分別是
-     1. 結束執行的一串珠珠本身
-        這個值是被捨棄的
-     2. local_variable 中的一個地址
-        用於重置
-        [current_free_address$local_variable]
-     3. local_memory 中的一個地址
-        用於重置
-        [V__local_memory__current_free_address + jo_size]
-   * end 和 tail-call 的區別在於
-     * end
-       入返回棧一串新的珠珠
-       [三個值一組的存在]
-     * tail-call
-       用一串新的珠珠
-       代替返回棧頂的一串珠珠
-       [三個值一組的存在]
-   * 結尾珠 涉及到局部變元的實現方式
-     1. 當一個 jojo 被入返回棧時
-        jojo 本身
-        還有當時的 [current_free_address$local_variable]
-        和 [V__local_memory__current_free_address + jo_size]
-        三者共同組成 一個 return-point
-     2. 在遇到結尾詞而退出對這次 jojo 的執行的時候
-        return-point 中的 local_variable 和 local_memory
-        會被用來重置 [current_free_address$local_variable]
-        和 [V__local_memory__current_free_address + jo_size]
-     3. 也就是說
-        在一個 jojo 被執行的過程中
-        它可以通過遞增 [current_free_address$local_variable]
-        和 [V__local_memory__current_free_address + jo_size]
-        而隨意分配內存以保存其局部數據
-        因爲反正當函數退出時 這兩個指針會被重置
+* return-stack
 ** note return-point
    * structure
      | return-point | conjugate-local-memory |
@@ -907,33 +926,58 @@
      |              | local-variable         |
      |              | jojo                   |
    * the interface is implemented by needs
+** offset of return-point
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   offset__return_point$conjugate_local_memory   = (jo_size * 0)
+   offset__return_point$local_memory             = (jo_size * 1)
+   offset__return_point$local_variable           = (jo_size * 2)
+   offset__return_point$jojo                     = (jo_size * 3)
+
+   unit__return_point = (jo_size * 4)
+   #+end_src
 ** *return-stack,unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*return-stack,unit*", V__return_stack__unit
-      xx (jo_size * 3)
+      xx unit__return_point
    #+end_src
 ** 記 插 珠珠 人返回棧 到某珠珠的前面 [等效替換法 以理解]
    * 有了下面的 (return-stack,insert-jo) 這個素函數之後
      即便是在非素函數中也能夠對返回棧進行有限的操作了
    * before insert-jo
+     |----------------+--------------------------|
      | return-point-1 | conjugate-local-memory-1 |
      |                | local-memory-1           |
      |                | local-variable-1         |
      |                | jojo-1                   |
-     | return-point-2 | local-memory-2           |
+     |----------------+--------------------------|
+     | return-point-2 | conjugate-local-memory-2 |
+     |                | local-memory-2           |
      |                | local-variable-2         |
      |                | jojo-2                   |
+     |----------------+--------------------------|
    * after
      jo return-point-2 (return-stack,insert-jo)
-     | return-point-1  | local-memory-1   |
-     |                 | local-variable-1 |
-     |                 | jojo-1           |
-     | return-point-in | local-memory-2   |
-     |                 | local-variable-2 |
-     |                 | jojo of jo       |
-     | return-point-2  | local-memory-2   |
-     |                 | local-variable-2 |
-     |                 | jojo-2           |
+     |-----------------+--------------------------|
+     | return-point-1  | conjugate-local-memory-1 |
+     |                 | local-memory-1           |
+     |                 | local-variable-1         |
+     |                 | jojo-1                   |
+     |-----------------+--------------------------|
+     | return-point-in | conjugate-local-memory-2 |
+     |                 | local-memory-2           |
+     |                 | local-variable-2         |
+     |                 | jojo of jo               |
+     |-----------------+--------------------------|
+     | return-point-no | local-memory-2           |
+     |                 | conjugate-local-memory-2 |
+     |                 | local-variable-2         |
+     |                 | jojo of nothing          |
+     |-----------------+--------------------------|
+     | return-point-2  | conjugate-local-memory-2 |
+     |                 | local-memory-2           |
+     |                 | local-variable-2         |
+     |                 | jojo-2                   |
+     |-----------------+--------------------------|
    * 之所以有這樣的效果
      是因爲
      這個 素函數 是爲了 實現 expect 而作
@@ -964,6 +1008,11 @@
      並且 (in) 在調用 (2) 之前
      沒有使用局部數據區域來爲任何局部變元分配空間
    * 上面的討論就證明了這種實現方式性質良好
+** nothing
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   define_function "nothing", nothing
+      xx end
+   #+end_src
 ** return-stack,insert-jo
    * 先在個循環中複製 return-stack 之後的部分
      以空出一個位置
@@ -976,7 +1025,7 @@
       pop_argument_stack rbx
 
       mov rsi, pointer$return_stack
-      add pointer$return_stack, (jo_size * 3)
+      add pointer$return_stack, (jo_size * 4 * 2)
       mov rdi, pointer$return_stack
 
    .loop:
@@ -991,7 +1040,17 @@
 
       pop_argument_stack rax
       add rax, jo_size
-      mov qword [rsi + (jo_size* 2)], rax
+      mov qword [rsi + (jo_size * 3)], rax
+
+      mov rax, qword [rsi + (jo_size * 1)]
+      mov qword [rsi + (jo_size * 4)], rax
+      mov rax, qword [rsi + (jo_size * 0)]
+      mov qword [rsi + (jo_size * 5)], rax
+      mov rax, qword [rsi + (jo_size * 2)]
+      mov qword [rsi + (jo_size * 6)], rax
+      mov rax, nothing + jo_size
+      mov qword [rsi + (jo_size * 7)], rax
+
       next
 
    }
@@ -1004,7 +1063,7 @@
 
       mov rcx, [pointer$return_stack]
       mov rsi, rcx
-      add rcx, (jo_size * 3)
+      add rcx, (jo_size * 4 * 2)
       mov rdi, rcx
       mov [pointer$return_stack], rcx
 
@@ -1020,7 +1079,17 @@
 
       pop_argument_stack rax
       add rax, jo_size
-      mov dword [rsi + (jo_size* 2)], rax
+      mov dword [rsi + (jo_size * 3)], rax
+
+      mov rax, dword [rsi + (jo_size * 1)]
+      mov dword [rsi + (jo_size * 4)], rax
+      mov rax, dword [rsi + (jo_size * 0)]
+      mov dword [rsi + (jo_size * 5)], rax
+      mov rax, dword [rsi + (jo_size * 2)]
+      mov dword [rsi + (jo_size * 6)], rax
+      mov rax, nothing + jo_size
+      mov dword [rsi + (jo_size * 7)], rax
+
       next
 
    }
@@ -1068,15 +1137,62 @@
 
    }
    #+end_src
+* end & tail-call
 ** end
    #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
    define_primitive_function "end", end
+      mov rax, pointer$return_stack
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_variable], rax
+      mov [local_variable$current_free_address], rax
       pop_return_stack rax
-      mov [V__local_memory__current_free_address + jo_size], rax
+      pop_return_stack rax
+      mov [V__local_memory_odd__current_free_address + jo_size], rax
       next
+
+   .return_stack_even:
+      pop_return_stack rbx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_even__current_free_address + jo_size], rax
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "end", end
+      mov rax, [pointer$return_stack]
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
+      pop_return_stack rbx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      next
+
+   .return_stack_even:
+      pop_return_stack rbx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_even__current_free_address + jo_size], rax
+      next
+
+   }
    #+end_src
 ** tail-call
    * tail-call
@@ -1084,37 +1200,58 @@
    match =64bit, machine {
 
    define_primitive_function "tail-call", tail_call
+      mov rax, pointer$return_stack
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
       pop_return_stack rbx
       pop_return_stack rax
-      mov [current_free_address$local_variable], rax
+      mov [local_variable$current_free_address], rax
       pop_return_stack rax
-      mov [V__local_memory__current_free_address + jo_size], rax
+      pop_return_stack rax
+      mov [V__local_memory_odd__current_free_address + jo_size], rax
       mov rax, [rbx]
       jmp qword [rax]
-   }
 
+   .return_stack_even:
+      pop_return_stack rbx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov rax, [rbx]
+      jmp qword [rax]
+
+   }
 
    match =32bit, machine {
 
    define_primitive_function "tail-call", tail_call
+      mov rax, [pointer$return_stack]
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
       pop_return_stack rbx
-      pop_return_stack rcx
-      mov [current_free_address$local_variable], rcx
-      pop_return_stack rcx
-      mov [V__local_memory__current_free_address + jo_size], rcx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_odd__current_free_address + jo_size], rax
       mov rax, [rbx]
       jmp dword [rax]
 
-   ;;;; old note
-   ;; ><><>< can not be the following
-   ;; maybe still something wrong with pop_return_stack
-   ;; but I care less about this now
-   ;; define_primitive_function "tail-call", tail_call
-   ;;    pop_return_stack ebx
-   ;;    pop_return_stack eax
-   ;;    mov [current_free_address$local_variable], eax
-   ;;    mov eax, [ebx]
-   ;;    jmp dword [eax]
+   .return_stack_even:
+      pop_return_stack rbx
+      pop_return_stack rax
+      mov [local_variable$current_free_address], rax
+      pop_return_stack rax
+      pop_return_stack rax
+      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov rax, [rbx]
+      jmp dword [rax]
 
    }
    #+end_src
@@ -1294,7 +1431,7 @@
 
    __reset_return_stack:
       ;; << -- >>
-      mov pointer$return_stack,    address$return_stack
+      mov pointer$return_stack, address$return_stack
       ret
 
    }
@@ -1322,15 +1459,17 @@
    __reset_local_variable:
       ;; << -- >>
       mov rax, address$local_variable
-      mov [current_free_address$local_variable], rax
+      mov [local_variable$current_free_address], rax
       ret
    #+end_src
 ** __reset_local_memory
    #+begin_src fasm :tangle cicada-nymph.fasm
    __reset_local_memory:
       ;; << -- >>
-      mov rax, address$local_memory
-      mov [V__local_memory__current_free_address + jo_size], rax
+      mov rax, address$local_memory_even
+      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov rax, address$local_memory_odd
+      mov [V__local_memory_odd__current_free_address + jo_size], rax
       ret
    #+end_src
 * *the-story-begin*
@@ -1350,17 +1489,28 @@
       call __reset_return_stack
 
       pop_return_stack rax
+      pop_return_stack rax
+      pop_return_stack rax
+      pop_return_stack rax
+
+      mov rax, address$local_memory_odd
+      push_return_stack rax
+      mov rax, address$local_memory_even
+      push_return_stack rax
+      mov rax, address$local_variable
+      push_return_stack rax
       mov rax, jojo_for__report_return_stack_is_empty_and_exit
       push_return_stack rax
 
-      mov rax, address$local_memory
+      mov rax, address$local_memory_even
       push_return_stack rax
-
+      mov rax, address$local_memory_odd
+      push_return_stack rax
       mov rax, address$local_variable
       push_return_stack rax
-
       mov rax, first_jojo
       push_return_stack rax
+
       next
 
    first_jojo:
@@ -1622,9 +1772,9 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "instruction,branch", branch
       pop_return_stack rbx
-      mov rax, [rbx]
-      imul rax, jo_size
-      add rbx, rax
+        mov rax, [rbx]
+        imul rax, jo_size
+        add rbx, rax
       push_return_stack rbx
       next
    #+end_src
@@ -1637,15 +1787,15 @@
       jnz help__false?branch__not_to_branch
 
       pop_return_stack rbx
-      mov rax, [rbx]
-      imul rax, jo_size
-      add rbx, rax
+        mov rax, [rbx]
+        imul rax, jo_size
+        add rbx, rax
       push_return_stack rbx
       next
 
    help__false?branch__not_to_branch:
       pop_return_stack rbx
-      add rbx, jo_size
+        add rbx, jo_size
       push_return_stack rbx
       next
    #+end_src
@@ -5037,14 +5187,14 @@
       每次進入一個函數體的執行
       即 每次將一串珠珠入棧時
       同時在這串珠子底部加上
-      current_free_address$local_variable
+      local_variable$current_free_address
       即 在 explain$function 中需要做特殊處理
     * 這個值在函數退出時
       [即 在 end 這個函數中]
-      用以重置 current_free_address$local_variable
+      用以重置 local_variable$current_free_address
       也就是 釋放在這次函數作用過程中所分配的內存
     * 每次 >:name 的時候
-      都更新 current_free_address$local_variable
+      都更新 local_variable$current_free_address
       以分配內存就行了
     * 也就是說
       return-stack 中的大多數有效值
@@ -5052,7 +5202,7 @@
     * 兩個結尾詞是 end 和 tail_call
       對於 tail_call
       即 對於明顯的尾遞歸調用
-      需要利用棧中的值重置 current_free_address$local_variable
+      需要利用棧中的值重置 local_variable$current_free_address
       但是並不入棧新值
 *** 語法擴展方面的支持
     * 這裏需要識別 >:name 還有 :name 等等
@@ -5073,7 +5223,7 @@
       使用 offset 就行了
     * 底層
       local-data-allocate,jo
-      這個只讓 current_free_address$local_variable 前進
+      這個只讓 local_variable$current_free_address 前進
       而不後退
     * 注意
       最爲重要的特點是
@@ -5122,20 +5272,20 @@
    address$local_variable labeling
       preserve size$local_variable
 
-   current_free_address$local_variable:
+   local_variable$current_free_address:
       xx address$local_variable
    #+end_src
 ** 記 注意結尾詞會初始化局部變量指針
    * 下面的接口函數必須是 primitive-function
      因爲 否則 遇到 end 和 tail_call 的時候
-     current_free_address$local_variable 就又被初始化了
+     local_variable$current_free_address 就又被初始化了
 ** allocate-local-variable
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "allocate-local-variable", allocate_local_variable
       ;; << number -- >>
       pop_argument_stack rax
       imul rax, jo_size
-      add [current_free_address$local_variable], rax
+      add [local_variable$current_free_address], rax
       next
    #+end_src
 ** note many get & set
@@ -5157,7 +5307,7 @@
       add rbx, (jo_size * 2)
       push_return_stack rbx
 
-      mov rbx, [pointer$return_stack - (2 * jo_size)]
+      mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
       add rbx, rdx
    .loop:
       mov rax, [rbx]
@@ -5174,7 +5324,7 @@
       add rbx, (jo_size * 2)
       push_return_stack rbx
 
-      mov rbx, [pointer$return_stack - (2 * jo_size)]
+      mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
       add rbx, rdx
         mov rax, jo_size
         imul rax, rcx
@@ -5204,7 +5354,7 @@
       push_return_stack rbx
 
       mov rax, [pointer$return_stack]
-      mov rbx, [rax - (2 * jo_size)]
+      mov rbx, [rax - unit__return_point + offset__return_point$local_variable]
       add rbx, rdx
    .loop:
       mov rax, [rbx]
@@ -5221,7 +5371,7 @@
       add rbx, (jo_size * 2)
       push_return_stack rbx
       mov rax, [pointer$return_stack]
-      mov rbx, [rax - (2 * jo_size)]
+      mov rbx, [rax - unit__return_point + offset__return_point$local_variable]
 
       add rbx, rdx
         mov rax, jo_size
@@ -5678,7 +5828,7 @@
      直接使用函數就可以了
    * 但是接口必須是 primitive-function
      因爲 否則 遇到 end 和 tail_call 的時候
-     V__local_memory__current_free_address + jo_size 就又被初始化了
+     local_memory 就又被初始化了
 ** 記 使用
    * 在一個函數內
      用 allocate-local-memory 所申請的局部數據空間
@@ -5691,62 +5841,136 @@
      所申請的 allocate-local-memory
      和上一次函數執行過程中
      所申請的 allocate-local-memory 是相同的
-** ><>< *local-memory-x*
+** *local-memory-even*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_memory_x = 1024 * 1024 * 6
+   size$local_memory_even = 1024 * 1024 * 6
 
-   address$local_memory_x labeling
-      preserve size$local_memory_x
+   address$local_memory_even labeling
+      preserve size$local_memory_even
 
-   define_variable "*local-memory-x,current-free-address*", V__local_memory_x__current_free_address
-      xx address$local_memory_x
+   define_variable "*local-memory-even,current-free-address*", V__local_memory_even__current_free_address
+      xx address$local_memory_even
    #+end_src
-** ><>< *local-memory-y*
+** *local-memory-odd*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_memory_y = 1024 * 1024 * 6
+   size$local_memory_odd = 1024 * 1024 * 6
 
-   address$local_memory_y labeling
-      preserve size$local_memory_y
+   address$local_memory_odd labeling
+      preserve size$local_memory_odd
 
-   define_variable "*local-memory-y,current-free-address*", V__local_memory_y__current_free_address
-      xx address$local_memory_y
+   define_variable "*local-memory-odd,current-free-address*", V__local_memory_odd__current_free_address
+      xx address$local_memory_odd
    #+end_src
-** *local-memory*
-   #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_memory = 1024 * 1024 * 6
-
-   address$local_memory labeling
-      preserve size$local_memory
-
-   define_variable "*local-memory,current-free-address*", V__local_memory__current_free_address
-      xx address$local_memory
-   #+end_src
+** 記 奇偶性
+   * 用 返回棧指針 來判斷 奇偶性
+     對 explain$function 來說
+     當前的 return-point 就是 返回棧指針
+     對 結尾珠 還有 下面的兩個函數來說
+     當前的 return-point 就是 返回棧指針 之前的 一個單位
+   * 在偶的 return-point
+     其中 local-memory 域 是 local-memory-even
+     其中 conjugate-local-memory 域 是 local-memory-odd
+     在奇的 return-point 則相反
+   * 函數退出時只重置 local-memory 而不重置 conjugate-local-memory
 ** allocate-local-memory
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "allocate-local-memory", allocate_local_memory
-      ;; << size -- address >>
-      pop_argument_stack rbx
-      mov rax, [V__local_memory__current_free_address + jo_size]
-      push_argument_stack rax
-      add [V__local_memory__current_free_address + jo_size], rbx
-      next
-   #+end_src
-** >< allocate-local-memory
-   #+begin_src fasm
-   define_primitive_function "allocate-local-memory", allocate_local_memory
-      ;; << size -- address >>
-      pop_argument_stack rbx
-      mov rax, [V__local_memory__current_free_address + jo_size]
-      push_argument_stack rax
-      add [V__local_memory__current_free_address + jo_size], rbx
-      next
-   #+end_src
-** >< allocate-conjugate-local-memory
-   #+begin_src fasm
-   define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
-      ;; <<  -- >>
+   match =64bit, machine {
 
+   define_primitive_function "allocate-local-memory", allocate_local_memory
+      ;; << size -- address >>
+      mov rax, pointer$return_stack
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_odd__current_free_address + jo_size], rbx
       next
+
+   .return_stack_even:
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_even__current_free_address + jo_size], rbx
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "allocate-local-memory", allocate_local_memory
+      ;; << size -- address >>
+      mov rax, [pointer$return_stack]
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      next
+
+   .return_stack_even:
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_even__current_free_address + jo_size], rbx
+      next
+
+   }
+   #+end_src
+** allocate-conjugate-local-memory
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   match =64bit, machine {
+
+   define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
+      ;; << size -- address >>
+      mov rax, pointer$return_stack
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_even__current_free_address + jo_size], rbx
+      next
+
+   .return_stack_even:
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      next
+
+   }
+
+   match =32bit, machine {
+
+   define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
+      ;; << size -- address >>
+      mov rax, [pointer$return_stack]
+      sub rax, address$return_stack
+      test rax, unit__return_point
+      jnz .return_stack_even
+
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_even__current_free_address + jo_size], rbx
+      next
+
+   .return_stack_even:
+      pop_argument_stack rbx
+      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      next
+
+   }
    #+end_src
 ** test
    #+begin_src cicada-nymph
