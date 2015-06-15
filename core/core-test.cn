@@ -511,7 +511,7 @@ name-hash-table,report
   "test-name" <string> equal? test
 ; test-do
 
-: "* (testing) <basic-REPL-syntax> if & else & then" .s .l
+: "* (testing) <eval-word-syntax> if & else & then" .s .l
   1
   one? if
     111
@@ -527,7 +527,7 @@ name-hash-table,report
   666 equal? test
 ; test-do
 
-: "* (testing) <basic-REPL-syntax> double-quote" .s .l
+: "* (testing) <eval-word-syntax> double-quote" .s .l
   1
   one? if
     "111"
@@ -544,13 +544,13 @@ name-hash-table,report
 ; test-do
 
 0
-: <basic-REPL-syntax> *testing-variable*
+: <eval-word-syntax> *testing-variable*
 ; test-variable,with-tos
 
-: "* (testing) <basic-REPL-syntax> address" .s .l
+: "* (testing) <eval-word-syntax> address" .s .l
   666
-  address <basic-REPL-syntax> *testing-variable* set
-  <basic-REPL-syntax> *testing-variable*
+  address <eval-word-syntax> *testing-variable* set
+  <eval-word-syntax> *testing-variable*
   666 equal? test
 ; test-do
 
@@ -558,16 +558,16 @@ name-hash-table,report
 address kkk
 >>
 
-: "* (testing) <basic-REPL-syntax> name" .s .l
+: "* (testing) <eval-word-syntax> name" .s .l
   name add
   name->string "add" <string> equal? test
-  name <basic-REPL-syntax> *testing-variable*
-  name->string "<basic-REPL-syntax> *testing-variable*" <string> equal? test
+  name <eval-word-syntax> *testing-variable*
+  name->string "<eval-word-syntax> *testing-variable*" <string> equal? test
   name kkk
   name->string "kkk" <string> equal? test
 ; test-do
 
-: "* (testing) <basic-REPL-syntax> name" .s .l
+: "* (testing) <eval-word-syntax> name" .s .l
   'add
   name->string "add" <string> equal? test
   'kkk
@@ -580,7 +580,7 @@ address kkk
   end
 ; test-function
 
-: "* (testing) <basic-REPL-syntax> title" .s .l
+: "* (testing) <eval-word-syntax> title" .s .l
   <test-title> test-name
   "TEST" <string> equal? test
 ; test-do

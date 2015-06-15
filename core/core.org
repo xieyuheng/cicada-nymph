@@ -86,73 +86,76 @@
      end
    ; define-function
    #+end_src
-* more syntax for definer
-** if & else & then                   :syntax:
-*** 記 條件轉跳
-    * one predicate can make two branchs
-      three predicates can make four branchs
-      three predicates may only make three branchs
-      but indeed there must be an invisible branch
-*** word:[if|else|then]?
-    #+begin_src cicada-nymph :tangle core.cn
-    : word:if?
-      << word[address, length] -- bool >>
-      "if" string-equal?
-      end
-    ; define-function
+* make-jojo-syntax
+** 記 條件轉跳
+   * one predicate can make two branchs
+     three predicates can make four branchs
+     three predicates may only make three branchs
+     but indeed there must be an invisible branch
+** word:[if|else|then]?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:if?
+     << word[address, length] -- bool >>
+     "if" string-equal?
+     end
+   ; define-function
 
-    : word:else?
-      << word[address, length] -- bool >>
-      "else" string-equal?
-      end
-    ; define-function
+   : word:else?
+     << word[address, length] -- bool >>
+     "else" string-equal?
+     end
+   ; define-function
 
-    : word:then?
-      << word[address, length] -- bool >>
-      "then" string-equal?
-      end
-    ; define-function
-    #+end_src
-*** syntax,[if|else|then],make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : syntax,if,make-jojo
-      << jo, string[address, length], word:if --
-         address, jo, string[address, length] >>
-      drop2
-      jo instruction,false?branch
+   : word:then?
+     << word[address, length] -- bool >>
+     "then" string-equal?
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,if
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,if
+     << jo, string[address, length], word:if --
+        address, jo, string[address, length] >>
+     drop2
+     jo instruction,false?branch
+       jojo-area,stay
+     *jojo-area,current-free-address* xxx|swap|x
+     0 jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,else
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,else
+     << address, jo, string[address, length], word:else --
+        address, jo, string[address, length] >>
+     drop2
+     jo instruction,branch
         jojo-area,stay
-      *jojo-area,current-free-address* xxx|swap|x
-      0 jojo-area,stay
-      end
-    ; define-function
-
-    : syntax,else,make-jojo
-      << address, jo, string[address, length], word:else --
-         address, jo, string[address, length] >>
-      drop2
-      jo instruction,branch
-         jojo-area,stay
-      x|swap|xxx
-      *jojo-area,current-free-address* xxxx|swap|x
-      0 jojo-area,stay
-      << address, string[address, length], address >>
-      *jojo-area,current-free-address*
-      over sub *jo-size* div
-      swap set
-      end
-    ; define-function
-
-    : syntax,then,make-jojo
-      << address, jo, string[address, length], word:then --
-         jo, string[address, length] >>
-      drop2
-      x|swap|xxx
-      *jojo-area,current-free-address*
-      over sub *jo-size* div
-      swap set
-      end
-    ; define-function
-    #+end_src
+     x|swap|xxx
+     *jojo-area,current-free-address* xxxx|swap|x
+     0 jojo-area,stay
+     << address, string[address, length], address >>
+     *jojo-area,current-free-address*
+     over sub *jo-size* div
+     swap set
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,then
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,then
+     << address, jo, string[address, length], word:then --
+        jo, string[address, length] >>
+     drop2
+     x|swap|xxx
+     *jojo-area,current-free-address*
+     over sub *jo-size* div
+     swap set
+     end
+   ; define-function
+   #+end_src
 ** test if & else & then
    #+begin_src cicada-nymph :tangle core-test.cn
    : .12
@@ -205,48 +208,46 @@
      end
    ; test-do
    #+end_src
-** loop                               :syntax:
-*** word:loop?
-    #+begin_src cicada-nymph :tangle core.cn
-    : word:loop?
-      << word[address, length] -- bool >>
-      "loop" string-equal?
-      end
-    ; define-function
-    #+end_src
-*** syntax,loop,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : syntax,loop,make-jojo
-      << jo, string[address, length], word:loop --
-         jo, string[address, length] >>
-      drop2
-      jo tail-call
-        jojo-area,stay
-      x|over|xx
-        jojo-area,stay
-      end
-    ; define-function
-    #+end_src
-** recur                              :syntax:
-*** word:recur?
-    #+begin_src cicada-nymph :tangle core.cn
-    : word:recur?
-      << word[address, length] -- bool >>
-      "recur" string-equal?
-      end
-    ; define-function
-    #+end_src
-*** syntax,recur,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : syntax,recur,make-jojo
-      << jo, string[address, length], word:recur --
-         jo, string[address, length] >>
-      drop2
-      x|over|xx
-        jojo-area,stay
-      end
-    ; define-function
-    #+end_src
+** word:loop?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:loop?
+     << word[address, length] -- bool >>
+     "loop" string-equal?
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,loop
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,loop
+     << jo, string[address, length], word:loop --
+        jo, string[address, length] >>
+     drop2
+     jo tail-call
+       jojo-area,stay
+     x|over|xx
+       jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** word:recur?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:recur?
+     << word[address, length] -- bool >>
+     "recur" string-equal?
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,recur
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,recur
+     << jo, string[address, length], word:recur --
+        jo, string[address, length] >>
+     drop2
+     x|over|xx
+       jojo-area,stay
+     end
+   ; define-function
+   #+end_src
 ** test loop & recur by factorial
    #+begin_src cicada-nymph :tangle core-test.cn
    : recur-factorial
@@ -344,11 +345,11 @@
    : more,rule-set,make-jojo
      << -- >>
      *rule-set,make-jojo*
-     dup jo word:if?    jo syntax,if,make-jojo    rule,add
-     dup jo word:else?  jo syntax,else,make-jojo  rule,add
-     dup jo word:then?  jo syntax,then,make-jojo  rule,add
-     dup jo word:loop?  jo syntax,loop,make-jojo  rule,add
-         jo word:recur? jo syntax,recur,make-jojo rule,add
+     dup jo word:if?    jo make-jojo-syntax,if    rule,add
+     dup jo word:else?  jo make-jojo-syntax,else  rule,add
+     dup jo word:then?  jo make-jojo-syntax,then  rule,add
+     dup jo word:loop?  jo make-jojo-syntax,loop  rule,add
+         jo word:recur? jo make-jojo-syntax,recur rule,add
      end
    ; define-function
    more,rule-set,make-jojo
@@ -867,7 +868,8 @@
       then
     ; test-do
     #+end_src
-* name-record
+* -----------------------------------
+* global-naming-stack & name-record
 ** note global-naming-stack
    * (define-*) push
      (undo) pop
@@ -1050,6 +1052,128 @@
      "testing--make-jojo-syntax,quote" <string> equal? test
    ; test-do
    #+end_src
+* scope-stack & offset-record
+** *scope-stack*
+   #+begin_src cicada-nymph :tangle core.cn
+   10 1024 mul
+   : *scope-stack,size*
+   ; define-variable,with-tos
+
+   2 *jo-size* mul
+   : *scope-stack,unit*
+   ; define-variable,with-tos
+
+   *scope-stack,size*
+   *scope-stack,unit* mul allocate-memory
+   : *scope-stack*
+   ; define-variable,with-tos
+
+   *scope-stack*
+   : *scope-stack,pointer*
+   ; define-variable,with-tos
+   #+end_src
+** note offset-record
+   * structure
+     | offset-record | name   |
+     |               | offset |
+     specially
+     | scope-delimiter | 0 |
+     |                 | 0 |
+** offset-record,[get|set]-name
+   #+begin_src cicada-nymph :tangle core.cn
+   : offset-record,get-name
+     << offset-record -- name >>
+     get
+     end
+   ; define-function
+
+   : offset-record,set-name
+     << name, offset-record -- >>
+     set
+     end
+   ; define-function
+   #+end_src
+** offset-record,[get|set]-offset
+   #+begin_src cicada-nymph :tangle core.cn
+   : offset-record,get-offset
+     << offset-record -- offset >>
+     *jo-size* add get
+     end
+   ; define-function
+
+   : offset-record,set-offset
+     << offset, offset-record -- >>
+     *jo-size* add set
+     end
+   ; define-function
+   #+end_src
+** offset-record,scope-delimiter?
+   #+begin_src cicada-nymph :tangle core.cn
+   : offset-record,scope-delimiter?
+     << offset-record -- bool >>
+     offset-record,get-name zero?
+     end
+   ; define-function
+   #+end_src
+** scope-stack,find
+   * from the pointer to the base
+   #+begin_src cicada-nymph :tangle core.cn
+   : scope-stack,find,loop
+     << name, cursor
+        -- offset-record, true
+        -- false >>
+     dup *scope-stack* equal? if
+       drop2
+       false
+       end
+     then
+     *scope-stack,unit* sub >:cursor
+     >:name
+     :cursor offset-record,get-name
+     :name equal? if
+       :cursor
+       true
+       end
+     then
+     :name
+     :cursor
+     loop
+   ; define-function
+
+   : scope-stack,find
+     << name
+        -- offset-record, true
+        -- false >>
+     *scope-stack,pointer*
+     scope-stack,find,loop
+     end
+   ; define-function
+   #+end_src
+** scope-stack,get-current-offset
+   #+begin_src cicada-nymph :tangle core.cn
+   : scope-stack,get-current-offset
+     << -- offset >>
+     *scope-stack* *scope-stack,pointer* equal? if
+       "* (scope-stack,get-current-offset) fail" .s .l
+       "  for the scope-stack is empty" .s .l
+       end
+     then
+     *scope-stack,pointer*
+     *scope-stack,unit* sub
+     dup offset-record,scope-delimiter? if
+       drop
+       0
+       end
+     then
+     dup
+     offset-record,get-name
+     name->string count-front-colon *jo-size* mul
+     swap
+     offset-record,get-offset
+     add
+     end
+   ; define-function
+   #+end_src
 * await & awake
 ** note notation
    * table
@@ -1077,9 +1201,9 @@
 ** note action
    * structure
      | action | function       |
-     |            | argument-stack |
-     |            | return-stack   |
-     |            | name           |
+     |        | argument-stack |
+     |        | return-stack   |
+     |        | name           |
 ** action,[get|set]-function
    #+begin_src cicada-nymph :tangle core.cn
    : action,get-function
@@ -1149,7 +1273,7 @@
    #+begin_src cicada-nymph :tangle core.cn
    : awaiting-stack,find,loop
      << name, cursor
-        -- action true
+        -- action, true
         -- false >>
      dup *awaiting-stack* equal? if
        drop2
@@ -1171,7 +1295,7 @@
 
    : awaiting-stack,find
      << name
-        -- action true
+        -- action, true
         -- false >>
      *awaiting-stack,pointer*
      awaiting-stack,find,loop
@@ -1315,9 +1439,9 @@
      end
    ; define-function
    #+end_src
-** syntax,bye,basic-REPL
+** eval-word-syntax,bye
    #+begin_src cicada-nymph :tangle core.cn
-   : syntax,bye,basic-REPL
+   : eval-word-syntax,bye
      << word:bye -- >>
      drop2
      'bye,basic-REPL awake
@@ -2035,6 +2159,80 @@
      equal? and test
    ; test-do
    #+end_src
+* make-jojo
+** make-jojo,dispatch-word            :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,dispatch-word
+     << jo, string[address, length], word[address, length] --
+        jo, string[address, length] >>
+     dup2 find-syntax if
+       apply
+       end
+     then
+     dup2 name-hash-table,find-jo if
+       xx|swap|x drop2
+       jojo-area,stay
+       end
+     then
+     "* (make-jojo) meets undefined word : " .s .s .l
+     global-naming-stack,delete-last-record
+     'make-jojo,dispatch-word,fail awake
+   ; define-function
+   #+end_src
+** make-jojo,dispatch-word,fail
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,dispatch-word,fail
+     "* (make-jojo,dispatch-word,fail)" .s .l
+     drop-syntax-stack
+     action,reset-the-stack
+     << scope-stack-pointer -- >>
+     address *scope-stack,pointer* set
+     'undo-make-jojo awake
+   ; define-function
+   #+end_src
+** make-jojo                          :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo,loop
+     << jo, string[address, length] -- >>
+     dup2 space-string? if
+       drop2
+       drop
+       end
+     then
+     dup2
+     string,word-tail
+     xx|swap|xx
+     string,word
+     make-jojo,dispatch-word
+     loop
+   ; define-function
+
+   : make-jojo
+     << jo, string[address, length] -- >>
+     >::string
+     >:jo
+
+     << this is an ad hoc
+     >> local-variable-table,clear
+
+     *scope-stack,pointer* >:scope-stack-pointer
+     0 :scope-stack-pointer offset-record,set-name
+     0 :scope-stack-pointer offset-record,set-offset
+     *scope-stack,unit* address *scope-stack,pointer* add-set
+
+     :scope-stack-pointer
+
+     jo make-jojo,dispatch-word,fail
+     'make-jojo,dispatch-word,fail await
+
+     *rule-set,make-jojo* push-syntax-stack
+     :jo ::string make-jojo,loop
+     drop-syntax-stack
+
+     address *scope-stack,pointer* set
+     end
+   ; define-function
+   #+end_src
 * define-function
 ** <word>?
    #+begin_src cicada-nymph :tangle core.cn
@@ -2056,67 +2254,6 @@
      end
    ; define-function
    #+end_src
-** make-jojo                          :redefine:
-*** 記 ad hoc
-    * 這裏對 name-hash-table 的 undo 是 ad hoc
-      因爲沒法重新定義 (!undo-make-jojo)
-      因爲有太多的函數調用它了
-    * 只有當有自己的匯編器的時候 才能解除這個 ad hoc
-    * 並且
-      此時只有對 *link* 的 undo
-      但是沒有對 (define-function,with-title) 中的
-      :address,link,title 的 undo
-      這是錯誤的 這導致 :address,link,title 在不必要地增長
-      但是這不是知名的錯誤
-      因爲
-      在調用的時候 用的是 name-hash-table 來做查找
-      而不是用 link 來查找
-*** make-jojo,dispatch-word
-    #+begin_src cicada-nymph :tangle core.cn
-    : make-jojo,dispatch-word
-      << jo, string[address, length], word[address, length] --
-         jo, string[address, length] >>
-      dup2 find-syntax if
-        apply
-        end
-      then
-      dup2 name-hash-table,find-jo if
-        xx|swap|x drop2
-        jojo-area,stay
-        end
-      then
-      "* (make-jojo) meets undefined word : " .s .s .l
-      global-naming-stack,delete-last-record
-      'undo-make-jojo awake
-    ; define-function
-    #+end_src
-*** make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : make-jojo,loop
-      << jo, string[address, length] -- >>
-      dup2 space-string? if
-        drop2
-        drop
-        end
-      then
-      dup2
-      string,word-tail
-      xx|swap|xx
-      string,word
-      make-jojo,dispatch-word
-      loop
-    ; define-function
-
-    : make-jojo
-      << jo, string[address, length] -- >>
-      local-variable-table,clear
-      *rule-set,make-jojo*
-      push-syntax-stack
-      make-jojo,loop
-      drop-syntax-stack
-      end
-    ; define-function
-    #+end_src
 ** init,name-hash-table,by-link
    * the function should be executed right after
      (define-function) is redefined
@@ -2303,15 +2440,246 @@
 
    test,testing-undefine
    #+end_src
-* to use the new naming mechanism
-  * 這裏的函數需要處理 鏈 中的重複定義的 珠
-    重複定義者 只有很少的幾個
-    一是 make-jojo 以及相關的
-    一是 define-function
-  #+begin_src cicada-nymph :tangle core.cn
-  *link* init,name-hash-table,by-link
-  basic-REPL
-  #+end_src
+* *to use the new naming mechanism*
+** note
+   * 這裏的函數需要處理 鏈 中的重複定義的 珠
+     重複定義者 只有很少的幾個
+     一是 make-jojo 以及相關的
+     一是 define-function
+** switch
+   #+begin_src cicada-nymph :tangle core.cn
+   *link* init,name-hash-table,by-link
+   basic-REPL
+   #+end_src
+* -----------------------------------
+* fix syntax about local-variable
+** make-jojo-syntax,local-variable-get :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,local-variable-get
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     dup2 string->name scope-stack,find if
+       jo instruction,local-variable,n-get
+         jojo-area,stay
+       << offset >>
+       offset-record,get-offset
+         jojo-area,stay
+       << number >>
+       count-front-colon
+         jojo-area,stay
+       end
+     then
+     "* (make-jojo-syntax,local-variable-get)" .s .l
+     "  local-variable not bound : " .s
+        .s .l
+     'undo-make-jojo await
+   ; define-function
+   #+end_src
+** make-jojo-syntax,local-variable-set :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,local-variable-set
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     string,byte-tail
+     >::local-variable-name
+     ::local-variable-name count-front-colon >:number
+     ::local-variable-name string->name >:name
+
+     :name scope-stack,find if
+       jo instruction,local-variable,n-set
+         jojo-area,stay
+       << offset >>
+       offset-record,get-offset
+         jojo-area,stay
+       :number
+         jojo-area,stay
+       end
+     then
+
+     scope-stack,get-current-offset >:current-offset
+     :current-offset
+     *scope-stack,pointer*
+     offset-record,set-offset
+     :name
+     *scope-stack,pointer*
+     offset-record,set-name
+     *scope-stack,unit* address *scope-stack,pointer* add-set
+
+     jo instruction,literal
+       jojo-area,stay
+     :number
+       jojo-area,stay
+     jo allocate-local-variable
+       jojo-area,stay
+
+     jo instruction,local-variable,n-set
+       jojo-area,stay
+     :current-offset
+       jojo-area,stay
+     :number
+       jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,if                :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,if
+     << jo, string[address, length], word:if --
+        scope-stack-pointer,
+        address,
+        jo, string[address, length] >>
+     drop2
+     >::string
+     >:jo
+
+     jo instruction,false?branch
+       jojo-area,stay
+
+     *scope-stack,pointer*
+     *jojo-area,current-free-address*
+     :jo
+     ::string
+
+     0 jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,else              :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,else
+     << scope-stack-pointer,
+        address,
+        jo, string[address, length], word:else --
+        scope-stack-pointer,
+        address,
+        jo, string[address, length] >>
+     drop2
+     >::string
+     >:jo
+     >:address
+     >:scope-stack-pointer
+
+     :scope-stack-pointer address *scope-stack,pointer* set
+
+     jo instruction,branch
+       jojo-area,stay
+
+     *scope-stack,pointer*
+     *jojo-area,current-free-address*
+     :jo
+     ::string
+
+     0 jojo-area,stay
+
+     <<
+     set offset of (instruction,false?branch)
+     over (instruction,branch) and its offset
+     >>
+     *jojo-area,current-free-address* :address sub
+     *jo-size* div
+     :address set
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,then              :redefine:
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,then
+     << scope-stack-pointer,
+        address,
+        jo, string[address, length], word:then --
+        jo, string[address, length] >>
+     drop2
+     >::string
+     >:jo
+     >:address
+     >:scope-stack-pointer
+
+     *jojo-area,current-free-address* :address sub
+     *jo-size* div
+     :address set
+
+     :jo
+     ::string
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     *rule-set,make-jojo*
+     jo local-variable-get-word?
+     jo make-jojo-syntax,local-variable-get
+     rule,add
+     *rule-set,make-jojo*
+     jo local-variable-set-word?
+     jo make-jojo-syntax,local-variable-set
+     rule,add
+     *rule-set,make-jojo*
+     dup jo word:if?    jo make-jojo-syntax,if    rule,add
+     dup jo word:else?  jo make-jojo-syntax,else  rule,add
+         jo word:then?  jo make-jojo-syntax,then  rule,add
+     end
+   ; define-function
+   more,rule-set,make-jojo
+   #+end_src
+* print-argument-stack
+** print-argument-stack
+   #+begin_src cicada-nymph :tangle core.cn
+   : print-argument-stack,loop
+     << address, counter -- >>
+     dup zero? if
+       drop2
+       end
+     then
+     sub1 swap
+       dup get .
+     *jo-size* add
+     swap
+     loop
+   ; define-function
+
+   : print-argument-stack
+     << -- >>
+     snapshot-the-stack-pointer
+     *the-stack-pointer-snapshot*
+     *the-stack* greater-or-equal? if
+       *the-stack*   << address as return value >>
+       *the-stack-pointer-snapshot* *the-stack* sub
+       *jo-size* div << counter as return value >>
+       print-argument-stack,loop
+       end
+     then
+     "below the stack " .s
+     end
+   ; define-function
+   #+end_src
+** print-argument-stack,pretty
+   #+begin_src cicada-nymph :tangle core.cn
+   : print-argument-stack,pretty
+     << -- >>
+     snapshot-the-stack-pointer
+     .l
+     "  * " .s
+        *the-stack-pointer-snapshot*
+        *the-stack* sub
+        << ad hoc for the BUG of div >>
+        dup negative? if
+          negate
+          *jo-size* div
+          negate
+        else
+          *jo-size* div
+        then
+        .i
+     " * " .s
+     " -- " .s
+       print-argument-stack
+     "--" .s
+     .l
+     end
+   ; define-function
+   #+end_src
 * define-variable,with-tos
 ** define-variable,with-tos           :redefine:
    * not undo is needed for define-variable,with-tos
@@ -2425,374 +2793,393 @@
    "ab" "ad" alias
    >>
    #+end_src
-* more syntax for definer
-** <title>                            :syntax:
-*** note
-    * <title> in *rule-set,make-jojo*
-      <title> name
-      set a jo into *jojo-area*
-    * <title> in *rule-set,eval-word*
-      <title> name
-      execute a jo
-*** name-hash-table,find-jo,with-title
-    #+begin_src cicada-nymph :tangle core.cn
-    : name-hash-table,find-jo,with-title
-      << title[address, length], word[address, length]
-         -- jo, true
-         -- false >>
-      512 allocate-local-memory >:buffer
-      " " xx|swap|xx
-      :buffer
-      3 n-string->buffer! >:length
-      :buffer
-      :length
-      name-hash-table,search if
-      else
-        drop
-        false
+* make-jojo-syntax,title
+** note
+   * <title> in *rule-set,make-jojo*
+     <title> name
+     set a jo into *jojo-area*
+   * <title> in *rule-set,eval-word*
+     <title> name
+     execute a jo
+** name-hash-table,find-jo,with-title
+   #+begin_src cicada-nymph :tangle core.cn
+   : name-hash-table,find-jo,with-title
+     << title[address, length], word[address, length]
+        -- jo, true
+        -- false >>
+     512 allocate-local-memory >:buffer
+     " " xx|swap|xx
+     :buffer
+     3 n-string->buffer! >:length
+     :buffer
+     :length
+     name-hash-table,search if
+     else
+       drop
+       false
+       end
+     then
+     dup name,used-as-jo? if
+       name,get-jo
+       true
+       end
+     then
+     drop
+     false
+     end
+   ; define-function
+   #+end_src
+** make-jojo-syntax,title
+   #+begin_src cicada-nymph :tangle core.cn
+   : make-jojo-syntax,title
+     << jo, string[address, length], <title>[address, length] --
+        jo, string[address, length] >>
+     >::title
+     >::string
+     >:jo
+     ::title ::string string,word
+     name-hash-table,find-jo,with-title if
+       jojo-area,stay
+     else
+       "* (make-jojo-syntax,title) meet undefined" .s .l
+       "  title : " .s ::title .s .l
+       "  name  : " .s ::string string,word .s .l
+       global-naming-stack,delete-last-record
+       'undo-make-jojo awake
+     then
+     :jo
+     ::string string,word-tail
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     *rule-set,make-jojo*
+     jo <word>? jo make-jojo-syntax,title rule,add
+     end
+   ; define-function
+   more,rule-set,make-jojo
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   : <test-title> test-name
+     << -- >>
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : atest
+     << -- >>
+     <test-title> test-name
+     end
+   ; define-function
+
+   atest
+
+
+   : <test-title> test-name,testing-undefine
+     << -- >>
+     testing-undefine
+     "TEST" .s .l
+     end
+   ; define-function
+
+   : test,testing-undefine
+     << -- >>
+     <test-title> test-name,testing-undefine
+     end
+   ; define-function
+
+   test,testing-undefine
+   #+end_src
+* -----------------------------------
+* <make-jojo-syntax> square-bar
+** string,find-word
+   #+begin_src cicada-nymph :tangle core.cn
+   : string,find-word
+     << string[address, length], word[address, length]
+        -- sub-string[address, length], true
+        -- false >>
+     xx|over|xx space-string? if
+       drop2 drop2
+       false
+       end
+     then
+     xx|over|xx string,word
+     xx|over|xx string-equal? if
+       drop2
+       true
+       end
+     then
+     xx|swap|xx string,word-tail
+     xx|swap|xx
+     loop
+   ; define-function
+   #+end_src
+** test string,find-word
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) string,find-word" .s .l
+     "111 222 333" "222" string,find-word if
+       " 222 333" <string> equal? test
+     else
+       false test
+     then
+
+     "111 222 333" "444" string,find-word if
+       .l .s .l
+       false test
+     else
+       true test
+     then
+
+     "111 222 [] 333" "[" string,find-word if
+       " [] 333" <string> equal? test
+     else
+       false test
+     then
+   ; test-do
+   #+end_src
+** note side-effect
+   * side-effect on function [unnamed or named] is actually not so needed
+     for function is mainly used to encode algorithm
+   * but side-effect on function is always possible when needed
+** note scope of named-local-variable
+   * in named function or unnamed function
+     the scope of named-local-variable is linear
+** word:square-bar?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-bar?
+     << word[address, length] -- bool >>
+     "[" string-equal?
+     end
+   ; define-function
+   #+end_src
+** word:square-ket?
+   #+begin_src cicada-nymph :tangle core.cn
+   : word:square-ket?
+     << word[address, length] -- bool >>
+     "]" string-equal?
+     end
+   ; define-function
+   #+end_src
+** note memory usage
+   * for the array can be nested
+     we must allocate the memory in place
+     a branch is there helping us to achieve this
+   * [dup drop end]
+     |-------------------|
+     | branch            |
+     | offset to jo      |
+     |-------------------|
+     | <jo-head>         |
+     |-------------------|
+     | dup               |
+     | drop              |
+     | end               |
+     |-------------------|
+     | literal           |
+     | address of the jo |
+     |-------------------|
+** <make-jojo-syntax> square-bar
+   #+begin_src cicada-nymph :tangle core.cn
+   : <make-jojo-syntax> square-bar
+     << jo, string[address, length], word:square-bar --
+        scope-stack-pointer,
+        offset-address,
+        new-jo,
+        jo, string[address, length] >>
+     drop2
+     >::string
+     >:jo
+
+     jo instruction,branch
+       jojo-area,stay
+     *jojo-area,current-free-address* >:offset-address
+     0 jojo-area,stay
+
+     *explainer,function* 0
+     make-jo-head >:new-jo
+
+     *scope-stack,pointer* >:scope-stack-pointer
+     0
+     :scope-stack-pointer
+     offset-record,set-name
+     0
+     :scope-stack-pointer
+     offset-record,set-offset
+     *scope-stack,unit* address *scope-stack,pointer* add-set
+
+     :scope-stack-pointer
+     :offset-address
+     :new-jo
+     :jo
+     ::string
+     end
+   ; define-function
+   #+end_src
+** <make-jojo-syntax> square-ket
+   #+begin_src cicada-nymph :tangle core.cn
+   : <make-jojo-syntax> square-ket
+     << scope-stack-pointer,
+        offset-address,
+        new-jo,
+        jo, string[address, length], word:square-ket --
+        jo, string[address, length] >>
+     drop2
+     >::string
+     >:jo
+     >:new-jo
+     >:offset-address
+     >:scope-stack-pointer
+
+     :scope-stack-pointer address *scope-stack,pointer* set
+
+     *jojo-area,current-free-address*
+     :offset-address sub
+     *jo-size* div
+     :offset-address set
+
+     jo instruction,literal
+       jojo-area,stay
+     :new-jo
+       jojo-area,stay
+
+     :jo
+     ::string
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     *rule-set,make-jojo*
+     dup jo word:square-bar? jo <make-jojo-syntax> square-bar rule,add
+         jo word:square-ket? jo <make-jojo-syntax> square-ket rule,add
+     end
+   ; define-function
+
+   more,rule-set,make-jojo
+   #+end_src
+** test square-bar & square-ket by factorial
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : testing-square-bar
+     ["testing square-bar & square-ket" end]
+     end
+   ; test-function
+
+   : "* (testing) square-bar & square-ket" .s .l
+     testing-square-bar apply
+     "testing square-bar & square-ket"
+     <string> equal? test
+   ; test-do
+
+   : apply-factorial
+     << number -- number >>
+     [dup
+      one? if
         end
       then
-      dup name,used-as-jo? if
-        name,get-jo
-        true
-        end
-      then
-      drop
-      false
-      end
-    ; define-function
-    #+end_src
-*** syntax,title,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : syntax,title,make-jojo
-      << jo, string[address, length], <title>[address, length] --
-         jo, string[address, length] >>
-      >::title
-      >::string
-      >:jo
-      ::title ::string string,word
-      name-hash-table,find-jo,with-title if
-        jojo-area,stay
-      else
-        "* (syntax,title,make-jojo) meet undefined" .s .l
-        "  title : " .s ::title .s .l
-        "  name  : " .s ::string string,word .s .l
-        global-naming-stack,delete-last-record
-        'undo-make-jojo awake
-      then
-      :jo
-      ::string string,word-tail
-      end
-    ; define-function
-    #+end_src
-*** more,rule-set,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : more,rule-set,make-jojo
-      << -- >>
-      *rule-set,make-jojo*
-      jo <word>? jo syntax,title,make-jojo rule,add
-      end
-    ; define-function
-    more,rule-set,make-jojo
-    #+end_src
-*** test
-    #+begin_src cicada-nymph
-    : <test-title> test-name
-      << -- >>
-      "TEST" .s .l
-      end
-    ; define-function
+      dup sub1 recur
+      mul
+      end] apply
+     end
+   ; test-function
 
-    : atest
-      << -- >>
-      <test-title> test-name
-      end
-    ; define-function
+   : "* (testing) square-bar & square-ket by factorial" .s .l
+     1 apply-factorial 1   equal?
+     2 apply-factorial 2   equal? and
+     3 apply-factorial 6   equal? and
+     4 apply-factorial 24  equal? and
+     5 apply-factorial 120 equal? and
+     6 apply-factorial 720 equal? and test
+     end
+   ; test-do
+   #+end_src
+** 記 大喜過望
+   * 當有了匿名函數之後
+     我就可以定義各種遞歸組合子來做函數式編程了
+     但是 沒有類型編碼 也沒有動態內存管理
+     cicada-nymph 中
+     並沒有 鏈表 這個有趣的數據結構 用以實踐函數式編程
+   * 需要做的是
+     去尋找一些 有趣的
+     能夠在 cicada-nymph 中以簡單方式實現的
+     具有良好遞歸定義的數據結構
+* <make-jojo-syntax> name
+** <make-jojo-syntax> name
+   #+begin_src cicada-nymph :tangle core.cn
+   : <make-jojo-syntax> name
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     drop2
+     jo instruction,literal
+       jojo-area,stay
+     dup2
+     string,word
+     string->name
+       jojo-area,stay
+     string,word-tail
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     *rule-set,make-jojo*
+     ["name" string-equal? end] jo <make-jojo-syntax> name
+     rule,add
+     end
+   ; define-function
+   more,rule-set,make-jojo
+   #+end_src
+** test <make-jojo-syntax> name
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : <make-jojo-syntax> name,test
+     << -- string[address, length] >>
+     name test-name name->string
+     end
+   ; test-function
 
-    atest
-
-
-    : <test-title> test-name,testing-undefine
-      << -- >>
-      testing-undefine
-      "TEST" .s .l
-      end
-    ; define-function
-
-    : test,testing-undefine
-      << -- >>
-      <test-title> test-name,testing-undefine
-      end
-    ; define-function
-
-    test,testing-undefine
-    #+end_src
-** unnamed function                   :syntax:
-*** string,find-word
-    #+begin_src cicada-nymph :tangle core.cn
-    : string,find-word
-      << string[address, length], word[address, length]
-         -- sub-string[address, length], true
-         -- false >>
-      xx|over|xx space-string? if
-        drop2 drop2
-        false
-        end
-      then
-      xx|over|xx string,word
-      xx|over|xx string-equal? if
-        drop2
-        true
-        end
-      then
-      xx|swap|xx string,word-tail
-      xx|swap|xx
-      loop
-    ; define-function
-    #+end_src
-*** test string,find-word
-    #+begin_src cicada-nymph :tangle core-test.cn
-    : "* (testing) string,find-word" .s .l
-      "111 222 333" "222" string,find-word if
-        " 222 333" <string> equal? test
-      else
-        false test
-      then
-
-      "111 222 333" "444" string,find-word if
-        .l .s .l
-        false test
-      else
-        true test
-      then
-
-      "111 222 [] 333" "[" string,find-word if
-        " [] 333" <string> equal? test
-      else
-        false test
-      then
-    ; test-do
-    #+end_src
-*** note side-effect
-    * side-effect on function [unnamed or named] is actually not so needed
-      for function is mainly used to encode algorithm
-    * but side-effect on function is always possible when needed
-*** note scope of named-local-variable
-    * in named function or unnamed function
-      the scope of named-local-variable is linear
-*** word:square-bar?
-    #+begin_src cicada-nymph :tangle core.cn
-    : word:square-bar?
-      << word[address, length] -- bool >>
-      "[" string-equal?
-      end
-    ; define-function
-    #+end_src
-*** word:square-ket?
-    #+begin_src cicada-nymph :tangle core.cn
-    : word:square-ket?
-      << word[address, length] -- bool >>
-      "]" string-equal?
-      end
-    ; define-function
-    #+end_src
-*** note memory usage
-    * for the array can be nested
-      we must allocate the memory in place
-      a branch is there helping us to achieve this
-    * [dup drop end]
-      |-------------------|
-      | branch            |
-      | offset to jo      |
-      |-------------------|
-      | <jo-head>         |
-      |-------------------|
-      | dup               |
-      | drop              |
-      | end               |
-      |-------------------|
-      | literal           |
-      | address of the jo |
-      |-------------------|
-*** <make-jojo-syntax> square-bar
-    #+begin_src cicada-nymph :tangle core.cn
-    : <make-jojo-syntax> square-bar
-      << jo, string[address, length], word:square-bar --
-         jo, string[address, length] >>
-      drop2
-      >::string
-      >:jo
-
-      jo instruction,branch
-        jojo-area,stay
-      *jojo-area,current-free-address* >:offset-address
-      0 jojo-area,stay
-
-      *explainer,function* 0
-      make-jo-head >:new-jo
-
-      :offset-address
-      :new-jo
-      :jo
-      ::string
-      end
-    ; define-function
-    #+end_src
-*** <make-jojo-syntax> square-ket
-    #+begin_src cicada-nymph :tangle core.cn
-    : <make-jojo-syntax> square-ket
-      << offset-address, new-jo,
-         jo, string[address, length], word:square-ket --
-         jo, string[address, length] >>
-      drop2
-      >::string
-      >:jo
-      >:new-jo
-      >:offset-address
-
-      *jojo-area,current-free-address*
-      :offset-address sub
-      *jo-size* div
-      :offset-address set
-
-      jo instruction,literal
-        jojo-area,stay
-      :new-jo
-        jojo-area,stay
-
-      :jo
-      ::string
-      end
-    ; define-function
-    #+end_src
-*** more,rule-set,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : more,rule-set,make-jojo
-      << -- >>
-      *rule-set,make-jojo*
-      dup jo word:square-bar? jo <make-jojo-syntax> square-bar rule,add
-          jo word:square-ket? jo <make-jojo-syntax> square-ket rule,add
-      end
-    ; define-function
-
-    more,rule-set,make-jojo
-    #+end_src
-*** test square-bar & square-ket by factorial
-    #+begin_src cicada-nymph :tangle core-test.cn
-    : testing-square-bar
-      ["testing square-bar & square-ket" end]
-      end
-    ; test-function
-
-    : "* (testing) square-bar & square-ket" .s .l
-      testing-square-bar apply
-      "testing square-bar & square-ket"
-      <string> equal? test
-    ; test-do
-
-    : apply-factorial
-      << number -- number >>
-      [dup
-       one? if
-         end
-       then
-       dup sub1 recur
-       mul
-       end] apply
-      end
-    ; test-function
-
-    : "* (testing) square-bar & square-ket by factorial" .s .l
-      1 apply-factorial 1   equal?
-      2 apply-factorial 2   equal? and
-      3 apply-factorial 6   equal? and
-      4 apply-factorial 24  equal? and
-      5 apply-factorial 120 equal? and
-      6 apply-factorial 720 equal? and test
-      end
-    ; test-do
-    #+end_src
-*** 記 大喜過望
-    * 當有了匿名函數之後
-      我就可以定義各種遞歸組合子來做函數式編程了
-      但是 沒有類型編碼 也沒有動態內存管理
-      cicada-nymph 中
-      並沒有 鏈表 這個有趣的數據結構 用以實踐函數式編程
-    * 需要做的是
-      去尋找一些 有趣的
-      能夠在 cicada-nymph 中以簡單方式實現的
-      具有良好遞歸定義的數據結構
-** name                               :syntax:
-*** <make-jojo-syntax> name
-    #+begin_src cicada-nymph :tangle core.cn
-    : <make-jojo-syntax> name
-      << string[address, length], word[address, length] --
-         string[address, length] >>
-      drop2
-      jo instruction,literal
-        jojo-area,stay
-      dup2
-      string,word
-      string->name
-        jojo-area,stay
-      string,word-tail
-      end
-    ; define-function
-    #+end_src
-*** more,rule-set,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : more,rule-set,make-jojo
-      << -- >>
-      *rule-set,make-jojo*
-      ["name" string-equal? end] jo <make-jojo-syntax> name
-      rule,add
-      end
-    ; define-function
-    more,rule-set,make-jojo
-    #+end_src
-*** test <make-jojo-syntax> name
-    #+begin_src cicada-nymph :tangle core-test.cn
-    : <make-jojo-syntax> name,test
-      << -- string[address, length] >>
-      name test-name name->string
-      end
-    ; test-function
-
-    : "* (testing) <make-jojo-syntax> name" .s .l
-      <make-jojo-syntax> name,test
-      "test-name" <string> equal? test
-    ; test-do
-    #+end_src
-** base#wild-integer-string           :syntax:
-*** <make-jojo-syntax> base#wild-integer-string
-    #+begin_src cicada-nymph :tangle core.cn
-    : <make-jojo-syntax> base#wild-integer-string
-      << string[address, length], word[address, length] --
-         string[address, length] >>
-      jo instruction,literal
-        jojo-area,stay
-      base#wild-integer-string->integer
-        jojo-area,stay
-      end
-    ; define-function
-    #+end_src
-*** more,rule-set,make-jojo
-    #+begin_src cicada-nymph :tangle core.cn
-    : more,rule-set,make-jojo
-      << -- >>
-      *rule-set,make-jojo*
-      jo base#wild-integer-string?
-      jo <make-jojo-syntax> base#wild-integer-string
-      rule,add
-      end
-    ; define-function
-    more,rule-set,make-jojo
-    #+end_src
-* more syntax for REPL
+   : "* (testing) <make-jojo-syntax> name" .s .l
+     <make-jojo-syntax> name,test
+     "test-name" <string> equal? test
+   ; test-do
+   #+end_src
+* <make-jojo-syntax> base#wild-integer-string
+** <make-jojo-syntax> base#wild-integer-string
+   #+begin_src cicada-nymph :tangle core.cn
+   : <make-jojo-syntax> base#wild-integer-string
+     << string[address, length], word[address, length] --
+        string[address, length] >>
+     jo instruction,literal
+       jojo-area,stay
+     base#wild-integer-string->integer
+       jojo-area,stay
+     end
+   ; define-function
+   #+end_src
+** more,rule-set,make-jojo
+   #+begin_src cicada-nymph :tangle core.cn
+   : more,rule-set,make-jojo
+     << -- >>
+     *rule-set,make-jojo*
+     jo base#wild-integer-string?
+     jo <make-jojo-syntax> base#wild-integer-string
+     rule,add
+     end
+   ; define-function
+   more,rule-set,make-jojo
+   #+end_src
+* -----------------------------------
+* <eval-word-syntax>
 ** jo                                 :syntax:
-*** <basic-REPL-syntax> jo
+*** <eval-word-syntax> jo
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> jo
+    : <eval-word-syntax> jo
       << word:jo -- jo >>
       drop2
       read-word
@@ -2812,7 +3199,7 @@
       ::word name-hash-table,find-jo if
         end
       then
-      "* (<basic-REPL-syntax> jo) meet undefined word after jo : " .s ::word .s .l
+      "* (<eval-word-syntax> jo) meet undefined word after jo : " .s ::word .s .l
       end
     ; define-function
     #+end_src
@@ -2821,11 +3208,11 @@
     : more,rule-set,basic-REPL
       << -- >>
       *rule-set,eval-word*
-      ["bye" string-equal? end] jo syntax,bye,basic-REPL
+      ["bye" string-equal? end] jo eval-word-syntax,bye
       rule,add
 
       *rule-set,eval-word*
-      ["jo" string-equal? end] jo <basic-REPL-syntax> jo
+      ["jo" string-equal? end] jo <eval-word-syntax> jo
       rule,add
       end
     ; define-function
@@ -2845,9 +3232,9 @@
       this is because (eval-word) calls (end)
       and the jojo (eval-word) is pop out of return-stack
       just like meet (end) in the function-body of (eval-word)
-*** <basic-REPL-syntax> if,meet-true
+*** <eval-word-syntax> if,meet-true
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> if,meet-true,else
+    : <eval-word-syntax> if,meet-true,else
       << -- >>
       read-word
       "then" string-equal? if
@@ -2856,7 +3243,7 @@
       loop
     ; define-function
 
-    : <basic-REPL-syntax> if,meet-true
+    : <eval-word-syntax> if,meet-true
       << -- >>
       read-word
       dup2 "then" string-equal? if
@@ -2865,16 +3252,16 @@
       then
       dup2 "else" string-equal? if
         drop2
-        <basic-REPL-syntax> if,meet-true,else
+        <eval-word-syntax> if,meet-true,else
         end
       then
       eval-word
       loop
     ; define-function
     #+end_src
-*** <basic-REPL-syntax> if,meet-false
+*** <eval-word-syntax> if,meet-false
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> if,meet-false,else
+    : <eval-word-syntax> if,meet-false,else
       << -- >>
       read-word
       dup2 "then" string-equal? if
@@ -2885,7 +3272,7 @@
       loop
     ; define-function
 
-    : <basic-REPL-syntax> if,meet-false
+    : <eval-word-syntax> if,meet-false
       << -- >>
       read-word
       dup2 "then" string-equal? if
@@ -2894,21 +3281,21 @@
       then
       dup2 "else" string-equal? if
         drop2
-        <basic-REPL-syntax> if,meet-false,else
+        <eval-word-syntax> if,meet-false,else
         end
       then
       drop2
       loop
     ; define-function
     #+end_src
-*** <basic-REPL-syntax> if
+*** <eval-word-syntax> if
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> if
+    : <eval-word-syntax> if
       << bool, word:if -- >>
       drop2 if
-        <basic-REPL-syntax> if,meet-true
+        <eval-word-syntax> if,meet-true
       else
-        <basic-REPL-syntax> if,meet-false
+        <eval-word-syntax> if,meet-false
       then
       end
     ; define-function
@@ -2916,12 +3303,12 @@
 *** rule,add to *rule-set,eval-word*
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
-    jo word:if? jo <basic-REPL-syntax> if
+    jo word:if? jo <eval-word-syntax> if
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> if & else & then
+*** test <eval-word-syntax> if & else & then
     #+begin_src cicada-nymph :tangle core-test.cn
-    : "* (testing) <basic-REPL-syntax> if & else & then" .s .l
+    : "* (testing) <eval-word-syntax> if & else & then" .s .l
       1
       one? if
         111
@@ -2980,10 +3367,10 @@
       end
     ; define-function
     #+end_src
-*** <basic-REPL-syntax> double-quote
+*** <eval-word-syntax> double-quote
     * in ASCII encode double-quote is 34
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> double-quote,loop
+    : <eval-word-syntax> double-quote,loop
       << cursor -- cursor >>
       read-byte
       dup 34 equal? if
@@ -2995,12 +3382,12 @@
       loop
     ; define-function
 
-    : <basic-REPL-syntax> double-quote
+    : <eval-word-syntax> double-quote
       << word:double-quote -- string[address, length] >>
       drop2
       1024 2 mul allocate-local-memory >:buffer
       :buffer
-      <basic-REPL-syntax> double-quote,loop
+      <eval-word-syntax> double-quote,loop
       >:cursor
       *circular-string-area,current-free-address* >:address
       :buffer
@@ -3014,12 +3401,12 @@
 *** rule,add to *rule-set,eval-word*
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
-    jo word:double-quote? jo <basic-REPL-syntax> double-quote
+    jo word:double-quote? jo <eval-word-syntax> double-quote
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> double-quote
+*** test <eval-word-syntax> double-quote
     #+begin_src cicada-nymph :tangle core-test.cn
-    : "* (testing) <basic-REPL-syntax> double-quote" .s .l
+    : "* (testing) <eval-word-syntax> double-quote" .s .l
       1
       one? if
         "111"
@@ -3036,9 +3423,9 @@
     ; test-do
     #+end_src
 ** address                            :syntax:
-*** <basic-REPL-syntax> address
+*** <eval-word-syntax> address
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> address
+    : <eval-word-syntax> address
       << word:address -- address >>
       drop2
       read-word
@@ -3056,14 +3443,14 @@
 
       ::word name-hash-table,find-jo if
       else
-        "* (<basic-REPL-syntax> address) meet undefined word : " .s ::word .s .l
+        "* (<eval-word-syntax> address) meet undefined word : " .s ::word .s .l
         end
       then
 
       >:jo
       :jo variable-jo? if
       else
-        "* (<basic-REPL-syntax> address) meet a not variable-jo : " .s ::word .s .l
+        "* (<eval-word-syntax> address) meet a not variable-jo : " .s ::word .s .l
         end
       then
       :jo *jo-size* add
@@ -3074,19 +3461,19 @@
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
     jo word:address?
-    jo <basic-REPL-syntax> address
+    jo <eval-word-syntax> address
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> address
+*** test <eval-word-syntax> address
     #+begin_src cicada-nymph :tangle core-test.cn
     0
-    : <basic-REPL-syntax> *testing-variable*
+    : <eval-word-syntax> *testing-variable*
     ; test-variable,with-tos
 
-    : "* (testing) <basic-REPL-syntax> address" .s .l
+    : "* (testing) <eval-word-syntax> address" .s .l
       666
-      address <basic-REPL-syntax> *testing-variable* set
-      <basic-REPL-syntax> *testing-variable*
+      address <eval-word-syntax> *testing-variable* set
+      <eval-word-syntax> *testing-variable*
       666 equal? test
     ; test-do
 
@@ -3103,9 +3490,9 @@
    ; define-function
    #+end_src
 ** name                               :syntax:
-*** <basic-REPL-syntax> name
+*** <eval-word-syntax> name
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> name
+    : <eval-word-syntax> name
       << word:name -- name >>
       drop2
       read-word
@@ -3129,24 +3516,24 @@
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
     jo word:name?
-    jo <basic-REPL-syntax> name
+    jo <eval-word-syntax> name
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> name
+*** test <eval-word-syntax> name
     #+begin_src cicada-nymph :tangle core-test.cn
-    : "* (testing) <basic-REPL-syntax> name" .s .l
+    : "* (testing) <eval-word-syntax> name" .s .l
       name add
       name->string "add" <string> equal? test
-      name <basic-REPL-syntax> *testing-variable*
-      name->string "<basic-REPL-syntax> *testing-variable*" <string> equal? test
+      name <eval-word-syntax> *testing-variable*
+      name->string "<eval-word-syntax> *testing-variable*" <string> equal? test
       name kkk
       name->string "kkk" <string> equal? test
     ; test-do
     #+end_src
 ** quote
-*** <basic-REPL-syntax> quote
+*** <eval-word-syntax> quote
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> quote
+    : <eval-word-syntax> quote
       << quote-word -- name >>
       string,byte-tail string->name
       end
@@ -3156,12 +3543,12 @@
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
     jo quote-word?
-    jo <basic-REPL-syntax> quote
+    jo <eval-word-syntax> quote
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> quote
+*** test <eval-word-syntax> quote
     #+begin_src cicada-nymph :tangle core-test.cn
-    : "* (testing) <basic-REPL-syntax> name" .s .l
+    : "* (testing) <eval-word-syntax> name" .s .l
       'add
       name->string "add" <string> equal? test
       'kkk
@@ -3176,9 +3563,9 @@
     * <title> in *rule-set,eval-word*
       <title> name
       execute a jo
-*** <basic-REPL-syntax> title
+*** <eval-word-syntax> title
     #+begin_src cicada-nymph :tangle core.cn
-    : <basic-REPL-syntax> title
+    : <eval-word-syntax> title
       << <title>[address, length] -- unknown >>
       >::title
       512 allocate-local-memory >:buffer
@@ -3191,7 +3578,7 @@
         apply
         end
       then
-      "* (<basic-REPL-syntax> title) meet undefined" .s .l
+      "* (<eval-word-syntax> title) meet undefined" .s .l
       "  title : " .s ::title .s .l
       "  name  : " .s ::name .s .l
       end
@@ -3201,10 +3588,10 @@
     #+begin_src cicada-nymph :tangle core.cn
     *rule-set,eval-word*
     jo <word>?
-    jo <basic-REPL-syntax> title
+    jo <eval-word-syntax> title
     rule,add
     #+end_src
-*** test <basic-REPL-syntax> title
+*** test <eval-word-syntax> title
     #+begin_src cicada-nymph :tangle core-test.cn
     : <test-title> test-name
       << -- >>
@@ -3212,7 +3599,7 @@
       end
     ; test-function
 
-    : "* (testing) <basic-REPL-syntax> title" .s .l
+    : "* (testing) <eval-word-syntax> title" .s .l
       <test-title> test-name
       "TEST" <string> equal? test
     ; test-do
@@ -3351,26 +3738,26 @@
 
    *rule-set,eval-word*
    jo word:address?
-   jo <basic-REPL-syntax> address
+   jo <eval-word-syntax> address
    rule,add
 
    *rule-set,eval-word*
    jo word:double-quote?
-   jo <basic-REPL-syntax> double-quote
+   jo <eval-word-syntax> double-quote
    rule,add
 
    *rule-set,eval-word* <rule-set> list
 
    *rule-set,eval-word*
    jo word:address?
-   jo <basic-REPL-syntax> address
+   jo <eval-word-syntax> address
    <rule> sub
 
    *rule-set,eval-word* <rule-set> list
 
    *rule-set,eval-word*
    jo word:double-quote?
-   jo <basic-REPL-syntax> double-quote
+   jo <eval-word-syntax> double-quote
    <rule> sub
 
    *rule-set,eval-word* <rule-set> list
@@ -3414,20 +3801,20 @@
    #+end_src
 ** syntax
    #+begin_src cicada-nymph :tangle core.cn
-   "<make-jojo-syntax> title" "syntax,title,make-jojo" alias
-   "<make-jojo-syntax> recur" "syntax,recur,make-jojo" alias
-   "<make-jojo-syntax> loop" "syntax,loop,make-jojo" alias
-   "<make-jojo-syntax> then" "syntax,then,make-jojo" alias
-   "<make-jojo-syntax> else" "syntax,else,make-jojo" alias
-   "<make-jojo-syntax> if" "syntax,if,make-jojo" alias
-   "<make-jojo-syntax> local-variable-get" "syntax,local-variable-get,make-jojo" alias
-   "<make-jojo-syntax> local-variable-set" "syntax,local-variable-set,make-jojo" alias
+   "<make-jojo-syntax> title" "make-jojo-syntax,title" alias
+   "<make-jojo-syntax> recur" "make-jojo-syntax,recur" alias
+   "<make-jojo-syntax> loop" "make-jojo-syntax,loop" alias
+   "<make-jojo-syntax> then" "make-jojo-syntax,then" alias
+   "<make-jojo-syntax> else" "make-jojo-syntax,else" alias
+   "<make-jojo-syntax> if" "make-jojo-syntax,if" alias
+   "<make-jojo-syntax> local-variable-get" "make-jojo-syntax,local-variable-get" alias
+   "<make-jojo-syntax> local-variable-set" "make-jojo-syntax,local-variable-set" alias
    "<make-jojo-syntax> double-quote" "syntax,double-quote,make-jojo" alias
-   "<make-jojo-syntax> jo" "syntax,jo,make-jojo" alias
-   "<make-jojo-syntax> address" "syntax,address,make-jojo" alias
-   "<make-jojo-syntax> integer-string" "syntax,integer-string,make-jojo" alias
+   "<make-jojo-syntax> jo" "make-jojo-syntax,jo" alias
+   "<make-jojo-syntax> address" "make-jojo-syntax,address" alias
+   "<make-jojo-syntax> integer-string" "make-jojo-syntax,integer-string" alias
 
-   "<basic-REPL-syntax> bye" "syntax,bye,basic-REPL" alias
+   "<eval-word-syntax> bye" "eval-word-syntax,bye" alias
    #+end_src
 ** <name-record>
    #+begin_src cicada-nymph :tangle core.cn
@@ -3467,62 +3854,6 @@
 * stack-REPL
 ** note
    * print argument-stack in every loop
-** print-argument-stack
-   #+begin_src cicada-nymph :tangle core.cn
-   : print-argument-stack,loop
-     << address, counter -- >>
-     dup zero? if
-       drop2
-       end
-     then
-     sub1 swap
-       dup get .
-     *jo-size* add
-     swap
-     loop
-   ; define-function
-
-   : print-argument-stack
-     << -- >>
-     snapshot-the-stack-pointer
-     *the-stack-pointer-snapshot*
-     *the-stack* greater-or-equal? if
-       *the-stack*   << address as return value >>
-       *the-stack-pointer-snapshot* *the-stack* sub
-       *jo-size* div << counter as return value >>
-       print-argument-stack,loop
-       end
-     then
-     "below the stack " .s
-     end
-   ; define-function
-   #+end_src
-** print-argument-stack,pretty
-   #+begin_src cicada-nymph :tangle core.cn
-   : print-argument-stack,pretty
-     << -- >>
-     snapshot-the-stack-pointer
-     .l
-     "  * " .s
-        *the-stack-pointer-snapshot*
-        *the-stack* sub
-        << ad hoc for the BUG of div >>
-        dup negative? if
-          negate
-          *jo-size* div
-          negate
-        else
-          *jo-size* div
-        then
-        .i
-     " * " .s
-     " -- " .s
-       print-argument-stack
-     "--" .s
-     .l
-     end
-   ; define-function
-   #+end_src
 ** stack-REPL
    #+begin_src cicada-nymph :tangle core.cn
    : stack-REPL,loop
@@ -5758,7 +6089,7 @@
      'bad-path-syntax-word awake
    ; define-function
    #+end_src
-** <basic-REPL-syntax> path
+** <eval-word-syntax> path
    #+begin_src cicada-nymph :tangle core.cn
    : bad-path-syntax-word,loop
      << -- >>
@@ -5771,7 +6102,7 @@
      loop
    ; define-function
 
-   : <basic-REPL-syntax> path,loop
+   : <eval-word-syntax> path,loop
      << cursor -- cursor >>
      >:cursor
      read-word >::word
@@ -5794,12 +6125,12 @@
      loop
    ; define-function
 
-   : <basic-REPL-syntax> path
+   : <eval-word-syntax> path
      << word:path: -- path[address, length] >>
      drop2
 
      [ << word -- >>
-       "* (<basic-REPL-syntax> path) the following word is of bad syntax : " .s .l
+       "* (<eval-word-syntax> path) the following word is of bad syntax : " .s .l
        "    " .s .s .l
        action,reset-the-stack
        << -- >>
@@ -5809,7 +6140,7 @@
      'bad-path-syntax-word await
 
      512 allocate-local-memory >:buffer
-     :buffer <basic-REPL-syntax> path,loop >:cursor
+     :buffer <eval-word-syntax> path,loop >:cursor
 
      :cursor :buffer sub >:length
 
@@ -5831,7 +6162,7 @@
      << -- >>
      *rule-set,eval-word*
      ["path:" <string> equal? end]
-     jo <basic-REPL-syntax> path
+     jo <eval-word-syntax> path
      <rule> add
      end
    ; define-function
@@ -6658,7 +6989,7 @@
      在 eval-string 的過程中可以用到
      比如 探測循環引入
      比如 記錄當前的模塊是否帶測試引入
-** *importing-stack*
+** *importing-stack* & *testing-flag*
    #+begin_src cicada-nymph :tangle core.cn
    10 1024 mul
    : *importing-stack,size*
@@ -6666,6 +6997,11 @@
 
    2 *jo-size* mul
    : *importing-stack,unit*
+   ; define-variable,with-tos
+
+   *jo-size* allocate-memory drop
+   *jo-size* allocate-memory
+   : *testing-flag*
    ; define-variable,with-tos
 
    *importing-stack,size*
@@ -6743,12 +7079,27 @@
      end
    ; define-function
    #+end_src
-** <importing-record> drop
+** <importing-stack> drop
    #+begin_src cicada-nymph :tangle core.cn
-   : <importing-record> drop
+   : <importing-stack> drop
      << -- >>
      *importing-stack,unit* address *importing-stack,pointer* sub-set
      end
+   ; define-function
+   #+end_src
+** t
+   #+begin_src cicada-nymph :tangle core.cn
+   : t
+     << -- >>
+     *testing-flag* get if
+       0 *testing-flag* set
+       "* (testing) *testing-flag* off" .s .l
+       end
+     else
+       1 *testing-flag* set
+       "* (testing) *testing-flag* on" .s .l
+       end
+     then
    ; define-function
    #+end_src
 * <global-naming-stack> & <module-naming-stack>
@@ -7788,7 +8139,7 @@
      ::meta-string eval-string
      drop-syntax-stack
 
-     <importing-record> drop
+     <importing-stack> drop
 
      *module-naming-stack,pointer* >:module-name-record-begin
      :global-name-record-begin
@@ -8079,7 +8430,7 @@
      ::meta-string eval-string
      drop-syntax-stack
 
-     <importing-record> drop
+     <importing-stack> drop
 
      *module-naming-stack,pointer* >:module-name-record-begin
      :global-name-record-begin
@@ -8247,7 +8598,7 @@
      ::meta-string eval-string
      drop-syntax-stack
 
-     <importing-record> drop
+     <importing-stack> drop
 
      *module-naming-stack,pointer* >:module-name-record-begin
      :global-name-record-begin

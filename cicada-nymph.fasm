@@ -3413,7 +3413,7 @@ define_function "rule-set,find,loop", rule_set__find__loop
    xx literal, cursor$rule_set__find, set
    xx tail_call, rule_set__find__loop
 
-define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
+define_function "make-jojo-syntax,integer-string", make_jojo_syntax__integer_string
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx literal, literal
@@ -3434,7 +3434,7 @@ define_function "word:address?", word_is_address?
    xx string_equal?
    xx end
 
-define_function "syntax,address,make-jojo", syntax__address__make_jojo
+define_function "make-jojo-syntax,address", make_jojo_syntax__address
    ;; << string[address, length], word:address --
    ;;    string[address, length] >>
    xx drop2
@@ -3454,7 +3454,7 @@ define_function "word:jo?", word_is_jo?
    xx string_equal?
    xx end
 
-define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
+define_function "make-jojo-syntax,jo", make_jojo_syntax__jo
    ;; << string[address, length], word:jo --
    ;;    string[address, length] >>
    xx drop2
@@ -3565,17 +3565,17 @@ define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
 
    xx dup
    xx literal, integer_string?
-   xx literal, syntax__integer_string__make_jojo
+   xx literal, make_jojo_syntax__integer_string
    xx rule__add
 
    xx dup
    xx literal, word_is_address?
-   xx literal, syntax__address__make_jojo
+   xx literal, make_jojo_syntax__address
    xx rule__add
 
    xx dup
    xx literal, word_is_jo?
-   xx literal, syntax__jo__make_jojo
+   xx literal, make_jojo_syntax__jo
    xx rule__add
 
    xx dup
@@ -3584,13 +3584,13 @@ define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
    xx rule__add
 
    xx dup
-   xx literal, local_variable_set_string?
-   xx literal, syntax__local_variable_set__make_jojo
+   xx literal, local_variable_set_word?
+   xx literal, make_jojo_syntax__local_variable_set
    xx rule__add
 
    xx dup
-   xx literal, local_variable_get_string?
-   xx literal, syntax__local_variable_get__make_jojo
+   xx literal, local_variable_get_word?
+   xx literal, make_jojo_syntax__local_variable_get
    xx rule__add
 
    xx literal, comment_begin_string?
@@ -3790,7 +3790,7 @@ define_primitive_function "allocate-local-variable", allocate_local_variable
 
 match =64bit, machine {
 
-define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+define_primitive_function "instruction,local-variable,n-get", instruction__local_variable__n_get
    ;; << -- value-1, ..., value-n >>
    pop_return_stack rbx
      mov rdx, [rbx]           ;; offset
@@ -3807,7 +3807,7 @@ define_primitive_function "instructions,local-variable,n-get", instruction__loca
    loop .loop
    next
 
-define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+define_primitive_function "instruction,local-variable,n-set", instruction__local_variable__n_set
    ;; << value-n, ..., value-1 -- >>
    pop_return_stack rbx
      mov rdx, [rbx]           ;; offset
@@ -3834,7 +3834,7 @@ define_primitive_function "instructions,local-variable,n-set", instruction__loca
 
 match =32bit, machine {
 
-define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+define_primitive_function "instruction,local-variable,n-get", instruction__local_variable__n_get
    ;; << -- value-1, ..., value-n >>
    pop_return_stack rbx
      mov rdx, [rbx]           ;; offset
@@ -3852,7 +3852,7 @@ define_primitive_function "instructions,local-variable,n-get", instruction__loca
    loop .loop
    next
 
-define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+define_primitive_function "instruction,local-variable,n-set", instruction__local_variable__n_set
    ;; << value-n, ..., value-1 -- >>
    pop_return_stack rbx
      mov rdx, [rbx]           ;; offset
@@ -3992,7 +3992,7 @@ define_function "count-front-colon,loop", count_front_colon__loop
    xx string__byte_tail, xswapxx
    xx tail_call, count_front_colon__loop
 
-define_function "local-variable-get-string?", local_variable_get_string?
+define_function "local-variable-get-word?", local_variable_get_word?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
    xx   drop2, false
@@ -4011,7 +4011,7 @@ define_function "local-variable-get-string?", local_variable_get_string?
    xx literal, 0, greater_than?
    xx end
 
-define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_get__make_jojo
+define_function "make-jojo-syntax,local-variable-get", make_jojo_syntax__local_variable_get
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
@@ -4042,7 +4042,7 @@ string$local_variable_not_bound_report:
 .end:
 length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
 
-define_function "local-variable-set-string?", local_variable_set_string?
+define_function "local-variable-set-word?", local_variable_set_word?
    ;; << string[address, length] -- bool >>
    xx dup, zero?, false?branch, 4
    xx   drop2, false
@@ -4066,7 +4066,7 @@ define_function "local-variable-set-string?", local_variable_set_string?
    xx literal, 0, greater_than?
    xx end
 
-define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
+define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_variable_set
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx string__byte_tail

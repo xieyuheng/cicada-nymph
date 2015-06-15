@@ -4555,9 +4555,9 @@
      and return a shorter string
      [this can be viewed as moving a cursor forward]
 ** ----------------------------------
-** syntax,integer-string,make-jojo
+** make-jojo-syntax,integer-string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,integer-string,make-jojo", syntax__integer_string__make_jojo
+   define_function "make-jojo-syntax,integer-string", make_jojo_syntax__integer_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
@@ -4581,9 +4581,9 @@
       xx string_equal?
       xx end
    #+end_src
-** syntax,address,make-jojo
+** make-jojo-syntax,address
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,address,make-jojo", syntax__address__make_jojo
+   define_function "make-jojo-syntax,address", make_jojo_syntax__address
       ;; << string[address, length], word:address --
       ;;    string[address, length] >>
       xx drop2
@@ -4606,9 +4606,9 @@
       xx string_equal?
       xx end
    #+end_src
-** syntax,jo,make-jojo
+** make-jojo-syntax,jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,jo,make-jojo", syntax__jo__make_jojo
+   define_function "make-jojo-syntax,jo", make_jojo_syntax__jo
       ;; << string[address, length], word:jo --
       ;;    string[address, length] >>
       xx drop2
@@ -4748,17 +4748,17 @@
 
       xx dup
       xx literal, integer_string?
-      xx literal, syntax__integer_string__make_jojo
+      xx literal, make_jojo_syntax__integer_string
       xx rule__add
 
       xx dup
       xx literal, word_is_address?
-      xx literal, syntax__address__make_jojo
+      xx literal, make_jojo_syntax__address
       xx rule__add
 
       xx dup
       xx literal, word_is_jo?
-      xx literal, syntax__jo__make_jojo
+      xx literal, make_jojo_syntax__jo
       xx rule__add
 
       xx dup
@@ -4767,13 +4767,13 @@
       xx rule__add
 
       xx dup
-      xx literal, local_variable_set_string?
-      xx literal, syntax__local_variable_set__make_jojo
+      xx literal, local_variable_set_word?
+      xx literal, make_jojo_syntax__local_variable_set
       xx rule__add
 
       xx dup
-      xx literal, local_variable_get_string?
-      xx literal, syntax__local_variable_get__make_jojo
+      xx literal, local_variable_get_word?
+      xx literal, make_jojo_syntax__local_variable_get
       xx rule__add
 
       xx literal, comment_begin_string?
@@ -5147,11 +5147,11 @@
      | 1 : value-3 |
    * on stack
      << value-1, value-2, value-3, ... >>
-** instructions,local-variable,[n-get|n-set] :64bit:
+** instruction,local-variable,[n-get|n-set] :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+   define_primitive_function "instruction,local-variable,n-get", instruction__local_variable__n_get
       ;; << -- value-1, ..., value-n >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
@@ -5168,7 +5168,7 @@
       loop .loop
       next
 
-   define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+   define_primitive_function "instruction,local-variable,n-set", instruction__local_variable__n_set
       ;; << value-n, ..., value-1 -- >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
@@ -5193,11 +5193,11 @@
 
    }
    #+end_src
-** instructions,local-variable,[n-get|n-set] :32bit:
+** instruction,local-variable,[n-get|n-set] :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   define_primitive_function "instructions,local-variable,n-get", instruction__local_variable__n_get
+   define_primitive_function "instruction,local-variable,n-get", instruction__local_variable__n_get
       ;; << -- value-1, ..., value-n >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
@@ -5215,7 +5215,7 @@
       loop .loop
       next
 
-   define_primitive_function "instructions,local-variable,n-set", instruction__local_variable__n_set
+   define_primitive_function "instruction,local-variable,n-set", instruction__local_variable__n_set
       ;; << value-n, ..., value-1 -- >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
@@ -5272,7 +5272,28 @@
 ** test
    #+begin_src cicada-nymph
    : local-variable,test
-     << number1, number2, number3 -- number1 + number2 >>
+     >:var1
+     :var1
+     end
+   ; define-function
+   1 local-variable,test .
+   << 1 >>
+
+   : local-variable,test
+     >:var1
+     >:var2
+     >:var3
+     >:var4
+     :var4
+     :var3
+     :var2
+     :var1
+     end
+   ; define-function
+   1 2 3 4 local-variable,test . . . .
+   << 4 3 2 1 >>
+
+   : local-variable,test
      >:var2
      >:var2
      >:var1
@@ -5281,8 +5302,8 @@
      add
      end
    ; define-function
-   1 2 4 local-variable,test << 3 >> .
-
+   1 2 4 local-variable,test .
+   << 3 >>
 
    : local-variable,test,2
      << number1, number2 -- number2 + number3 >>
@@ -5290,8 +5311,8 @@
      ::var2
      end
    ; define-function
-   1 2 local-variable,test,2 << 1 2 >> . .
-
+   1 2 local-variable,test,2 . .
+   << 1 2 >>
 
    : local-variable,test,3
      << number1, number2, number3 -- number2 + number3 >>
@@ -5301,7 +5322,8 @@
      add
      end
    ; define-function
-   1 2 4 local-variable,test,3 << 6 >> .
+   1 2 4 local-variable,test,3 .
+   << 6 >>
    #+end_src
 ** test nested call
    #+begin_src cicada-nymph
@@ -5371,8 +5393,8 @@
 *** 記
     * 只有一個 local-variable-table
       用以在編譯時期解決局部變元的名與值的對應
-      這個數據結構被 syntax__local_variable_set__make_jojo
-      和 syntax__local_variable_get__make_jojo 所使用
+      這個數據結構被 make_jojo_syntax__local_variable_set
+      和 make_jojo_syntax__local_variable_get 所使用
     * 其中保存
       * offset-in-local-variable
       * length-of-string
@@ -5521,14 +5543,14 @@
     #+end_src
 ** two syntaxes
 *** ----------------------------------
-*** local-variable-get-string?
+*** local-variable-get-word?
     * :name
       ::name
     * but not
       :name:
       ::name:
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "local-variable-get-string?", local_variable_get_string?
+    define_function "local-variable-get-word?", local_variable_get_word?
        ;; << string[address, length] -- bool >>
        xx dup, zero?, false?branch, 4
        xx   drop2, false
@@ -5547,9 +5569,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** syntax,local-variable-get,make-jojo
+*** make-jojo-syntax,local-variable-get
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "syntax,local-variable-get,make-jojo", syntax__local_variable_get__make_jojo
+    define_function "make-jojo-syntax,local-variable-get", make_jojo_syntax__local_variable_get
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx dup2
@@ -5581,14 +5603,14 @@
     length$local_variable_not_bound_report = (.end - string$local_variable_not_bound_report)
     #+end_src
 *** ----------------------------------
-*** local-variable-set-string?
+*** local-variable-set-word?
     * >:name
       >::name
     * but not
       >:name:
       >::name:
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "local-variable-set-string?", local_variable_set_string?
+    define_function "local-variable-set-word?", local_variable_set_word?
        ;; << string[address, length] -- bool >>
        xx dup, zero?, false?branch, 4
        xx   drop2, false
@@ -5612,9 +5634,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** syntax,local-variable-set,make-jojo
+*** make-jojo-syntax,local-variable-set
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "syntax,local-variable-set,make-jojo", syntax__local_variable_set__make_jojo
+    define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_variable_set
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx string__byte_tail
