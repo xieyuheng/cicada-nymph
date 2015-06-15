@@ -902,9 +902,10 @@
         因爲反正當函數退出時 這兩個指針會被重置
 ** note return-point
    * structure
-     | return-point | local-memory |
-     |              | local-variable   |
-     |              | jojo       |
+     | return-point | conjugate-local-memory |
+     |              | local-memory           |
+     |              | local-variable         |
+     |              | jojo                   |
    * the interface is implemented by needs
 ** *return-stack,unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -915,23 +916,24 @@
    * 有了下面的 (return-stack,insert-jo) 這個素函數之後
      即便是在非素函數中也能夠對返回棧進行有限的操作了
    * before insert-jo
-     | return-point-1 | local-memory-1 |
-     |                | local-variable-1     |
-     |                | jojo-1         |
-     | return-point-2 | local-memory-2 |
-     |                | local-variable-2     |
-     |                | jojo-2         |
+     | return-point-1 | conjugate-local-memory-1 |
+     |                | local-memory-1           |
+     |                | local-variable-1         |
+     |                | jojo-1                   |
+     | return-point-2 | local-memory-2           |
+     |                | local-variable-2         |
+     |                | jojo-2                   |
    * after
      jo return-point-2 (return-stack,insert-jo)
-     | return-point-1  | local-memory-1 |
-     |                 | local-variable-1     |
-     |                 | jojo-1         |
-     | return-point-in | local-memory-2 |
-     |                 | local-variable-2     |
-     |                 | jojo of jo     |
-     | return-point-2  | local-memory-2 |
-     |                 | local-variable-2     |
-     |                 | jojo-2         |
+     | return-point-1  | local-memory-1   |
+     |                 | local-variable-1 |
+     |                 | jojo-1           |
+     | return-point-in | local-memory-2   |
+     |                 | local-variable-2 |
+     |                 | jojo of jo       |
+     | return-point-2  | local-memory-2   |
+     |                 | local-variable-2 |
+     |                 | jojo-2           |
    * 之所以有這樣的效果
      是因爲
      這個 素函數 是爲了 實現 expect 而作
@@ -972,26 +974,24 @@
    define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
       ;; << jo, return-stack-pointer -- >>
       pop_argument_stack rbx
-      mov rcx, pointer$return_stack
-      sub rcx, rbx
-      mov rax, jo_size
-      idiv rcx
-      ;; the remainder is stored in rdx
-      ;; the quotient  is stored in rax
-      mov rcx, rax
+
       mov rsi, pointer$return_stack
-      sub rsi, jo_size
       add pointer$return_stack, (jo_size * 3)
       mov rdi, pointer$return_stack
-      sub rdi, jo_size
+
    .loop:
-      mov rdi, qword [rsi]
+      cmp rbx, rsi
+      je .end
       sub rsi, jo_size
       sub rdi, jo_size
-      loop .loop
+      mov rax, qword [rsi]
+      mov qword [rdi], rax
+      jmp .loop
+   .end:
+
       pop_argument_stack rax
       add rax, jo_size
-      mov qword [rbx + (jo_size* 2)], rax
+      mov qword [rsi + (jo_size* 2)], rax
       next
 
    }
@@ -1001,28 +1001,26 @@
    define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
       ;; << jo, return-stack-pointer -- >>
       pop_argument_stack rbx
+
       mov rcx, [pointer$return_stack]
-      sub rcx, rbx
-      mov rax, jo_size
-      idiv rcx
-      ;; the remainder is stored in rdx
-      ;; the quotient  is stored in rax
-      mov rcx, rax
-      mov rax, [pointer$return_stack]
-      mov rsi, rax
-      sub rsi, jo_size
-      add rax, (jo_size * 3)
-      mov [pointer$return_stack], rax
-      mov rdi, rax
-      sub rdi, jo_size
+      mov rsi, rcx
+      add rcx, (jo_size * 3)
+      mov rdi, rcx
+      mov [pointer$return_stack], rcx
+
    .loop:
-      mov rdi, dword [rsi]
+      cmp rbx, rsi
+      je .end
       sub rsi, jo_size
       sub rdi, jo_size
-      loop .loop
+      mov rax, dword [rsi]
+      mov dword [rdi], rax
+      jmp .loop
+   .end:
+
       pop_argument_stack rax
       add rax, jo_size
-      mov dword [rbx + (jo_size* 2)], rax
+      mov dword [rsi + (jo_size* 2)], rax
       next
 
    }
@@ -5693,15 +5691,33 @@
      所申請的 allocate-local-memory
      和上一次函數執行過程中
      所申請的 allocate-local-memory 是相同的
-** memory allocation
+** ><>< *local-memory-x*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$local_memory_x = 1024 * 1024 * 6
+
+   address$local_memory_x labeling
+      preserve size$local_memory_x
+
+   define_variable "*local-memory-x,current-free-address*", V__local_memory_x__current_free_address
+      xx address$local_memory_x
+   #+end_src
+** ><>< *local-memory-y*
+   #+begin_src fasm :tangle cicada-nymph.fasm
+   size$local_memory_y = 1024 * 1024 * 6
+
+   address$local_memory_y labeling
+      preserve size$local_memory_y
+
+   define_variable "*local-memory-y,current-free-address*", V__local_memory_y__current_free_address
+      xx address$local_memory_y
+   #+end_src
+** *local-memory*
    #+begin_src fasm :tangle cicada-nymph.fasm
    size$local_memory = 1024 * 1024 * 6
 
    address$local_memory labeling
       preserve size$local_memory
-   #+end_src
-** *local-memory,current-free-address*
-   #+begin_src fasm :tangle cicada-nymph.fasm
+
    define_variable "*local-memory,current-free-address*", V__local_memory__current_free_address
       xx address$local_memory
    #+end_src
@@ -5713,6 +5729,23 @@
       mov rax, [V__local_memory__current_free_address + jo_size]
       push_argument_stack rax
       add [V__local_memory__current_free_address + jo_size], rbx
+      next
+   #+end_src
+** >< allocate-local-memory
+   #+begin_src fasm
+   define_primitive_function "allocate-local-memory", allocate_local_memory
+      ;; << size -- address >>
+      pop_argument_stack rbx
+      mov rax, [V__local_memory__current_free_address + jo_size]
+      push_argument_stack rax
+      add [V__local_memory__current_free_address + jo_size], rbx
+      next
+   #+end_src
+** >< allocate-conjugate-local-memory
+   #+begin_src fasm
+   define_primitive_function "allocate-conjugate-local-memory", allocate_conjugate_local_memory
+      ;; <<  -- >>
+
       next
    #+end_src
 ** test

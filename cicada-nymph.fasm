@@ -554,26 +554,24 @@ match =64bit, machine {
 define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
    ;; << jo, return-stack-pointer -- >>
    pop_argument_stack rbx
-   mov rcx, pointer$return_stack
-   sub rcx, rbx
-   mov rax, jo_size
-   idiv rcx
-   ;; the remainder is stored in rdx
-   ;; the quotient  is stored in rax
-   mov rcx, rax
+
    mov rsi, pointer$return_stack
-   sub rsi, jo_size
    add pointer$return_stack, (jo_size * 3)
    mov rdi, pointer$return_stack
-   sub rdi, jo_size
+
 .loop:
-   mov rdi, qword [rsi]
+   cmp rbx, rsi
+   je .end
    sub rsi, jo_size
    sub rdi, jo_size
-   loop .loop
+   mov rax, qword [rsi]
+   mov qword [rdi], rax
+   jmp .loop
+.end:
+
    pop_argument_stack rax
    add rax, jo_size
-   mov qword [rbx + (jo_size* 2)], rax
+   mov qword [rsi + (jo_size* 2)], rax
    next
 
 }
@@ -583,28 +581,26 @@ match =32bit, machine {
 define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
    ;; << jo, return-stack-pointer -- >>
    pop_argument_stack rbx
+
    mov rcx, [pointer$return_stack]
-   sub rcx, rbx
-   mov rax, jo_size
-   idiv rcx
-   ;; the remainder is stored in rdx
-   ;; the quotient  is stored in rax
-   mov rcx, rax
-   mov rax, [pointer$return_stack]
-   mov rsi, rax
-   sub rsi, jo_size
-   add rax, (jo_size * 3)
-   mov [pointer$return_stack], rax
-   mov rdi, rax
-   sub rdi, jo_size
+   mov rsi, rcx
+   add rcx, (jo_size * 3)
+   mov rdi, rcx
+   mov [pointer$return_stack], rcx
+
 .loop:
-   mov rdi, dword [rsi]
+   cmp rbx, rsi
+   je .end
    sub rsi, jo_size
    sub rdi, jo_size
-   loop .loop
+   mov rax, dword [rsi]
+   mov dword [rdi], rax
+   jmp .loop
+.end:
+
    pop_argument_stack rax
    add rax, jo_size
-   mov dword [rbx + (jo_size* 2)], rax
+   mov dword [rsi + (jo_size* 2)], rax
    next
 
 }
@@ -4102,6 +4098,22 @@ define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_v
    ;;   n
    xx     jojo_area__stay
    xx end
+
+size$local_memory_x = 1024 * 1024 * 6
+
+address$local_memory_x labeling
+   preserve size$local_memory_x
+
+define_variable "*local-memory-x,current-free-address*", V__local_memory_x__current_free_address
+   xx address$local_memory_x
+
+size$local_memory_y = 1024 * 1024 * 6
+
+address$local_memory_y labeling
+   preserve size$local_memory_y
+
+define_variable "*local-memory-y,current-free-address*", V__local_memory_y__current_free_address
+   xx address$local_memory_y
 
 size$local_memory = 1024 * 1024 * 6
 

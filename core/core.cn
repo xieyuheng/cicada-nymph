@@ -852,8 +852,7 @@ more,rule-set,make-jojo
 
   jo drop-awaiting-stack
   :return-stack-pointer
-  drop2
-  << return-stack,insert-jo >>
+  return-stack,insert-jo
   end
 ; define-function
 

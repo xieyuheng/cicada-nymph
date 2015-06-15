@@ -1336,8 +1336,7 @@
 
      jo drop-awaiting-stack
      :return-stack-pointer
-     drop2
-     << return-stack,insert-jo >>
+     return-stack,insert-jo
      end
    ; define-function
    #+end_src
