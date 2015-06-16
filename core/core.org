@@ -5,7 +5,7 @@
 * todo
 ** >< the size of file
 ** >< better structure for IO functions
-*** only one error-code->string is not enough :maybe:
+   * only one error-code->string is not enough
 ** >< write-with-color
    * for better report
 ** type check
@@ -16,7 +16,7 @@
 ** code generation
    * for data-structure
 ** debug-REPL
-** 中文 alias
+** 漢語 alias
 ** language-level support for creating and managing processes
 * ===================================
 * module-meta
