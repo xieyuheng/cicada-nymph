@@ -3,6 +3,7 @@
 #+EMAIL:  xyheme@gmail.com
 
 * todo
+** >< code generation for interfaces of data-structure
 ** >< the size of file
 ** >< better structure for IO functions
    * only one error-code->string is not enough
@@ -13,8 +14,6 @@
    * re-import core every time
 ** optimize with type info
 ** fast tangle
-** code generation
-   * for data-structure
 ** debug-REPL
 ** 漢語 alias
 ** language-level support for creating and managing processes
@@ -3561,6 +3560,153 @@
       "TEST" <string> equal? test
     ; test-do
     #+end_src
+* *to define some alias*
+** <string>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<string> byte" "string,byte" alias
+   "<string> byte-tail" "string,byte-tail" alias
+   "<string> byte-back" "string,byte-back" alias
+
+   "<string> word" "string,word" alias
+   "<string> word-begin" "string,word-begin" alias
+   "<string> word-end" "string,word-end" alias
+   "<string> word-tail" "string,word-tail" alias
+
+   "<string> equal?" "string-equal?" alias
+
+   "<string> space?" "space-string?" alias
+   "<string> empty?" "empty-string?" alias
+
+   "<string> find-byte" "string,find-byte" alias
+   #+end_src
+** <rule-set> & <rule>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<rule-set> get-border" "rule-set,get-border" alias
+   "<rule-set> set-border" "rule-set,set-border" alias
+   "<rule-set> find" "rule-set,find" alias
+
+   "<rule> add" "rule,add" alias
+
+   "<rule> *unit*" "*rule,unit*" alias
+   "<rule> get" "rule,get" alias
+   "<rule> get-predicate" "rule,get-predicate" alias
+   "<rule> get-function" "rule,get-function" alias
+   #+end_src
+** *rule-set*
+   #+begin_src cicada-nymph :tangle core.cn
+   "<word-interpreter> *rule-set*" "*rule-set,word-interpreter*" alias
+   "<jojo-compiler> *rule-set*" "*rule-set,jojo-compiler*" alias
+   #+end_src
+** syntax
+   #+begin_src cicada-nymph :tangle core.cn
+   "<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
+   "<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
+   "<jojo-compiler-syntax> loop" "jojo-compiler-syntax,loop" alias
+   "<jojo-compiler-syntax> then" "jojo-compiler-syntax,then" alias
+   "<jojo-compiler-syntax> else" "jojo-compiler-syntax,else" alias
+   "<jojo-compiler-syntax> if" "jojo-compiler-syntax,if" alias
+   "<jojo-compiler-syntax> local-variable-get" "jojo-compiler-syntax,local-variable-get" alias
+   "<jojo-compiler-syntax> local-variable-set" "jojo-compiler-syntax,local-variable-set" alias
+   "<jojo-compiler-syntax> double-quote" "syntax,double-quote,jojo-compiler" alias
+   "<jojo-compiler-syntax> jo" "jojo-compiler-syntax,jo" alias
+   "<jojo-compiler-syntax> address" "jojo-compiler-syntax,address" alias
+   "<jojo-compiler-syntax> integer-string" "jojo-compiler-syntax,integer-string" alias
+
+   "<word-interpreter-syntax> bye" "word-interpreter-syntax,bye" alias
+   #+end_src
+** <name-record>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<name-record> get-old-jo" "name-record,get-old-jo" alias
+   "<name-record> set-old-jo" "name-record,set-old-jo" alias
+
+   "<name-record> get-name" "name-record,get-name" alias
+   "<name-record> set-name" "name-record,set-name" alias
+
+   "<name-record> get-new-jo" "name-record,get-new-jo" alias
+   "<name-record> set-new-jo" "name-record,set-new-jo" alias
+   #+end_src
+** <global-naming-stack>
+   #+begin_src cicada-nymph :tangle core.cn
+   "<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
+   "<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
+   #+end_src
+* *a little test*
+** nested comment
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : "* (testing) nested comment in REPL" .s .l
+     1 << 2    3    4 >> 5
+     1 << 2 << 3 >> 4 >> 5
+     5 equal?
+     1 equal? add
+     5 equal? add
+     1 equal? add test
+     end
+   ; test-do
+
+   : nested-comment-function-body
+     1 << 2    3    4 >> 5
+     1 << 2 << 3 >> 4 >> 5
+     5 equal?
+     1 equal? add
+     5 equal? add
+     1 equal? add test
+     end
+   ; test-function
+
+   : "* (testing) nested comment in function body" .s .l
+     nested-comment-function-body
+     end
+   ; test-do
+   #+end_src
+** return structured value
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : callee
+     << -- string[address, length] >>
+     512 allocate-conjugate-local-memory >:buffer
+     "(callee ^-^) " >:length >:address
+     :address :length
+     :buffer
+     string->buffer!
+     :buffer :length
+     end
+   ; test-function
+
+   : caller
+     << -- string[address, length] >>
+     512 allocate-local-memory >:buffer
+     "(caller O.o) " >:length >:address
+     :address :length
+     :buffer
+     string->buffer!
+     :buffer :length >::caller-string-1
+
+     callee >::callee-string
+
+     512 allocate-local-memory >:buffer
+     "(caller o.O) " >:length >:address
+     :address :length
+     :buffer
+     string->buffer!
+     :buffer :length >::caller-string-2
+
+     512 allocate-local-memory >:buffer
+     ::caller-string-1
+     ::callee-string
+     ::caller-string-2
+     :buffer
+     3 n-string->buffer! >:length
+
+     :buffer
+     :length
+     end
+   ; test-function
+
+   : "* (testing) return structured value" .s .l
+     caller
+     "(caller O.o) (callee ^-^) (caller o.O) "
+     <string> equal? test
+   ; test-do
+   #+end_src
 * -----------------------------------
 * <rule-set> & <rule>
 ** test endianness of n-get & n-set
@@ -3719,152 +3865,50 @@
 
    *rule-set,word-interpreter* <rule-set> list
    #+end_src
-* to define some alias
-** <string>
+** <rule-set> mixin
+   * the order matters
    #+begin_src cicada-nymph :tangle core.cn
-   "<string> byte" "string,byte" alias
-   "<string> byte-tail" "string,byte-tail" alias
-   "<string> byte-back" "string,byte-back" alias
+   : <rule-set> mixin,loop
+     << base-rule-set, border, cursor -- >>
+     dup2 equal? if
+       drop2
+       drop
+       end
+     then
+     dup <rule> get >::rule
+     x|over|xx ::rule <rule> add
+     <rule> *unit* add
+     loop
+   ; define-function
 
-   "<string> word" "string,word" alias
-   "<string> word-begin" "string,word-begin" alias
-   "<string> word-end" "string,word-end" alias
-   "<string> word-tail" "string,word-tail" alias
-
-   "<string> equal?" "string-equal?" alias
-
-   "<string> space?" "space-string?" alias
-   "<string> empty?" "empty-string?" alias
-
-   "<string> find-byte" "string,find-byte" alias
-   #+end_src
-** <rule-set> & <rule>
-   #+begin_src cicada-nymph :tangle core.cn
-   "<rule-set> get-border" "rule-set,get-border" alias
-   "<rule-set> set-border" "rule-set,set-border" alias
-   "<rule-set> find" "rule-set,find" alias
-
-   "<rule> add" "rule,add" alias
-
-   "<rule> *unit*" "*rule,unit*" alias
-   "<rule> get" "rule,get" alias
-   "<rule> get-predicate" "rule,get-predicate" alias
-   "<rule> get-function" "rule,get-function" alias
-   #+end_src
-** *rule-set*
-   #+begin_src cicada-nymph :tangle core.cn
-   "<word-interpreter> *rule-set*" "*rule-set,word-interpreter*" alias
-   "<jojo-compiler> *rule-set*" "*rule-set,jojo-compiler*" alias
-   #+end_src
-** syntax
-   #+begin_src cicada-nymph :tangle core.cn
-   "<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
-   "<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
-   "<jojo-compiler-syntax> loop" "jojo-compiler-syntax,loop" alias
-   "<jojo-compiler-syntax> then" "jojo-compiler-syntax,then" alias
-   "<jojo-compiler-syntax> else" "jojo-compiler-syntax,else" alias
-   "<jojo-compiler-syntax> if" "jojo-compiler-syntax,if" alias
-   "<jojo-compiler-syntax> local-variable-get" "jojo-compiler-syntax,local-variable-get" alias
-   "<jojo-compiler-syntax> local-variable-set" "jojo-compiler-syntax,local-variable-set" alias
-   "<jojo-compiler-syntax> double-quote" "syntax,double-quote,jojo-compiler" alias
-   "<jojo-compiler-syntax> jo" "jojo-compiler-syntax,jo" alias
-   "<jojo-compiler-syntax> address" "jojo-compiler-syntax,address" alias
-   "<jojo-compiler-syntax> integer-string" "jojo-compiler-syntax,integer-string" alias
-
-   "<word-interpreter-syntax> bye" "word-interpreter-syntax,bye" alias
-   #+end_src
-** <name-record>
-   #+begin_src cicada-nymph :tangle core.cn
-   "<name-record> get-old-jo" "name-record,get-old-jo" alias
-   "<name-record> set-old-jo" "name-record,set-old-jo" alias
-
-   "<name-record> get-name" "name-record,get-name" alias
-   "<name-record> set-name" "name-record,set-name" alias
-
-   "<name-record> get-new-jo" "name-record,get-new-jo" alias
-   "<name-record> set-new-jo" "name-record,set-new-jo" alias
-   #+end_src
-** <global-naming-stack>
-   #+begin_src cicada-nymph :tangle core.cn
-   "<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
-   "<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
-   #+end_src
-* *a little test*
-** nested comment
-   #+begin_src cicada-nymph :tangle core-test.cn
-   : "* (testing) nested comment in REPL" .s .l
-     1 << 2    3    4 >> 5
-     1 << 2 << 3 >> 4 >> 5
-     5 equal?
-     1 equal? add
-     5 equal? add
-     1 equal? add test
+   : <rule-set> mixin
+     << base-rule-set, rule-set -- >>
+     dup <rule-set> get-border swap
+     <rule-set> mixin,loop
      end
-   ; test-do
-
-   : nested-comment-function-body
-     1 << 2    3    4 >> 5
-     1 << 2 << 3 >> 4 >> 5
-     5 equal?
-     1 equal? add
-     5 equal? add
-     1 equal? add test
-     end
-   ; test-function
-
-   : "* (testing) nested comment in function body" .s .l
-     nested-comment-function-body
-     end
-   ; test-do
+   ; define-function
    #+end_src
-** return structured value
-   #+begin_src cicada-nymph :tangle core-test.cn
-   : callee
-     << -- string[address, length] >>
-     512 allocate-conjugate-local-memory >:buffer
-     "(callee ^-^) " >:length >:address
-     :address :length
-     :buffer
-     string->buffer!
-     :buffer :length
+** <rule-set> mixout
+   #+begin_src cicada-nymph :tangle core.cn
+   : <rule-set> mixout,loop
+     << base-rule-set, border, cursor -- >>
+     dup2 equal? if
+       drop2
+       drop
+       end
+     then
+     dup <rule> get >::rule
+     x|over|xx ::rule <rule> sub
+     <rule> *unit* add
+     loop
+   ; define-function
+
+   : <rule-set> mixout
+     << base-rule-set, rule-set -- >>
+     dup <rule-set> get-border swap
+     <rule-set> mixout,loop
      end
-   ; test-function
-
-   : caller
-     << -- string[address, length] >>
-     512 allocate-local-memory >:buffer
-     "(caller O.o) " >:length >:address
-     :address :length
-     :buffer
-     string->buffer!
-     :buffer :length >::caller-string-1
-
-     callee >::callee-string
-
-     512 allocate-local-memory >:buffer
-     "(caller o.O) " >:length >:address
-     :address :length
-     :buffer
-     string->buffer!
-     :buffer :length >::caller-string-2
-
-     512 allocate-local-memory >:buffer
-     ::caller-string-1
-     ::callee-string
-     ::caller-string-2
-     :buffer
-     3 n-string->buffer! >:length
-
-     :buffer
-     :length
-     end
-   ; test-function
-
-   : "* (testing) return structured value" .s .l
-     caller
-     "(caller O.o) (callee ^-^) (caller o.O) "
-     <string> equal? test
-   ; test-do
+   ; define-function
    #+end_src
 * stack-REPL
 ** note
@@ -4080,48 +4124,49 @@
      . . .
    ; define-variable
    #+end_src
-* constant of system
-** note *linux*
+* -----------------------------------
+* system misc
+** note linux
 ** init-syscall-number                :32bit:
    #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 4 equal? if
-     5   : :syscall-number,open:       ; define-variable,with-tos
-     6   : :syscall-number,close:      ; define-variable,with-tos
-     3   : :syscall-number,read:       ; define-variable,with-tos
-     4   : :syscall-number,write:      ; define-variable,with-tos
-     9   : :syscall-number,link:       ; define-variable,with-tos
-     10  : :syscall-number,unlink:     ; define-variable,with-tos
-     39  : :syscall-number,mkdir:      ; define-variable,with-tos
-     40  : :syscall-number,rmdir:      ; define-variable,with-tos
-     141 : :syscall-number,getdents:   ; define-variable,with-tos
-     220 : :syscall-number,getdents64: ; define-variable,with-tos
-     106 : :syscall-number,stat:       ; define-variable,with-tos
-     1   : :syscall-number,exit:       ; define-variable,with-tos
-     43  : :syscall-number,times:      ; define-variable,with-tos
-     20  : :syscall-number,getpid:     ; define-variable,with-tos
-     183 : :syscall-number,getcwd:     ; define-variable,with-tos
-     12  : :syscall-number,chdir:      ; define-variable,with-tos
+     5   : <syscall-number> *open*       ; define-variable,with-tos
+     6   : <syscall-number> *close*      ; define-variable,with-tos
+     3   : <syscall-number> *read*       ; define-variable,with-tos
+     4   : <syscall-number> *write*      ; define-variable,with-tos
+     9   : <syscall-number> *link*       ; define-variable,with-tos
+     10  : <syscall-number> *unlink*     ; define-variable,with-tos
+     39  : <syscall-number> *mkdir*      ; define-variable,with-tos
+     40  : <syscall-number> *rmdir*      ; define-variable,with-tos
+     141 : <syscall-number> *getdents*   ; define-variable,with-tos
+     220 : <syscall-number> *getdents64* ; define-variable,with-tos
+     106 : <syscall-number> *stat*       ; define-variable,with-tos
+     1   : <syscall-number> *exit*       ; define-variable,with-tos
+     43  : <syscall-number> *times*      ; define-variable,with-tos
+     20  : <syscall-number> *getpid*     ; define-variable,with-tos
+     183 : <syscall-number> *getcwd*     ; define-variable,with-tos
+     12  : <syscall-number> *chdir*      ; define-variable,with-tos
    then
    #+end_src
 ** init-syscall-number                :64bit:
    #+begin_src cicada-nymph :tangle core.cn
    *jo-size* 8 equal? if
-     2   : :syscall-number,open:       ; define-variable,with-tos
-     3   : :syscall-number,close:      ; define-variable,with-tos
-     0   : :syscall-number,read:       ; define-variable,with-tos
-     1   : :syscall-number,write:      ; define-variable,with-tos
-     86  : :syscall-number,link:       ; define-variable,with-tos
-     87  : :syscall-number,unlink:     ; define-variable,with-tos
-     83  : :syscall-number,mkdir:      ; define-variable,with-tos
-     84  : :syscall-number,rmdir:      ; define-variable,with-tos
-     78  : :syscall-number,getdents:   ; define-variable,with-tos
-     217 : :syscall-number,getdents64: ; define-variable,with-tos
-     4   : :syscall-number,stat:       ; define-variable,with-tos
-     60  : :syscall-number,exit:       ; define-variable,with-tos
-     100 : :syscall-number,times:      ; define-variable,with-tos
-     39  : :syscall-number,getpid:     ; define-variable,with-tos
-     79  : :syscall-number,getcwd:     ; define-variable,with-tos
-     80  : :syscall-number,chdir:      ; define-variable,with-tos
+     2   : <syscall-number> *open*       ; define-variable,with-tos
+     3   : <syscall-number> *close*      ; define-variable,with-tos
+     0   : <syscall-number> *read*       ; define-variable,with-tos
+     1   : <syscall-number> *write*      ; define-variable,with-tos
+     86  : <syscall-number> *link*       ; define-variable,with-tos
+     87  : <syscall-number> *unlink*     ; define-variable,with-tos
+     83  : <syscall-number> *mkdir*      ; define-variable,with-tos
+     84  : <syscall-number> *rmdir*      ; define-variable,with-tos
+     78  : <syscall-number> *getdents*   ; define-variable,with-tos
+     217 : <syscall-number> *getdents64* ; define-variable,with-tos
+     4   : <syscall-number> *stat*       ; define-variable,with-tos
+     60  : <syscall-number> *exit*       ; define-variable,with-tos
+     100 : <syscall-number> *times*      ; define-variable,with-tos
+     39  : <syscall-number> *getpid*     ; define-variable,with-tos
+     79  : <syscall-number> *getcwd*     ; define-variable,with-tos
+     80  : <syscall-number> *chdir*      ; define-variable,with-tos
    then
    #+end_src
 ** error-code->string
@@ -4183,66 +4228,67 @@
      end
    ; define-function
    #+end_src
-* port
-** note
-*** syscall with string arguments
-    * for syscall the arguments in stack look like
-      << ..., arg3, arg2, arg1 >>
-      so
-      for read(port, buffer, size)
-      we need
-      << size, buffer, port >>
-      but the interface (<port> read) in cicada-nymph is
-      << buffer, size, port >>
-      thus we need a swap here
-      and
-      we should be careful
-      for other interface functions in cicada-nymph
-*** linux header
-    * 8 base number :
-      O_ACCMODE          0003
-      O_RDONLY             00
-      O_WRONLY             01
-      O_RDWR               02
-      O_CREAT            0100  Not fcntl
-      O_EXCL             0200  Not fcntl
-      O_NOCTTY           0400  Not fcntl
-      O_TRUNC           01000  Not fcntl
-      O_APPEND          02000
-      O_NONBLOCK        04000
-      O_NDELAY     O_NONBLOCK
-      O_SYNC         04010000
-      O_FSYNC          O_SYNC
-      O_ASYNC          020000
-      O_LARGEFILE     0100000
-      O_DIRECTORY     0200000
-      O_NOFOLLOW      0400000
-      O_CLOEXEC      02000000
-      O_DIRECT         040000
-      O_NOATIME      01000000
-      O_PATH        010000000
-      O_DSYNC          010000
-      O_TMPFILE     020200000
-*** 關於輸入輸出
-    * 接口設計分兩個層次
-      1. 底層的以 port 爲基礎的接口
-         這裏應該如何設計還不確定
-         可能會模仿操作系統所提供的接口
-      2. 高層的以 path 爲基礎的接口
-         這裏將抽象掉 port 這個概念
-         也就是每次簡單的讀寫都伴隨兩個對 port 的操作
-         這樣接口就很簡單 但是速度可能會非常慢
-*** interface
-    * open to read
-    * create and update to write
-      |--------+-----------------------|
-      | create | fail if already exist |
-      | update | fail if nor exist     |
-      |--------+-----------------------|
-    * one should always know if a file exist or not
-      when open it as output-port
-      predicates are provided to help you to do so
-** open
+* <port>
+** 記 關於輸入輸出
+   * 接口設計分兩個層次
+     1. 底層的以 port 爲基礎的接口
+        這裏應該如何設計還不確定
+        可能會模仿操作系統所提供的接口
+     2. 高層的以 path 爲基礎的接口
+        這裏將抽象掉 port 這個概念
+        也就是每次簡單的讀寫都伴隨兩個對 port 的操作
+        這樣接口就很簡單 但是速度可能會非常慢
+   * 目前
+     二者的接口差異是通過前綴 <port> 體現出來的
+** note linux header
+   * 8 base number :
+     O_ACCMODE          0003
+     O_RDONLY             00
+     O_WRONLY             01
+     O_RDWR               02
+     O_CREAT            0100  Not fcntl
+     O_EXCL             0200  Not fcntl
+     O_NOCTTY           0400  Not fcntl
+     O_TRUNC           01000  Not fcntl
+     O_APPEND          02000
+     O_NONBLOCK        04000
+     O_NDELAY     O_NONBLOCK
+     O_SYNC         04010000
+     O_FSYNC          O_SYNC
+     O_ASYNC          020000
+     O_LARGEFILE     0100000
+     O_DIRECTORY     0200000
+     O_NOFOLLOW      0400000
+     O_CLOEXEC      02000000
+     O_DIRECT         040000
+     O_NOATIME      01000000
+     O_PATH        010000000
+     O_DSYNC          010000
+     O_TMPFILE     020200000
+** note interface
+   * open to read
+   * create and update to write
+     |--------+-----------------------|
+     | create | fail if already exist |
+     | update | fail if nor exist     |
+     |--------+-----------------------|
+   * one should always know if a file exist or not
+     when open it as output-port
+     predicates are provided to help you to do so
+** note syscall with string arguments
+   * for syscall the arguments in stack look like
+     << ..., arg3, arg2, arg1 >>
+     so
+     for read(port, buffer, size)
+     we need
+     << size, buffer, port >>
+     but the interface (<port> read) in cicada-nymph is
+     << buffer, size, port >>
+     thus we need a swap here
+     and
+     we should be careful
+     for other interface functions in cicada-nymph
+** <port> open
    #+begin_src cicada-nymph :tangle core.cn
    : <port> open
      << path[address, length]
@@ -4254,7 +4300,7 @@
      O_RDONLY
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      2 syscall
      dup
      negative? if
@@ -4265,7 +4311,7 @@
      end
    ; define-function
    #+end_src
-** create
+** <port> create
    #+begin_src cicada-nymph :tangle core.cn
    : <port> create
      << path[address, length]
@@ -4282,7 +4328,7 @@
      O_TRUNC  1000
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      3 syscall
      dup
      negative? if
@@ -4293,7 +4339,7 @@
      end
    ; define-function
    #+end_src
-** update
+** <port> update
    #+begin_src cicada-nymph :tangle core.cn
    : <port> update
      << path[address, length]
@@ -4309,7 +4355,7 @@
      O_TRUNC  1000
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      3 syscall
      dup
      negative? if
@@ -4320,13 +4366,13 @@
      end
    ; define-function
    #+end_src
-** close
+** <port> close
    #+begin_src cicada-nymph :tangle core.cn
    : <port> close
      << port
         -- true
         -- error-code, false >>
-     :syscall-number,close:
+     <syscall-number> *close*
      1 syscall
      dup
      negative? if
@@ -4337,29 +4383,7 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test
-     << -- >>
-     "kkk~" <port> create if
-       <port> close if
-         end
-       then error-code->string .s .l end
-     then error-code->string .s .l end
-   ; define-function
-   test
-
-   : test
-     << -- >>
-     "kkk~" <port> update if
-       <port> close if
-         end
-       then error-code->string .s .l end
-     then error-code->string .s .l end
-   ; define-function
-   test
-   #+end_src
-** read
+** <port> read
    #+begin_src cicada-nymph :tangle core.cn
    : <port> read
      << buffer, max-size, port
@@ -4368,7 +4392,7 @@
      >:port
      swap
      :port
-     :syscall-number,read:
+     <syscall-number> *read*
      3 syscall
      dup
      negative? if
@@ -4379,7 +4403,7 @@
      end
    ; define-function
    #+end_src
-** write
+** <port> write
    #+begin_src cicada-nymph :tangle core.cn
    : <port> write
      << buffer, max-size, port
@@ -4388,7 +4412,7 @@
      >:port
      swap
      :port
-     :syscall-number,write:
+     <syscall-number> *write*
      3 syscall
      dup
      negative? if
@@ -4401,7 +4425,27 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test
+   : k
+     << -- >>
+     "kkk~" <port> create if
+       <port> close if
+         end
+       then error-code->string .s .l end
+     then error-code->string .s .l end
+   ; define-function
+   k
+
+   : k
+     << -- >>
+     "kkk~" <port> update if
+       <port> close if
+         end
+       then error-code->string .s .l end
+     then error-code->string .s .l end
+   ; define-function
+   k
+
+   : k
      << -- >>
      64 allocate-local-memory
      dup
@@ -4412,53 +4456,33 @@
        then error-code->string .s .l end
      then error-code->string .s .l end
    ; define-function
-   test
+   k
    #+end_src
-* file
-** note file-tree
-*** interface
-    * file-tree
-      two types of nodes
-      1. file
-      2. directory
-      a leaf must be a file
-    * the following interface is provided
-      * they use path as an argument
-      * they print error message on error
-        instead of return error info
+* <file>
+** note interface
+   * note that
+     the concept of port is
+     completely removed from the interface
+   * file-tree
+     two types of nodes
+     1. file
+     2. directory
+     a leaf must be a file
+   * the interface
+     1. use path as an argument
+     2. print error message on error
+        instead of
+        return error info
         or do non-local-exit
-      * the concept of port is
-        completely removed from the interface
-      --------------------------------
-      * file
-        1. create
-        2. write
-        3. read
-        4. remove
-      * directory
-        1. create
-        2. remove
-        3. empty?
-        4. list-file
-        5. list-directory
-        6. find-file
-        7. find-directory
-*** 錯誤處理
-    * 兩種風格
-      IO 相關的函數在出錯時
-      1. 立即報錯
-      2. 返回出錯信息
-    * 第一種很簡單
-      它假設了所有的錯誤都是不可忽略的
-*** 元數據
-    * 訪問管理
-      1. 誰有權訪問這個文件
-      2. 他的權利是什麼
-    * 文件類型
-      [linux 沒有]
-    * 文件大小
-    * 文件使用註釋
-      [linux 沒有]
+** 記 元數據
+   * 訪問管理
+     1. 誰有權訪問這個文件
+     2. 他的權利是什麼
+   * 文件類型
+     [linux 沒有]
+   * 文件大小
+   * 文件使用註釋
+     [linux 沒有]
 ** <file> create
    #+begin_src cicada-nymph :tangle core.cn
    : <file> create
@@ -4476,7 +4500,7 @@
      O_CREAT  0100
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      3 syscall
      dup
      negative? if
@@ -4511,7 +4535,7 @@
      O_TRUNC  1000
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      3 syscall
      dup
      negative? if
@@ -4523,7 +4547,7 @@
      >:port
      ::string swap
      :port
-     :syscall-number,write:
+     <syscall-number> *write*
      3 syscall
      dup
      negative? if
@@ -4556,7 +4580,7 @@
      O_RDONLY
      >>
      :syscall-path
-     :syscall-number,open:
+     <syscall-number> *open*
      2 syscall
      dup
      negative? if
@@ -4569,7 +4593,7 @@
      >:port
      ::string swap
      :port
-     :syscall-number,read:
+     <syscall-number> *read*
      3 syscall
      dup
      negative? if
@@ -4601,7 +4625,7 @@
      string->syscall-string
      >:syscall-path
      :syscall-path
-     :syscall-number,unlink:
+     <syscall-number> *unlink*
      1 syscall
      dup
      negative? if
@@ -4614,42 +4638,35 @@
      end
    ; define-function
    #+end_src
-** test
-   #+begin_src cicada-nymph
-   : test
+** test <file>
+   #+begin_src cicada-nymph :tangle core-test.cn
+   : file,test
      << -- >>
      "kkk~" <file> create
-     "core" <file> create
-     end
-   ; define-function
-   test
 
-   : test
-     << -- >>
-     "kkk~" <file> create
-     "kkk took my baby away !!!" "kkk~" <file> write
-     end
-   ; define-function
-   test
+     "kkk took my baby away" dup >:length
+     "kkk~" <file> write
 
-   : test
-     << -- >>
      "............................" >::string
-     ::string "kkk~" <file> read .i .l
-     ::string .s
-     end
-   ; define-function
-   test
+     ::string "kkk~" <file> read >:counter
 
-   : test
-     << -- >>
+     :counter
+     :length
+     equal? test
+
+     "kkk took my baby away......."
+     ::string
+     <string> equal? test
+
      "kkk~" <file> remove
-     "play" <file> remove
      end
-   ; define-function
-   test
+   ; test-function
+
+   : "* (testing) <file>" .s .l
+     file,test
+   ; test-do
    #+end_src
-* directory
+* <directory>
 ** <directory> create
    #+begin_src cicada-nymph :tangle core.cn
    : <directory> create
@@ -4662,7 +4679,7 @@
      2#111101101
      >>
      :syscall-path
-     :syscall-number,mkdir:
+     <syscall-number> *mkdir*
      2 syscall
      dup
      negative? if
@@ -4684,7 +4701,7 @@
      string->syscall-string
      >:syscall-path
      :syscall-path
-     :syscall-number,rmdir:
+     <syscall-number> *rmdir*
      1 syscall
      dup
      negative? if
@@ -4699,35 +4716,35 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "play" <directory> create
-   "play" <directory> remove
+   "kkk" <directory> create
+   "kkk" <directory> remove
    #+end_src
-** getdents64 structure
+** <system-getdents64>
    #+begin_src cicada-nymph :tangle core.cn
-   0 : +getdents64,d_ino+        ; define-variable,with-tos
-   0 : +getdents64,d_off+        ; define-variable,with-tos
-   0 : +getdents64,d_reclen+     ; define-variable,with-tos
-   0 : +getdents64,d_type+       ; define-variable,with-tos
-   0 : +getdents64,d_name+       ; define-variable,with-tos
+   0 : +getdents64,ino+        ; define-variable,with-tos
+   0 : +getdents64,off+        ; define-variable,with-tos
+   0 : +getdents64,reclen+     ; define-variable,with-tos
+   0 : +getdents64,type+       ; define-variable,with-tos
+   0 : +getdents64,name+       ; define-variable,with-tos
    0 : +getdents64,end+          ; define-variable,with-tos
 
    : init,getdents64
      << offset -- >>
      *jo-size* 4 equal? if
-       dup address +getdents64,d_ino+    set    8 add
-       dup address +getdents64,d_off+    set    8 add
-       dup address +getdents64,d_reclen+ set    2 add
-       dup address +getdents64,d_type+   set    1 add
-       dup address +getdents64,d_name+   set    256 add
+       dup address +getdents64,ino+    set    8 add
+       dup address +getdents64,off+    set    8 add
+       dup address +getdents64,reclen+ set    2 add
+       dup address +getdents64,type+   set    1 add
+       dup address +getdents64,name+   set    256 add
            address +getdents64,end+      set
        end
      then
      *jo-size* 8 equal? if
-       dup address +getdents64,d_ino+    set    8 add
-       dup address +getdents64,d_off+    set    8 add
-       dup address +getdents64,d_reclen+ set    2 add
-       dup address +getdents64,d_type+   set    1 add
-       dup address +getdents64,d_name+   set    256 add
+       dup address +getdents64,ino+    set    8 add
+       dup address +getdents64,off+    set    8 add
+       dup address +getdents64,reclen+ set    2 add
+       dup address +getdents64,type+   set    1 add
+       dup address +getdents64,name+   set    256 add
            address +getdents64,end+      set
        end
      then
@@ -4741,14 +4758,14 @@
    #+begin_src cicada-nymph
    : test,getdents64,print
      << -- >>
-     "+getdents64,d_ino+ : "    .s +getdents64,d_ino+     get . .l
-     "+getdents64,d_off+ : "    .s +getdents64,d_off+     get . .l
-     "+getdents64,d_reclen+ : " .s +getdents64,d_reclen+  get-two-bytes . .l
-     "+getdents64,d_type+ : "   .s
-     +getdents64,d_type+
+     "+getdents64,ino+ : "    .s +getdents64,ino+     get . .l
+     "+getdents64,off+ : "    .s +getdents64,off+     get . .l
+     "+getdents64,reclen+ : " .s +getdents64,reclen+  get-two-bytes . .l
+     "+getdents64,type+ : "   .s
+     +getdents64,type+
      get-byte file-type-code->string .s .l
-     "+getdents64,d_name+ : "   .s
-     +getdents64,d_name+
+     "+getdents64,name+ : "   .s
+     +getdents64,name+
      dup 256
      0 <string> find-byte
      drop  << drop 0 >>
@@ -4766,7 +4783,7 @@
      >:cursor
      :cursor init,getdents64
      test,getdents64,print
-     :cursor +getdents64,d_reclen+ get-two-bytes add
+     :cursor +getdents64,reclen+ get-two-bytes add
      loop
    ; define-function
 
@@ -4777,7 +4794,7 @@
      1024
      :getdents64-structure-list
      :port
-     :syscall-number,getdents64:
+     <syscall-number> *getdents64*
      3 syscall
      "* syscall returns : " .s dup .i .l
      dup negative? if
@@ -4836,7 +4853,7 @@
      128
      :getdents64-structure-list
      :port
-     :syscall-number,getdents64:
+     <syscall-number> *getdents64*
      3 syscall
      48 equal? << this call to equal? returns the needed bool >>
      :port <port> close if
@@ -4870,7 +4887,7 @@
      :cursor init,getdents64
      :function apply
      :end
-     :cursor +getdents64,d_reclen+ get-two-bytes add
+     :cursor +getdents64,reclen+ get-two-bytes add
      :function
      loop
    ; define-function
@@ -4883,7 +4900,7 @@
      1024
      :getdents64-structure-list
      :port
-     :syscall-number,getdents64:
+     <syscall-number> *getdents64*
      3 syscall
      dup negative? if
        "* (<directory> map,loop) syscall fail" .s .l
@@ -4930,10 +4947,10 @@
    #+begin_src cicada-nymph
    : test,function
      << -- >>
-     +getdents64,d_type+ get-byte
+     +getdents64,type+ get-byte
      8 equal? if
        "  " .s
-       +getdents64,d_name+
+       +getdents64,name+
        dup 256
        0 <string> find-byte
        drop  << drop 0 >>
@@ -4949,10 +4966,10 @@
    : <directory> list-file
      << directory-path[address, length] -- >>
      [ << -- >>
-       +getdents64,d_type+ get-byte
+       +getdents64,type+ get-byte
        8 equal? if
          "  " .s
-         +getdents64,d_name+
+         +getdents64,name+
          dup 256
          0 <string> find-byte
          drop  << drop 0 >>
@@ -4968,9 +4985,9 @@
    : <directory> list-directory
      << directory-path[address, length] -- >>
      [ << -- >>
-       +getdents64,d_type+ get-byte
+       +getdents64,type+ get-byte
        4 equal? if
-         +getdents64,d_name+
+         +getdents64,name+
          dup 256
          0 <string> find-byte
          drop  << drop 0 >>
@@ -5016,13 +5033,13 @@
      xx|swap|x
      [ << file-name[address, length], bool --
           file-name[address, length], bool >>
-       +getdents64,d_type+ get-byte 8 equal? not if
+       +getdents64,type+ get-byte 8 equal? not if
          end
        then
        >:bool
        >:file-name,lenght
        >:file-name,address
-       :file-name,lenght +getdents64,d_name+ add
+       :file-name,lenght +getdents64,name+ add
        get-byte zero? not if
          :file-name,address
          :file-name,lenght
@@ -5030,7 +5047,7 @@
          end
        then
        :file-name,address :file-name,lenght
-       +getdents64,d_name+ :file-name,lenght
+       +getdents64,name+ :file-name,lenght
        <string> equal? if
          :file-name,address
          :file-name,lenght
@@ -5055,13 +5072,13 @@
      xx|swap|x
      [ << file-name[address, length], bool --
           file-name[address, length], bool >>
-       +getdents64,d_type+ get-byte 4 equal? not if
+       +getdents64,type+ get-byte 4 equal? not if
          end
        then
        >:bool
        >:file-name,lenght
        >:file-name,address
-       :file-name,lenght +getdents64,d_name+ add
+       :file-name,lenght +getdents64,name+ add
        get-byte zero? not if
          :file-name,address
          :file-name,lenght
@@ -5069,7 +5086,7 @@
          end
        then
        :file-name,address :file-name,lenght
-       +getdents64,d_name+ :file-name,lenght
+       +getdents64,name+ :file-name,lenght
        <string> equal? if
          :file-name,address
          :file-name,lenght
@@ -5087,7 +5104,7 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : test
+   : find-file,test
      << -- >>
      "play" "cn" <directory> find-file .
      "play" "kkk" <directory> find-file .
@@ -5097,9 +5114,9 @@
      .l
      end
    ; define-function
-   test
+   find-file,test
 
-   : test
+   : find-directory,test
      << -- >>
      "play" "cn" <directory> find-directory .
      "play" "kkk" <directory> find-directory .
@@ -5109,10 +5126,10 @@
      .l
      end
    ; define-function
-   test
+   find-directory,test
    #+end_src
 * system environment
-** note *linux*
+** note linux
 *** one directory
     * all files about cicada
       are stored in
@@ -5129,7 +5146,7 @@
 
    : init-pid
      << -- >>
-     :syscall-number,getpid:
+     <syscall-number> *getpid*
      0 syscall
      address *pid* set
      end
@@ -5367,78 +5384,94 @@
      end
    ; define-function
    #+end_src
-** work-directory
-*** get-work-directory
-    #+begin_src cicada-nymph :tangle core.cn
-    512 allocate-memory
-    : *buffer,work-directory*
-    ; define-variable,with-tos
-
-    : get-work-directory
-      << -- directory[address, length] >>
-      512
-      *buffer,work-directory*
-      :syscall-number,getcwd:
-      2 syscall
-      dup negative? if
-        "* (get-work-directory) fail" .s .l
-        "  " .s error-code->string .s .l
-        end
-      then
-      *buffer,work-directory*
-      swap
-      sub1 << for the ending zero >>
-      end
-    ; define-function
-    #+end_src
-*** change-work-directory
-    #+begin_src cicada-nymph :tangle core.cn
-    : change-work-directory
-      << directory-path[address, length] -- >>
-      >::directory-path
-      ::directory-path
-      string->syscall-string
-      :syscall-number,chdir:
-      1 syscall
-      dup negative? if
-        "* (change-work-directory) fail" .s .l
-        "  can not change the work directory into : " .s ::directory-path .s .l
-        "  " .s error-code->string .s .l
-        end
-      then
-      drop
-      end
-    ; define-function
-    #+end_src
-*** test
-    #+begin_src cicada-nymph
-    get-work-directory .s
-    "/home" change-work-directory
-    get-work-directory .s
-    "/////home/xyh////cicada/play" change-work-directory
-    get-work-directory .s
-    "//././/home/xyh/././cicada/./" change-work-directory
-    get-work-directory .s
-    #+end_src
-* path
-** stat structure
+* <work-directory>
+** <work-directory> get
    #+begin_src cicada-nymph :tangle core.cn
-   0 : +stat,st_dev+        ; define-variable,with-tos
-   0 : +stat,st_ino+        ; define-variable,with-tos
-   0 : +stat,st_mode+       ; define-variable,with-tos
-   0 : +stat,st_nlink+      ; define-variable,with-tos
-   0 : +stat,st_uid+        ; define-variable,with-tos
-   0 : +stat,st_gid+        ; define-variable,with-tos
-   0 : +stat,st_rdev+       ; define-variable,with-tos
-   0 : +stat,st_size+       ; define-variable,with-tos
-   0 : +stat,st_blksize+    ; define-variable,with-tos
-   0 : +stat,st_blocks+     ; define-variable,with-tos
-   0 : +stat,st_atime+      ; define-variable,with-tos
-   0 : +stat,st_atime_nsec+ ; define-variable,with-tos
-   0 : +stat,st_mtime+      ; define-variable,with-tos
-   0 : +stat,st_mtime_nsec+ ; define-variable,with-tos
-   0 : +stat,st_ctime+      ; define-variable,with-tos
-   0 : +stat,st_ctime_nsec+ ; define-variable,with-tos
+   512 allocate-memory
+   : *buffer,work-directory*
+   ; define-variable,with-tos
+
+   : <work-directory> get
+     << -- directory[address, length] >>
+     512
+     *buffer,work-directory*
+     <syscall-number> *getcwd*
+     2 syscall
+     dup negative? if
+       "* (<work-directory> get) fail" .s .l
+       "  " .s error-code->string .s .l
+       end
+     then
+     *buffer,work-directory*
+     swap
+     sub1 << for the ending zero >>
+     end
+   ; define-function
+   #+end_src
+** <work-directory> change
+   #+begin_src cicada-nymph :tangle core.cn
+   : <work-directory> change
+     << directory-path[address, length] -- >>
+     >::directory-path
+     ::directory-path
+     string->syscall-string
+     <syscall-number> *chdir*
+     1 syscall
+     dup negative? if
+       "* (<work-directory> change) fail" .s .l
+       "  can not change the work directory into : " .s ::directory-path .s .l
+       "  thus the argument in the stack is not consumed" .s .l
+       "  " .s error-code->string .s .l
+       ::directory-path
+       end
+     then
+     drop
+     end
+   ; define-function
+   #+end_src
+** pwd
+   * print work-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   : pwd
+     << -- >>
+     <work-directory> get .s .l
+     end
+   ; define-function
+   #+end_src
+** cd
+   * change work-directory
+   #+begin_src cicada-nymph :tangle core.cn
+   "cd" "<work-directory> change" alias
+   #+end_src
+** test
+   #+begin_src cicada-nymph
+   pwd
+   "/home" cd
+   pwd
+   "/////home/xyh////cicada/play" cd
+   pwd
+   "//././/home/xyh/././cicada/./" cd
+   pwd
+   #+end_src
+* <path>
+** <system-stat>
+   #+begin_src cicada-nymph :tangle core.cn
+   0 : +stat,dev+        ; define-variable,with-tos
+   0 : +stat,ino+        ; define-variable,with-tos
+   0 : +stat,mode+       ; define-variable,with-tos
+   0 : +stat,nlink+      ; define-variable,with-tos
+   0 : +stat,uid+        ; define-variable,with-tos
+   0 : +stat,gid+        ; define-variable,with-tos
+   0 : +stat,rdev+       ; define-variable,with-tos
+   0 : +stat,size+       ; define-variable,with-tos
+   0 : +stat,blksize+    ; define-variable,with-tos
+   0 : +stat,blocks+     ; define-variable,with-tos
+   0 : +stat,atime+      ; define-variable,with-tos
+   0 : +stat,atime_nsec+ ; define-variable,with-tos
+   0 : +stat,mtime+      ; define-variable,with-tos
+   0 : +stat,mtime_nsec+ ; define-variable,with-tos
+   0 : +stat,ctime+      ; define-variable,with-tos
+   0 : +stat,ctime_nsec+ ; define-variable,with-tos
    0 : +stat,__unused4+     ; define-variable,with-tos
    0 : +stat,__unused5+     ; define-variable,with-tos
    0 : +stat,end+           ; define-variable,with-tos
@@ -5446,50 +5479,50 @@
    : init,stat
      << offset -- >>
      *jo-size* 4 equal? if
-       dup address +stat,st_dev+        set *jo-size* add
-       dup address +stat,st_ino+        set *jo-size* add
-       dup address +stat,st_mode+       set 2 add
-       dup address +stat,st_nlink+      set 2 add
-       dup address +stat,st_uid+        set 2 add
-       dup address +stat,st_gid+        set 2 add
-       dup address +stat,st_rdev+       set *jo-size* add
-       dup address +stat,st_size+       set *jo-size* add
-       dup address +stat,st_blksize+    set *jo-size* add
-       dup address +stat,st_blocks+     set *jo-size* add
-       dup address +stat,st_atime+      set *jo-size* add
-       dup address +stat,st_atime_nsec+ set *jo-size* add
-       dup address +stat,st_mtime+      set *jo-size* add
-       dup address +stat,st_mtime_nsec+ set *jo-size* add
-       dup address +stat,st_ctime+      set *jo-size* add
-       dup address +stat,st_ctime_nsec+ set *jo-size* add
+       dup address +stat,dev+        set *jo-size* add
+       dup address +stat,ino+        set *jo-size* add
+       dup address +stat,mode+       set 2 add
+       dup address +stat,nlink+      set 2 add
+       dup address +stat,uid+        set 2 add
+       dup address +stat,gid+        set 2 add
+       dup address +stat,rdev+       set *jo-size* add
+       dup address +stat,size+       set *jo-size* add
+       dup address +stat,blksize+    set *jo-size* add
+       dup address +stat,blocks+     set *jo-size* add
+       dup address +stat,atime+      set *jo-size* add
+       dup address +stat,atime_nsec+ set *jo-size* add
+       dup address +stat,mtime+      set *jo-size* add
+       dup address +stat,mtime_nsec+ set *jo-size* add
+       dup address +stat,ctime+      set *jo-size* add
+       dup address +stat,ctime_nsec+ set *jo-size* add
        dup address +stat,__unused4+     set *jo-size* add
        dup address +stat,__unused5+     set *jo-size* add
            address +stat,end+           set
        end
      then
      *jo-size* 8 equal? if
-       dup address +stat,st_dev+        set *jo-size* add
-       dup address +stat,st_ino+        set *jo-size* add
+       dup address +stat,dev+        set *jo-size* add
+       dup address +stat,ino+        set *jo-size* add
        <<
        note the following order changing
        this is linux' bad
        >>
-       dup address +stat,st_nlink+      set 8 add
-       dup address +stat,st_mode+       set 4 add
+       dup address +stat,nlink+      set 8 add
+       dup address +stat,mode+       set 4 add
 
-       dup address +stat,st_uid+        set 4 add
-       dup address +stat,st_gid+        set 4 add
-                                             4 add << padding >>
-       dup address +stat,st_rdev+       set *jo-size* add
-       dup address +stat,st_size+       set *jo-size* add
-       dup address +stat,st_blksize+    set *jo-size* add
-       dup address +stat,st_blocks+     set *jo-size* add
-       dup address +stat,st_atime+      set *jo-size* add
-       dup address +stat,st_atime_nsec+ set *jo-size* add
-       dup address +stat,st_mtime+      set *jo-size* add
-       dup address +stat,st_mtime_nsec+ set *jo-size* add
-       dup address +stat,st_ctime+      set *jo-size* add
-       dup address +stat,st_ctime_nsec+ set *jo-size* add
+       dup address +stat,uid+        set 4 add
+       dup address +stat,gid+        set 4 add
+                                            4 add << padding >>
+       dup address +stat,rdev+       set *jo-size* add
+       dup address +stat,size+       set *jo-size* add
+       dup address +stat,blksize+    set *jo-size* add
+       dup address +stat,blocks+     set *jo-size* add
+       dup address +stat,atime+      set *jo-size* add
+       dup address +stat,atime_nsec+ set *jo-size* add
+       dup address +stat,mtime+      set *jo-size* add
+       dup address +stat,mtime_nsec+ set *jo-size* add
+       dup address +stat,ctime+      set *jo-size* add
+       dup address +stat,ctime_nsec+ set *jo-size* add
        dup address +stat,__unused4+     set *jo-size* add
        dup address +stat,__unused5+     set *jo-size* add
            address +stat,end+           set
@@ -5511,7 +5544,7 @@
      >:stat-structure
      :stat-structure
      :syscall-path
-     :syscall-number,stat:
+     <syscall-number> *stat*
      2 syscall
      dup
      negative? if
@@ -5521,30 +5554,30 @@
      then
      drop
      :stat-structure init,stat
-     "+stat,st_dev+ : " .s +stat,st_dev+        get . .l
-     "+stat,st_ino+ : " .s +stat,st_ino+        get . .l
+     "+stat,dev+ : " .s +stat,dev+        get . .l
+     "+stat,ino+ : " .s +stat,ino+        get . .l
      *jo-size* 4 equal? if
-     "+stat,st_mode+ : " .s +stat,st_mode+       get-two-bytes  . .l
-     "+stat,st_nlink+ : " .s +stat,st_nlink+      get-two-bytes  . .l
-     "+stat,st_uid+ : " .s +stat,st_uid+        get-two-bytes  . .l
-     "+stat,st_gid+ : " .s +stat,st_gid+        get-two-bytes  . .l
+     "+stat,mode+ : " .s +stat,mode+       get-two-bytes  . .l
+     "+stat,nlink+ : " .s +stat,nlink+      get-two-bytes  . .l
+     "+stat,uid+ : " .s +stat,uid+        get-two-bytes  . .l
+     "+stat,gid+ : " .s +stat,gid+        get-two-bytes  . .l
      then
      *jo-size* 8 equal? if
-     "+stat,st_nlink+ : " .s +stat,st_nlink+      get  . .l
-     "+stat,st_mode+ : " .s +stat,st_mode+       get-four-bytes  . .l
-     "+stat,st_uid+ : " .s +stat,st_uid+        get-four-bytes  . .l
-     "+stat,st_gid+ : " .s +stat,st_gid+        get-four-bytes  . .l
+     "+stat,nlink+ : " .s +stat,nlink+      get  . .l
+     "+stat,mode+ : " .s +stat,mode+       get-four-bytes  . .l
+     "+stat,uid+ : " .s +stat,uid+        get-four-bytes  . .l
+     "+stat,gid+ : " .s +stat,gid+        get-four-bytes  . .l
      then
-     "+stat,st_rdev+ : " .s +stat,st_rdev+       get . .l
-     "+stat,st_size+ : " .s +stat,st_size+       get . .l
-     "+stat,st_blksize+ : " .s +stat,st_blksize+    get . .l
-     "+stat,st_blocks+ : " .s +stat,st_blocks+     get . .l
-     "+stat,st_atime+ : " .s +stat,st_atime+      get . .l
-     "+stat,st_atime_nsec+ : " .s +stat,st_atime_nsec+ get . .l
-     "+stat,st_mtime+ : " .s +stat,st_mtime+      get . .l
-     "+stat,st_mtime_nsec+ : " .s +stat,st_mtime_nsec+ get . .l
-     "+stat,st_ctime+ : " .s +stat,st_ctime+      get . .l
-     "+stat,st_ctime_nsec+ : " .s +stat,st_ctime_nsec+ get . .l
+     "+stat,rdev+ : " .s +stat,rdev+       get . .l
+     "+stat,size+ : " .s +stat,size+       get . .l
+     "+stat,blksize+ : " .s +stat,blksize+    get . .l
+     "+stat,blocks+ : " .s +stat,blocks+     get . .l
+     "+stat,atime+ : " .s +stat,atime+      get . .l
+     "+stat,atime_nsec+ : " .s +stat,atime_nsec+ get . .l
+     "+stat,mtime+ : " .s +stat,mtime+      get . .l
+     "+stat,mtime_nsec+ : " .s +stat,mtime_nsec+ get . .l
+     "+stat,ctime+ : " .s +stat,ctime+      get . .l
+     "+stat,ctime_nsec+ : " .s +stat,ctime_nsec+ get . .l
      "+stat,__unused4+ : " .s +stat,__unused4+     get . .l
      "+stat,__unused5+ : " .s +stat,__unused5+     get . .l
      end
@@ -5556,9 +5589,9 @@
 ** note predicate
    * to use predicate to know more about the file-tree
      before calling a function that makes action on the file-tree
-** path,nothing?
+** <path> nothing?
    #+begin_src cicada-nymph :tangle core.cn
-   : path,nothing?
+   : <path> nothing?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -5566,15 +5599,15 @@
      >:stat-structure
      :stat-structure
      :syscall-path
-     :syscall-number,stat:
+     <syscall-number> *stat*
      2 syscall
      -2 equal?
      end
    ; define-function
    #+end_src
-** path,file?
+** <path> file?
    #+begin_src cicada-nymph :tangle core.cn
-   : path,file?
+   : <path> file?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -5582,7 +5615,7 @@
      >:stat-structure
      :stat-structure
      :syscall-path
-     :syscall-number,stat:
+     <syscall-number> *stat*
      2 syscall
      dup
      negative? if
@@ -5593,11 +5626,11 @@
      drop
      :stat-structure init,stat
      *jo-size* 4 equal? if
-       +stat,st_mode+
+       +stat,mode+
        get-two-bytes
      then
      *jo-size* 8 equal? if
-       +stat,st_mode+
+       +stat,mode+
        get-four-bytes
      then
      12 bit-right
@@ -5616,9 +5649,9 @@
      end
    ; define-function
    #+end_src
-** path,directory?
+** <path> directory?
    #+begin_src cicada-nymph :tangle core.cn
-   : path,directory?
+   : <path> directory?
      << path[address, length] -- bool >>
      string->syscall-string
      >:syscall-path
@@ -5626,7 +5659,7 @@
      >:stat-structure
      :stat-structure
      :syscall-path
-     :syscall-number,stat:
+     <syscall-number> *stat*
      2 syscall
      dup
      negative? if
@@ -5637,11 +5670,11 @@
      drop
      :stat-structure init,stat
      *jo-size* 4 equal? if
-       +stat,st_mode+
+       +stat,mode+
        get-two-bytes
      then
      *jo-size* 8 equal? if
-       +stat,st_mode+
+       +stat,mode+
        get-four-bytes
      then
      12 bit-right
@@ -5662,17 +5695,17 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   "cn" path,nothing? . << 0 >>
-   "core" path,nothing? . << 0 >>
-   "ai" path,nothing? . << 1 >>
+   "cn" <path> nothing? . << 0 >>
+   "core" <path> nothing? . << 0 >>
+   "ai" <path> nothing? . << 1 >>
 
-   "cn" path,file? . << 1 >>
-   "core" path,file? . << 0 >>
-   "ai" path,file? . << 0 >>
+   "cn" <path> file? . << 1 >>
+   "core" <path> file? . << 0 >>
+   "ai" <path> file? . << 0 >>
 
-   "cn" path,directory? . << 0 >>
-   "core" path,directory? . << 1 >>
-   "ai" path,directory? . << 0 >>
+   "cn" <path> directory? . << 0 >>
+   "core" <path> directory? . << 1 >>
+   "ai" <path> directory? . << 0 >>
    #+end_src
 ** 記 字符串的謂詞
    * 下面這兩個函數
@@ -5695,10 +5728,10 @@
      3. 並且在這裏我允許 path 內 出現空格
         保留對這種路徑的處理能力
         只不過 我不使用這種路徑而已
-** relative-path?
+** <path> relative?
    * in ASCII "/" is 47
    #+begin_src cicada-nymph :tangle core.cn
-   : relative-path?
+   : <path> relative?
      << string[address, length] -- bool >>
      dup zero? if
        drop2
@@ -5710,10 +5743,10 @@
      end
    ; define-function
    #+end_src
-** full-path?
+** <path> full?
    * in ASCII "/" is 47
    #+begin_src cicada-nymph :tangle core.cn
-   : full-path?
+   : <path> full?
      << string[address, length] -- bool >>
      dup zero? if
        drop2
@@ -5725,16 +5758,16 @@
      end
    ; define-function
    #+end_src
-** test full-path?
+** test <path> full?
    #+begin_src cicada-nymph :tangle core-test.cn
-   : "* (testing) full-path?" .s .l
-     "/home" relative-path? false?
-     "/home" full-path?     true? and
-     "home"  relative-path? true? and
-     "home"  full-path?     false? and test
+   : "* (testing) <path> full?" .s .l
+     "/home" <path> relative? false?
+     "/home" <path> full?     true? and
+     "home"  <path> relative? true? and
+     "home"  <path> full?     false? and test
    ; test-do
    #+end_src
-* poi
+* <poi>
 ** 記
    * poi 是利用文件系統所實現的登記機制
      所登記的 path 信息爲 path-syntax 所用
@@ -5776,7 +5809,7 @@
      4 n-string->buffer! >:length
 
      :buffer :length
-     path,file? not if
+     <path> file? not if
        false
        end
      then
@@ -5805,13 +5838,13 @@
      >::relative-path
      >::name
 
-     ::relative-path relative-path? not if
+     ::relative-path <path> relative? not if
        "* (<poi> add) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
-     ::relative-path path,directory? not if
+     ::relative-path <path> directory? not if
        "* (<poi> add) the argument must be a relative-path to a existing directory" .s .l
        "  but the following path is not to a directory : " .s ::relative-path .s .l
        end
@@ -5840,7 +5873,7 @@
      <file> create
 
      512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
+     <work-directory> get "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -5887,13 +5920,13 @@
      >::relative-path
      >::name
 
-     ::relative-path relative-path? not if
+     ::relative-path <path> relative? not if
        "* (<poi> up) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
-     ::relative-path path,directory? not if
+     ::relative-path <path> directory? not if
        "* (<poi> up) the argument must be a relative-path to a existing directory" .s .l
        "  but the following directory is not exist : " .s ::relative-path .s .l
        end
@@ -5912,7 +5945,7 @@
      4 n-string->buffer! >:length
 
      512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
+     <work-directory> get "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -5928,10 +5961,10 @@
      << -- >>
      *poi-directory*
      [ << -- >>
-       +getdents64,d_type+ get-byte
+       +getdents64,type+ get-byte
        4 equal? if
          512 allocate-local-memory >:path-buffer
-         +getdents64,d_name+
+         +getdents64,name+
          dup 256
          0 <string> find-byte
          drop  << drop 0 >>
@@ -6008,7 +6041,7 @@
 
    <poi> help
    #+end_src
-* path syntax
+* <word-interpreter-syntax> path
 ** +word+?
    #+begin_src cicada-nymph :tangle core.cn
    : +word+?
@@ -6082,7 +6115,7 @@
        end
      then
      ::word "+work+" <string> equal? if
-       get-work-directory
+       <work-directory> get
        end
      then
      ::word "+home+" <string> equal? if
@@ -6199,6 +6232,7 @@
    << error >>
    path: +module+ hi.cn ;
    #+end_src
+* -----------------------------------
 * <string>
 ** <string> full-of-the-same-byte?
    #+begin_src cicada-nymph :tangle core.cn
@@ -6398,54 +6432,8 @@
    ; define-function
    unread-word,test
    #+end_src
-* <rule-set>
-** <rule-set> mixin
-   * the order matters
-   #+begin_src cicada-nymph :tangle core.cn
-   : <rule-set> mixin,loop
-     << base-rule-set, border, cursor -- >>
-     dup2 equal? if
-       drop2
-       drop
-       end
-     then
-     dup <rule> get >::rule
-     x|over|xx ::rule <rule> add
-     <rule> *unit* add
-     loop
-   ; define-function
-
-   : <rule-set> mixin
-     << base-rule-set, rule-set -- >>
-     dup <rule-set> get-border swap
-     <rule-set> mixin,loop
-     end
-   ; define-function
-   #+end_src
-** <rule-set> mixout
-   #+begin_src cicada-nymph :tangle core.cn
-   : <rule-set> mixout,loop
-     << base-rule-set, border, cursor -- >>
-     dup2 equal? if
-       drop2
-       drop
-       end
-     then
-     dup <rule> get >::rule
-     x|over|xx ::rule <rule> sub
-     <rule> *unit* add
-     loop
-   ; define-function
-
-   : <rule-set> mixout
-     << base-rule-set, rule-set -- >>
-     dup <rule-set> get-border swap
-     <rule-set> mixout,loop
-     end
-   ; define-function
-   #+end_src
 * -----------------------------------
-* 記 module
+* 記 模塊
 ** 元數據 之 語法
    * 舉例
      #+begin_src cicada-nymph
@@ -6565,7 +6553,7 @@
      4 n-string->buffer! >:length
 
      :buffer :length
-     path,file? not if
+     <path> file? not if
        false
        end
      then
@@ -6594,13 +6582,13 @@
      >::relative-path
      >::name
 
-     ::relative-path relative-path? not if
+     ::relative-path <path> relative? not if
        "* (<moi> add) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
-     ::relative-path path,file? not if
+     ::relative-path <path> file? not if
        "* (<moi> add) the argument must be a relative-path to a existing file" .s .l
        "  but the following path is not to a file : " .s ::relative-path .s .l
        end
@@ -6629,7 +6617,7 @@
      <file> create
 
      512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
+     <work-directory> get "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -6676,13 +6664,13 @@
      >::relative-path
      >::name
 
-     ::relative-path relative-path? not if
+     ::relative-path <path> relative? not if
        "* (<moi> up) the argument must be a relative-path" .s .l
        "  but the following is not : " .s ::relative-path .s .l
        end
      then
 
-     ::relative-path path,file? not if
+     ::relative-path <path> file? not if
        "* (<moi> up) the argument must be a relative-path to a existing file" .s .l
        "  but the following file is not exist : " .s ::relative-path .s .l
        end
@@ -6701,7 +6689,7 @@
      4 n-string->buffer! >:length
 
      512 allocate-local-memory >:address,full-path
-     get-work-directory "/" ::relative-path
+     <work-directory> get "/" ::relative-path
      :address,full-path
      3 n-string->buffer! >:length,full-path
 
@@ -6717,10 +6705,10 @@
      << -- >>
      *module-directory*
      [ << -- >>
-       +getdents64,d_type+ get-byte
+       +getdents64,type+ get-byte
        4 equal? if
          512 allocate-local-memory >:path-buffer
-         +getdents64,d_name+
+         +getdents64,name+
          dup 256
          0 <string> find-byte
          drop  << drop 0 >>
@@ -6759,10 +6747,10 @@
    : <moi> help
      << -- >>
      "* (<moi> help)" .s .l
-     "  * cn moi add  <new-name> <relative-path-to-existing-directory>" .s .l
-     "  * cn moi sub  <old-name>" .s .l
-     "  * cn moi up   <old-name> <relative-path-to-existing-directory>" .s .l
-     "  * cn moi find <old-name>" .s .l
+     "  * cn moi add  <new-module-name>      <relative-path-to-existing-file>" .s .l
+     "  * cn moi sub  <existing-module-name>" .s .l
+     "  * cn moi up   <existing-module-name> <relative-path-to-existing-file>" .s .l
+     "  * cn moi find <existing-module-name>" .s .l
      "  * cn moi list" .s .l
      end
    ; define-function
@@ -8904,7 +8892,7 @@
 
   : hi,random
     << -- random-number >>
-    0 :syscall-number,times:
+    0 <syscall-number> *times*
     1 syscall
     13 mod
     <<
@@ -9207,7 +9195,7 @@
      end
    ; define-function
    #+end_src
-* *the-story-begin*
+* *the story begin*
   #+begin_src cicada-nymph :tangle core.cn
   <command> dispatch
   #+end_src

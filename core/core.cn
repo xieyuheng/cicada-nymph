@@ -2252,6 +2252,63 @@ jo <word>?
 jo <word-interpreter-syntax> title
 rule,add
 
+"<string> byte" "string,byte" alias
+"<string> byte-tail" "string,byte-tail" alias
+"<string> byte-back" "string,byte-back" alias
+
+"<string> word" "string,word" alias
+"<string> word-begin" "string,word-begin" alias
+"<string> word-end" "string,word-end" alias
+"<string> word-tail" "string,word-tail" alias
+
+"<string> equal?" "string-equal?" alias
+
+"<string> space?" "space-string?" alias
+"<string> empty?" "empty-string?" alias
+
+"<string> find-byte" "string,find-byte" alias
+
+"<rule-set> get-border" "rule-set,get-border" alias
+"<rule-set> set-border" "rule-set,set-border" alias
+"<rule-set> find" "rule-set,find" alias
+
+"<rule> add" "rule,add" alias
+
+"<rule> *unit*" "*rule,unit*" alias
+"<rule> get" "rule,get" alias
+"<rule> get-predicate" "rule,get-predicate" alias
+"<rule> get-function" "rule,get-function" alias
+
+"<word-interpreter> *rule-set*" "*rule-set,word-interpreter*" alias
+"<jojo-compiler> *rule-set*" "*rule-set,jojo-compiler*" alias
+
+"<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
+"<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
+"<jojo-compiler-syntax> loop" "jojo-compiler-syntax,loop" alias
+"<jojo-compiler-syntax> then" "jojo-compiler-syntax,then" alias
+"<jojo-compiler-syntax> else" "jojo-compiler-syntax,else" alias
+"<jojo-compiler-syntax> if" "jojo-compiler-syntax,if" alias
+"<jojo-compiler-syntax> local-variable-get" "jojo-compiler-syntax,local-variable-get" alias
+"<jojo-compiler-syntax> local-variable-set" "jojo-compiler-syntax,local-variable-set" alias
+"<jojo-compiler-syntax> double-quote" "syntax,double-quote,jojo-compiler" alias
+"<jojo-compiler-syntax> jo" "jojo-compiler-syntax,jo" alias
+"<jojo-compiler-syntax> address" "jojo-compiler-syntax,address" alias
+"<jojo-compiler-syntax> integer-string" "jojo-compiler-syntax,integer-string" alias
+
+"<word-interpreter-syntax> bye" "word-interpreter-syntax,bye" alias
+
+"<name-record> get-old-jo" "name-record,get-old-jo" alias
+"<name-record> set-old-jo" "name-record,set-old-jo" alias
+
+"<name-record> get-name" "name-record,get-name" alias
+"<name-record> set-name" "name-record,set-name" alias
+
+"<name-record> get-new-jo" "name-record,get-new-jo" alias
+"<name-record> set-new-jo" "name-record,set-new-jo" alias
+
+"<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
+"<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
+
 : <rule-set> list,loop
   << rule-set, cursor, counter -- >>
   xx|over|x equal? if
@@ -2333,62 +2390,45 @@ rule,add
   end
 ; define-function
 
-"<string> byte" "string,byte" alias
-"<string> byte-tail" "string,byte-tail" alias
-"<string> byte-back" "string,byte-back" alias
+: <rule-set> mixin,loop
+  << base-rule-set, border, cursor -- >>
+  dup2 equal? if
+    drop2
+    drop
+    end
+  then
+  dup <rule> get >::rule
+  x|over|xx ::rule <rule> add
+  <rule> *unit* add
+  loop
+; define-function
 
-"<string> word" "string,word" alias
-"<string> word-begin" "string,word-begin" alias
-"<string> word-end" "string,word-end" alias
-"<string> word-tail" "string,word-tail" alias
+: <rule-set> mixin
+  << base-rule-set, rule-set -- >>
+  dup <rule-set> get-border swap
+  <rule-set> mixin,loop
+  end
+; define-function
 
-"<string> equal?" "string-equal?" alias
+: <rule-set> mixout,loop
+  << base-rule-set, border, cursor -- >>
+  dup2 equal? if
+    drop2
+    drop
+    end
+  then
+  dup <rule> get >::rule
+  x|over|xx ::rule <rule> sub
+  <rule> *unit* add
+  loop
+; define-function
 
-"<string> space?" "space-string?" alias
-"<string> empty?" "empty-string?" alias
-
-"<string> find-byte" "string,find-byte" alias
-
-"<rule-set> get-border" "rule-set,get-border" alias
-"<rule-set> set-border" "rule-set,set-border" alias
-"<rule-set> find" "rule-set,find" alias
-
-"<rule> add" "rule,add" alias
-
-"<rule> *unit*" "*rule,unit*" alias
-"<rule> get" "rule,get" alias
-"<rule> get-predicate" "rule,get-predicate" alias
-"<rule> get-function" "rule,get-function" alias
-
-"<word-interpreter> *rule-set*" "*rule-set,word-interpreter*" alias
-"<jojo-compiler> *rule-set*" "*rule-set,jojo-compiler*" alias
-
-"<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
-"<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
-"<jojo-compiler-syntax> loop" "jojo-compiler-syntax,loop" alias
-"<jojo-compiler-syntax> then" "jojo-compiler-syntax,then" alias
-"<jojo-compiler-syntax> else" "jojo-compiler-syntax,else" alias
-"<jojo-compiler-syntax> if" "jojo-compiler-syntax,if" alias
-"<jojo-compiler-syntax> local-variable-get" "jojo-compiler-syntax,local-variable-get" alias
-"<jojo-compiler-syntax> local-variable-set" "jojo-compiler-syntax,local-variable-set" alias
-"<jojo-compiler-syntax> double-quote" "syntax,double-quote,jojo-compiler" alias
-"<jojo-compiler-syntax> jo" "jojo-compiler-syntax,jo" alias
-"<jojo-compiler-syntax> address" "jojo-compiler-syntax,address" alias
-"<jojo-compiler-syntax> integer-string" "jojo-compiler-syntax,integer-string" alias
-
-"<word-interpreter-syntax> bye" "word-interpreter-syntax,bye" alias
-
-"<name-record> get-old-jo" "name-record,get-old-jo" alias
-"<name-record> set-old-jo" "name-record,set-old-jo" alias
-
-"<name-record> get-name" "name-record,get-name" alias
-"<name-record> set-name" "name-record,set-name" alias
-
-"<name-record> get-new-jo" "name-record,get-new-jo" alias
-"<name-record> set-new-jo" "name-record,set-new-jo" alias
-
-"<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
-"<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
+: <rule-set> mixout
+  << base-rule-set, rule-set -- >>
+  dup <rule-set> get-border swap
+  <rule-set> mixout,loop
+  end
+; define-function
 
 : stack-REPL,loop
   << unknown -- unknown >>
@@ -2534,41 +2574,41 @@ rule,add
 ; define-function
 
 *jo-size* 4 equal? if
-  5   : :syscall-number,open:       ; define-variable,with-tos
-  6   : :syscall-number,close:      ; define-variable,with-tos
-  3   : :syscall-number,read:       ; define-variable,with-tos
-  4   : :syscall-number,write:      ; define-variable,with-tos
-  9   : :syscall-number,link:       ; define-variable,with-tos
-  10  : :syscall-number,unlink:     ; define-variable,with-tos
-  39  : :syscall-number,mkdir:      ; define-variable,with-tos
-  40  : :syscall-number,rmdir:      ; define-variable,with-tos
-  141 : :syscall-number,getdents:   ; define-variable,with-tos
-  220 : :syscall-number,getdents64: ; define-variable,with-tos
-  106 : :syscall-number,stat:       ; define-variable,with-tos
-  1   : :syscall-number,exit:       ; define-variable,with-tos
-  43  : :syscall-number,times:      ; define-variable,with-tos
-  20  : :syscall-number,getpid:     ; define-variable,with-tos
-  183 : :syscall-number,getcwd:     ; define-variable,with-tos
-  12  : :syscall-number,chdir:      ; define-variable,with-tos
+  5   : <syscall-number> *open*       ; define-variable,with-tos
+  6   : <syscall-number> *close*      ; define-variable,with-tos
+  3   : <syscall-number> *read*       ; define-variable,with-tos
+  4   : <syscall-number> *write*      ; define-variable,with-tos
+  9   : <syscall-number> *link*       ; define-variable,with-tos
+  10  : <syscall-number> *unlink*     ; define-variable,with-tos
+  39  : <syscall-number> *mkdir*      ; define-variable,with-tos
+  40  : <syscall-number> *rmdir*      ; define-variable,with-tos
+  141 : <syscall-number> *getdents*   ; define-variable,with-tos
+  220 : <syscall-number> *getdents64* ; define-variable,with-tos
+  106 : <syscall-number> *stat*       ; define-variable,with-tos
+  1   : <syscall-number> *exit*       ; define-variable,with-tos
+  43  : <syscall-number> *times*      ; define-variable,with-tos
+  20  : <syscall-number> *getpid*     ; define-variable,with-tos
+  183 : <syscall-number> *getcwd*     ; define-variable,with-tos
+  12  : <syscall-number> *chdir*      ; define-variable,with-tos
 then
 
 *jo-size* 8 equal? if
-  2   : :syscall-number,open:       ; define-variable,with-tos
-  3   : :syscall-number,close:      ; define-variable,with-tos
-  0   : :syscall-number,read:       ; define-variable,with-tos
-  1   : :syscall-number,write:      ; define-variable,with-tos
-  86  : :syscall-number,link:       ; define-variable,with-tos
-  87  : :syscall-number,unlink:     ; define-variable,with-tos
-  83  : :syscall-number,mkdir:      ; define-variable,with-tos
-  84  : :syscall-number,rmdir:      ; define-variable,with-tos
-  78  : :syscall-number,getdents:   ; define-variable,with-tos
-  217 : :syscall-number,getdents64: ; define-variable,with-tos
-  4   : :syscall-number,stat:       ; define-variable,with-tos
-  60  : :syscall-number,exit:       ; define-variable,with-tos
-  100 : :syscall-number,times:      ; define-variable,with-tos
-  39  : :syscall-number,getpid:     ; define-variable,with-tos
-  79  : :syscall-number,getcwd:     ; define-variable,with-tos
-  80  : :syscall-number,chdir:      ; define-variable,with-tos
+  2   : <syscall-number> *open*       ; define-variable,with-tos
+  3   : <syscall-number> *close*      ; define-variable,with-tos
+  0   : <syscall-number> *read*       ; define-variable,with-tos
+  1   : <syscall-number> *write*      ; define-variable,with-tos
+  86  : <syscall-number> *link*       ; define-variable,with-tos
+  87  : <syscall-number> *unlink*     ; define-variable,with-tos
+  83  : <syscall-number> *mkdir*      ; define-variable,with-tos
+  84  : <syscall-number> *rmdir*      ; define-variable,with-tos
+  78  : <syscall-number> *getdents*   ; define-variable,with-tos
+  217 : <syscall-number> *getdents64* ; define-variable,with-tos
+  4   : <syscall-number> *stat*       ; define-variable,with-tos
+  60  : <syscall-number> *exit*       ; define-variable,with-tos
+  100 : <syscall-number> *times*      ; define-variable,with-tos
+  39  : <syscall-number> *getpid*     ; define-variable,with-tos
+  79  : <syscall-number> *getcwd*     ; define-variable,with-tos
+  80  : <syscall-number> *chdir*      ; define-variable,with-tos
 then
 
 : error-code->string
@@ -2636,7 +2676,7 @@ then
   O_RDONLY
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   2 syscall
   dup
   negative? if
@@ -2662,7 +2702,7 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   3 syscall
   dup
   negative? if
@@ -2687,7 +2727,7 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   3 syscall
   dup
   negative? if
@@ -2702,7 +2742,7 @@ then
   << port
      -- true
      -- error-code, false >>
-  :syscall-number,close:
+  <syscall-number> *close*
   1 syscall
   dup
   negative? if
@@ -2720,7 +2760,7 @@ then
   >:port
   swap
   :port
-  :syscall-number,read:
+  <syscall-number> *read*
   3 syscall
   dup
   negative? if
@@ -2738,7 +2778,7 @@ then
   >:port
   swap
   :port
-  :syscall-number,write:
+  <syscall-number> *write*
   3 syscall
   dup
   negative? if
@@ -2764,7 +2804,7 @@ then
   O_CREAT  0100
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   3 syscall
   dup
   negative? if
@@ -2797,7 +2837,7 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   3 syscall
   dup
   negative? if
@@ -2809,7 +2849,7 @@ then
   >:port
   ::string swap
   :port
-  :syscall-number,write:
+  <syscall-number> *write*
   3 syscall
   dup
   negative? if
@@ -2840,7 +2880,7 @@ then
   O_RDONLY
   >>
   :syscall-path
-  :syscall-number,open:
+  <syscall-number> *open*
   2 syscall
   dup
   negative? if
@@ -2853,7 +2893,7 @@ then
   >:port
   ::string swap
   :port
-  :syscall-number,read:
+  <syscall-number> *read*
   3 syscall
   dup
   negative? if
@@ -2883,7 +2923,7 @@ then
   string->syscall-string
   >:syscall-path
   :syscall-path
-  :syscall-number,unlink:
+  <syscall-number> *unlink*
   1 syscall
   dup
   negative? if
@@ -2906,7 +2946,7 @@ then
   2#111101101
   >>
   :syscall-path
-  :syscall-number,mkdir:
+  <syscall-number> *mkdir*
   2 syscall
   dup
   negative? if
@@ -2926,7 +2966,7 @@ then
   string->syscall-string
   >:syscall-path
   :syscall-path
-  :syscall-number,rmdir:
+  <syscall-number> *rmdir*
   1 syscall
   dup
   negative? if
@@ -2939,30 +2979,30 @@ then
   end
 ; define-function
 
-0 : +getdents64,d_ino+        ; define-variable,with-tos
-0 : +getdents64,d_off+        ; define-variable,with-tos
-0 : +getdents64,d_reclen+     ; define-variable,with-tos
-0 : +getdents64,d_type+       ; define-variable,with-tos
-0 : +getdents64,d_name+       ; define-variable,with-tos
+0 : +getdents64,ino+        ; define-variable,with-tos
+0 : +getdents64,off+        ; define-variable,with-tos
+0 : +getdents64,reclen+     ; define-variable,with-tos
+0 : +getdents64,type+       ; define-variable,with-tos
+0 : +getdents64,name+       ; define-variable,with-tos
 0 : +getdents64,end+          ; define-variable,with-tos
 
 : init,getdents64
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +getdents64,d_ino+    set    8 add
-    dup address +getdents64,d_off+    set    8 add
-    dup address +getdents64,d_reclen+ set    2 add
-    dup address +getdents64,d_type+   set    1 add
-    dup address +getdents64,d_name+   set    256 add
+    dup address +getdents64,ino+    set    8 add
+    dup address +getdents64,off+    set    8 add
+    dup address +getdents64,reclen+ set    2 add
+    dup address +getdents64,type+   set    1 add
+    dup address +getdents64,name+   set    256 add
         address +getdents64,end+      set
     end
   then
   *jo-size* 8 equal? if
-    dup address +getdents64,d_ino+    set    8 add
-    dup address +getdents64,d_off+    set    8 add
-    dup address +getdents64,d_reclen+ set    2 add
-    dup address +getdents64,d_type+   set    1 add
-    dup address +getdents64,d_name+   set    256 add
+    dup address +getdents64,ino+    set    8 add
+    dup address +getdents64,off+    set    8 add
+    dup address +getdents64,reclen+ set    2 add
+    dup address +getdents64,type+   set    1 add
+    dup address +getdents64,name+   set    256 add
         address +getdents64,end+      set
     end
   then
@@ -2987,7 +3027,7 @@ then
   128
   :getdents64-structure-list
   :port
-  :syscall-number,getdents64:
+  <syscall-number> *getdents64*
   3 syscall
   48 equal? << this call to equal? returns the needed bool >>
   :port <port> close if
@@ -3011,7 +3051,7 @@ then
   :cursor init,getdents64
   :function apply
   :end
-  :cursor +getdents64,d_reclen+ get-two-bytes add
+  :cursor +getdents64,reclen+ get-two-bytes add
   :function
   loop
 ; define-function
@@ -3024,7 +3064,7 @@ then
   1024
   :getdents64-structure-list
   :port
-  :syscall-number,getdents64:
+  <syscall-number> *getdents64*
   3 syscall
   dup negative? if
     "* (<directory> map,loop) syscall fail" .s .l
@@ -3070,10 +3110,10 @@ then
 : <directory> list-file
   << directory-path[address, length] -- >>
   [ << -- >>
-    +getdents64,d_type+ get-byte
+    +getdents64,type+ get-byte
     8 equal? if
       "  " .s
-      +getdents64,d_name+
+      +getdents64,name+
       dup 256
       0 <string> find-byte
       drop  << drop 0 >>
@@ -3087,9 +3127,9 @@ then
 : <directory> list-directory
   << directory-path[address, length] -- >>
   [ << -- >>
-    +getdents64,d_type+ get-byte
+    +getdents64,type+ get-byte
     4 equal? if
-      +getdents64,d_name+
+      +getdents64,name+
       dup 256
       0 <string> find-byte
       drop  << drop 0 >>
@@ -3115,13 +3155,13 @@ then
   xx|swap|x
   [ << file-name[address, length], bool --
        file-name[address, length], bool >>
-    +getdents64,d_type+ get-byte 8 equal? not if
+    +getdents64,type+ get-byte 8 equal? not if
       end
     then
     >:bool
     >:file-name,lenght
     >:file-name,address
-    :file-name,lenght +getdents64,d_name+ add
+    :file-name,lenght +getdents64,name+ add
     get-byte zero? not if
       :file-name,address
       :file-name,lenght
@@ -3129,7 +3169,7 @@ then
       end
     then
     :file-name,address :file-name,lenght
-    +getdents64,d_name+ :file-name,lenght
+    +getdents64,name+ :file-name,lenght
     <string> equal? if
       :file-name,address
       :file-name,lenght
@@ -3152,13 +3192,13 @@ then
   xx|swap|x
   [ << file-name[address, length], bool --
        file-name[address, length], bool >>
-    +getdents64,d_type+ get-byte 4 equal? not if
+    +getdents64,type+ get-byte 4 equal? not if
       end
     then
     >:bool
     >:file-name,lenght
     >:file-name,address
-    :file-name,lenght +getdents64,d_name+ add
+    :file-name,lenght +getdents64,name+ add
     get-byte zero? not if
       :file-name,address
       :file-name,lenght
@@ -3166,7 +3206,7 @@ then
       end
     then
     :file-name,address :file-name,lenght
-    +getdents64,d_name+ :file-name,lenght
+    +getdents64,name+ :file-name,lenght
     <string> equal? if
       :file-name,address
       :file-name,lenght
@@ -3186,7 +3226,7 @@ then
 
 : init-pid
   << -- >>
-  :syscall-number,getpid:
+  <syscall-number> *getpid*
   0 syscall
   address *pid* set
   end
@@ -3410,14 +3450,14 @@ init-environment-variable-list
 : *buffer,work-directory*
 ; define-variable,with-tos
 
-: get-work-directory
+: <work-directory> get
   << -- directory[address, length] >>
   512
   *buffer,work-directory*
-  :syscall-number,getcwd:
+  <syscall-number> *getcwd*
   2 syscall
   dup negative? if
-    "* (get-work-directory) fail" .s .l
+    "* (<work-directory> get) fail" .s .l
     "  " .s error-code->string .s .l
     end
   then
@@ -3427,39 +3467,49 @@ init-environment-variable-list
   end
 ; define-function
 
-: change-work-directory
+: <work-directory> change
   << directory-path[address, length] -- >>
   >::directory-path
   ::directory-path
   string->syscall-string
-  :syscall-number,chdir:
+  <syscall-number> *chdir*
   1 syscall
   dup negative? if
-    "* (change-work-directory) fail" .s .l
+    "* (<work-directory> change) fail" .s .l
     "  can not change the work directory into : " .s ::directory-path .s .l
+    "  thus the argument in the stack is not consumed" .s .l
     "  " .s error-code->string .s .l
+    ::directory-path
     end
   then
   drop
   end
 ; define-function
 
-0 : +stat,st_dev+        ; define-variable,with-tos
-0 : +stat,st_ino+        ; define-variable,with-tos
-0 : +stat,st_mode+       ; define-variable,with-tos
-0 : +stat,st_nlink+      ; define-variable,with-tos
-0 : +stat,st_uid+        ; define-variable,with-tos
-0 : +stat,st_gid+        ; define-variable,with-tos
-0 : +stat,st_rdev+       ; define-variable,with-tos
-0 : +stat,st_size+       ; define-variable,with-tos
-0 : +stat,st_blksize+    ; define-variable,with-tos
-0 : +stat,st_blocks+     ; define-variable,with-tos
-0 : +stat,st_atime+      ; define-variable,with-tos
-0 : +stat,st_atime_nsec+ ; define-variable,with-tos
-0 : +stat,st_mtime+      ; define-variable,with-tos
-0 : +stat,st_mtime_nsec+ ; define-variable,with-tos
-0 : +stat,st_ctime+      ; define-variable,with-tos
-0 : +stat,st_ctime_nsec+ ; define-variable,with-tos
+: pwd
+  << -- >>
+  <work-directory> get .s .l
+  end
+; define-function
+
+"cd" "<work-directory> change" alias
+
+0 : +stat,dev+        ; define-variable,with-tos
+0 : +stat,ino+        ; define-variable,with-tos
+0 : +stat,mode+       ; define-variable,with-tos
+0 : +stat,nlink+      ; define-variable,with-tos
+0 : +stat,uid+        ; define-variable,with-tos
+0 : +stat,gid+        ; define-variable,with-tos
+0 : +stat,rdev+       ; define-variable,with-tos
+0 : +stat,size+       ; define-variable,with-tos
+0 : +stat,blksize+    ; define-variable,with-tos
+0 : +stat,blocks+     ; define-variable,with-tos
+0 : +stat,atime+      ; define-variable,with-tos
+0 : +stat,atime_nsec+ ; define-variable,with-tos
+0 : +stat,mtime+      ; define-variable,with-tos
+0 : +stat,mtime_nsec+ ; define-variable,with-tos
+0 : +stat,ctime+      ; define-variable,with-tos
+0 : +stat,ctime_nsec+ ; define-variable,with-tos
 0 : +stat,__unused4+     ; define-variable,with-tos
 0 : +stat,__unused5+     ; define-variable,with-tos
 0 : +stat,end+           ; define-variable,with-tos
@@ -3467,50 +3517,50 @@ init-environment-variable-list
 : init,stat
   << offset -- >>
   *jo-size* 4 equal? if
-    dup address +stat,st_dev+        set *jo-size* add
-    dup address +stat,st_ino+        set *jo-size* add
-    dup address +stat,st_mode+       set 2 add
-    dup address +stat,st_nlink+      set 2 add
-    dup address +stat,st_uid+        set 2 add
-    dup address +stat,st_gid+        set 2 add
-    dup address +stat,st_rdev+       set *jo-size* add
-    dup address +stat,st_size+       set *jo-size* add
-    dup address +stat,st_blksize+    set *jo-size* add
-    dup address +stat,st_blocks+     set *jo-size* add
-    dup address +stat,st_atime+      set *jo-size* add
-    dup address +stat,st_atime_nsec+ set *jo-size* add
-    dup address +stat,st_mtime+      set *jo-size* add
-    dup address +stat,st_mtime_nsec+ set *jo-size* add
-    dup address +stat,st_ctime+      set *jo-size* add
-    dup address +stat,st_ctime_nsec+ set *jo-size* add
+    dup address +stat,dev+        set *jo-size* add
+    dup address +stat,ino+        set *jo-size* add
+    dup address +stat,mode+       set 2 add
+    dup address +stat,nlink+      set 2 add
+    dup address +stat,uid+        set 2 add
+    dup address +stat,gid+        set 2 add
+    dup address +stat,rdev+       set *jo-size* add
+    dup address +stat,size+       set *jo-size* add
+    dup address +stat,blksize+    set *jo-size* add
+    dup address +stat,blocks+     set *jo-size* add
+    dup address +stat,atime+      set *jo-size* add
+    dup address +stat,atime_nsec+ set *jo-size* add
+    dup address +stat,mtime+      set *jo-size* add
+    dup address +stat,mtime_nsec+ set *jo-size* add
+    dup address +stat,ctime+      set *jo-size* add
+    dup address +stat,ctime_nsec+ set *jo-size* add
     dup address +stat,__unused4+     set *jo-size* add
     dup address +stat,__unused5+     set *jo-size* add
         address +stat,end+           set
     end
   then
   *jo-size* 8 equal? if
-    dup address +stat,st_dev+        set *jo-size* add
-    dup address +stat,st_ino+        set *jo-size* add
+    dup address +stat,dev+        set *jo-size* add
+    dup address +stat,ino+        set *jo-size* add
     <<
     note the following order changing
     this is linux' bad
     >>
-    dup address +stat,st_nlink+      set 8 add
-    dup address +stat,st_mode+       set 4 add
+    dup address +stat,nlink+      set 8 add
+    dup address +stat,mode+       set 4 add
 
-    dup address +stat,st_uid+        set 4 add
-    dup address +stat,st_gid+        set 4 add
-                                          4 add << padding >>
-    dup address +stat,st_rdev+       set *jo-size* add
-    dup address +stat,st_size+       set *jo-size* add
-    dup address +stat,st_blksize+    set *jo-size* add
-    dup address +stat,st_blocks+     set *jo-size* add
-    dup address +stat,st_atime+      set *jo-size* add
-    dup address +stat,st_atime_nsec+ set *jo-size* add
-    dup address +stat,st_mtime+      set *jo-size* add
-    dup address +stat,st_mtime_nsec+ set *jo-size* add
-    dup address +stat,st_ctime+      set *jo-size* add
-    dup address +stat,st_ctime_nsec+ set *jo-size* add
+    dup address +stat,uid+        set 4 add
+    dup address +stat,gid+        set 4 add
+                                         4 add << padding >>
+    dup address +stat,rdev+       set *jo-size* add
+    dup address +stat,size+       set *jo-size* add
+    dup address +stat,blksize+    set *jo-size* add
+    dup address +stat,blocks+     set *jo-size* add
+    dup address +stat,atime+      set *jo-size* add
+    dup address +stat,atime_nsec+ set *jo-size* add
+    dup address +stat,mtime+      set *jo-size* add
+    dup address +stat,mtime_nsec+ set *jo-size* add
+    dup address +stat,ctime+      set *jo-size* add
+    dup address +stat,ctime_nsec+ set *jo-size* add
     dup address +stat,__unused4+     set *jo-size* add
     dup address +stat,__unused5+     set *jo-size* add
         address +stat,end+           set
@@ -3522,7 +3572,7 @@ init-environment-variable-list
 0 init,stat
 +stat,end+ : +stat,length+ ; define-variable,with-tos
 
-: path,nothing?
+: <path> nothing?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3530,13 +3580,13 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  :syscall-number,stat:
+  <syscall-number> *stat*
   2 syscall
   -2 equal?
   end
 ; define-function
 
-: path,file?
+: <path> file?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3544,7 +3594,7 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  :syscall-number,stat:
+  <syscall-number> *stat*
   2 syscall
   dup
   negative? if
@@ -3555,11 +3605,11 @@ init-environment-variable-list
   drop
   :stat-structure init,stat
   *jo-size* 4 equal? if
-    +stat,st_mode+
+    +stat,mode+
     get-two-bytes
   then
   *jo-size* 8 equal? if
-    +stat,st_mode+
+    +stat,mode+
     get-four-bytes
   then
   12 bit-right
@@ -3578,7 +3628,7 @@ init-environment-variable-list
   end
 ; define-function
 
-: path,directory?
+: <path> directory?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3586,7 +3636,7 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  :syscall-number,stat:
+  <syscall-number> *stat*
   2 syscall
   dup
   negative? if
@@ -3597,11 +3647,11 @@ init-environment-variable-list
   drop
   :stat-structure init,stat
   *jo-size* 4 equal? if
-    +stat,st_mode+
+    +stat,mode+
     get-two-bytes
   then
   *jo-size* 8 equal? if
-    +stat,st_mode+
+    +stat,mode+
     get-four-bytes
   then
   12 bit-right
@@ -3620,7 +3670,7 @@ init-environment-variable-list
   end
 ; define-function
 
-: relative-path?
+: <path> relative?
   << string[address, length] -- bool >>
   dup zero? if
     drop2
@@ -3632,7 +3682,7 @@ init-environment-variable-list
   end
 ; define-function
 
-: full-path?
+: <path> full?
   << string[address, length] -- bool >>
   dup zero? if
     drop2
@@ -3666,7 +3716,7 @@ init-environment-variable-list
   4 n-string->buffer! >:length
 
   :buffer :length
-  path,file? not if
+  <path> file? not if
     false
     end
   then
@@ -3693,13 +3743,13 @@ init-environment-variable-list
   >::relative-path
   >::name
 
-  ::relative-path relative-path? not if
+  ::relative-path <path> relative? not if
     "* (<poi> add) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path path,directory? not if
+  ::relative-path <path> directory? not if
     "* (<poi> add) the argument must be a relative-path to a existing directory" .s .l
     "  but the following path is not to a directory : " .s ::relative-path .s .l
     end
@@ -3728,7 +3778,7 @@ init-environment-variable-list
   <file> create
 
   512 allocate-local-memory >:address,full-path
-  get-work-directory "/" ::relative-path
+  <work-directory> get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
@@ -3771,13 +3821,13 @@ init-environment-variable-list
   >::relative-path
   >::name
 
-  ::relative-path relative-path? not if
+  ::relative-path <path> relative? not if
     "* (<poi> up) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path path,directory? not if
+  ::relative-path <path> directory? not if
     "* (<poi> up) the argument must be a relative-path to a existing directory" .s .l
     "  but the following directory is not exist : " .s ::relative-path .s .l
     end
@@ -3796,7 +3846,7 @@ init-environment-variable-list
   4 n-string->buffer! >:length
 
   512 allocate-local-memory >:address,full-path
-  get-work-directory "/" ::relative-path
+  <work-directory> get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
@@ -3810,10 +3860,10 @@ init-environment-variable-list
   << -- >>
   *poi-directory*
   [ << -- >>
-    +getdents64,d_type+ get-byte
+    +getdents64,type+ get-byte
     4 equal? if
       512 allocate-local-memory >:path-buffer
-      +getdents64,d_name+
+      +getdents64,name+
       dup 256
       0 <string> find-byte
       drop  << drop 0 >>
@@ -3891,7 +3941,7 @@ init-environment-variable-list
     end
   then
   ::word "+work+" <string> equal? if
-    get-work-directory
+    <work-directory> get
     end
   then
   ::word "+home+" <string> equal? if
@@ -4115,46 +4165,6 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <rule-set> mixin,loop
-  << base-rule-set, border, cursor -- >>
-  dup2 equal? if
-    drop2
-    drop
-    end
-  then
-  dup <rule> get >::rule
-  x|over|xx ::rule <rule> add
-  <rule> *unit* add
-  loop
-; define-function
-
-: <rule-set> mixin
-  << base-rule-set, rule-set -- >>
-  dup <rule-set> get-border swap
-  <rule-set> mixin,loop
-  end
-; define-function
-
-: <rule-set> mixout,loop
-  << base-rule-set, border, cursor -- >>
-  dup2 equal? if
-    drop2
-    drop
-    end
-  then
-  dup <rule> get >::rule
-  x|over|xx ::rule <rule> sub
-  <rule> *unit* add
-  loop
-; define-function
-
-: <rule-set> mixout
-  << base-rule-set, rule-set -- >>
-  dup <rule-set> get-border swap
-  <rule-set> mixout,loop
-  end
-; define-function
-
 100 1024 mul
 : *module-naming-stack,size*
 ; define-variable,with-tos
@@ -4194,7 +4204,7 @@ more,rule-set,basic-REPL
   4 n-string->buffer! >:length
 
   :buffer :length
-  path,file? not if
+  <path> file? not if
     false
     end
   then
@@ -4221,13 +4231,13 @@ more,rule-set,basic-REPL
   >::relative-path
   >::name
 
-  ::relative-path relative-path? not if
+  ::relative-path <path> relative? not if
     "* (<moi> add) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path path,file? not if
+  ::relative-path <path> file? not if
     "* (<moi> add) the argument must be a relative-path to a existing file" .s .l
     "  but the following path is not to a file : " .s ::relative-path .s .l
     end
@@ -4256,7 +4266,7 @@ more,rule-set,basic-REPL
   <file> create
 
   512 allocate-local-memory >:address,full-path
-  get-work-directory "/" ::relative-path
+  <work-directory> get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
@@ -4299,13 +4309,13 @@ more,rule-set,basic-REPL
   >::relative-path
   >::name
 
-  ::relative-path relative-path? not if
+  ::relative-path <path> relative? not if
     "* (<moi> up) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path path,file? not if
+  ::relative-path <path> file? not if
     "* (<moi> up) the argument must be a relative-path to a existing file" .s .l
     "  but the following file is not exist : " .s ::relative-path .s .l
     end
@@ -4324,7 +4334,7 @@ more,rule-set,basic-REPL
   4 n-string->buffer! >:length
 
   512 allocate-local-memory >:address,full-path
-  get-work-directory "/" ::relative-path
+  <work-directory> get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
@@ -4338,10 +4348,10 @@ more,rule-set,basic-REPL
   << -- >>
   *module-directory*
   [ << -- >>
-    +getdents64,d_type+ get-byte
+    +getdents64,type+ get-byte
     4 equal? if
       512 allocate-local-memory >:path-buffer
-      +getdents64,d_name+
+      +getdents64,name+
       dup 256
       0 <string> find-byte
       drop  << drop 0 >>
@@ -4378,10 +4388,10 @@ more,rule-set,basic-REPL
 : <moi> help
   << -- >>
   "* (<moi> help)" .s .l
-  "  * cn moi add  <new-name> <relative-path-to-existing-directory>" .s .l
-  "  * cn moi sub  <old-name>" .s .l
-  "  * cn moi up   <old-name> <relative-path-to-existing-directory>" .s .l
-  "  * cn moi find <old-name>" .s .l
+  "  * cn moi add  <new-module-name>      <relative-path-to-existing-file>" .s .l
+  "  * cn moi sub  <existing-module-name>" .s .l
+  "  * cn moi up   <existing-module-name> <relative-path-to-existing-file>" .s .l
+  "  * cn moi find <existing-module-name>" .s .l
   "  * cn moi list" .s .l
   end
 ; define-function
@@ -5864,7 +5874,7 @@ jo <post-module-syntax> do
 
 : hi,random
   << -- random-number >>
-  0 :syscall-number,times:
+  0 <syscall-number> *times*
   1 syscall
   13 mod
   <<

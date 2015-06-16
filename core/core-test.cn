@@ -585,28 +585,6 @@ address kkk
   "TEST" <string> equal? test
 ; test-do
 
-3 *jo-size* mul allocate-memory
-: *t*
-; test-variable,with-tos
-
-: "* (testing) endianness of n-get & n-set" .s .l
-  1 2 3 *t* 3 n-set
-  << re-occur when geting through >>
-  *t* get
-  1 equal?
-
-  *t* *jo-size* add get
-  2 equal? and
-
-  *t* *jo-size* 2 mul add get
-  3 equal? and test
-
-  *t* 3 n-get
-  3 equal? test
-  2 equal? test
-  1 equal? test
-; test-do
-
 : "* (testing) nested comment in REPL" .s .l
   1 << 2    3    4 >> 5
   1 << 2 << 3 >> 4 >> 5
@@ -679,6 +657,28 @@ address kkk
   <string> equal? test
 ; test-do
 
+3 *jo-size* mul allocate-memory
+: *t*
+; test-variable,with-tos
+
+: "* (testing) endianness of n-get & n-set" .s .l
+  1 2 3 *t* 3 n-set
+  << re-occur when geting through >>
+  *t* get
+  1 equal?
+
+  *t* *jo-size* add get
+  2 equal? and
+
+  *t* *jo-size* 2 mul add get
+  3 equal? and test
+
+  *t* 3 n-get
+  3 equal? test
+  2 equal? test
+  1 equal? test
+; test-do
+
 : "* (testing) eval-string" .s .l
   "1 2 3 add add" eval-string 6 equal? test
   "  1 2 3 add add  " eval-string  6 equal? test
@@ -690,11 +690,37 @@ address kkk
   k 6 equal? test
 ; test-do
 
-: "* (testing) full-path?" .s .l
-  "/home" relative-path? false?
-  "/home" full-path?     true? and
-  "home"  relative-path? true? and
-  "home"  full-path?     false? and test
+: file,test
+  << -- >>
+  "kkk~" <file> create
+
+  "kkk took my baby away" dup >:length
+  "kkk~" <file> write
+
+  "............................" >::string
+  ::string "kkk~" <file> read >:counter
+
+  :counter
+  :length
+  equal? test
+
+  "kkk took my baby away......."
+  ::string
+  <string> equal? test
+
+  "kkk~" <file> remove
+  end
+; test-function
+
+: "* (testing) <file>" .s .l
+  file,test
+; test-do
+
+: "* (testing) <path> full?" .s .l
+  "/home" <path> relative? false?
+  "/home" <path> full?     true? and
+  "home"  <path> relative? true? and
+  "home"  <path> full?     false? and test
 ; test-do
 
 : "* (testing) <string> full-of-the-same-byte?" .s .l

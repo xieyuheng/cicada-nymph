@@ -23,6 +23,8 @@ help:
 	echo "    * tangle-core.org"
 	echo "  * install"
 	echo "  * uninstall"
+	echo "  * test"
+	echo "  * run"
 	echo "  * clean"
 	echo "* I wish you happy making ^-^"
 	echo "  please read the makefile for more informations"
@@ -76,6 +78,18 @@ uninstall:
 	echo -e "\e[0m"
 	rm $(BINDIR)/cn
 	rm $(BINDIR)/cn32
+
+test:
+	@
+	./cn moi add core-test core/core-test.cn
+	./cn moi list
+	time ./cn load-with-test core-test
+
+test32:
+	@
+	./cn32 moi add core-test core/core-test.cn
+	./cn32 moi list
+	time ./cn32 load-with-test core-test
 
 run:
 	@
