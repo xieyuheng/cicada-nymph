@@ -126,9 +126,9 @@ do: "* (core-test) finished" .s .l
 name-hash-table,report
 >>
 
-: "* (testing) make-jojo-syntax,quote" .s .l
-  'testing--make-jojo-syntax,quote name->string
-  "testing--make-jojo-syntax,quote" <string> equal? test
+: "* (testing) jojo-compiler-syntax,quote" .s .l
+  'testing--jojo-compiler-syntax,quote name->string
+  "testing--jojo-compiler-syntax,quote" <string> equal? test
 ; test-do
 
 : testing-awake
@@ -500,18 +500,18 @@ name-hash-table,report
   end
 ; test-do
 
-: <make-jojo-syntax> name,test
+: <jojo-compiler-syntax> name,test
   << -- string[address, length] >>
   name test-name name->string
   end
 ; test-function
 
-: "* (testing) <make-jojo-syntax> name" .s .l
-  <make-jojo-syntax> name,test
+: "* (testing) <jojo-compiler-syntax> name" .s .l
+  <jojo-compiler-syntax> name,test
   "test-name" <string> equal? test
 ; test-do
 
-: "* (testing) <eval-word-syntax> if & else & then" .s .l
+: "* (testing) <word-interpreter-syntax> if & else & then" .s .l
   1
   one? if
     111
@@ -527,7 +527,7 @@ name-hash-table,report
   666 equal? test
 ; test-do
 
-: "* (testing) <eval-word-syntax> double-quote" .s .l
+: "* (testing) <word-interpreter-syntax> double-quote" .s .l
   1
   one? if
     "111"
@@ -544,13 +544,13 @@ name-hash-table,report
 ; test-do
 
 0
-: <eval-word-syntax> *testing-variable*
+: <word-interpreter-syntax> *testing-variable*
 ; test-variable,with-tos
 
-: "* (testing) <eval-word-syntax> address" .s .l
+: "* (testing) <word-interpreter-syntax> address" .s .l
   666
-  address <eval-word-syntax> *testing-variable* set
-  <eval-word-syntax> *testing-variable*
+  address <word-interpreter-syntax> *testing-variable* set
+  <word-interpreter-syntax> *testing-variable*
   666 equal? test
 ; test-do
 
@@ -558,16 +558,16 @@ name-hash-table,report
 address kkk
 >>
 
-: "* (testing) <eval-word-syntax> name" .s .l
+: "* (testing) <word-interpreter-syntax> name" .s .l
   name add
   name->string "add" <string> equal? test
-  name <eval-word-syntax> *testing-variable*
-  name->string "<eval-word-syntax> *testing-variable*" <string> equal? test
+  name <word-interpreter-syntax> *testing-variable*
+  name->string "<word-interpreter-syntax> *testing-variable*" <string> equal? test
   name kkk
   name->string "kkk" <string> equal? test
 ; test-do
 
-: "* (testing) <eval-word-syntax> name" .s .l
+: "* (testing) <word-interpreter-syntax> name" .s .l
   'add
   name->string "add" <string> equal? test
   'kkk
@@ -580,7 +580,7 @@ address kkk
   end
 ; test-function
 
-: "* (testing) <eval-word-syntax> title" .s .l
+: "* (testing) <word-interpreter-syntax> title" .s .l
   <test-title> test-name
   "TEST" <string> equal? test
 ; test-do

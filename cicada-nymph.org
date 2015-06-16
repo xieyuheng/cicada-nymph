@@ -1525,7 +1525,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "initialization", initialization
       ;; << -- >>
-      xx init__rule_set__make_jojo
+      xx init__rule_set__jojo_compiler
       xx end
    #+end_src
 ** ----------------------------------
@@ -4200,9 +4200,9 @@
       xx tail_call, find_link
    #+end_src
 * basic-REPL
-** eval-word
+** word-interpreter
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "eval-word", eval_word
+   define_function "word-interpreter", word_interpreter
       ;; << word[address, length] -- unknown >>
       xx dup2, integer_string?, false?branch, 3
       xx   string_to_integer
@@ -4216,31 +4216,31 @@
       xx   link_to_jo, apply
       xx   end
 
-      xx write_undefined_word_report__for_eval_word
+      xx write_undefined_word_report__for_word_interpreter
       xx write_string
       xx literal, 10
       xx write_byte
       xx end
 
 
-   define_function "write-undefined-word-report,for-eval-word", write_undefined_word_report__for_eval_word
+   define_function "write-undefined-word-report,for-word-interpreter", write_undefined_word_report__for_word_interpreter
       ;; << -- >>
-      xx literal, string$undefined_word_report__for_eval_word
-      xx literal, length$undefined_word_report__for_eval_word
+      xx literal, string$undefined_word_report__for_word_interpreter
+      xx literal, length$undefined_word_report__for_word_interpreter
       xx write_string
       xx end
 
-   string$undefined_word_report__for_eval_word:
-      db "* (eval-word) meets undefined word : "
+   string$undefined_word_report__for_word_interpreter:
+      db "* (word-interpreter) meets undefined word : "
    .end:
-   length$undefined_word_report__for_eval_word = (.end - string$undefined_word_report__for_eval_word)
+   length$undefined_word_report__for_word_interpreter = (.end - string$undefined_word_report__for_word_interpreter)
    #+end_src
 ** basic-REPL
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "basic-REPL", basic_REPL
       ;; << unknown -- unknown >>
       xx read_word
-      xx eval_word
+      xx word_interpreter
       xx tail_call, basic_REPL
    #+end_src
 * -----------------------------------
@@ -4558,15 +4558,15 @@
    #+end_src
 * rule-set
 ** 記 使用
-   * rule-set,make-jojo 是
+   * rule-set,jojo-compiler 是
      語法謂詞 還有 語法函數 這種對子
      所形成的有序集合
      這樣就可以形成簡單的語境概念了
    * 每個語境都有責任
      在進入和退出時
-     維護好 rule-set,make-jojo
+     維護好 rule-set,jojo-compiler
    * 以 syntax 爲前綴的 function 的類型常常是
-     1. 以 make-jojo 爲後綴時
+     1. 以 jojo-compiler 爲後綴時
         << jo, string[address, length], word[address, length]
         -- jo, string[address, length] >>
      2. 在 REPL 中使用時又可以是
@@ -4694,7 +4694,7 @@
       xx literal, cursor$rule_set__find, set
       xx tail_call, rule_set__find__loop
    #+end_src
-* *rule-set,make-jojo*
+* *rule-set,jojo-compiler*
 ** ----------------------------------
 ** note
    * a syntax is a function to be called at compile time
@@ -4703,9 +4703,9 @@
      and return a shorter string
      [this can be viewed as moving a cursor forward]
 ** ----------------------------------
-** make-jojo-syntax,integer-string
+** jojo-compiler-syntax,integer-string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo-syntax,integer-string", make_jojo_syntax__integer_string
+   define_function "jojo-compiler-syntax,integer-string", jojo_compiler_syntax__integer_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
@@ -4729,9 +4729,9 @@
       xx string_equal?
       xx end
    #+end_src
-** make-jojo-syntax,address
+** jojo-compiler-syntax,address
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo-syntax,address", make_jojo_syntax__address
+   define_function "jojo-compiler-syntax,address", jojo_compiler_syntax__address
       ;; << string[address, length], word:address --
       ;;    string[address, length] >>
       xx drop2
@@ -4754,9 +4754,9 @@
       xx string_equal?
       xx end
    #+end_src
-** make-jojo-syntax,jo
+** jojo-compiler-syntax,jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo-syntax,jo", make_jojo_syntax__jo
+   define_function "jojo-compiler-syntax,jo", jojo_compiler_syntax__jo
       ;; << string[address, length], word:jo --
       ;;    string[address, length] >>
       xx drop2
@@ -4779,12 +4779,12 @@
       xx string_equal?
       xx end
    #+end_src
-** syntax,double-quote,make-jojo
+** syntax,double-quote,jojo-compiler
    * string-area is used
      to allocate string literal in function body
    * in ASCII encode double-quote is 34
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
+   define_function "syntax,double-quote,jojo-compiler", syntax__double_quote__jojo_compiler
       ;; << string[address, length], word:double-quote --
       ;;    string[address, length] >>
       xx drop2
@@ -4832,17 +4832,17 @@
       xx end
 
    string$not_integer_string_report__for_double_quote:
-      db "* (syntax,double-quote,make-jojo) can not find the ending double-quote"
+      db "* (syntax,double-quote,jojo-compiler) can not find the ending double-quote"
    .end:
    length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
    #+end_src
 ** ----------------------------------
 ** note
    * comment can not cross ";"
-** syntax,comment,make-jojo
+** syntax,comment,jojo-compiler
    * nested << >> must be handled
    * note that
-     syntax,comment,make-jojo is a syntax
+     syntax,comment,jojo-compiler is a syntax
      its interface is special
      thus
      when implement it as one recursive function
@@ -4850,7 +4850,7 @@
      otherwise
      just implement it by two functions
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
+   define_function "syntax,comment,jojo-compiler", syntax__comment__jojo_compiler
       ;; << string[address, length], word --
       ;;    string[address, length] >>
       xx drop2
@@ -4863,86 +4863,86 @@
       xx   drop2
       xx   end
       xx dup2, comment_begin_string?, CICADA__not, false?branch, 3
-      xx   tail_call, syntax__comment__make_jojo
+      xx   tail_call, syntax__comment__jojo_compiler
       ;; nested
-      xx syntax__comment__make_jojo
+      xx syntax__comment__jojo_compiler
       xx dup2, space_string?, false?branch, 2
       xx   end
       xx dup2
       xx string__word_tail, xxswapxx
       xx string__word
-      xx tail_call, syntax__comment__make_jojo
+      xx tail_call, syntax__comment__jojo_compiler
    #+end_src
 ** ----------------------------------
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$rule_set__make_jojo = 1024 * jo_size
+   size$rule_set__jojo_compiler = 1024 * jo_size
 
-   cursor$rule_set__make_jojo:
-      xx address$rule_set__make_jojo
-   address$rule_set__make_jojo:
-      times size$rule_set__make_jojo db 0
+   cursor$rule_set__jojo_compiler:
+      xx address$rule_set__jojo_compiler
+   address$rule_set__jojo_compiler:
+      times size$rule_set__jojo_compiler db 0
    #+end_src
-** *rule-set,make-jojo*
+** *rule-set,jojo-compiler*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
-      xx address$rule_set__make_jojo
+   define_variable "*rule-set,jojo-compiler*", V__rule_set__jojo_compiler
+      xx address$rule_set__jojo_compiler
    #+end_src
-** init,rule-set,make-jojo
+** init,rule-set,jojo-compiler
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
+   define_function "init,rule-set,jojo-compiler", init__rule_set__jojo_compiler
       ;; << -- >>
-      xx V__rule_set__make_jojo
+      xx V__rule_set__jojo_compiler
 
       xx dup
       xx literal, integer_string?
-      xx literal, make_jojo_syntax__integer_string
+      xx literal, jojo_compiler_syntax__integer_string
       xx rule__add
 
       xx dup
       xx literal, word_is_address?
-      xx literal, make_jojo_syntax__address
+      xx literal, jojo_compiler_syntax__address
       xx rule__add
 
       xx dup
       xx literal, word_is_jo?
-      xx literal, make_jojo_syntax__jo
+      xx literal, jojo_compiler_syntax__jo
       xx rule__add
 
       xx dup
       xx literal, word_is_double_quote?
-      xx literal, syntax__double_quote__make_jojo
+      xx literal, syntax__double_quote__jojo_compiler
       xx rule__add
 
       xx dup
       xx literal, local_variable_set_word?
-      xx literal, make_jojo_syntax__local_variable_set
+      xx literal, jojo_compiler_syntax__local_variable_set
       xx rule__add
 
       xx dup
       xx literal, local_variable_get_word?
-      xx literal, make_jojo_syntax__local_variable_get
+      xx literal, jojo_compiler_syntax__local_variable_get
       xx rule__add
 
       xx literal, comment_begin_string?
-      xx literal, syntax__comment__make_jojo
+      xx literal, syntax__comment__jojo_compiler
       xx rule__add
 
       xx end
    #+end_src
 ** ----------------------------------
-* make-jojo
+* jojo-compiler
 ** note
-   * the make-jojo is a macro dispatcher
+   * the jojo-compiler is a macro dispatcher
      it can be viewed as make-function-body
      it gets next word and use predicates on word to do dispatch
    * note that
-     make-jojo can be viewed as the "compiler" of the cicada-nymph
+     jojo-compiler can be viewed as the "compiler" of the cicada-nymph
      it does NOT (can not) compile file to file
      but creates structured data directly into memory
-** make-jojo,dispatch-word
+** jojo-compiler,dispatch-word
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+   define_function "jojo-compiler,dispatch-word", jojo_compiler__dispatch_word
       ;; << jo, string[address, length], word[address, length] --
       ;;    jo, string[address, length] >>
       xx dup2
@@ -4956,34 +4956,34 @@
       xx   link_to_jo
       xx   jojo_area__stay
       xx   end
-      xx write_undefined_word_report__for_make_jojo
+      xx write_undefined_word_report__for_jojo_compiler
       xx write_string
       xx literal, 10, write_byte
       xx end
 
-   define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
+   define_function "write-undefined-word-report,for-jojo-compiler", write_undefined_word_report__for_jojo_compiler
       ;; << -- >>
-      xx literal, string$undefined_word_report__for_make_jojo
-      xx literal, length$undefined_word_report__for_make_jojo
+      xx literal, string$undefined_word_report__for_jojo_compiler
+      xx literal, length$undefined_word_report__for_jojo_compiler
       xx write_string
       xx end
 
-   string$undefined_word_report__for_make_jojo:
-      db "* (make-jojo) meets undefined word : "
+   string$undefined_word_report__for_jojo_compiler:
+      db "* (jojo-compiler) meets undefined word : "
    .end:
-   length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+   length$undefined_word_report__for_jojo_compiler = (.end - string$undefined_word_report__for_jojo_compiler)
    #+end_src
-** make-jojo
+** jojo-compiler
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "make-jojo", make_jojo
+   define_function "jojo-compiler", jojo_compiler
       ;; << jo, string[address, length] -- >>
       xx local_variable_table__clear
-      xx V__rule_set__make_jojo, push_syntax_stack
-      xx make_jojo__loop
+      xx V__rule_set__jojo_compiler, push_syntax_stack
+      xx jojo_compiler__loop
       xx drop_syntax_stack
       xx end
 
-   define_function "make-jojo,loop", make_jojo__loop
+   define_function "jojo-compiler,loop", jojo_compiler__loop
       ;; << jo, string[address, length] -- >>
       xx dup2, space_string?, false?branch, 4
       xx   drop2, drop
@@ -4993,8 +4993,8 @@
       xx xxswapxx
       xx string__word
       ;; << tail[address, length], head[address, length] >>
-      xx make_jojo__dispatch_word
-      xx tail_call, make_jojo__loop
+      xx jojo_compiler__dispatch_word
+      xx tail_call, jojo_compiler__loop
    #+end_src
 * define-function
 ** note
@@ -5056,7 +5056,7 @@
       ;;    V__jojo_area__current_free_address
       ;;    jo
       ;;    body[address, length] >>
-      xx make_jojo
+      xx jojo_compiler
       ;; << jo
       ;;    V__jojo_area__current_free_address >>
 
@@ -5541,8 +5541,8 @@
 *** 記
     * 只有一個 local-variable-table
       用以在編譯時期解決局部變元的名與值的對應
-      這個數據結構被 make_jojo_syntax__local_variable_set
-      和 make_jojo_syntax__local_variable_get 所使用
+      這個數據結構被 jojo_compiler_syntax__local_variable_set
+      和 jojo_compiler_syntax__local_variable_get 所使用
     * 其中保存
       * offset-in-local-variable
       * length-of-string
@@ -5717,9 +5717,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** make-jojo-syntax,local-variable-get
+*** jojo-compiler-syntax,local-variable-get
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "make-jojo-syntax,local-variable-get", make_jojo_syntax__local_variable_get
+    define_function "jojo-compiler-syntax,local-variable-get", jojo_compiler_syntax__local_variable_get
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx dup2
@@ -5782,9 +5782,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** make-jojo-syntax,local-variable-set
+*** jojo-compiler-syntax,local-variable-set
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_variable_set
+    define_function "jojo-compiler-syntax,local-variable-set", jojo_compiler_syntax__local_variable_set
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx string__byte_tail

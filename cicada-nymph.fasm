@@ -1031,7 +1031,7 @@ first_jojo:
 
 define_function "initialization", initialization
    ;; << -- >>
-   xx init__rule_set__make_jojo
+   xx init__rule_set__jojo_compiler
    xx end
 
 string$report_return_stack_is_empty_and_exit:
@@ -3235,7 +3235,7 @@ define_function "find-link", find_link
    xx link_to_next_link
    xx tail_call, find_link
 
-define_function "eval-word", eval_word
+define_function "word-interpreter", word_interpreter
    ;; << word[address, length] -- unknown >>
    xx dup2, integer_string?, false?branch, 3
    xx   string_to_integer
@@ -3249,29 +3249,29 @@ define_function "eval-word", eval_word
    xx   link_to_jo, apply
    xx   end
 
-   xx write_undefined_word_report__for_eval_word
+   xx write_undefined_word_report__for_word_interpreter
    xx write_string
    xx literal, 10
    xx write_byte
    xx end
 
 
-define_function "write-undefined-word-report,for-eval-word", write_undefined_word_report__for_eval_word
+define_function "write-undefined-word-report,for-word-interpreter", write_undefined_word_report__for_word_interpreter
    ;; << -- >>
-   xx literal, string$undefined_word_report__for_eval_word
-   xx literal, length$undefined_word_report__for_eval_word
+   xx literal, string$undefined_word_report__for_word_interpreter
+   xx literal, length$undefined_word_report__for_word_interpreter
    xx write_string
    xx end
 
-string$undefined_word_report__for_eval_word:
-   db "* (eval-word) meets undefined word : "
+string$undefined_word_report__for_word_interpreter:
+   db "* (word-interpreter) meets undefined word : "
 .end:
-length$undefined_word_report__for_eval_word = (.end - string$undefined_word_report__for_eval_word)
+length$undefined_word_report__for_word_interpreter = (.end - string$undefined_word_report__for_word_interpreter)
 
 define_function "basic-REPL", basic_REPL
    ;; << unknown -- unknown >>
    xx read_word
-   xx eval_word
+   xx word_interpreter
    xx tail_call, basic_REPL
 
 define_function "colon-string?", colon_string?
@@ -3576,7 +3576,7 @@ define_function "rule-set,find,loop", rule_set__find__loop
    xx literal, cursor$rule_set__find, set
    xx tail_call, rule_set__find__loop
 
-define_function "make-jojo-syntax,integer-string", make_jojo_syntax__integer_string
+define_function "jojo-compiler-syntax,integer-string", jojo_compiler_syntax__integer_string
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx literal, literal
@@ -3597,7 +3597,7 @@ define_function "word:address?", word_is_address?
    xx string_equal?
    xx end
 
-define_function "make-jojo-syntax,address", make_jojo_syntax__address
+define_function "jojo-compiler-syntax,address", jojo_compiler_syntax__address
    ;; << string[address, length], word:address --
    ;;    string[address, length] >>
    xx drop2
@@ -3617,7 +3617,7 @@ define_function "word:jo?", word_is_jo?
    xx string_equal?
    xx end
 
-define_function "make-jojo-syntax,jo", make_jojo_syntax__jo
+define_function "jojo-compiler-syntax,jo", jojo_compiler_syntax__jo
    ;; << string[address, length], word:jo --
    ;;    string[address, length] >>
    xx drop2
@@ -3637,7 +3637,7 @@ define_function "word:double-quote?", word_is_double_quote?
    xx string_equal?
    xx end
 
-define_function "syntax,double-quote,make-jojo", syntax__double_quote__make_jojo
+define_function "syntax,double-quote,jojo-compiler", syntax__double_quote__jojo_compiler
    ;; << string[address, length], word:double-quote --
    ;;    string[address, length] >>
    xx drop2
@@ -3685,11 +3685,11 @@ define_function "write-not-integer-string-report,for-double-quote", write_not_in
    xx end
 
 string$not_integer_string_report__for_double_quote:
-   db "* (syntax,double-quote,make-jojo) can not find the ending double-quote"
+   db "* (syntax,double-quote,jojo-compiler) can not find the ending double-quote"
 .end:
 length$not_integer_string_report__for_double_quote = (.end - string$not_integer_string_report__for_double_quote)
 
-define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
+define_function "syntax,comment,jojo-compiler", syntax__comment__jojo_compiler
    ;; << string[address, length], word --
    ;;    string[address, length] >>
    xx drop2
@@ -3702,67 +3702,67 @@ define_function "syntax,comment,make-jojo", syntax__comment__make_jojo
    xx   drop2
    xx   end
    xx dup2, comment_begin_string?, CICADA__not, false?branch, 3
-   xx   tail_call, syntax__comment__make_jojo
+   xx   tail_call, syntax__comment__jojo_compiler
    ;; nested
-   xx syntax__comment__make_jojo
+   xx syntax__comment__jojo_compiler
    xx dup2, space_string?, false?branch, 2
    xx   end
    xx dup2
    xx string__word_tail, xxswapxx
    xx string__word
-   xx tail_call, syntax__comment__make_jojo
+   xx tail_call, syntax__comment__jojo_compiler
 
-size$rule_set__make_jojo = 1024 * jo_size
+size$rule_set__jojo_compiler = 1024 * jo_size
 
-cursor$rule_set__make_jojo:
-   xx address$rule_set__make_jojo
-address$rule_set__make_jojo:
-   times size$rule_set__make_jojo db 0
+cursor$rule_set__jojo_compiler:
+   xx address$rule_set__jojo_compiler
+address$rule_set__jojo_compiler:
+   times size$rule_set__jojo_compiler db 0
 
-define_variable "*rule-set,make-jojo*", V__rule_set__make_jojo
-   xx address$rule_set__make_jojo
+define_variable "*rule-set,jojo-compiler*", V__rule_set__jojo_compiler
+   xx address$rule_set__jojo_compiler
 
-define_function "init,rule-set,make-jojo", init__rule_set__make_jojo
+define_function "init,rule-set,jojo-compiler", init__rule_set__jojo_compiler
    ;; << -- >>
-   xx V__rule_set__make_jojo
+   xx V__rule_set__jojo_compiler
 
    xx dup
    xx literal, integer_string?
-   xx literal, make_jojo_syntax__integer_string
+   xx literal, jojo_compiler_syntax__integer_string
    xx rule__add
 
    xx dup
    xx literal, word_is_address?
-   xx literal, make_jojo_syntax__address
+   xx literal, jojo_compiler_syntax__address
    xx rule__add
 
    xx dup
    xx literal, word_is_jo?
-   xx literal, make_jojo_syntax__jo
+   xx literal, jojo_compiler_syntax__jo
    xx rule__add
 
    xx dup
    xx literal, word_is_double_quote?
-   xx literal, syntax__double_quote__make_jojo
+   xx literal, syntax__double_quote__jojo_compiler
    xx rule__add
 
    xx dup
    xx literal, local_variable_set_word?
-   xx literal, make_jojo_syntax__local_variable_set
+   xx literal, jojo_compiler_syntax__local_variable_set
    xx rule__add
 
    xx dup
    xx literal, local_variable_get_word?
-   xx literal, make_jojo_syntax__local_variable_get
+   xx literal, jojo_compiler_syntax__local_variable_get
    xx rule__add
 
    xx literal, comment_begin_string?
-   xx literal, syntax__comment__make_jojo
+   xx literal, syntax__comment__jojo_compiler
    xx rule__add
 
    xx end
 
-define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
+define_function "jojo-compiler,dispatch-word", jojo_compiler__dispatch_word
    ;; << jo, string[address, length], word[address, length] --
    ;;    jo, string[address, length] >>
    xx dup2
@@ -3776,32 +3776,32 @@ define_function "make-jojo,dispatch-word", make_jojo__dispatch_word
    xx   link_to_jo
    xx   jojo_area__stay
    xx   end
-   xx write_undefined_word_report__for_make_jojo
+   xx write_undefined_word_report__for_jojo_compiler
    xx write_string
    xx literal, 10, write_byte
    xx end
 
-define_function "write-undefined-word-report,for-make-jojo", write_undefined_word_report__for_make_jojo
+define_function "write-undefined-word-report,for-jojo-compiler", write_undefined_word_report__for_jojo_compiler
    ;; << -- >>
-   xx literal, string$undefined_word_report__for_make_jojo
-   xx literal, length$undefined_word_report__for_make_jojo
+   xx literal, string$undefined_word_report__for_jojo_compiler
+   xx literal, length$undefined_word_report__for_jojo_compiler
    xx write_string
    xx end
 
-string$undefined_word_report__for_make_jojo:
-   db "* (make-jojo) meets undefined word : "
+string$undefined_word_report__for_jojo_compiler:
+   db "* (jojo-compiler) meets undefined word : "
 .end:
-length$undefined_word_report__for_make_jojo = (.end - string$undefined_word_report__for_make_jojo)
+length$undefined_word_report__for_jojo_compiler = (.end - string$undefined_word_report__for_jojo_compiler)
 
-define_function "make-jojo", make_jojo
+define_function "jojo-compiler", jojo_compiler
    ;; << jo, string[address, length] -- >>
    xx local_variable_table__clear
-   xx V__rule_set__make_jojo, push_syntax_stack
-   xx make_jojo__loop
+   xx V__rule_set__jojo_compiler, push_syntax_stack
+   xx jojo_compiler__loop
    xx drop_syntax_stack
    xx end
 
-define_function "make-jojo,loop", make_jojo__loop
+define_function "jojo-compiler,loop", jojo_compiler__loop
    ;; << jo, string[address, length] -- >>
    xx dup2, space_string?, false?branch, 4
    xx   drop2, drop
@@ -3811,8 +3811,8 @@ define_function "make-jojo,loop", make_jojo__loop
    xx xxswapxx
    xx string__word
    ;; << tail[address, length], head[address, length] >>
-   xx make_jojo__dispatch_word
-   xx tail_call, make_jojo__loop
+   xx jojo_compiler__dispatch_word
+   xx tail_call, jojo_compiler__loop
 
 define_function "define-function", CICADA__define_function
    ;; << string[address, length] -- >>
@@ -3867,7 +3867,7 @@ define_function "define-function", CICADA__define_function
    ;;    V__jojo_area__current_free_address
    ;;    jo
    ;;    body[address, length] >>
-   xx make_jojo
+   xx jojo_compiler
    ;; << jo
    ;;    V__jojo_area__current_free_address >>
 
@@ -4174,7 +4174,7 @@ define_function "local-variable-get-word?", local_variable_get_word?
    xx literal, 0, greater_than?
    xx end
 
-define_function "make-jojo-syntax,local-variable-get", make_jojo_syntax__local_variable_get
+define_function "jojo-compiler-syntax,local-variable-get", jojo_compiler_syntax__local_variable_get
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx dup2
@@ -4229,7 +4229,7 @@ define_function "local-variable-set-word?", local_variable_set_word?
    xx literal, 0, greater_than?
    xx end
 
-define_function "make-jojo-syntax,local-variable-set", make_jojo_syntax__local_variable_set
+define_function "jojo-compiler-syntax,local-variable-set", jojo_compiler_syntax__local_variable_set
    ;; << string[address, length], word[address, length] --
    ;;    string[address, length] >>
    xx string__byte_tail
