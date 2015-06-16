@@ -150,5 +150,145 @@
        應該命名爲 *cell-size*
   - x ::
        沒錯
+       我還限制 多個值時的順序必須與 n-get 和 n-set 一致
+       也就是 大端序
+       但是其實這與底層的 端序 並不相互違背
+       只要在語法中增加 邊界
+       我就可以避免用數字來明指數量
+       <link>
+       |--------+------|
+       | link   | cell |
+       |--------+------|
+       | jo     | cell |
+       |--------+------|
+       | string | cell |
+       |        | cell |
+       |--------+------|
+       其實不用邊界 如下的語法也沒有歧義
+       | link   | cell |
+       | jo     | cell |
+       | string | cell |
+       |        | cell |
+       當單位一致時 可以在外部聲明單位
+       unit cell
+       並簡化語法爲
+       | link   |
+       | jo     |
+       | string |
+       |        |
+       <jo>
+       開頭地址有偏移 對於其下保存變長數據的結構很重要
+       用標記來標出這一點
+       unit cell
+       | length        |
+       | explainer <*> |
+       | body          |
+       內部包含大域時如何
+       <system-getdents64>
+       | ino    | 8 byte   |
+       | off    | 8 byte   |
+       | reclen | 2 byte   |
+       | type   | 1 byte   |
+       | name   | 256 byte |
+       其中的 name 域 需要特殊處理
+       這種大域完全破壞了正規性
+       因爲 256 byte 大於 cell
+       其實它應該被處理爲嵌套的數據結構
+       要知道嵌套的向量之內存是直接就地分配的
+       <system-getdents64>
+       | ino                      | 8 byte |
+       | off                      | 8 byte |
+       | reclen                   | 2 byte |
+       | type                     | 1 byte |
+       | <system-getdents64-name> |        |
+       關於 <system-getdents64-name> 所要知道的只是大小而已
+       也就是說 存儲方式有兩種 一種是 包含地址 一種是就地分配
+       就地分配 很重要
+       因爲它可以使得在複製時不必遞歸
+       <system-getdents64-name>
+       | +padding+ | 256 byte |
+       可以處理連續的 <title> <title>
+       <system-getdents64> <system-getdents64-name> get-system-string
+       但是 這裏的 get-system-string 是特殊的接口
+       必須有擴展機制來處理這種特殊接口
+       我能想到的簡單方法是在定義完成上面的 <system-getdents64-name> 之後
+       進行 alias
+       "<system-getdents64-name> get-system-string" "get-system-string" alias
+       也就是說這裏必須使用手動的定義了
+       也許我可以以如下方式將這個 alias 自動化
+       <system-getdents64-name>
+       | +system-string+ | 256 byte |
+       而 system-string 這個詞本身是一種擴展機制它會自動生成新的接口
+       所生成的接口的名稱完全由 +system-string+ 做爲擴展機制來控制了
+       具體就這個例子而言
+       它將執行
+       "<system-getdents64-name> get-system-string" "get-system-string" alias
   - k ::
+       也就是說
+       計劃中刪除的 語法擴展機制 又被加回來了
+       並且還增加了 就地分配內存 處理
+       然而
+       上面無疑是說
+       <system-getdents64>
+       | ino                      | 8 byte |
+       | off                      | 8 byte |
+       | reclen                   | 2 byte |
+       | type                     | 1 byte |
+       | <system-getdents64-name> |        |
+       可以被寫成
+       <system-getdents64>
+       | ino             | 8 byte   |
+       | off             | 8 byte   |
+       | reclen          | 2 byte   |
+       | type            | 1 byte   |
+       | +system-string+ | 256 byte |
   - x ::
+       沒錯
+       哦
+       這無疑是說上面的
+       "<system-getdents64-name> get-system-string" "get-system-string" alias
+       是不充分的
+       所生成的接口不可能是簡單的 alias
+       因爲首先要處理 offset
+       但是
+       就地嵌套 還是需要被處理的
+       並且我知道一個處理它的辦法
+       比如
+       <system-getdents64> <system-getdents64-name> get-system-string
+       兩個詞兩個詞地看
+       先處理
+       <system-getdents64> <system-getdents64-name>
+       這將編譯一個函數進去以切換 offset
+       再處理
+       <system-getdents64-name> get-system-string
+       在 name-hash-table 中保存的名字
+       就只是 "<system-getdents64-name> get-system-string" 而已
+  - k ::
+       這確實是有趣的設計
+       並且在語法上 並沒有過載
+       但是 在真正動手實現之前
+       我覺得 還是想反思一下
+       設想一下這種設計有什麼壞的效果
+  - x ::
+       壞的影響是語言變複雜了
+       但是這是無可厚非的
+       追求性狀 一定會導致系統變複雜
+  - k ::
+       那麼就看是否真能實現這些設計了
+       看來所有東西都已經考慮到了
+       還有一點
+       之前說 在嵌套的時候 需要知道 就地分配內存的大小
+       這些信息應該如何保存
+  - x ::
+       可以把 <title> 做爲一個 variable-jo
+       在其中保存
+       其實
+       我還發現一個問題
+       觀察這些設計
+       它們對 類型系統 將會有很大影響
+       類型系統 本身 也將影響 代碼生成機制
+       因爲所生成的函數是有類型的
+  - k ::
+       也就是說兩個機制必須被綜合起來討論
+  - x ::
+       沒錯
