@@ -48,20 +48,20 @@
    end equ exit
    #+end_src
 ** ----------------------------------
-** jo_size                            :64bit:
+** cell_size                          :64bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   jo_size = 8 ;; (byte)
+   cell_size = 8 ;; (byte)
    xx equ dq
 
    }
    #+end_src
-** jo_size                            :32bit:
+** cell_size                          :32bit:
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =32bit, machine {
 
-   jo_size = 4 ;; (byte)
+   cell_size = 4 ;; (byte)
    xx equ dd
 
    rax equ eax
@@ -183,9 +183,9 @@
      into the interface of pop and push
      we allocation some memory below the stacks
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$argument_stack = 1024 * 1024 * jo_size
+   size$argument_stack = 1024 * 1024 * cell_size
 
-      preserve 64 * jo_size
+      preserve 64 * cell_size
    address$argument_stack labeling
       preserve size$argument_stack
    #+end_src
@@ -206,11 +206,11 @@
 
    macro push_argument_stack register \{
       mov [pointer$argument_stack], register
-      add pointer$argument_stack, jo_size
+      add pointer$argument_stack, cell_size
    \}
 
    macro pop_argument_stack register \{
-      sub pointer$argument_stack, jo_size
+      sub pointer$argument_stack, cell_size
       mov register, [pointer$argument_stack]
    \}
 
@@ -234,14 +234,14 @@
       push ebx
       mov ebx, [pointer$argument_stack]
       mov [ebx], register
-      add ebx, jo_size
+      add ebx, cell_size
       mov [pointer$argument_stack], ebx
       pop ebx
       else
       push eax
       mov eax, [pointer$argument_stack]
       mov [eax], register
-      add eax, jo_size
+      add eax, cell_size
       mov [pointer$argument_stack], eax
       pop eax
       finish if
@@ -251,14 +251,14 @@
       if register in <eax>
       push ebx
       mov ebx, [pointer$argument_stack]
-      sub ebx, jo_size
+      sub ebx, cell_size
       mov register, [ebx]
       mov [pointer$argument_stack], ebx
       pop ebx
       else
       push eax
       mov eax, [pointer$argument_stack]
-      sub eax, jo_size
+      sub eax, cell_size
       mov register, [eax]
       mov [pointer$argument_stack], eax
       pop eax
@@ -275,9 +275,9 @@
      決定了 如何出這個棧
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$return_stack = 1024 * 1024 * jo_size
+   size$return_stack = 1024 * 1024 * cell_size
 
-      preserve 64 * jo_size
+      preserve 64 * cell_size
    address$return_stack labeling
       preserve size$return_stack
    #+end_src
@@ -298,11 +298,11 @@
 
    macro push_return_stack register \{
       mov [pointer$return_stack], register
-      add pointer$return_stack, jo_size
+      add pointer$return_stack, cell_size
    \}
 
    macro pop_return_stack register \{
-      sub pointer$return_stack, jo_size
+      sub pointer$return_stack, cell_size
       mov register, [pointer$return_stack]
    \}
 
@@ -326,14 +326,14 @@
       push ebx
       mov ebx, [pointer$return_stack]
       mov [ebx], register
-      add ebx, jo_size
+      add ebx, cell_size
       mov [pointer$return_stack], ebx
       pop ebx
       else
       push eax
       mov eax, [pointer$return_stack]
       mov [eax], register
-      add eax, jo_size
+      add eax, cell_size
       mov [pointer$return_stack], eax
       pop eax
       finish if
@@ -343,14 +343,14 @@
       if register in <eax>
       push ebx
       mov ebx, [pointer$return_stack]
-      sub ebx, jo_size
+      sub ebx, cell_size
       mov register, [ebx]
       mov [pointer$return_stack], ebx
       pop ebx
       else
       push eax
       mov eax, [pointer$return_stack]
-      sub eax, jo_size
+      sub eax, cell_size
       mov register, [eax]
       mov [pointer$return_stack], eax
       pop eax
@@ -367,7 +367,7 @@
    macro next \{
       pop_return_stack rbx
         mov rax, [rbx]
-      add rbx, jo_size
+      add rbx, cell_size
       push_return_stack rbx
         jmp qword [rax]
    \}
@@ -380,7 +380,7 @@
    macro next \{
       pop_return_stack rbx
         mov rax, [rbx]
-      add rbx, jo_size
+      add rbx, cell_size
       push_return_stack rbx
         jmp dword [rax]
    \}
@@ -490,9 +490,9 @@
        value-list
 ** offset of jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   offset__jo$other          = - (jo_size * 2)
-   offset__jo$length         = - (jo_size * 1)
-   offset__jo$body           = (jo_size * 1)
+   offset__jo$other          = - (cell_size * 2)
+   offset__jo$length         = - (cell_size * 1)
+   offset__jo$body           = (cell_size * 1)
    #+end_src
 ** note link
    * link as data-structure
@@ -507,9 +507,9 @@
      the link is the last-link
 ** offset of link
    #+begin_src fasm :tangle cicada-nymph.fasm
-   offset__link$jo             = (jo_size * 1)
-   offset__link$string_address = (jo_size * 2)
-   offset__link$string_length  = (jo_size * 3)
+   offset__link$jo             = (cell_size * 1)
+   offset__link$string_address = (cell_size * 2)
+   offset__link$string_length  = (cell_size * 3)
    #+end_src
 ** null link
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -589,7 +589,7 @@
       ASSEMBLY__make_string string
 
 
-      ;; xx (end__#jo - jo)/jo_size
+      ;; xx (end__#jo - jo)/cell_size
       xx 0
 
    jo:
@@ -613,24 +613,24 @@
       test rbx, unit__return_point
       jz .return_stack_even
 
-      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      mov rbx, [V__local_memory_odd__current_free_address + cell_size]
       push_return_stack rbx
-      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      mov rbx, [V__local_memory_even__current_free_address + cell_size]
       push_return_stack rbx
       mov rbx, [local_variable$current_free_address]
       push_return_stack rbx
-      add rax, jo_size
+      add rax, cell_size
       push_return_stack rax
       next
 
    .return_stack_even:
-      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      mov rbx, [V__local_memory_even__current_free_address + cell_size]
       push_return_stack rbx
-      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      mov rbx, [V__local_memory_odd__current_free_address + cell_size]
       push_return_stack rbx
       mov rbx, [local_variable$current_free_address]
       push_return_stack rbx
-      add rax, jo_size
+      add rax, cell_size
       push_return_stack rax
       next
 
@@ -644,24 +644,24 @@
       test rbx, unit__return_point
       jz .return_stack_even
 
-      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      mov rbx, [V__local_memory_odd__current_free_address + cell_size]
       push_return_stack rbx
-      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      mov rbx, [V__local_memory_even__current_free_address + cell_size]
       push_return_stack rbx
       mov rbx, [local_variable$current_free_address]
       push_return_stack rbx
-      add rax, jo_size
+      add rax, cell_size
       push_return_stack rax
       next
 
    .return_stack_even:
-      mov rbx, [V__local_memory_even__current_free_address + jo_size]
+      mov rbx, [V__local_memory_even__current_free_address + cell_size]
       push_return_stack rbx
-      mov rbx, [V__local_memory_odd__current_free_address + jo_size]
+      mov rbx, [V__local_memory_odd__current_free_address + cell_size]
       push_return_stack rbx
       mov rbx, [local_variable$current_free_address]
       push_return_stack rbx
-      add rax, jo_size
+      add rax, cell_size
       push_return_stack rax
       next
 
@@ -733,7 +733,7 @@
    jo:
       xx explain$variable
 
-      ;; here follows a value of jo_size
+      ;; here follows a value of cell_size
       ;; only one value is allowed
 
    }
@@ -748,11 +748,11 @@
 
    explain$variable:
       mov rcx, [rax + offset__jo$length]
-      add rax, jo_size
+      add rax, cell_size
    .loop:
       mov rdx, qword [rax]
       push_argument_stack rdx
-      add rax, jo_size
+      add rax, cell_size
       loop .loop
       next
 
@@ -768,11 +768,11 @@
 
    explain$variable:
       mov rcx, [rax + offset__jo$length]
-      add rax, jo_size
+      add rax, cell_size
    .loop:
       mov rdx, dword [rax]
       push_argument_stack rdx
-      add rax, jo_size
+      add rax, cell_size
       loop .loop
       next
 
@@ -800,10 +800,10 @@
 
    }
    #+end_src
-** *jo-size*
+** *cell-size*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*jo-size*", V__jo_size
-      xx jo_size
+   define_variable "*cell-size*", V__cell_size
+      xx cell_size
    #+end_src
 ** jo->explainer
    * the type of primitive function jo
@@ -816,7 +816,7 @@
       xx dup
 
       xx dup, get
-      xx swap, subtraction, literal, jo_size, equal?, false?branch, 4
+      xx swap, subtraction, literal, cell_size, equal?, false?branch, 4
       xx   drop, zero
       xx   end
 
@@ -928,12 +928,12 @@
    * the interface is implemented by needs
 ** offset of return-point
    #+begin_src fasm :tangle cicada-nymph.fasm
-   offset__return_point$conjugate_local_memory   = (jo_size * 0)
-   offset__return_point$local_memory             = (jo_size * 1)
-   offset__return_point$local_variable           = (jo_size * 2)
-   offset__return_point$jojo                     = (jo_size * 3)
+   offset__return_point$conjugate_local_memory   = (cell_size * 0)
+   offset__return_point$local_memory             = (cell_size * 1)
+   offset__return_point$local_variable           = (cell_size * 2)
+   offset__return_point$jojo                     = (cell_size * 3)
 
-   unit__return_point = (jo_size * 4)
+   unit__return_point = (cell_size * 4)
    #+end_src
 ** *return-stack,unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -1025,31 +1025,31 @@
       pop_argument_stack rbx
 
       mov rsi, pointer$return_stack
-      add pointer$return_stack, (jo_size * 4 * 2)
+      add pointer$return_stack, (cell_size * 4 * 2)
       mov rdi, pointer$return_stack
 
    .loop:
       cmp rbx, rsi
       je .end
-      sub rsi, jo_size
-      sub rdi, jo_size
+      sub rsi, cell_size
+      sub rdi, cell_size
       mov rax, qword [rsi]
       mov qword [rdi], rax
       jmp .loop
    .end:
 
       pop_argument_stack rax
-      add rax, jo_size
-      mov qword [rsi + (jo_size * 3)], rax
+      add rax, cell_size
+      mov qword [rsi + (cell_size * 3)], rax
 
-      mov rax, qword [rsi + (jo_size * 1)]
-      mov qword [rsi + (jo_size * 4)], rax
-      mov rax, qword [rsi + (jo_size * 0)]
-      mov qword [rsi + (jo_size * 5)], rax
-      mov rax, qword [rsi + (jo_size * 2)]
-      mov qword [rsi + (jo_size * 6)], rax
-      mov rax, nothing + jo_size
-      mov qword [rsi + (jo_size * 7)], rax
+      mov rax, qword [rsi + (cell_size * 1)]
+      mov qword [rsi + (cell_size * 4)], rax
+      mov rax, qword [rsi + (cell_size * 0)]
+      mov qword [rsi + (cell_size * 5)], rax
+      mov rax, qword [rsi + (cell_size * 2)]
+      mov qword [rsi + (cell_size * 6)], rax
+      mov rax, nothing + cell_size
+      mov qword [rsi + (cell_size * 7)], rax
 
       next
 
@@ -1063,32 +1063,32 @@
 
       mov rcx, [pointer$return_stack]
       mov rsi, rcx
-      add rcx, (jo_size * 4 * 2)
+      add rcx, (cell_size * 4 * 2)
       mov rdi, rcx
       mov [pointer$return_stack], rcx
 
    .loop:
       cmp rbx, rsi
       je .end
-      sub rsi, jo_size
-      sub rdi, jo_size
+      sub rsi, cell_size
+      sub rdi, cell_size
       mov rax, dword [rsi]
       mov dword [rdi], rax
       jmp .loop
    .end:
 
       pop_argument_stack rax
-      add rax, jo_size
-      mov dword [rsi + (jo_size * 3)], rax
+      add rax, cell_size
+      mov dword [rsi + (cell_size * 3)], rax
 
-      mov rax, dword [rsi + (jo_size * 1)]
-      mov dword [rsi + (jo_size * 4)], rax
-      mov rax, dword [rsi + (jo_size * 0)]
-      mov dword [rsi + (jo_size * 5)], rax
-      mov rax, dword [rsi + (jo_size * 2)]
-      mov dword [rsi + (jo_size * 6)], rax
-      mov rax, nothing + jo_size
-      mov dword [rsi + (jo_size * 7)], rax
+      mov rax, dword [rsi + (cell_size * 1)]
+      mov dword [rsi + (cell_size * 4)], rax
+      mov rax, dword [rsi + (cell_size * 0)]
+      mov dword [rsi + (cell_size * 5)], rax
+      mov rax, dword [rsi + (cell_size * 2)]
+      mov dword [rsi + (cell_size * 6)], rax
+      mov rax, nothing + cell_size
+      mov dword [rsi + (cell_size * 7)], rax
 
       next
 
@@ -1153,7 +1153,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      mov [V__local_memory_odd__current_free_address + cell_size], rax
       next
 
    .return_stack_even:
@@ -1162,7 +1162,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov [V__local_memory_even__current_free_address + cell_size], rax
       next
 
    }
@@ -1180,7 +1180,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      mov [V__local_memory_odd__current_free_address + cell_size], rax
       next
 
    .return_stack_even:
@@ -1189,7 +1189,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov [V__local_memory_even__current_free_address + cell_size], rax
       next
 
    }
@@ -1210,7 +1210,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      mov [V__local_memory_odd__current_free_address + cell_size], rax
       mov rax, [rbx]
       jmp qword [rax]
 
@@ -1220,7 +1220,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov [V__local_memory_even__current_free_address + cell_size], rax
       mov rax, [rbx]
       jmp qword [rax]
 
@@ -1239,7 +1239,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      mov [V__local_memory_odd__current_free_address + cell_size], rax
       mov rax, [rbx]
       jmp dword [rax]
 
@@ -1249,7 +1249,7 @@
       mov [local_variable$current_free_address], rax
       pop_return_stack rax
       pop_return_stack rax
-      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov [V__local_memory_even__current_free_address + cell_size], rax
       mov rax, [rbx]
       jmp dword [rax]
 
@@ -1451,7 +1451,7 @@
    __reset_syntax_stack:
       ;; << -- >>
       mov rax, address$syntax_stack
-      mov [V__syntax_stack__pointer + jo_size], rax
+      mov [V__syntax_stack__pointer + cell_size], rax
       ret
    #+end_src
 ** __reset_local_variable
@@ -1467,9 +1467,9 @@
    __reset_local_memory:
       ;; << -- >>
       mov rax, address$local_memory_even
-      mov [V__local_memory_even__current_free_address + jo_size], rax
+      mov [V__local_memory_even__current_free_address + cell_size], rax
       mov rax, address$local_memory_odd
-      mov [V__local_memory_odd__current_free_address + jo_size], rax
+      mov [V__local_memory_odd__current_free_address + cell_size], rax
       ret
    #+end_src
 * *the-story-begin*
@@ -1752,7 +1752,7 @@
       pop_return_stack rbx
         mov rax, [rbx]
         push_argument_stack rax
-      add rbx, jo_size
+      add rbx, cell_size
       push_return_stack rbx
       next
    #+end_src
@@ -1762,9 +1762,9 @@
       ;; << -- address >>
       pop_return_stack rbx
         mov rax, [rbx]
-        add rax, jo_size
+        add rax, cell_size
         push_argument_stack rax
-      add rbx, jo_size
+      add rbx, cell_size
       push_return_stack rbx
       next
    #+end_src
@@ -1773,7 +1773,7 @@
    define_primitive_function "instruction,branch", branch
       pop_return_stack rbx
         mov rax, [rbx]
-        imul rax, jo_size
+        imul rax, cell_size
         add rbx, rax
       push_return_stack rbx
       next
@@ -1788,14 +1788,14 @@
 
       pop_return_stack rbx
         mov rax, [rbx]
-        imul rax, jo_size
+        imul rax, cell_size
         add rbx, rax
       push_return_stack rbx
       next
 
    help__false?branch__not_to_branch:
       pop_return_stack rbx
-        add rbx, jo_size
+        add rbx, cell_size
       push_return_stack rbx
       next
    #+end_src
@@ -1821,14 +1821,14 @@
 
    define_primitive_function "dup", dup
       ;; << a -- a, a >>
-      mov  rax, [pointer$argument_stack - (1 * jo_size)]
+      mov  rax, [pointer$argument_stack - (1 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "dup2", dup2
       ;; << a b -- a b a b >>
-      mov  rbx, [pointer$argument_stack - (1 * jo_size)]
-      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      mov  rbx, [pointer$argument_stack - (1 * cell_size)]
+      mov  rax, [pointer$argument_stack - (2 * cell_size)]
       push_argument_stack rax
       push_argument_stack rbx
       next
@@ -1864,49 +1864,49 @@
 
    define_primitive_function "over", over
       ;; << a b -- a b | a >>
-      mov  rax, [pointer$argument_stack - (2 * jo_size)]
+      mov  rax, [pointer$argument_stack - (2 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xx", xoverxx
       ;; << a | b c -- a | b c | a >>
-      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      mov  rax, [pointer$argument_stack - (3 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|x", xxoverx
       ;; << a b | c -- a b | c | a b >>
-      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      mov  rax, [pointer$argument_stack - (3 * cell_size)]
       push_argument_stack rax
-      mov  rax, [pointer$argument_stack - (3 * jo_size)]
+      mov  rax, [pointer$argument_stack - (3 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xx", xxoverxx
       ;; << a b | c d -- a b | c d | a b >>
-      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      mov  rax, [pointer$argument_stack - (4 * cell_size)]
       push_argument_stack rax
-      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      mov  rax, [pointer$argument_stack - (4 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xxx", xoverxxx
       ;; << a | b c d -- a | b c d | a >>
-      mov  rax, [pointer$argument_stack - (4 * jo_size)]
+      mov  rax, [pointer$argument_stack - (4 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xxxx", xoverxxxx
       ;; << a | b c d -- a | b c d | a >>
-      mov  rax, [pointer$argument_stack - (5 * jo_size)]
+      mov  rax, [pointer$argument_stack - (5 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xxxx", xxoverxxxx
       ;; << a b | c d e f -- a b | c d e f | a b >>
-      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      mov  rax, [pointer$argument_stack - (6 * cell_size)]
       push_argument_stack rax
-      mov  rax, [pointer$argument_stack - (6 * jo_size)]
+      mov  rax, [pointer$argument_stack - (6 * cell_size)]
       push_argument_stack rax
       next
 
@@ -1919,55 +1919,55 @@
    define_primitive_function "over", over
       ;; << a b -- a b | a >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (2 * jo_size)]
+      mov rax, [rbx - (2 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xx", xoverxx
       ;; << a | b c -- a | b c | a >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (3 * jo_size)]
+      mov rax, [rbx - (3 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|x", xxoverx
       ;; << a b | c -- a b | c | a b >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (3 * jo_size)]
+      mov rax, [rbx - (3 * cell_size)]
       push_argument_stack rax
-      mov rax, [rbx - (2 * jo_size)]
+      mov rax, [rbx - (2 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xx", xxoverxx
       ;; << a b | c d -- a b | c d | a b >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (4 * jo_size)]
+      mov rax, [rbx - (4 * cell_size)]
       push_argument_stack rax
-      mov rax, [rbx - (3 * jo_size)]
+      mov rax, [rbx - (3 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xxx", xoverxxx
       ;; << a | b c d -- a | b c d | a >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (4 * jo_size)]
+      mov rax, [rbx - (4 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "x|over|xxxx", xoverxxxx
       ;; << a | b c d -- a | b c d | a >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (5 * jo_size)]
+      mov rax, [rbx - (5 * cell_size)]
       push_argument_stack rax
       next
 
    define_primitive_function "xx|over|xxxx", xxoverxxxx
       ;; << a b | c d e f -- a b | c d e f | a b >>
       mov rbx, [pointer$argument_stack]
-      mov rax, [rbx - (6 * jo_size)]
+      mov rax, [rbx - (6 * cell_size)]
       push_argument_stack rax
-      mov rax, [rbx - (5 * jo_size)]
+      mov rax, [rbx - (5 * cell_size)]
       push_argument_stack rax
       next
 
@@ -2191,7 +2191,7 @@
 
    define_primitive_function "snapshot-the-stack-pointer", snapshot_the_stack_pointer
       ;; << -- >>
-      mov [V__the_stack_pointer_snapshot + jo_size], pointer$argument_stack
+      mov [V__the_stack_pointer_snapshot + cell_size], pointer$argument_stack
       next
 
    }
@@ -2204,7 +2204,7 @@
    define_primitive_function "snapshot-the-stack-pointer", snapshot_the_stack_pointer
       ;; << -- >>
       mov eax, [pointer$argument_stack]
-      mov [V__the_stack_pointer_snapshot + jo_size], eax
+      mov [V__the_stack_pointer_snapshot + cell_size], eax
       next
 
    }
@@ -2270,7 +2270,7 @@
 
    define_function "and", CICADA__and
       ;; << bool, bool -- bool >>
-      xx false?, false?branch, (.true-$)/jo_size
+      xx false?, false?branch, (.true-$)/cell_size
       xx   drop
       xx   false
       xx   end
@@ -2283,7 +2283,7 @@
 
    define_function "or", CICADA__or
       ;; << bool, bool -- bool >>
-      xx false?branch, (.false-$)/jo_size
+      xx false?branch, (.false-$)/cell_size
       xx   drop
       xx   true
       xx   end
@@ -2296,7 +2296,7 @@
 
    define_function "xor", CICADA__xor
       ;; << bool, bool -- bool >>
-      xx false?branch, (.false-$)/jo_size
+      xx false?branch, (.false-$)/cell_size
       xx   CICADA__not
       xx   end
    .false:
@@ -2340,66 +2340,66 @@
 
    define_primitive_function "add1", add1
       ;; << n -- n+1 >>
-      inc qword [pointer$argument_stack - (1 * jo_size)]
+      inc qword [pointer$argument_stack - (1 * cell_size)]
       next
 
    define_primitive_function "add2", add2
       ;; << n -- n+2 >>
-      add qword [pointer$argument_stack - (1 * jo_size)], 2
+      add qword [pointer$argument_stack - (1 * cell_size)], 2
       next
 
    define_primitive_function "add3", add3
       ;; << n -- n+3 >>
-      add qword [pointer$argument_stack - (1 * jo_size)], 3
+      add qword [pointer$argument_stack - (1 * cell_size)], 3
       next
 
    define_primitive_function "add4", add4
       ;; << n -- n+4 >>
-      add qword [pointer$argument_stack - (1 * jo_size)], 4
+      add qword [pointer$argument_stack - (1 * cell_size)], 4
       next
 
    define_primitive_function "add8", add8
       ;; << n -- n+8 >>
-      add qword [pointer$argument_stack - (1 * jo_size)], 8
+      add qword [pointer$argument_stack - (1 * cell_size)], 8
       next
 
 
    define_primitive_function "sub1", sub1
       ;; << n -- n-1 >>
-      dec qword [pointer$argument_stack - (1 * jo_size)]
+      dec qword [pointer$argument_stack - (1 * cell_size)]
       next
 
    define_primitive_function "sub2", sub2
       ;; << n -- n-2 >>
-      sub qword [pointer$argument_stack - (1 * jo_size)], 2
+      sub qword [pointer$argument_stack - (1 * cell_size)], 2
       next
 
    define_primitive_function "sub3", sub3
       ;; << n -- n-3 >>
-      sub qword [pointer$argument_stack - (1 * jo_size)], 3
+      sub qword [pointer$argument_stack - (1 * cell_size)], 3
       next
 
    define_primitive_function "sub4", sub4
       ;; << n -- n-4 >>
-      sub qword [pointer$argument_stack - (1 * jo_size)], 4
+      sub qword [pointer$argument_stack - (1 * cell_size)], 4
       next
 
    define_primitive_function "sub8", sub8
       ;; << n -- n-8 >>
-      sub qword [pointer$argument_stack - (1 * jo_size)], 8
+      sub qword [pointer$argument_stack - (1 * cell_size)], 8
       next
 
 
    define_primitive_function "add", addition
       ;; << a b -- a+b >>
       pop_argument_stack rax
-      add qword [pointer$argument_stack - (1 * jo_size)], rax
+      add qword [pointer$argument_stack - (1 * cell_size)], rax
       next
 
    define_primitive_function "sub", subtraction
       ;; << a b -- a-b >>
       pop_argument_stack rax
-      sub qword [pointer$argument_stack - (1 * jo_size)], rax
+      sub qword [pointer$argument_stack - (1 * cell_size)], rax
       next
 
    }
@@ -2699,7 +2699,7 @@
 ** note get & set
    * although the following functions are all side-effect
      but I use "set" instead of "set!"
-   * (get) and (set) default to a jo_size
+   * (get) and (set) default to a cell_size
 ** note endianness of n-get & n-set
    * big-endian is used
      in memory
@@ -2757,7 +2757,7 @@
    .loop:
       mov rax, qword [rdx]
       push_argument_stack rax
-      add rdx, jo_size
+      add rdx, cell_size
       loop .loop
       next
 
@@ -2799,16 +2799,16 @@
       ;; << value-n, ..., value-1, address, n -- >>
       pop_argument_stack rcx
       pop_argument_stack rdx
-      mov rax, jo_size
+      mov rax, cell_size
       imul rax, rcx
       add rdx, rax
       ;; for address is based on 0
       ;; but n is based on 1
-      sub rdx, jo_size
+      sub rdx, cell_size
    .loop:
       pop_argument_stack rax
       mov qword [rdx], rax
-      sub rdx, jo_size
+      sub rdx, cell_size
       loop .loop
       next
 
@@ -2870,7 +2870,7 @@
    .loop:
       mov rax, dword [rdx]
       push_argument_stack rax
-      add rdx, jo_size
+      add rdx, cell_size
       loop .loop
       next
 
@@ -2912,16 +2912,16 @@
       ;; << value-n, ..., value-1, address, n -- >>
       pop_argument_stack rcx
       pop_argument_stack rdx
-      mov rax, jo_size
+      mov rax, cell_size
       imul rax, rcx
       add rdx, rax
       ;; for address is based on 0
       ;; but n is based on 1
-      sub rdx, jo_size
+      sub rdx, cell_size
    .loop:
       pop_argument_stack rax
       mov dword [rdx], rax
-      sub rdx, jo_size
+      sub rdx, cell_size
       loop .loop
       next
 
@@ -2965,24 +2965,24 @@
    define_primitive_function "bit-and", bit_and
       ;; << a, b -- a and b >>
       pop_argument_stack rbx
-      and [pointer$argument_stack - (1 * jo_size)], rbx
+      and [pointer$argument_stack - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-or", bit_or
       ;; << a, b -- a or b >>
       pop_argument_stack rbx
-      or  [pointer$argument_stack - (1 * jo_size)], rbx
+      or  [pointer$argument_stack - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-xor", bit_xor
       ;; << a, b -- a xor b >>
       pop_argument_stack rbx
-      xor [pointer$argument_stack - (1 * jo_size)], rbx
+      xor [pointer$argument_stack - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-invert", bit_invert
       ;; << a -- invert a >>
-      not qword [pointer$argument_stack - (1 * jo_size)]
+      not qword [pointer$argument_stack - (1 * cell_size)]
       next
 
    }
@@ -2995,27 +2995,27 @@
       ;; << a, b -- a and b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
-      and [rax - (1 * jo_size)], rbx
+      and [rax - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-or", bit_or
       ;; << a, b -- a or b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
-      or  [rax - (1 * jo_size)], rbx
+      or  [rax - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-xor", bit_xor
       ;; << a, b -- a xor b >>
       pop_argument_stack rbx
       mov rax, [pointer$argument_stack]
-      xor [rax - (1 * jo_size)], rbx
+      xor [rax - (1 * cell_size)], rbx
       next
 
    define_primitive_function "bit-invert", bit_invert
       ;; << a -- invert a >>
       mov rax, [pointer$argument_stack]
-      not dword [rax - (1 * jo_size)]
+      not dword [rax - (1 * cell_size)]
       next
 
    }
@@ -3228,9 +3228,9 @@
      i.e. two values
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$reading_stack = 1024 * jo_size
+   size$reading_stack = 1024 * cell_size
 
-      preserve 64 * jo_size
+      preserve 64 * cell_size
    address$reading_stack labeling
       preserve size$reading_stack
 
@@ -3244,30 +3244,30 @@
    define_primitive_function "push-reading-stack", push_reading_stack
       ;; << string[address, length] -- >>
       pop_argument_stack rax
-      mov rbx, [V__reading_stack__pointer + jo_size]
+      mov rbx, [V__reading_stack__pointer + cell_size]
       mov [rbx], rax
-      add qword [V__reading_stack__pointer + jo_size], jo_size
+      add qword [V__reading_stack__pointer + cell_size], cell_size
       pop_argument_stack rax
-      mov rbx, [V__reading_stack__pointer + jo_size]
+      mov rbx, [V__reading_stack__pointer + cell_size]
       mov [rbx], rax
-      add qword [V__reading_stack__pointer + jo_size], jo_size
+      add qword [V__reading_stack__pointer + cell_size], cell_size
       next
 
    define_primitive_function "pop-reading-stack", pop_reading_stack
       ;; << -- string[address, length] >>
-      sub qword [V__reading_stack__pointer + jo_size], jo_size
-      mov rbx, [V__reading_stack__pointer + jo_size]
+      sub qword [V__reading_stack__pointer + cell_size], cell_size
+      mov rbx, [V__reading_stack__pointer + cell_size]
       mov rax, [rbx]
       push_argument_stack rax
-      sub qword [V__reading_stack__pointer + jo_size], jo_size
-      mov rbx, [V__reading_stack__pointer + jo_size]
+      sub qword [V__reading_stack__pointer + cell_size], cell_size
+      mov rbx, [V__reading_stack__pointer + cell_size]
       mov rax, [rbx]
       push_argument_stack rax
       next
 
    define_primitive_function "drop-reading-stack", drop_reading_stack
       ;; << -- >>
-      sub qword [V__reading_stack__pointer + jo_size], (jo_size * 2)
+      sub qword [V__reading_stack__pointer + cell_size], (cell_size * 2)
       next
 
    }
@@ -3279,30 +3279,30 @@
    define_primitive_function "push-reading-stack", push_reading_stack
       ;; << string[address, length] -- >>
       pop_argument_stack rax
-      mov rsi, [V__reading_stack__pointer + jo_size]
+      mov rsi, [V__reading_stack__pointer + cell_size]
       mov [rsi], rax
-      add dword [V__reading_stack__pointer + jo_size], jo_size
+      add dword [V__reading_stack__pointer + cell_size], cell_size
       pop_argument_stack rax
-      mov rsi, [V__reading_stack__pointer + jo_size]
+      mov rsi, [V__reading_stack__pointer + cell_size]
       mov [rsi], rax
-      add dword [V__reading_stack__pointer + jo_size], jo_size
+      add dword [V__reading_stack__pointer + cell_size], cell_size
       next
 
    define_primitive_function "pop-reading-stack", pop_reading_stack
       ;; << -- string[address, length] >>
-      sub dword [V__reading_stack__pointer + jo_size], jo_size
-      mov rsi, [V__reading_stack__pointer + jo_size]
+      sub dword [V__reading_stack__pointer + cell_size], cell_size
+      mov rsi, [V__reading_stack__pointer + cell_size]
       mov rax, [rsi]
       push_argument_stack rax
-      sub dword [V__reading_stack__pointer + jo_size], jo_size
-      mov rsi, [V__reading_stack__pointer + jo_size]
+      sub dword [V__reading_stack__pointer + cell_size], cell_size
+      mov rsi, [V__reading_stack__pointer + cell_size]
       mov rax, [rsi]
       push_argument_stack rax
       next
 
    define_primitive_function "drop-reading-stack", drop_reading_stack
       ;; << -- >>
-      sub dword [V__reading_stack__pointer + jo_size], (jo_size * 2)
+      sub dword [V__reading_stack__pointer + cell_size], (cell_size * 2)
       next
 
    }
@@ -3311,13 +3311,13 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_primitive_function "tos-reading-stack", tos_reading_stack
       ;; << -- string[address, length] >>
-      mov rbx, [V__reading_stack__pointer + jo_size]
-      sub rbx, jo_size
+      mov rbx, [V__reading_stack__pointer + cell_size]
+      sub rbx, cell_size
       mov rax, [rbx]
       push_argument_stack rax
-      mov rbx, [V__reading_stack__pointer + jo_size]
-      sub rbx, jo_size
-      sub rbx, jo_size
+      mov rbx, [V__reading_stack__pointer + cell_size]
+      sub rbx, cell_size
+      sub rbx, cell_size
       mov rax, [rbx]
       push_argument_stack rax
       next
@@ -3327,7 +3327,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "reading-stack-empty?", reading_stack_empty?
       ;; << -- bool >>
-      xx literal, V__reading_stack__pointer + jo_size, get
+      xx literal, V__reading_stack__pointer + cell_size, get
       xx literal, address$reading_stack
       xx equal?
       xx end
@@ -3415,7 +3415,7 @@
    define_function "read-byte", read_byte
       ;; << -- byte >>
       xx pop_reading_stack
-      xx dup2, empty_string?, CICADA__not, false?branch, (.bad_tos-$)/jo_size
+      xx dup2, empty_string?, CICADA__not, false?branch, (.bad_tos-$)/cell_size
       xx   sub1, swap
       xx   tuck
       xx   add1, swap
@@ -3423,12 +3423,12 @@
       xx   get_byte
       xx   end
    .bad_tos:
-      xx reading_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx reading_stack_empty?, false?branch, (.not_empty-$)/cell_size
       xx   drop2
       xx   literal, buffer$reading
       xx   literal, max_input_length
       xx   read_line_from_stdin
-      xx   dup, positive?, false?branch, (.read_error-$)/jo_size
+      xx   dup, positive?, false?branch, (.read_error-$)/cell_size
       xx     literal, buffer$reading
       xx     swap
       xx     push_reading_stack
@@ -3670,13 +3670,13 @@
    define_primitive_function "string-reverse!", string_reverse!
       ;; << string[address, length] -- string[address, length] >>
       mov rdi, buffer$string_reverse!
-      mov rcx, [pointer$argument_stack - (1 * jo_size)]
-      mov rsi, [pointer$argument_stack - (2 * jo_size)]
+      mov rcx, [pointer$argument_stack - (1 * cell_size)]
+      mov rsi, [pointer$argument_stack - (2 * cell_size)]
       rep movsb
 
-      mov rcx, [pointer$argument_stack - (1 * jo_size)]
+      mov rcx, [pointer$argument_stack - (1 * cell_size)]
       dec rdi ;; cursor back into string in buffer$string_reverse!
-      mov rsi, [pointer$argument_stack - (2 * jo_size)]
+      mov rsi, [pointer$argument_stack - (2 * cell_size)]
    .loop:
       mov al, byte [rdi]
       mov byte [rsi], al
@@ -3700,13 +3700,13 @@
       ;; << string[address, length] -- string[address, length] >>
       mov rbx, [pointer$argument_stack]
       mov rdi, buffer$string_reverse!
-      mov rcx, [rbx - (1 * jo_size)]
-      mov rsi, [rbx - (2 * jo_size)]
+      mov rcx, [rbx - (1 * cell_size)]
+      mov rsi, [rbx - (2 * cell_size)]
       rep movsb
 
-      mov rcx, [rbx - (1 * jo_size)]
+      mov rcx, [rbx - (1 * cell_size)]
       dec rdi ;; cursor back into string in buffer$string_reverse!
-      mov rsi, [rbx - (2 * jo_size)]
+      mov rsi, [rbx - (2 * cell_size)]
    .loop:
       mov al, byte [rdi]
       mov byte [rsi], al
@@ -4056,7 +4056,7 @@
    define_function "read-word->buffer", read_word_to_buffer
       ;; << buffer -- word[address, length] >>
       xx pop_reading_stack
-      xx dup2, space_string?, CICADA__not, false?branch, (.bad_tos-$)/jo_size
+      xx dup2, space_string?, CICADA__not, false?branch, (.bad_tos-$)/cell_size
       xx   dup2, string__word_tail, push_reading_stack
       xx   string__word
       xx   xoverxx, xxoverx
@@ -4065,12 +4065,12 @@
       xx   swap, drop
       xx   end
    .bad_tos:
-      xx reading_stack_empty?, false?branch, (.not_empty-$)/jo_size
+      xx reading_stack_empty?, false?branch, (.not_empty-$)/cell_size
       xx   drop2
       xx   literal, buffer$reading
       xx   literal, max_input_length
       xx   read_line_from_stdin
-      xx   dup, positive?, false?branch, (.read_error-$)/jo_size
+      xx   dup, positive?, false?branch, (.read_error-$)/cell_size
       xx     literal, buffer$reading
       xx     swap
       xx     push_reading_stack
@@ -4409,7 +4409,7 @@
      for functions that create structured data into memory
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$jojo_area = 1024 * 1024 * jo_size
+   size$jojo_area = 1024 * 1024 * cell_size
 
    define_variable "*jojo-area*", V__jojo_area
      xx address$jojo_area
@@ -4430,7 +4430,7 @@
       ;; << number -- >>
       xx V__jojo_area__current_free_address
       xx set
-      xx literal, jo_size
+      xx literal, cell_size
       xx address, V__jojo_area__current_free_address
       xx add_set
       xx end
@@ -4481,9 +4481,9 @@
    * *rule-set,...* 添加語法
 ** memory allocate
    #+begin_src fasm :tangle cicada-nymph.fasm
-      preserve jo_size * 64
+      preserve cell_size * 64
    address$syntax_stack labeling
-      preserve jo_size * 1024
+      preserve cell_size * 1024
 
    define_variable "*syntax-stack,address*", V__syntax_stack__address
       xx address$syntax_stack
@@ -4497,7 +4497,7 @@
       ;; << syntax-set[address] -- >>
       xx V__syntax_stack__pointer
       xx set
-      xx V__jo_size
+      xx V__cell_size
       xx address, V__syntax_stack__pointer
       xx add_set
       xx end
@@ -4506,7 +4506,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "pop-syntax-stack", pop_syntax_stack
       ;; << -- syntax-set[address] >>
-      xx V__jo_size
+      xx V__cell_size
       xx address, V__syntax_stack__pointer
       xx sub_set
       xx V__syntax_stack__pointer, get
@@ -4517,7 +4517,7 @@
    define_function "tos-syntax-stack", tos_syntax_stack
       ;; << -- syntax-set[address] >>
       xx V__syntax_stack__pointer
-      xx V__jo_size
+      xx V__cell_size
       xx subtraction
       xx get
       xx end
@@ -4526,7 +4526,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "drop-syntax-stack", drop_syntax_stack
       ;; << -- >>
-      xx V__jo_size
+      xx V__cell_size
       xx address, V__syntax_stack__pointer
       xx sub_set
       xx end
@@ -4596,7 +4596,7 @@
 ** *rule,unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_variable "*rule,unit*", V__rule__unit
-      xx (jo_size * 2)
+      xx (cell_size * 2)
    #+end_src
 ** rule,get-predicate
    #+begin_src fasm :tangle cicada-nymph.fasm
@@ -4609,7 +4609,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "rule,get-function", rule__get_function
       ;; << rule[address] -- function >>
-      xx V__jo_size, addition
+      xx V__cell_size, addition
       xx get
       xx end
    #+end_src
@@ -4617,7 +4617,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "rule,get", rule__get
       ;; << rule[address] -- rule[predicate, function] >>
-      xx V__rule__unit, V__jo_size, division
+      xx V__rule__unit, V__cell_size, division
       xx n_get
       xx end
    #+end_src
@@ -4625,7 +4625,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "rule-set,get-border", rule_set__get_border
       ;; << rule-set -- border >>
-      xx V__jo_size, subtraction
+      xx V__cell_size, subtraction
       xx get
       xx end
    #+end_src
@@ -4633,7 +4633,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "rule-set,set-border", rule_set__set_border
       ;; << border, rule-set -- >>
-      xx V__jo_size, subtraction
+      xx V__cell_size, subtraction
       xx set
       xx end
    #+end_src
@@ -4647,8 +4647,8 @@
       xx n_set
       xx dup
       xx rule_set__get_border
-      xx V__jo_size, addition
-      xx V__jo_size, addition
+      xx V__cell_size, addition
+      xx V__cell_size, addition
       xx swap
       xx rule_set__set_border
       xx end
@@ -4680,7 +4680,7 @@
       xx literal, cursor$rule_set__find, get
       xx V__rule__unit, subtraction
       xx rule__get_predicate
-      xx apply, false?branch, (.not_found-$)/jo_size
+      xx apply, false?branch, (.not_found-$)/cell_size
       xx   drop, drop2
       xx   literal, cursor$rule_set__find, get
       xx   V__rule__unit, subtraction
@@ -4689,8 +4689,8 @@
       xx   end
    .not_found:
       xx literal, cursor$rule_set__find, get
-      xx V__jo_size, subtraction
-      xx V__jo_size, subtraction
+      xx V__cell_size, subtraction
+      xx V__cell_size, subtraction
       xx literal, cursor$rule_set__find, set
       xx tail_call, rule_set__find__loop
    #+end_src
@@ -4791,7 +4791,7 @@
 
       xx dup2
       xx literal, '"', string__find_byte
-      xx false?branch, (.not_found-$)/jo_size
+      xx false?branch, (.not_found-$)/cell_size
       xx   xoverxx, subtraction
       ;;   << string[address, length], new-length >>
       xx   xxtuckx
@@ -4876,7 +4876,7 @@
 ** ----------------------------------
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$rule_set__jojo_compiler = 1024 * jo_size
+   size$rule_set__jojo_compiler = 1024 * cell_size
 
    cursor$rule_set__jojo_compiler:
       xx address$rule_set__jojo_compiler
@@ -5062,7 +5062,7 @@
 
       xx V__jojo_area__current_free_address
       xx swap, subtraction
-      xx V__jo_size, division
+      xx V__cell_size, division
       xx swap, jo__set_length
 
       xx end
@@ -5215,7 +5215,7 @@
 ** 記 總結
 *** interface
     * 首先要滿足最基本的
-      長度爲 *jo-size* 的倍數的
+      長度爲 *cell-size* 的倍數的
       局部變量的需求
       其次
       還要能夠在所申請的局部空間裏使用字符串
@@ -5231,7 +5231,7 @@
       都必須在編譯時期被靜態地算出來
       所以必須設計語法幫助編譯器作計算
       >:name :name 用以 分配 和 使用
-      *jo-size* 倍數大小的內存
+      *cell-size* 倍數大小的內存
     * 語義方面
       >:name 的重複出現有兩種語義
       1. 更新這個局部變元的值
@@ -5267,7 +5267,7 @@
         會得到相同的 offset
 ** memory allocation
    #+begin_src fasm :tangle cicada-nymph.fasm
-   size$local_variable = 1024 * 1024 * jo_size
+   size$local_variable = 1024 * 1024 * cell_size
 
    address$local_variable labeling
       preserve size$local_variable
@@ -5284,7 +5284,7 @@
    define_primitive_function "allocate-local-variable", allocate_local_variable
       ;; << number -- >>
       pop_argument_stack rax
-      imul rax, jo_size
+      imul rax, cell_size
       add [local_variable$current_free_address], rax
       next
    #+end_src
@@ -5303,8 +5303,8 @@
       ;; << -- value-1, ..., value-n >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
-        mov rcx, [rbx + jo_size] ;; numebr
-      add rbx, (jo_size * 2)
+        mov rcx, [rbx + cell_size] ;; numebr
+      add rbx, (cell_size * 2)
       push_return_stack rbx
 
       mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
@@ -5312,7 +5312,7 @@
    .loop:
       mov rax, [rbx]
       push_argument_stack rax
-      add rbx, jo_size
+      add rbx, cell_size
       loop .loop
       next
 
@@ -5320,22 +5320,22 @@
       ;; << value-n, ..., value-1 -- >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
-        mov rcx, [rbx + jo_size] ;; numebr
-      add rbx, (jo_size * 2)
+        mov rcx, [rbx + cell_size] ;; numebr
+      add rbx, (cell_size * 2)
       push_return_stack rbx
 
       mov rbx, [pointer$return_stack - unit__return_point + offset__return_point$local_variable]
       add rbx, rdx
-        mov rax, jo_size
+        mov rax, cell_size
         imul rax, rcx
         add rbx, rax
         ;; for address is based on 0
         ;; but n is based on 1
-        sub rbx, jo_size
+        sub rbx, cell_size
    .loop:
       pop_argument_stack rax
       mov [rbx], rax
-      sub rbx, jo_size
+      sub rbx, cell_size
       loop .loop
       next
 
@@ -5349,8 +5349,8 @@
       ;; << -- value-1, ..., value-n >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
-        mov rcx, [rbx + jo_size] ;; numebr
-      add rbx, (jo_size * 2)
+        mov rcx, [rbx + cell_size] ;; numebr
+      add rbx, (cell_size * 2)
       push_return_stack rbx
 
       mov rax, [pointer$return_stack]
@@ -5359,7 +5359,7 @@
    .loop:
       mov rax, [rbx]
       push_argument_stack rax
-      add rbx, jo_size
+      add rbx, cell_size
       loop .loop
       next
 
@@ -5367,23 +5367,23 @@
       ;; << value-n, ..., value-1 -- >>
       pop_return_stack rbx
         mov rdx, [rbx]           ;; offset
-        mov rcx, [rbx + jo_size] ;; numebr
-      add rbx, (jo_size * 2)
+        mov rcx, [rbx + cell_size] ;; numebr
+      add rbx, (cell_size * 2)
       push_return_stack rbx
       mov rax, [pointer$return_stack]
       mov rbx, [rax - unit__return_point + offset__return_point$local_variable]
 
       add rbx, rdx
-        mov rax, jo_size
+        mov rax, cell_size
         imul rax, rcx
         add rbx, rax
         ;; for address is based on 0
         ;; but n is based on 1
-        sub rbx, jo_size
+        sub rbx, cell_size
    .loop:
       pop_argument_stack rax
       mov [rbx], rax
-      sub rbx, jo_size
+      sub rbx, cell_size
       loop .loop
       next
 
@@ -5597,19 +5597,19 @@
        xx literal, offset$local_variable_table, get
        xx   xxtuckx ;; return value
        xx literal, border$local_variable_table, get, set
-       xx V__jo_size
+       xx V__cell_size
        xx literal, border$local_variable_table, add_set
 
        ;; update offset$local_variable_table
        xx dup2
        xx   count_front_colon
-       xx   V__jo_size, multiple
+       xx   V__cell_size, multiple
        xx   literal, offset$local_variable_table, add_set
 
        ;; leave length
        xx dup
        xx literal, border$local_variable_table, get, set
-       xx V__jo_size
+       xx V__cell_size
        xx literal, border$local_variable_table, add_set
 
        xx tuck ;; for to update border$local_variable_table
@@ -5649,10 +5649,10 @@
        xx   end
        xx dup2
        xx literal, cursor$local_variable_table, get
-       xx   V__jo_size, addition
-       xx   V__jo_size, addition ;; address of string
+       xx   V__cell_size, addition
+       xx   V__cell_size, addition ;; address of string
        xx literal, cursor$local_variable_table, get
-       xx   V__jo_size, addition
+       xx   V__cell_size, addition
        xx   get ;; length of string
        xx string_equal?, false?branch, 8
        xx   drop2
@@ -5661,10 +5661,10 @@
        xx   true
        xx   end
        xx literal, cursor$local_variable_table, get
-       xx   V__jo_size, addition
+       xx   V__cell_size, addition
        xx   get ;; length of string
-       xx V__jo_size, addition
-       xx V__jo_size, addition
+       xx V__cell_size, addition
+       xx V__cell_size, addition
        xx literal, cursor$local_variable_table, add_set
        xx tail_call, local_variable_table__find__loop
     #+end_src
@@ -5723,7 +5723,7 @@
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx dup2
-       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+       xx local_variable_table__find, false?branch, (.not_found-$)/cell_size
        ;;   instruction__local_variable__n_get, <offese>, n
        xx     literal, instruction__local_variable__n_get
        xx       jojo_area__stay
@@ -5789,7 +5789,7 @@
        ;;    string[address, length] >>
        xx string__byte_tail
        xx dup2
-       xx local_variable_table__find, false?branch, (.not_found-$)/jo_size
+       xx local_variable_table__find, false?branch, (.not_found-$)/cell_size
        ;;   instruction__local_variable__n_set, <offese>, n
        xx     literal, instruction__local_variable__n_set
        xx       jojo_area__stay
@@ -5884,16 +5884,16 @@
       jnz .return_stack_even
 
       pop_argument_stack rbx
-      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      mov rax, [V__local_memory_odd__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      add [V__local_memory_odd__current_free_address + cell_size], rbx
       next
 
    .return_stack_even:
       pop_argument_stack rbx
-      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      mov rax, [V__local_memory_even__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_even__current_free_address + jo_size], rbx
+      add [V__local_memory_even__current_free_address + cell_size], rbx
       next
 
    }
@@ -5908,16 +5908,16 @@
       jnz .return_stack_even
 
       pop_argument_stack rbx
-      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      mov rax, [V__local_memory_odd__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      add [V__local_memory_odd__current_free_address + cell_size], rbx
       next
 
    .return_stack_even:
       pop_argument_stack rbx
-      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      mov rax, [V__local_memory_even__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_even__current_free_address + jo_size], rbx
+      add [V__local_memory_even__current_free_address + cell_size], rbx
       next
 
    }
@@ -5934,16 +5934,16 @@
       jnz .return_stack_even
 
       pop_argument_stack rbx
-      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      mov rax, [V__local_memory_even__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_even__current_free_address + jo_size], rbx
+      add [V__local_memory_even__current_free_address + cell_size], rbx
       next
 
    .return_stack_even:
       pop_argument_stack rbx
-      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      mov rax, [V__local_memory_odd__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      add [V__local_memory_odd__current_free_address + cell_size], rbx
       next
 
    }
@@ -5958,16 +5958,16 @@
       jnz .return_stack_even
 
       pop_argument_stack rbx
-      mov rax, [V__local_memory_even__current_free_address + jo_size]
+      mov rax, [V__local_memory_even__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_even__current_free_address + jo_size], rbx
+      add [V__local_memory_even__current_free_address + cell_size], rbx
       next
 
    .return_stack_even:
       pop_argument_stack rbx
-      mov rax, [V__local_memory_odd__current_free_address + jo_size]
+      mov rax, [V__local_memory_odd__current_free_address + cell_size]
       push_argument_stack rax
-      add [V__local_memory_odd__current_free_address + jo_size], rbx
+      add [V__local_memory_odd__current_free_address + cell_size], rbx
       next
 
    }

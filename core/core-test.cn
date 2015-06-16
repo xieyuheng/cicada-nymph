@@ -657,7 +657,7 @@ address kkk
   <string> equal? test
 ; test-do
 
-3 *jo-size* mul allocate-memory
+3 *cell-size* mul allocate-memory
 : *t*
 ; test-variable,with-tos
 
@@ -667,10 +667,10 @@ address kkk
   *t* get
   1 equal?
 
-  *t* *jo-size* add get
+  *t* *cell-size* add get
   2 equal? and
 
-  *t* *jo-size* 2 mul add get
+  *t* *cell-size* 2 mul add get
   3 equal? and test
 
   *t* 3 n-get

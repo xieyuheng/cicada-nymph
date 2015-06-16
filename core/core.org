@@ -109,7 +109,7 @@
      0 jojo-area,stay
      << address, string[address, length], address >>
      *jojo-area,current-free-address*
-     over sub *jo-size* div
+     over sub *cell-size* div
      swap set
      end
    ; define-function
@@ -122,7 +122,7 @@
      drop2
      x|swap|xxx
      *jojo-area,current-free-address*
-     over sub *jo-size* div
+     over sub *cell-size* div
      swap set
      end
    ; define-function
@@ -358,7 +358,7 @@
    : *name-hash-table,size*
    ; define-variable,with-tos
 
-   *jo-size* 5 mul
+   *cell-size* 5 mul
    : *name-hash-table,unit*
    ; define-variable,with-tos
 
@@ -456,7 +456,7 @@
     : name,used-as-jo?
       << name -- bool >>
       name->address
-      *jo-size* 4 mul add
+      *cell-size* 4 mul add
       get zero? not
       end
     ; define-function
@@ -475,7 +475,7 @@
     : name,get-orbit-length
       << name -- orbit-length >>
       name->address
-      *jo-size* 2 mul add
+      *cell-size* 2 mul add
       get
       end
     ; define-function
@@ -485,7 +485,7 @@
     : name,get-orbiton
       << name -- orbiton >>
       name->address
-      *jo-size* 3 mul add
+      *cell-size* 3 mul add
       get
       end
     ; define-function
@@ -495,7 +495,7 @@
     : name,get-jo
       << name -- jo >>
       name->address
-      *jo-size* 4 mul add
+      *cell-size* 4 mul add
       get
       end
     ; define-function
@@ -516,7 +516,7 @@
     : name,set-orbit-length
       << orbit-length, name -- >>
       name->address
-      *jo-size* 2 mul add
+      *cell-size* 2 mul add
       set
       end
     ; define-function
@@ -526,7 +526,7 @@
     : name,set-orbiton
       << orbiton, name -- >>
       name->address
-      *jo-size* 3 mul add
+      *cell-size* 3 mul add
       set
       end
     ; define-function
@@ -536,7 +536,7 @@
     : name,set-jo
       << jo, name -- >>
       name->address
-      *jo-size* 4 mul add
+      *cell-size* 4 mul add
       set
       end
     ; define-function
@@ -856,7 +856,7 @@
    : *global-naming-stack,size*
    ; define-variable,with-tos
 
-   3 *jo-size* mul
+   3 *cell-size* mul
    : *global-naming-stack,unit*
    ; define-variable,with-tos
 
@@ -887,13 +887,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : name-record,get-name
      << name-record -- name >>
-     *jo-size* add get
+     *cell-size* add get
      end
    ; define-function
 
    : name-record,set-name
      << name, name-record -- >>
-     *jo-size* add set
+     *cell-size* add set
      end
    ; define-function
    #+end_src
@@ -901,13 +901,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : name-record,get-new-jo
      << name-record -- new-jo >>
-     *jo-size* 2 mul add get
+     *cell-size* 2 mul add get
      end
    ; define-function
 
    : name-record,set-new-jo
      << new-jo, name-record -- >>
-     *jo-size* 2 mul add set
+     *cell-size* 2 mul add set
      end
    ; define-function
    #+end_src
@@ -1030,7 +1030,7 @@
    : *scope-stack,size*
    ; define-variable,with-tos
 
-   2 *jo-size* mul
+   2 *cell-size* mul
    : *scope-stack,unit*
    ; define-variable,with-tos
 
@@ -1068,13 +1068,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : offset-record,get-offset
      << offset-record -- offset >>
-     *jo-size* add get
+     *cell-size* add get
      end
    ; define-function
 
    : offset-record,set-offset
      << offset, offset-record -- >>
-     *jo-size* add set
+     *cell-size* add set
      end
    ; define-function
    #+end_src
@@ -1138,7 +1138,7 @@
      then
      dup
      offset-record,get-name
-     name->string count-front-colon *jo-size* mul
+     name->string count-front-colon *cell-size* mul
      swap
      offset-record,get-offset
      add
@@ -1156,7 +1156,7 @@
    : *awaiting-stack,size*
    ; define-variable,with-tos
 
-   4 *jo-size* mul
+   4 *cell-size* mul
    : *awaiting-stack,unit*
    ; define-variable,with-tos
 
@@ -1193,13 +1193,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : action,get-argument-stack-pointer
      << action -- argument-stack-pointer >>
-     *jo-size* add get
+     *cell-size* add get
      end
    ; define-function
 
    : action,set-argument-stack-pointer
      << argument-stack-pointer, action -- >>
-     *jo-size* add set
+     *cell-size* add set
      end
    ; define-function
    #+end_src
@@ -1207,13 +1207,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : action,get-return-stack-pointer
      << action -- return-stack-pointer >>
-     *jo-size* 2 mul add get
+     *cell-size* 2 mul add get
      end
    ; define-function
 
    : action,set-return-stack-pointer
      << return-stack-pointer, action -- >>
-     *jo-size* 2 mul add set
+     *cell-size* 2 mul add set
      end
    ; define-function
    #+end_src
@@ -1221,13 +1221,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : action,get-name
      << action -- name >>
-     *jo-size* 3 mul add get
+     *cell-size* 3 mul add get
      end
    ; define-function
 
    : action,set-name
      << name, action -- >>
-     *jo-size* 3 mul add set
+     *cell-size* 3 mul add set
      end
    ; define-function
    #+end_src
@@ -1373,12 +1373,12 @@
 * basic-REPL
 ** *rule-set,word-interpreter*
    #+begin_src cicada-nymph :tangle core.cn
-   1024 *jo-size* mul
+   1024 *cell-size* mul
    : *rule-set,word-interpreter,size*
    ; define-variable,with-tos
 
    << for cursor >>
-   *jo-size* allocate-memory drop
+   *cell-size* allocate-memory drop
 
    *rule-set,word-interpreter,size*
    allocate-memory
@@ -1386,7 +1386,7 @@
    ; define-variable,with-tos
 
    *rule-set,word-interpreter*
-   *rule-set,word-interpreter* *jo-size* sub
+   *rule-set,word-interpreter* *cell-size* sub
    set
    #+end_src
 ** word-interpreter
@@ -2358,7 +2358,7 @@
      :jo ::body jojo-compiler
 
      *jojo-area,current-free-address*
-     :old-address sub *jo-size* div
+     :old-address sub *cell-size* div
      :jo jo,set-length
 
      drop2
@@ -2546,7 +2546,7 @@
      over (instruction,branch) and its offset
      >>
      *jojo-area,current-free-address* :address sub
-     *jo-size* div
+     *cell-size* div
      :address set
      end
    ; define-function
@@ -2565,7 +2565,7 @@
      >:scope-stack-pointer
 
      *jojo-area,current-free-address* :address sub
-     *jo-size* div
+     *cell-size* div
      :address set
 
      :jo
@@ -2604,7 +2604,7 @@
      then
      sub1 swap
        dup get .
-     *jo-size* add
+     *cell-size* add
      swap
      loop
    ; define-function
@@ -2616,7 +2616,7 @@
      *the-stack* greater-or-equal? if
        *the-stack*   << address as return value >>
        *the-stack-pointer-snapshot* *the-stack* sub
-       *jo-size* div << counter as return value >>
+       *cell-size* div << counter as return value >>
        print-argument-stack,loop
        end
      then
@@ -2636,10 +2636,10 @@
         << ad hoc for the BUG of div >>
         dup negative? if
           negate
-          *jo-size* div
+          *cell-size* div
           negate
         else
-          *jo-size* div
+          *cell-size* div
         then
         .i
      " * " .s
@@ -3001,7 +3001,7 @@
 
      *jojo-area,current-free-address*
      :offset-address sub
-     *jo-size* div
+     *cell-size* div
      :offset-address set
 
      jo instruction,literal
@@ -3416,7 +3416,7 @@
         "* (<word-interpreter-syntax> address) meet a not variable-jo : " .s ::word .s .l
         end
       then
-      :jo *jo-size* add
+      :jo *cell-size* add
       end
     ; define-function
     #+end_src
@@ -3718,7 +3718,7 @@
      on stack
      << value-1, value-2, value-3 >>
    #+begin_src cicada-nymph :tangle core-test.cn
-   3 *jo-size* mul allocate-memory
+   3 *cell-size* mul allocate-memory
    : *t*
    ; test-variable,with-tos
 
@@ -3728,10 +3728,10 @@
      *t* get
      1 equal?
 
-     *t* *jo-size* add get
+     *t* *cell-size* add get
      2 equal? and
 
-     *t* *jo-size* 2 mul add get
+     *t* *cell-size* 2 mul add get
      3 equal? and test
 
      *t* 3 n-get
@@ -3761,7 +3761,7 @@
        "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
        dup *rule,unit* sub rule,get-function
        "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
-       *jo-size* sub *jo-size* sub
+       *cell-size* sub *cell-size* sub
      swap
      loop
    ; define-function
@@ -3785,7 +3785,7 @@
      << cursor -- >>
      >:cursor
      :cursor 2 n-get
-     :cursor *jo-size* 2 mul sub
+     :cursor *cell-size* 2 mul sub
      2 n-set
      end
    ; define-function
@@ -3796,14 +3796,14 @@
      >:rule-set
      :rule-set rule-set,get-border >:border
      :cursor :border equal? if
-       :border *jo-size* 2 mul sub
+       :border *cell-size* 2 mul sub
        :rule-set
        rule-set,set-border
        end
      then
      :cursor <rule> sub,move-one
      :rule-set
-     :cursor *jo-size* 2 mul add
+     :cursor *cell-size* 2 mul add
      loop
    ; define-function
 
@@ -3824,7 +3824,7 @@
      then
      :rule-set
      ::rule
-     :cursor *jo-size* 2 mul sub
+     :cursor *cell-size* 2 mul sub
      loop
    ; define-function
 
@@ -4045,7 +4045,7 @@
      :new-snapshot :old-snapshot sub
 
      dup negative? if
-       negate *jo-size* div
+       negate *cell-size* div
        "* (define-variable) fail to define variable : " .s ::name .s .l
        "  because after eval the following body" .s .l
        "  the stack is " .s .i " below what it use to be" .s .l
@@ -4061,7 +4061,7 @@
        end
      then
 
-     *jo-size* div >:length
+     *cell-size* div >:length
 
      ::name make-string >::name
 
@@ -4084,7 +4084,7 @@
      :length
      n-set
 
-     :length *jo-size* mul
+     :length *cell-size* mul
      address *jojo-area,current-free-address*
      add-set
      end
@@ -4129,7 +4129,7 @@
 ** note linux
 ** init-syscall-number                :32bit:
    #+begin_src cicada-nymph :tangle core.cn
-   *jo-size* 4 equal? if
+   *cell-size* 4 equal? if
      5   : <syscall-number> *open*       ; define-variable,with-tos
      6   : <syscall-number> *close*      ; define-variable,with-tos
      3   : <syscall-number> *read*       ; define-variable,with-tos
@@ -4150,7 +4150,7 @@
    #+end_src
 ** init-syscall-number                :64bit:
    #+begin_src cicada-nymph :tangle core.cn
-   *jo-size* 8 equal? if
+   *cell-size* 8 equal? if
      2   : <syscall-number> *open*       ; define-variable,with-tos
      3   : <syscall-number> *close*      ; define-variable,with-tos
      0   : <syscall-number> *read*       ; define-variable,with-tos
@@ -4730,7 +4730,7 @@
 
    : init,getdents64
      << offset -- >>
-     *jo-size* 4 equal? if
+     *cell-size* 4 equal? if
        dup address +getdents64,ino+    set    8 add
        dup address +getdents64,off+    set    8 add
        dup address +getdents64,reclen+ set    2 add
@@ -4739,7 +4739,7 @@
            address +getdents64,end+      set
        end
      then
-     *jo-size* 8 equal? if
+     *cell-size* 8 equal? if
        dup address +getdents64,ino+    set    8 add
        dup address +getdents64,off+    set    8 add
        dup address +getdents64,reclen+ set    2 add
@@ -5478,31 +5478,31 @@
 
    : init,stat
      << offset -- >>
-     *jo-size* 4 equal? if
-       dup address +stat,dev+        set *jo-size* add
-       dup address +stat,ino+        set *jo-size* add
+     *cell-size* 4 equal? if
+       dup address +stat,dev+        set *cell-size* add
+       dup address +stat,ino+        set *cell-size* add
        dup address +stat,mode+       set 2 add
        dup address +stat,nlink+      set 2 add
        dup address +stat,uid+        set 2 add
        dup address +stat,gid+        set 2 add
-       dup address +stat,rdev+       set *jo-size* add
-       dup address +stat,size+       set *jo-size* add
-       dup address +stat,blksize+    set *jo-size* add
-       dup address +stat,blocks+     set *jo-size* add
-       dup address +stat,atime+      set *jo-size* add
-       dup address +stat,atime_nsec+ set *jo-size* add
-       dup address +stat,mtime+      set *jo-size* add
-       dup address +stat,mtime_nsec+ set *jo-size* add
-       dup address +stat,ctime+      set *jo-size* add
-       dup address +stat,ctime_nsec+ set *jo-size* add
-       dup address +stat,__unused4+     set *jo-size* add
-       dup address +stat,__unused5+     set *jo-size* add
+       dup address +stat,rdev+       set *cell-size* add
+       dup address +stat,size+       set *cell-size* add
+       dup address +stat,blksize+    set *cell-size* add
+       dup address +stat,blocks+     set *cell-size* add
+       dup address +stat,atime+      set *cell-size* add
+       dup address +stat,atime_nsec+ set *cell-size* add
+       dup address +stat,mtime+      set *cell-size* add
+       dup address +stat,mtime_nsec+ set *cell-size* add
+       dup address +stat,ctime+      set *cell-size* add
+       dup address +stat,ctime_nsec+ set *cell-size* add
+       dup address +stat,__unused4+     set *cell-size* add
+       dup address +stat,__unused5+     set *cell-size* add
            address +stat,end+           set
        end
      then
-     *jo-size* 8 equal? if
-       dup address +stat,dev+        set *jo-size* add
-       dup address +stat,ino+        set *jo-size* add
+     *cell-size* 8 equal? if
+       dup address +stat,dev+        set *cell-size* add
+       dup address +stat,ino+        set *cell-size* add
        <<
        note the following order changing
        this is linux' bad
@@ -5513,18 +5513,18 @@
        dup address +stat,uid+        set 4 add
        dup address +stat,gid+        set 4 add
                                             4 add << padding >>
-       dup address +stat,rdev+       set *jo-size* add
-       dup address +stat,size+       set *jo-size* add
-       dup address +stat,blksize+    set *jo-size* add
-       dup address +stat,blocks+     set *jo-size* add
-       dup address +stat,atime+      set *jo-size* add
-       dup address +stat,atime_nsec+ set *jo-size* add
-       dup address +stat,mtime+      set *jo-size* add
-       dup address +stat,mtime_nsec+ set *jo-size* add
-       dup address +stat,ctime+      set *jo-size* add
-       dup address +stat,ctime_nsec+ set *jo-size* add
-       dup address +stat,__unused4+     set *jo-size* add
-       dup address +stat,__unused5+     set *jo-size* add
+       dup address +stat,rdev+       set *cell-size* add
+       dup address +stat,size+       set *cell-size* add
+       dup address +stat,blksize+    set *cell-size* add
+       dup address +stat,blocks+     set *cell-size* add
+       dup address +stat,atime+      set *cell-size* add
+       dup address +stat,atime_nsec+ set *cell-size* add
+       dup address +stat,mtime+      set *cell-size* add
+       dup address +stat,mtime_nsec+ set *cell-size* add
+       dup address +stat,ctime+      set *cell-size* add
+       dup address +stat,ctime_nsec+ set *cell-size* add
+       dup address +stat,__unused4+     set *cell-size* add
+       dup address +stat,__unused5+     set *cell-size* add
            address +stat,end+           set
        end
      then
@@ -5556,13 +5556,13 @@
      :stat-structure init,stat
      "+stat,dev+ : " .s +stat,dev+        get . .l
      "+stat,ino+ : " .s +stat,ino+        get . .l
-     *jo-size* 4 equal? if
+     *cell-size* 4 equal? if
      "+stat,mode+ : " .s +stat,mode+       get-two-bytes  . .l
      "+stat,nlink+ : " .s +stat,nlink+      get-two-bytes  . .l
      "+stat,uid+ : " .s +stat,uid+        get-two-bytes  . .l
      "+stat,gid+ : " .s +stat,gid+        get-two-bytes  . .l
      then
-     *jo-size* 8 equal? if
+     *cell-size* 8 equal? if
      "+stat,nlink+ : " .s +stat,nlink+      get  . .l
      "+stat,mode+ : " .s +stat,mode+       get-four-bytes  . .l
      "+stat,uid+ : " .s +stat,uid+        get-four-bytes  . .l
@@ -5625,11 +5625,11 @@
      then
      drop
      :stat-structure init,stat
-     *jo-size* 4 equal? if
+     *cell-size* 4 equal? if
        +stat,mode+
        get-two-bytes
      then
-     *jo-size* 8 equal? if
+     *cell-size* 8 equal? if
        +stat,mode+
        get-four-bytes
      then
@@ -5669,11 +5669,11 @@
      then
      drop
      :stat-structure init,stat
-     *jo-size* 4 equal? if
+     *cell-size* 4 equal? if
        +stat,mode+
        get-two-bytes
      then
-     *jo-size* 8 equal? if
+     *cell-size* 8 equal? if
        +stat,mode+
        get-four-bytes
      then
@@ -6507,7 +6507,7 @@
    : *module-naming-stack,size*
    ; define-variable,with-tos
 
-   3 *jo-size* mul
+   3 *cell-size* mul
    : *module-naming-stack,unit*
    ; define-variable,with-tos
 
@@ -6798,7 +6798,7 @@
    : *module-stack,size*
    ; define-variable,with-tos
 
-   8 *jo-size* mul
+   8 *cell-size* mul
    : *module-stack,unit*
    ; define-variable,with-tos
 
@@ -6841,14 +6841,14 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-name
      << module-info -- name >>
-     *jo-size* 2 mul add
+     *cell-size* 2 mul add
      get
      end
    ; define-function
 
    : <module-info> set-name
      << name, module-info -- >>
-     *jo-size* 2 mul add
+     *cell-size* 2 mul add
      set
      end
    ; define-function
@@ -6857,14 +6857,14 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-name-record-begin
      << module-info -- name >>
-     *jo-size* 3 mul add
+     *cell-size* 3 mul add
      get
      end
    ; define-function
 
    : <module-info> set-name-record-begin
      << name, module-info -- >>
-     *jo-size* 3 mul add
+     *cell-size* 3 mul add
      set
      end
    ; define-function
@@ -6873,14 +6873,14 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-name-record-end
      << module-info -- name >>
-     *jo-size* 4 mul add
+     *cell-size* 4 mul add
      get
      end
    ; define-function
 
    : <module-info> set-name-record-end
      << name, module-info -- >>
-     *jo-size* 4 mul add
+     *cell-size* 4 mul add
      set
      end
    ; define-function
@@ -6889,14 +6889,14 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-tested-flag
      << module-info -- name >>
-     *jo-size* 5 mul add
+     *cell-size* 5 mul add
      get
      end
    ; define-function
 
    : <module-info> set-tested-flag
      << name, module-info -- >>
-     *jo-size* 5 mul add
+     *cell-size* 5 mul add
      set
      end
    ; define-function
@@ -6905,21 +6905,21 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-success-counter
      << module-info -- name >>
-     *jo-size* 6 mul add
+     *cell-size* 6 mul add
      get
      end
    ; define-function
 
    : <module-info> set-success-counter
      << name, module-info -- >>
-     *jo-size* 6 mul add
+     *cell-size* 6 mul add
      set
      end
    ; define-function
 
    : <module-info> inc-success-counter
      << module-info -- >>
-     *jo-size* 6 mul add
+     *cell-size* 6 mul add
      1 swap
      add-set
      end
@@ -6929,21 +6929,21 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <module-info> get-fail-counter
      << module-info -- name >>
-     *jo-size* 7 mul add
+     *cell-size* 7 mul add
      get
      end
    ; define-function
 
    : <module-info> set-fail-counter
      << name, module-info -- >>
-     *jo-size* 7 mul add
+     *cell-size* 7 mul add
      set
      end
    ; define-function
 
    : <module-info> inc-fail-counter
      << module-info -- >>
-     *jo-size* 7 mul add
+     *cell-size* 7 mul add
      1 swap
      add-set
      end
@@ -6998,12 +6998,12 @@
    : *importing-stack,size*
    ; define-variable,with-tos
 
-   2 *jo-size* mul
+   2 *cell-size* mul
    : *importing-stack,unit*
    ; define-variable,with-tos
 
-   *jo-size* allocate-memory drop
-   *jo-size* allocate-memory
+   *cell-size* allocate-memory drop
+   *cell-size* allocate-memory
    : *testing-flag*
    ; define-variable,with-tos
 
@@ -7038,13 +7038,13 @@
    #+begin_src cicada-nymph :tangle core.cn
    : <importing-record> get-testing-flag
      << module-info -- bool >>
-     *jo-size* add get
+     *cell-size* add get
      end
    ; define-function
 
    : <importing-record> set-testing-flag
      << bool, module-info -- >>
-     *jo-size* add set
+     *cell-size* add set
      end
    ; define-function
    #+end_src
@@ -7268,7 +7268,7 @@
    : *undo-stack,size*
    ; define-variable,with-tos
 
-   7 *jo-size* mul
+   7 *cell-size* mul
    : *undo-stack,unit*
    ; define-variable,with-tos
 
@@ -7313,13 +7313,13 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-string-area
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* add get
+      *cell-size* add get
       end
     ; define-function
 
     : <undo-point> set-string-area
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* add set
+      *cell-size* add set
       end
     ; define-function
     #+end_src
@@ -7327,13 +7327,13 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-global-naming-stack
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* 2 mul add get
+      *cell-size* 2 mul add get
       end
     ; define-function
 
     : <undo-point> set-global-naming-stack
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* 2 mul add set
+      *cell-size* 2 mul add set
       end
     ; define-function
     #+end_src
@@ -7341,13 +7341,13 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-module-naming-stack
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* 3 mul add get
+      *cell-size* 3 mul add get
       end
     ; define-function
 
     : <undo-point> set-module-naming-stack
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* 3 mul add set
+      *cell-size* 3 mul add set
       end
     ; define-function
     #+end_src
@@ -7355,13 +7355,13 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-syntax-backup-area
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* 4 mul add get
+      *cell-size* 4 mul add get
       end
     ; define-function
 
     : <undo-point> set-syntax-backup-area
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* 4 mul add set
+      *cell-size* 4 mul add set
       end
     ; define-function
     #+end_src
@@ -7369,13 +7369,13 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-number-of-rule-sets
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* 5 mul add get
+      *cell-size* 5 mul add get
       end
     ; define-function
 
     : <undo-point> set-number-of-rule-sets
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* 5 mul add set
+      *cell-size* 5 mul add set
       end
     ; define-function
     #+end_src
@@ -7383,20 +7383,20 @@
     #+begin_src cicada-nymph :tangle core.cn
     : <undo-point> get-importing-stack
       << undo-point -- jojo-area current-free-address >>
-      *jo-size* 6 mul add get
+      *cell-size* 6 mul add get
       end
     ; define-function
 
     : <undo-point> set-importing-stack
       << jojo-area current-free-address, undo-point -- >>
-      *jo-size* 6 mul add set
+      *cell-size* 6 mul add set
       end
     ; define-function
     #+end_src
 ** *syntax-backup-area*
    #+begin_src cicada-nymph :tangle core.cn
    20 1024 mul
-   *jo-size* mul
+   *cell-size* mul
    : *syntax-backup-area,size*
    ; define-variable,with-tos
 
@@ -7419,21 +7419,21 @@
       >:rule-set
       :rule-set <rule-set> get-border >:border
       :border :rule-set sub
-      *jo-size* div >:n
+      *cell-size* div >:n
 
       :rule-set
       *syntax-backup-area,current-free-address* set
-      *jo-size* address *syntax-backup-area,current-free-address* add-set
+      *cell-size* address *syntax-backup-area,current-free-address* add-set
 
       :n
       *syntax-backup-area,current-free-address* set
-      *jo-size* address *syntax-backup-area,current-free-address* add-set
+      *cell-size* address *syntax-backup-area,current-free-address* add-set
 
       :rule-set
       :n n-get
       *syntax-backup-area,current-free-address*
       :n n-set
-      *jo-size* :n mul
+      *cell-size* :n mul
       address *syntax-backup-area,current-free-address* add-set
       end
     ; define-function
@@ -7447,7 +7447,7 @@
         end
       then
       dup get <undo-point> create,copy-syntax,one-rule-set
-      *jo-size* add
+      *cell-size* add
       loop
     ; define-function
     #+end_src
@@ -7491,7 +7491,7 @@
 
       *syntax-stack,pointer*
       *syntax-stack,address* sub
-      *jo-size* div
+      *cell-size* div
       :undo-point
       <undo-point> set-number-of-rule-sets
 
@@ -7583,22 +7583,22 @@
       >:cursor
 
       :rule-set-copy get >:rule-set
-      :rule-set-copy *jo-size* add get >:n
+      :rule-set-copy *cell-size* add get >:n
 
       :rule-set :cursor set
 
-      :rule-set-copy *jo-size* 2 mul add
+      :rule-set-copy *cell-size* 2 mul add
       :n n-get
       :rule-set
       :n n-set
 
-      *jo-size*
+      *cell-size*
       :n mul
       :rule-set add
       :rule-set <rule-set> set-border
 
-      :cursor *jo-size* add
-      :rule-set-copy *jo-size* :n 2 add mul add
+      :cursor *cell-size* add
+      :rule-set-copy *cell-size* :n 2 add mul add
       :number-of-rule-sets sub1
       loop
     ; define-function
@@ -7726,7 +7726,7 @@
 
    *syntax-stack,pointer*
    *syntax-stack,address* sub
-   *jo-size* div . << 2 >>
+   *cell-size* div . << 2 >>
 
    <<
    <report> syntax
@@ -7738,7 +7738,7 @@
 
    *syntax-stack,pointer*
    *syntax-stack,address* sub
-   *jo-size* div . << 1 >>
+   *cell-size* div . << 1 >>
 
    <<
    <report> syntax
@@ -7811,35 +7811,35 @@
 * <pre-module> *rule-set*
   #+begin_src cicada-nymph :tangle core.cn
   : <pre-module> *rule-set,size*
-    1024 *jo-size* mul
+    1024 *cell-size* mul
   ; define-variable
 
   << for cursor >>
-  *jo-size* allocate-memory drop
+  *cell-size* allocate-memory drop
 
   : <pre-module> *rule-set*
     <pre-module> *rule-set,size* allocate-memory
   ; define-variable
 
   <pre-module> *rule-set*
-  <pre-module> *rule-set* *jo-size* sub
+  <pre-module> *rule-set* *cell-size* sub
   set
   #+end_src
 * <post-module> *rule-set*
   #+begin_src cicada-nymph :tangle core.cn
   : <post-module> *rule-set,size*
-    1024 *jo-size* mul
+    1024 *cell-size* mul
   ; define-variable
 
   << for cursor >>
-  *jo-size* allocate-memory drop
+  *cell-size* allocate-memory drop
 
   : <post-module> *rule-set*
     <post-module> *rule-set,size* allocate-memory
   ; define-variable
 
   <post-module> *rule-set*
-  <post-module> *rule-set* *jo-size* sub
+  <post-module> *rule-set* *cell-size* sub
   set
   #+end_src
 * <module-buffer>
@@ -8877,7 +8877,7 @@
    : <report> system
      << -- >>
      "* (system) " .s
-     *jo-size* 8 mul .i "bit" .s
+     *cell-size* 8 mul .i "bit" .s
      " " .s
      platform .s
      .l
