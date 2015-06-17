@@ -1,4 +1,4 @@
-#+TITLE:  蟬語散記 / note on cicada language
+#+TITLE:  蟬語散記 / cicada language prose
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 #+EMAIL:  xyheme@gmail.com
 

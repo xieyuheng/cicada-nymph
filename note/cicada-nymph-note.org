@@ -92,13 +92,13 @@
    * 用以保存被加載的代碼的信息
      使得代碼可以被分散到不同的文件
      以形成相對獨立的的模塊
-* >< 語法
+* 語法
 ** 語境
    * reading-stack
    * syntax-stack
    * rule-set
 ** >< 括號
-   * 應該如何使用 保留的括號 ()
+   * 保留 ()
      所謂 mixfix notation ?
      所謂 borderfix notation ?
 * 類型
