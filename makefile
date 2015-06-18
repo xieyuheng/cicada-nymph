@@ -24,7 +24,9 @@ help:
 	echo "  * install"
 	echo "  * uninstall"
 	echo "  * test"
+	echo "  * test32"
 	echo "  * run"
+	echo "  * run32"
 	echo "  * clean"
 	echo "* I wish you happy making ^-^"
 	echo "  please read the makefile for more informations"
@@ -94,6 +96,10 @@ test32:
 run:
 	@
 	rlwrap ./cn
+
+run32:
+	@
+	rlwrap ./cn32
 
 clean:
 	@

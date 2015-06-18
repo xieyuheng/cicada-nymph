@@ -104,17 +104,17 @@
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
-  dup jo word:if?    jo jojo-compiler-syntax,if    rule,add
-  dup jo word:else?  jo jojo-compiler-syntax,else  rule,add
-  dup jo word:then?  jo jojo-compiler-syntax,then  rule,add
-  dup jo word:loop?  jo jojo-compiler-syntax,loop  rule,add
-      jo word:recur? jo jojo-compiler-syntax,recur rule,add
+  *syntax-rule-set,jojo-compiler*
+  dup jo word:if?    jo jojo-compiler-syntax,if    syntax-rule,add
+  dup jo word:else?  jo jojo-compiler-syntax,else  syntax-rule,add
+  dup jo word:then?  jo jojo-compiler-syntax,then  syntax-rule,add
+  dup jo word:loop?  jo jojo-compiler-syntax,loop  syntax-rule,add
+      jo word:recur? jo jojo-compiler-syntax,recur syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : allocate-memory
   << size -- address >>
@@ -609,13 +609,13 @@ allocate-memory
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
-  jo quote-word? jo jojo-compiler-syntax,quote rule,add
+  *syntax-rule-set,jojo-compiler*
+  jo quote-word? jo jojo-compiler-syntax,quote syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 10 1024 mul
 : *scope-stack,size*
@@ -884,19 +884,19 @@ more,rule-set,jojo-compiler
 ; define-function
 
 1024 *cell-size* mul
-: *rule-set,word-interpreter,size*
+: *syntax-rule-set,word-interpreter,size*
 ; define-variable,with-tos
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-*rule-set,word-interpreter,size*
+*syntax-rule-set,word-interpreter,size*
 allocate-memory
-: *rule-set,word-interpreter*
+: *syntax-rule-set,word-interpreter*
 ; define-variable,with-tos
 
-*rule-set,word-interpreter*
-*rule-set,word-interpreter* *cell-size* sub
+*syntax-rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter* *cell-size* sub
 set
 
 : word-interpreter
@@ -941,7 +941,7 @@ set
   << unknown -- unknown >>
   jo bye,basic-REPL
   'bye,basic-REPL await
-  *rule-set,word-interpreter* push-syntax-stack
+  *syntax-rule-set,word-interpreter* push-syntax-stack
   basic-REPL,loop
   end
 ; define-function
@@ -1309,14 +1309,14 @@ set
 : .#8  8  .# " " .s end ; define-function
 : .#16 16 .# " " .s end ; define-function
 
-: init,rule-set,basic-REPL
+: init,syntax-rule-set,basic-REPL
   << -- >>
-  *rule-set,word-interpreter*
-  dup jo integer-string? jo string->integer rule,add
-      jo base#wild-integer-string? jo base#wild-integer-string->integer rule,add
+  *syntax-rule-set,word-interpreter*
+  dup jo integer-string? jo string->integer syntax-rule,add
+      jo base#wild-integer-string? jo base#wild-integer-string->integer syntax-rule,add
   end
 ; define-function
-init,rule-set,basic-REPL
+init,syntax-rule-set,basic-REPL
 
 : jojo-compiler,dispatch-word
   << jo, string[address, length], word[address, length] --
@@ -1377,7 +1377,7 @@ init,rule-set,basic-REPL
   jo jojo-compiler,dispatch-word,fail
   'jojo-compiler,dispatch-word,fail await
 
-  *rule-set,jojo-compiler* push-syntax-stack
+  *syntax-rule-set,jojo-compiler* push-syntax-stack
   :jo ::string jojo-compiler,loop
   drop-syntax-stack
 
@@ -1659,23 +1659,23 @@ basic-REPL
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
+  *syntax-rule-set,jojo-compiler*
   jo local-variable-get-word?
   jo jojo-compiler-syntax,local-variable-get
-  rule,add
-  *rule-set,jojo-compiler*
+  syntax-rule,add
+  *syntax-rule-set,jojo-compiler*
   jo local-variable-set-word?
   jo jojo-compiler-syntax,local-variable-set
-  rule,add
-  *rule-set,jojo-compiler*
-  dup jo word:if?    jo jojo-compiler-syntax,if    rule,add
-  dup jo word:else?  jo jojo-compiler-syntax,else  rule,add
-      jo word:then?  jo jojo-compiler-syntax,then  rule,add
+  syntax-rule,add
+  *syntax-rule-set,jojo-compiler*
+  dup jo word:if?    jo jojo-compiler-syntax,if    syntax-rule,add
+  dup jo word:else?  jo jojo-compiler-syntax,else  syntax-rule,add
+      jo word:then?  jo jojo-compiler-syntax,then  syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : print-argument-stack,loop
   << address, counter -- >>
@@ -1823,13 +1823,13 @@ more,rule-set,jojo-compiler
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
-  jo <word>? jo jojo-compiler-syntax,title rule,add
+  *syntax-rule-set,jojo-compiler*
+  jo <word>? jo jojo-compiler-syntax,title syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : string,find-word
   << string[address, length], word[address, length]
@@ -1928,15 +1928,15 @@ more,rule-set,jojo-compiler
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
-  dup jo word:square-bar? jo <jojo-compiler-syntax> square-bar rule,add
-      jo word:square-ket? jo <jojo-compiler-syntax> square-ket rule,add
+  *syntax-rule-set,jojo-compiler*
+  dup jo word:square-bar? jo <jojo-compiler-syntax> square-bar syntax-rule,add
+      jo word:square-ket? jo <jojo-compiler-syntax> square-ket syntax-rule,add
   end
 ; define-function
 
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : <jojo-compiler-syntax> name
   << string[address, length], word[address, length] --
@@ -1952,14 +1952,14 @@ more,rule-set,jojo-compiler
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
+  *syntax-rule-set,jojo-compiler*
   ["name" string-equal? end] jo <jojo-compiler-syntax> name
-  rule,add
+  syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : <jojo-compiler-syntax> base#wild-integer-string
   << string[address, length], word[address, length] --
@@ -1971,15 +1971,15 @@ more,rule-set,jojo-compiler
   end
 ; define-function
 
-: more,rule-set,jojo-compiler
+: more,syntax-rule-set,jojo-compiler
   << -- >>
-  *rule-set,jojo-compiler*
+  *syntax-rule-set,jojo-compiler*
   jo base#wild-integer-string?
   jo <jojo-compiler-syntax> base#wild-integer-string
-  rule,add
+  syntax-rule,add
   end
 ; define-function
-more,rule-set,jojo-compiler
+more,syntax-rule-set,jojo-compiler
 
 : <word-interpreter-syntax> jo
   << word:jo -- jo >>
@@ -2005,18 +2005,18 @@ more,rule-set,jojo-compiler
   end
 ; define-function
 
-: more,rule-set,basic-REPL
+: more,syntax-rule-set,basic-REPL
   << -- >>
-  *rule-set,word-interpreter*
+  *syntax-rule-set,word-interpreter*
   ["bye" string-equal? end] jo word-interpreter-syntax,bye
-  rule,add
+  syntax-rule,add
 
-  *rule-set,word-interpreter*
+  *syntax-rule-set,word-interpreter*
   ["jo" string-equal? end] jo <word-interpreter-syntax> jo
-  rule,add
+  syntax-rule,add
   end
 ; define-function
-more,rule-set,basic-REPL
+more,syntax-rule-set,basic-REPL
 
 : <word-interpreter-syntax> if,meet-true,else
   << -- >>
@@ -2080,9 +2080,9 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo word:if? jo <word-interpreter-syntax> if
-rule,add
+syntax-rule,add
 
 1024 1024 mul
 : *circular-string-area,size*
@@ -2145,9 +2145,9 @@ rule,add
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo word:double-quote? jo <word-interpreter-syntax> double-quote
-rule,add
+syntax-rule,add
 
 : <word-interpreter-syntax> address
   << word:address -- address >>
@@ -2181,10 +2181,10 @@ rule,add
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo word:address?
 jo <word-interpreter-syntax> address
-rule,add
+syntax-rule,add
 
 : word:name?
   << word[address, length] -- bool >>
@@ -2212,10 +2212,10 @@ rule,add
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo word:name?
 jo <word-interpreter-syntax> name
-rule,add
+syntax-rule,add
 
 : <word-interpreter-syntax> quote
   << quote-word -- name >>
@@ -2223,10 +2223,10 @@ rule,add
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo quote-word?
 jo <word-interpreter-syntax> quote
-rule,add
+syntax-rule,add
 
 : <word-interpreter-syntax> title
   << <title>[address, length] -- unknown >>
@@ -2247,10 +2247,10 @@ rule,add
   end
 ; define-function
 
-*rule-set,word-interpreter*
+*syntax-rule-set,word-interpreter*
 jo <word>?
 jo <word-interpreter-syntax> title
-rule,add
+syntax-rule,add
 
 "<string> byte" "string,byte" alias
 "<string> byte-tail" "string,byte-tail" alias
@@ -2268,19 +2268,19 @@ rule,add
 
 "<string> find-byte" "string,find-byte" alias
 
-"<rule-set> get-border" "rule-set,get-border" alias
-"<rule-set> set-border" "rule-set,set-border" alias
-"<rule-set> find" "rule-set,find" alias
+"<syntax-rule-set> get-border" "syntax-rule-set,get-border" alias
+"<syntax-rule-set> set-border" "syntax-rule-set,set-border" alias
+"<syntax-rule-set> find" "syntax-rule-set,find" alias
 
-"<rule> add" "rule,add" alias
+"<syntax-rule> add" "syntax-rule,add" alias
 
-"<rule> *unit*" "*rule,unit*" alias
-"<rule> get" "rule,get" alias
-"<rule> get-predicate" "rule,get-predicate" alias
-"<rule> get-function" "rule,get-function" alias
+"<syntax-rule> *unit*" "*syntax-rule,unit*" alias
+"<syntax-rule> get" "syntax-rule,get" alias
+"<syntax-rule> get-predicate" "syntax-rule,get-predicate" alias
+"<syntax-rule> get-function" "syntax-rule,get-function" alias
 
-"<word-interpreter> *rule-set*" "*rule-set,word-interpreter*" alias
-"<jojo-compiler> *rule-set*" "*rule-set,jojo-compiler*" alias
+"<word-interpreter> *syntax-rule-set*" "*syntax-rule-set,word-interpreter*" alias
+"<jojo-compiler> *syntax-rule-set*" "*syntax-rule-set,jojo-compiler*" alias
 
 "<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
 "<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
@@ -2309,8 +2309,8 @@ rule,add
 "<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
 "<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
 
-: <rule-set> list,loop
-  << rule-set, cursor, counter -- >>
+: <syntax-rule-set> list,loop
+  << syntax-rule-set, cursor, counter -- >>
   xx|over|x equal? if
     drop drop2
     end
@@ -2320,23 +2320,23 @@ rule,add
   add1 dup .i
   ")" .s .l
   swap
-    dup *rule,unit* sub rule,get-predicate
+    dup *syntax-rule,unit* sub syntax-rule,get-predicate
     "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
-    dup *rule,unit* sub rule,get-function
+    dup *syntax-rule,unit* sub syntax-rule,get-function
     "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
     *cell-size* sub *cell-size* sub
   swap
   loop
 ; define-function
 
-: <rule-set> list
-  << rule-set -- >>
-  dup rule-set,get-border
-  0 <rule-set> list,loop
+: <syntax-rule-set> list
+  << syntax-rule-set -- >>
+  dup syntax-rule-set,get-border
+  0 <syntax-rule-set> list,loop
   end
 ; define-function
 
-: <rule> sub,move-one
+: <syntax-rule> sub,move-one
   << cursor -- >>
   >:cursor
   :cursor 2 n-get
@@ -2345,88 +2345,88 @@ rule,add
   end
 ; define-function
 
-: <rule> sub,move
-  << rule-set, cursor -- >>
+: <syntax-rule> sub,move
+  << syntax-rule-set, cursor -- >>
   >:cursor
-  >:rule-set
-  :rule-set rule-set,get-border >:border
+  >:syntax-rule-set
+  :syntax-rule-set syntax-rule-set,get-border >:border
   :cursor :border equal? if
     :border *cell-size* 2 mul sub
-    :rule-set
-    rule-set,set-border
+    :syntax-rule-set
+    syntax-rule-set,set-border
     end
   then
-  :cursor <rule> sub,move-one
-  :rule-set
+  :cursor <syntax-rule> sub,move-one
+  :syntax-rule-set
   :cursor *cell-size* 2 mul add
   loop
 ; define-function
 
-: <rule> sub,loop
-  << rule-set, rule[predicate, function], cursor -- >>
+: <syntax-rule> sub,loop
+  << syntax-rule-set, syntax-rule[predicate, function], cursor -- >>
   >:cursor
-  >::rule
-  >:rule-set
-  :cursor :rule-set equal? if
+  >::syntax-rule
+  >:syntax-rule-set
+  :cursor :syntax-rule-set equal? if
     end
   then
-  ::rule
-  :cursor *rule,unit* sub rule,get
+  ::syntax-rule
+  :cursor *syntax-rule,unit* sub syntax-rule,get
   equal2? if
-    :rule-set :cursor
-    <rule> sub,move
+    :syntax-rule-set :cursor
+    <syntax-rule> sub,move
     end
   then
-  :rule-set
-  ::rule
+  :syntax-rule-set
+  ::syntax-rule
   :cursor *cell-size* 2 mul sub
   loop
 ; define-function
 
-: <rule> sub
-  << rule-set, rule[predicate, function] -- >>
-  x|over|xx rule-set,get-border
-  <rule> sub,loop
+: <syntax-rule> sub
+  << syntax-rule-set, syntax-rule[predicate, function] -- >>
+  x|over|xx syntax-rule-set,get-border
+  <syntax-rule> sub,loop
   end
 ; define-function
 
-: <rule-set> mixin,loop
-  << base-rule-set, border, cursor -- >>
+: <syntax-rule-set> mixin,loop
+  << base-syntax-rule-set, border, cursor -- >>
   dup2 equal? if
     drop2
     drop
     end
   then
-  dup <rule> get >::rule
-  x|over|xx ::rule <rule> add
-  <rule> *unit* add
+  dup <syntax-rule> get >::syntax-rule
+  x|over|xx ::syntax-rule <syntax-rule> add
+  <syntax-rule> *unit* add
   loop
 ; define-function
 
-: <rule-set> mixin
-  << base-rule-set, rule-set -- >>
-  dup <rule-set> get-border swap
-  <rule-set> mixin,loop
+: <syntax-rule-set> mixin
+  << base-syntax-rule-set, syntax-rule-set -- >>
+  dup <syntax-rule-set> get-border swap
+  <syntax-rule-set> mixin,loop
   end
 ; define-function
 
-: <rule-set> mixout,loop
-  << base-rule-set, border, cursor -- >>
+: <syntax-rule-set> mixout,loop
+  << base-syntax-rule-set, border, cursor -- >>
   dup2 equal? if
     drop2
     drop
     end
   then
-  dup <rule> get >::rule
-  x|over|xx ::rule <rule> sub
-  <rule> *unit* add
+  dup <syntax-rule> get >::syntax-rule
+  x|over|xx ::syntax-rule <syntax-rule> sub
+  <syntax-rule> *unit* add
   loop
 ; define-function
 
-: <rule-set> mixout
-  << base-rule-set, rule-set -- >>
-  dup <rule-set> get-border swap
-  <rule-set> mixout,loop
+: <syntax-rule-set> mixout
+  << base-syntax-rule-set, syntax-rule-set -- >>
+  dup <syntax-rule-set> get-border swap
+  <syntax-rule-set> mixout,loop
   end
 ; define-function
 
@@ -2442,7 +2442,7 @@ rule,add
   << unknown -- unknown >>
   jo bye,basic-REPL
   'bye,basic-REPL await
-  *rule-set,word-interpreter* push-syntax-stack
+  *syntax-rule-set,word-interpreter* push-syntax-stack
   stack-REPL,loop
   end
 ; define-function
@@ -2510,17 +2510,17 @@ rule,add
   snapshot-the-stack-pointer
   *the-stack-pointer-snapshot* >:old-snapshot
 
-  *rule-set,word-interpreter*
+  *syntax-rule-set,word-interpreter*
   jo word:double-quote?
   jo syntax,double-quote,define-variable
-  <rule> add
+  <syntax-rule> add
 
   ::body eval-string
 
-  *rule-set,word-interpreter*
+  *syntax-rule-set,word-interpreter*
   jo word:double-quote?
   jo syntax,double-quote,define-variable
-  <rule> sub
+  <syntax-rule> sub
 
   snapshot-the-stack-pointer
   *the-stack-pointer-snapshot* >:new-snapshot
@@ -4028,15 +4028,15 @@ init-environment-variable-list
   end
 ; define-function
 
-: more,rule-set,basic-REPL
+: more,syntax-rule-set,basic-REPL
   << -- >>
-  *rule-set,word-interpreter*
+  *syntax-rule-set,word-interpreter*
   ["path:" <string> equal? end]
   jo <word-interpreter-syntax> path
-  <rule> add
+  <syntax-rule> add
   end
 ; define-function
-more,rule-set,basic-REPL
+more,syntax-rule-set,basic-REPL
 
 : <string> full-of-the-same-byte?
   << string[address, length], byte -- bool >>
@@ -4823,13 +4823,13 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <undo-point> get-number-of-rule-sets
+: <undo-point> get-number-of-syntax-rule-sets
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 5 mul add get
   end
 ; define-function
 
-: <undo-point> set-number-of-rule-sets
+: <undo-point> set-number-of-syntax-rule-sets
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 5 mul add set
   end
@@ -4860,14 +4860,14 @@ more,rule-set,basic-REPL
 : *syntax-backup-area,current-free-address*
 ; define-variable,with-tos
 
-: <undo-point> create,copy-syntax,one-rule-set
-  << rule-set -- >>
-  >:rule-set
-  :rule-set <rule-set> get-border >:border
-  :border :rule-set sub
+: <undo-point> create,copy-syntax,one-syntax-rule-set
+  << syntax-rule-set -- >>
+  >:syntax-rule-set
+  :syntax-rule-set <syntax-rule-set> get-border >:border
+  :border :syntax-rule-set sub
   *cell-size* div >:n
 
-  :rule-set
+  :syntax-rule-set
   *syntax-backup-area,current-free-address* set
   *cell-size* address *syntax-backup-area,current-free-address* add-set
 
@@ -4875,7 +4875,7 @@ more,rule-set,basic-REPL
   *syntax-backup-area,current-free-address* set
   *cell-size* address *syntax-backup-area,current-free-address* add-set
 
-  :rule-set
+  :syntax-rule-set
   :n n-get
   *syntax-backup-area,current-free-address*
   :n n-set
@@ -4890,7 +4890,7 @@ more,rule-set,basic-REPL
     drop
     end
   then
-  dup get <undo-point> create,copy-syntax,one-rule-set
+  dup get <undo-point> create,copy-syntax,one-syntax-rule-set
   *cell-size* add
   loop
 ; define-function
@@ -4935,7 +4935,7 @@ more,rule-set,basic-REPL
   *syntax-stack,address* sub
   *cell-size* div
   :undo-point
-  <undo-point> set-number-of-rule-sets
+  <undo-point> set-number-of-syntax-rule-sets
 
   :undo-point
   end
@@ -4982,33 +4982,33 @@ more,rule-set,basic-REPL
 ; define-function
 
 : <undo-point> restore-syntax-backup-area,set-syntax
-  << cursor, rule-set-copy, number-of-rule-sets -- cursor >>
+  << cursor, syntax-rule-set-copy, number-of-syntax-rule-sets -- cursor >>
   dup zero? if
     drop2
     end
   then
-  >:number-of-rule-sets
-  >:rule-set-copy
+  >:number-of-syntax-rule-sets
+  >:syntax-rule-set-copy
   >:cursor
 
-  :rule-set-copy get >:rule-set
-  :rule-set-copy *cell-size* add get >:n
+  :syntax-rule-set-copy get >:syntax-rule-set
+  :syntax-rule-set-copy *cell-size* add get >:n
 
-  :rule-set :cursor set
+  :syntax-rule-set :cursor set
 
-  :rule-set-copy *cell-size* 2 mul add
+  :syntax-rule-set-copy *cell-size* 2 mul add
   :n n-get
-  :rule-set
+  :syntax-rule-set
   :n n-set
 
   *cell-size*
   :n mul
-  :rule-set add
-  :rule-set <rule-set> set-border
+  :syntax-rule-set add
+  :syntax-rule-set <syntax-rule-set> set-border
 
   :cursor *cell-size* add
-  :rule-set-copy *cell-size* :n 2 add mul add
-  :number-of-rule-sets sub1
+  :syntax-rule-set-copy *cell-size* :n 2 add mul add
+  :number-of-syntax-rule-sets sub1
   loop
 ; define-function
 
@@ -5016,11 +5016,11 @@ more,rule-set,basic-REPL
   << undo-point -- >>
   >:undo-point
   :undo-point <undo-point> get-syntax-backup-area >:old-address
-  :undo-point <undo-point> get-number-of-rule-sets >:number-of-rule-sets
+  :undo-point <undo-point> get-number-of-syntax-rule-sets >:number-of-syntax-rule-sets
 
   *syntax-stack,address*
   :old-address
-  :number-of-rule-sets
+  :number-of-syntax-rule-sets
   <undo-point> restore-syntax-backup-area,set-syntax >:cursor
 
   :cursor
@@ -5061,34 +5061,34 @@ more,rule-set,basic-REPL
   end
 ; define-function
 
-: <pre-module> *rule-set,size*
+: <pre-module> *syntax-rule-set,size*
   1024 *cell-size* mul
 ; define-variable
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-: <pre-module> *rule-set*
-  <pre-module> *rule-set,size* allocate-memory
+: <pre-module> *syntax-rule-set*
+  <pre-module> *syntax-rule-set,size* allocate-memory
 ; define-variable
 
-<pre-module> *rule-set*
-<pre-module> *rule-set* *cell-size* sub
+<pre-module> *syntax-rule-set*
+<pre-module> *syntax-rule-set* *cell-size* sub
 set
 
-: <post-module> *rule-set,size*
+: <post-module> *syntax-rule-set,size*
   1024 *cell-size* mul
 ; define-variable
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-: <post-module> *rule-set*
-  <post-module> *rule-set,size* allocate-memory
+: <post-module> *syntax-rule-set*
+  <post-module> *syntax-rule-set,size* allocate-memory
 ; define-variable
 
-<post-module> *rule-set*
-<post-module> *rule-set* *cell-size* sub
+<post-module> *syntax-rule-set*
+<post-module> *syntax-rule-set* *cell-size* sub
 set
 
 : module-meta-begin-word?
@@ -5267,17 +5267,17 @@ set
 
   *global-naming-stack,pointer* >:global-name-record-before-import
 
-  <pre-module> *rule-set* push-syntax-stack
+  <pre-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
   *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *rule-set* push-syntax-stack
+  <word-interpreter> *syntax-rule-set* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
   *global-naming-stack,pointer* >:global-name-record-end
 
-  <post-module> *rule-set* push-syntax-stack
+  <post-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
@@ -5363,29 +5363,29 @@ set
   end
 ; define-function
 
-<pre-module> *rule-set*
-<word-interpreter> *rule-set*
-<rule-set> mixin
+<pre-module> *syntax-rule-set*
+<word-interpreter> *syntax-rule-set*
+<syntax-rule-set> mixin
 
-<pre-module> *rule-set*
+<pre-module> *syntax-rule-set*
 jo module-meta-word?
 jo <module-syntax> unknow-meta-word
-<rule> add
+<syntax-rule> add
 
-<pre-module> *rule-set*
+<pre-module> *syntax-rule-set*
 jo module-meta-begin-word?
 jo drop2
-<rule> add
+<syntax-rule> add
 
-<pre-module> *rule-set*
+<pre-module> *syntax-rule-set*
 jo module-meta-end-word?
 jo drop2
-<rule> add
+<syntax-rule> add
 
-<pre-module> *rule-set*
+<pre-module> *syntax-rule-set*
 jo meta-word:import?
 jo <pre-module-syntax> import
-<rule> add
+<syntax-rule> add
 
 : meta-word:do?
   << word[address, length] -- bool >>
@@ -5411,29 +5411,29 @@ jo <pre-module-syntax> import
   end
 ; define-function
 
-<post-module> *rule-set*
-<word-interpreter> *rule-set*
-<rule-set> mixin
+<post-module> *syntax-rule-set*
+<word-interpreter> *syntax-rule-set*
+<syntax-rule-set> mixin
 
-<post-module> *rule-set*
+<post-module> *syntax-rule-set*
 jo module-meta-word?
 jo <module-syntax> unknow-meta-word
-<rule> add
+<syntax-rule> add
 
-<post-module> *rule-set*
+<post-module> *syntax-rule-set*
 jo module-meta-begin-word?
 jo drop2
-<rule> add
+<syntax-rule> add
 
-<post-module> *rule-set*
+<post-module> *syntax-rule-set*
 jo module-meta-end-word?
 jo drop2
-<rule> add
+<syntax-rule> add
 
-<post-module> *rule-set*
+<post-module> *syntax-rule-set*
 jo meta-word:do?
 jo <post-module-syntax> do
-<rule> add
+<syntax-rule> add
 
 : load
   << module-name-string[address, length] -- >>
@@ -5508,17 +5508,17 @@ jo <post-module-syntax> do
 
   *global-naming-stack,pointer* >:global-name-record-before-import
 
-  <pre-module> *rule-set* push-syntax-stack
+  <pre-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
   *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *rule-set* push-syntax-stack
+  <word-interpreter> *syntax-rule-set* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
   *global-naming-stack,pointer* >:global-name-record-end
 
-  <post-module> *rule-set* push-syntax-stack
+  <post-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
@@ -5637,17 +5637,17 @@ jo <post-module-syntax> do
 
   *global-naming-stack,pointer* >:global-name-record-before-import
 
-  <pre-module> *rule-set* push-syntax-stack
+  <pre-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
   *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *rule-set* push-syntax-stack
+  <word-interpreter> *syntax-rule-set* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
   *global-naming-stack,pointer* >:global-name-record-end
 
-  <post-module> *rule-set* push-syntax-stack
+  <post-module> *syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
@@ -5801,12 +5801,12 @@ jo <post-module-syntax> do
 
 : <report> syntax
   << -- >>
-  "* *rule-set,jojo-compiler* :" .s .l
-     *rule-set,jojo-compiler* <rule-set> list
-  "* *rule-set,word-interpreter* :" .s .l
-     *rule-set,word-interpreter* <rule-set> list
+  "* *syntax-rule-set,jojo-compiler* :" .s .l
+     *syntax-rule-set,jojo-compiler* <syntax-rule-set> list
+  "* *syntax-rule-set,word-interpreter* :" .s .l
+     *syntax-rule-set,word-interpreter* <syntax-rule-set> list
   "* tos-syntax-stack :" .s .l
-     tos-syntax-stack <rule-set> list
+     tos-syntax-stack <syntax-rule-set> list
   end
 ; define-function
 

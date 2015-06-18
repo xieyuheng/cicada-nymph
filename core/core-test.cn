@@ -446,6 +446,17 @@ name-hash-table,report
 "ab" "ad" alias
 >>
 
+: <test-title> test-name
+  << -- >>
+  "TEST"
+  end
+; test-function
+
+: "* (testing) jojo-compiler-syntax,title" .s .l
+  <test-title> test-name
+  "TEST" <string> equal? test
+; test-do
+
 : "* (testing) string,find-word" .s .l
   "111 222 333" "222" string,find-word if
     " 222 333" <string> equal? test
