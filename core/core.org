@@ -8729,6 +8729,8 @@
    "gamber" load-with-test
    #+end_src
 * -----------------------------------
+* type
+* -----------------------------------
 * <report>
 ** <report> memory
    #+begin_src cicada-nymph :tangle core.cn
