@@ -34,7 +34,7 @@
    #+begin_src fasm :tangle cicada-nymph.fasm
    ;;;; before you compile the code
    ;;;; do not forget to choose your platform
-   ;;;; in the following code
+   ;;;; in the following file
 
    include "platform-configuration.inc"
    #+end_src
