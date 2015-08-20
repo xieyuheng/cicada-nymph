@@ -1599,9 +1599,9 @@
    }
    #+end_src
 ** ----------------------------------
-** exit_with_TOS a.k.a. bye
+** exit_with_tos a.k.a. bye
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_primitive_function "bye", exit_with_TOS
+   define_primitive_function "bye", exit_with_tos
       call __exit_with_tos
    #+end_src
 ** ----------------------------------
@@ -1614,45 +1614,45 @@
 
       ;;;; variable
       ;; xx V__little_test_number
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; exit ocde : 3
 
       ;;;; literal
       ;; xx literal, 4
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; exit ocde : 4
 
       ;;;; address
       ;; xx address, V__little_test_number, get, add2
       ;; xx address, V__little_test_number, set
       ;; xx V__little_test_number
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; exit ocde : 5
 
       ;;;; end
       ;; xx literal, 2, negate
       ;; xx literal, 8
       ;; xx addition
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; 6
 
       ;;;; tail_call
       ;; xx literal, 2
       ;; xx literal, 4
       ;; xx power
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; exit ocde : 16
 
       ;;;; write_byte
       ;; xx literal, 64, write_byte
       ;; xx literal, 10, write_byte
       ;; xx zero
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; @
 
       ;;;; read_byte
       ;; xx read_byte, write_byte
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;;
 
       ;;;; branch
@@ -1670,14 +1670,14 @@
       ;; xx   literal, 64, write_byte
       ;; xx   literal, 10, write_byte
       ;; xx   zero
-      ;; xx   exit_with_TOS
+      ;; xx   exit_with_tos
       ;; xx true, false?branch, 9
       ;; xx   literal, 65, write_byte
       ;; xx   literal, 10, write_byte
       ;; xx   zero
-      ;; xx   exit_with_TOS
+      ;; xx   exit_with_tos
       ;; xx zero
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; A
 
       ;;;; read_word & write_string
@@ -1686,13 +1686,13 @@
       ;; xx read_word, write_string
       ;; xx literal, 10, write_byte
       ;; xx zero
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; read line
       ;;;; write first two words of the line
 
       ;;;; string->integer
       ;; xx read_word, string_to_integer
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; type 123
       ;;;; exit code 123
 
@@ -1709,7 +1709,7 @@
       ;; xx pretty_write_integer
       ;; xx pretty_write_integer
       ;; xx zero
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; 2 1 4 3 2 1
 
       ;;;; find_link
@@ -1721,7 +1721,7 @@
       ;; xx apply
       ;; xx write_integer
       ;; xx zero
-      ;; xx exit_with_TOS
+      ;; xx exit_with_tos
       ;;;; 1 2 add
       ;;;; print "3"
 
@@ -3399,7 +3399,7 @@
       xx literal, buffer$reading
       xx literal, 10
       xx write_string
-      xx exit_with_TOS
+      xx exit_with_tos
       xx end
    #+end_src
 ** read-byte
