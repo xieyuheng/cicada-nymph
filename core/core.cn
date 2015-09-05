@@ -272,7 +272,7 @@ allocate-memory
   add *name-hash-table,size* mod
   end
 ; define-function
-
+2
 16
 : *max-carry-position*
 ; define-variable,with-tos
