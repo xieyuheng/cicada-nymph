@@ -1,6 +1,5 @@
 #+TITLE:  蟬語記 / cicada language note
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * 姓名
 ** 意義

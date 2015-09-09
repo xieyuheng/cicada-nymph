@@ -1,6 +1,5 @@
 #+TITLE:  early-assembly-code
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * notation
   * "nature number" is just called "number"

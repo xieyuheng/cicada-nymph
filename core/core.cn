@@ -16,26 +16,26 @@
   end
 ; define-function
 
-: word:if?
+: literal-word:if?
   << word[address, length] -- bool >>
-  "if" string-equal?
+  "if" string:equal?
   end
 ; define-function
 
-: word:else?
+: literal-word:else?
   << word[address, length] -- bool >>
-  "else" string-equal?
+  "else" string:equal?
   end
 ; define-function
 
-: word:then?
+: literal-word:then?
   << word[address, length] -- bool >>
-  "then" string-equal?
+  "then" string:equal?
   end
 ; define-function
 
-: jojo-compiler-syntax,if
-  << jo, string[address, length], word:if --
+: jojo-compiler-syntax:if
+  << jo, string[address, length], literal-word:if --
      address, jo, string[address, length] >>
   drop2
   jo instruction,false?branch
@@ -45,8 +45,8 @@
   end
 ; define-function
 
-: jojo-compiler-syntax,else
-  << address, jo, string[address, length], word:else --
+: jojo-compiler-syntax:else
+  << address, jo, string[address, length], literal-word:else --
      address, jo, string[address, length] >>
   drop2
   jo instruction,branch
@@ -61,8 +61,8 @@
   end
 ; define-function
 
-: jojo-compiler-syntax,then
-  << address, jo, string[address, length], word:then --
+: jojo-compiler-syntax:then
+  << address, jo, string[address, length], literal-word:then --
      jo, string[address, length] >>
   drop2
   x|swap|xxx
@@ -72,14 +72,14 @@
   end
 ; define-function
 
-: word:loop?
+: literal-word:loop?
   << word[address, length] -- bool >>
-  "loop" string-equal?
+  "loop" string:equal?
   end
 ; define-function
 
-: jojo-compiler-syntax,loop
-  << jo, string[address, length], word:loop --
+: jojo-compiler-syntax:loop
+  << jo, string[address, length], literal-word:loop --
      jo, string[address, length] >>
   drop2
   jo tail-call
@@ -89,14 +89,14 @@
   end
 ; define-function
 
-: word:recur?
+: literal-word:recur?
   << word[address, length] -- bool >>
-  "recur" string-equal?
+  "recur" string:equal?
   end
 ; define-function
 
-: jojo-compiler-syntax,recur
-  << jo, string[address, length], word:recur --
+: jojo-compiler-syntax:recur
+  << jo, string[address, length], literal-word:recur --
      jo, string[address, length] >>
   drop2
   x|over|xx
@@ -104,17 +104,17 @@
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
-  dup jo word:if?    jo jojo-compiler-syntax,if    syntax-rule,add
-  dup jo word:else?  jo jojo-compiler-syntax,else  syntax-rule,add
-  dup jo word:then?  jo jojo-compiler-syntax,then  syntax-rule,add
-  dup jo word:loop?  jo jojo-compiler-syntax,loop  syntax-rule,add
-      jo word:recur? jo jojo-compiler-syntax,recur syntax-rule,add
+  jojo-compiler:*syntax-rule-set*
+  dup jo literal-word:if?    jo jojo-compiler-syntax:if    syntax-rule:add
+  dup jo literal-word:else?  jo jojo-compiler-syntax:else  syntax-rule:add
+  dup jo literal-word:then?  jo jojo-compiler-syntax:then  syntax-rule:add
+  dup jo literal-word:loop?  jo jojo-compiler-syntax:loop  syntax-rule:add
+      jo literal-word:recur? jo jojo-compiler-syntax:recur syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
 : allocate-memory
   << size -- address >>
@@ -272,7 +272,7 @@ allocate-memory
   add *name-hash-table,size* mod
   end
 ; define-function
-2
+
 16
 : *max-carry-position*
 ; define-variable,with-tos
@@ -287,12 +287,12 @@ allocate-memory
     drop 0 << re-start from 0 >>
   then
   xx|over|x
-  string,byte over
+  string:byte over
   2 swap power
   mul
   x|swap|xxxx add xxx|swap|x
   add1 xx|swap|x
-  string,byte-tail x|swap|xx
+  string:byte-tail x|swap|xx
   loop
 ; define-function
 
@@ -318,7 +318,7 @@ allocate-memory
     end
   then
   :name name->string
-  ::string string-equal? if
+  ::string string:equal? if
     :name true
     end
   then
@@ -362,7 +362,7 @@ allocate-memory
     end
   then
   :name name->string
-  ::string string-equal? if
+  ::string string:equal? if
     :name true
     end
   then
@@ -475,76 +475,76 @@ allocate-memory
 ; define-function
 
 100 1024 mul
-: *global-naming-stack,size*
+: global-naming-stack:*size*
 ; define-variable,with-tos
 
 3 *cell-size* mul
-: *global-naming-stack,unit*
+: global-naming-stack:*unit*
 ; define-variable,with-tos
 
-*global-naming-stack,size*
-*global-naming-stack,unit* mul allocate-memory
+global-naming-stack:*size*
+global-naming-stack:*unit* mul allocate-memory
 : *global-naming-stack*
 ; define-variable,with-tos
 
 *global-naming-stack*
-: *global-naming-stack,pointer*
+: global-naming-stack:*pointer*
 ; define-variable,with-tos
 
-: name-record,get-old-jo
+: name-record:get-old-jo
   << name-record -- old-jo >>
   get
   end
 ; define-function
 
-: name-record,set-old-jo
+: name-record:set-old-jo
   << old-jo, name-record -- >>
   set
   end
 ; define-function
 
-: name-record,get-name
+: name-record:get-name
   << name-record -- name >>
   *cell-size* add get
   end
 ; define-function
 
-: name-record,set-name
+: name-record:set-name
   << name, name-record -- >>
   *cell-size* add set
   end
 ; define-function
 
-: name-record,get-new-jo
+: name-record:get-new-jo
   << name-record -- new-jo >>
   *cell-size* 2 mul add get
   end
 ; define-function
 
-: name-record,set-new-jo
+: name-record:set-new-jo
   << new-jo, name-record -- >>
   *cell-size* 2 mul add set
   end
 ; define-function
 
-: global-naming-stack,record-jo
+: global-naming-stack:record-jo
   << jo, name -- >>
   dup name,get-jo
-  *global-naming-stack,pointer* name-record,set-old-jo
+  global-naming-stack:*pointer* name-record:set-old-jo
   dup2 name,set-jo
-  *global-naming-stack,pointer* name-record,set-name
-  *global-naming-stack,pointer* name-record,set-new-jo
-  *global-naming-stack,unit* address *global-naming-stack,pointer* add-set
+  global-naming-stack:*pointer* name-record:set-name
+  global-naming-stack:*pointer* name-record:set-new-jo
+  global-naming-stack:*unit* address global-naming-stack:*pointer* add-set
   end
 ; define-function
 
-: global-naming-stack,delete-last-record
+: global-naming-stack:delete-last-record
   << -- >>
-  *global-naming-stack,unit*
-  address *global-naming-stack,pointer*
+  global-naming-stack:*unit*
+  address global-naming-stack:*pointer*
   sub-set
-  *global-naming-stack,pointer* name-record,get-old-jo
-  *global-naming-stack,pointer* name-record,get-name
+  global-naming-stack:*pointer* name-record:get-old-jo
+  global-naming-stack:*pointer* name-record:get-name
   name,set-jo
   end
 ; define-function
@@ -558,12 +558,12 @@ allocate-memory
     false
     end
   then
-  *global-naming-stack,unit* sub
+  global-naming-stack:*unit* sub
   dup >:name-record
   over
-  :name-record name-record,get-new-jo equal? if
+  :name-record name-record:get-new-jo equal? if
     drop2
-    :name-record name-record,get-name
+    :name-record name-record:get-name
     true
     end
   then
@@ -574,7 +574,7 @@ allocate-memory
   << jo
      -- name, true
      -- false >>
-  *global-naming-stack,pointer*
+  global-naming-stack:*pointer*
   jo,find-name,loop
   end
 ; define-function
@@ -584,7 +584,7 @@ allocate-memory
   >:link
   :link link->jo
   :link link->name-string string->name
-  global-naming-stack,record-jo
+  global-naming-stack:record-jo
   end
 ; define-function
 
@@ -595,43 +595,43 @@ allocate-memory
     false
     end
   then
-  string,byte "'" string,byte equal?
+  string:byte "'" string:byte equal?
   end
 ; define-function
 
-: jojo-compiler-syntax,quote
+: jojo-compiler-syntax:quote
   << string[address, length], word[address, length] --
      string[address, length] >>
   jo instruction,literal
     jojo-area,stay
-  string,byte-tail string->name
+  string:byte-tail string->name
     jojo-area,stay
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
-  jo quote-word? jo jojo-compiler-syntax,quote syntax-rule,add
+  jojo-compiler:*syntax-rule-set*
+  jo quote-word? jo jojo-compiler-syntax:quote syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
 10 1024 mul
-: *scope-stack,size*
+: scope-stack:*size*
 ; define-variable,with-tos
 
 2 *cell-size* mul
-: *scope-stack,unit*
+: scope-stack:*unit*
 ; define-variable,with-tos
 
-*scope-stack,size*
-*scope-stack,unit* mul allocate-memory
+scope-stack:*size*
+scope-stack:*unit* mul allocate-memory
 : *scope-stack*
 ; define-variable,with-tos
 
 *scope-stack*
-: *scope-stack,pointer*
+: scope-stack:*pointer*
 ; define-variable,with-tos
 
 : offset-record,get-name
@@ -664,7 +664,7 @@ more,syntax-rule-set,jojo-compiler
   end
 ; define-function
 
-: scope-stack,find,loop
+: scope-stack:find,loop
   << name, cursor
      -- offset-record, true
      -- false >>
@@ -673,7 +673,7 @@ more,syntax-rule-set,jojo-compiler
     false
     end
   then
-  *scope-stack,unit* sub >:cursor
+  scope-stack:*unit* sub >:cursor
   >:name
   :cursor offset-record,get-name
   :name equal? if
@@ -686,24 +686,24 @@ more,syntax-rule-set,jojo-compiler
   loop
 ; define-function
 
-: scope-stack,find
+: scope-stack:find
   << name
      -- offset-record, true
      -- false >>
-  *scope-stack,pointer*
-  scope-stack,find,loop
+  scope-stack:*pointer*
+  scope-stack:find,loop
   end
 ; define-function
 
-: scope-stack,get-current-offset
+: scope-stack:get-current-offset
   << -- offset >>
-  *scope-stack* *scope-stack,pointer* equal? if
-    "* (scope-stack,get-current-offset) fail" .s .l
+  *scope-stack* scope-stack:*pointer* equal? if
+    "* (scope-stack:get-current-offset) fail" .s .l
     "  for the scope-stack is empty" .s .l
     end
   then
-  *scope-stack,pointer*
-  *scope-stack,unit* sub
+  scope-stack:*pointer*
+  scope-stack:*unit* sub
   dup offset-record,scope-delimiter? if
     drop
     0
@@ -719,20 +719,20 @@ more,syntax-rule-set,jojo-compiler
 ; define-function
 
 10 1024 mul
-: *awaiting-stack,size*
+: awaiting-stack:*size*
 ; define-variable,with-tos
 
 4 *cell-size* mul
-: *awaiting-stack,unit*
+: awaiting-stack:*unit*
 ; define-variable,with-tos
 
-*awaiting-stack,size*
-*awaiting-stack,unit* mul allocate-memory
+awaiting-stack:*size*
+awaiting-stack:*unit* mul allocate-memory
 : *awaiting-stack*
 ; define-variable,with-tos
 
 *awaiting-stack*
-: *awaiting-stack,pointer*
+: awaiting-stack:*pointer*
 ; define-variable,with-tos
 
 : action,get-function
@@ -785,11 +785,11 @@ more,syntax-rule-set,jojo-compiler
 
 : drop-awaiting-stack
   << -- >>
-  *awaiting-stack,unit* address *awaiting-stack,pointer* sub-set
+  awaiting-stack:*unit* address awaiting-stack:*pointer* sub-set
   end
 ; define-function
 
-: awaiting-stack,find,loop
+: awaiting-stack:find,loop
   << name, cursor
      -- action, true
      -- false >>
@@ -798,7 +798,7 @@ more,syntax-rule-set,jojo-compiler
     false
     end
   then
-  *awaiting-stack,unit* sub >:cursor
+  awaiting-stack:*unit* sub >:cursor
   >:name
   :cursor action,get-name
   :name equal? if
@@ -811,12 +811,12 @@ more,syntax-rule-set,jojo-compiler
   loop
 ; define-function
 
-: awaiting-stack,find
+: awaiting-stack:find
   << name
      -- action, true
      -- false >>
-  *awaiting-stack,pointer*
-  awaiting-stack,find,loop
+  awaiting-stack:*pointer*
+  awaiting-stack:find,loop
   end
 ; define-function
 
@@ -829,10 +829,10 @@ more,syntax-rule-set,jojo-compiler
   *the-stack-pointer-snapshot* >:argument-stack-pointer
 
   get-return-stack-pointer
-  *return-stack,unit* 2 mul sub >:return-stack-pointer
+  return-stack:*unit* 2 mul sub >:return-stack-pointer
 
-  *awaiting-stack,pointer* >:action
-  *awaiting-stack,unit* address *awaiting-stack,pointer* add-set
+  awaiting-stack:*pointer* >:action
+  awaiting-stack:*unit* address awaiting-stack:*pointer* add-set
 
   :function
   :action
@@ -852,14 +852,14 @@ more,syntax-rule-set,jojo-compiler
 
   jo drop-awaiting-stack
   :return-stack-pointer
-  return-stack,insert-jo
+  return-stack:insert-jo
   end
 ; define-function
 
 : action,apply
   << action -- >>
   >:action
-  :action address *awaiting-stack,pointer* set
+  :action address awaiting-stack:*pointer* set
   :action action,get-return-stack-pointer
   :action action,get-function
   apply-with-return-point
@@ -867,7 +867,7 @@ more,syntax-rule-set,jojo-compiler
 
 : action,reset-the-stack
   << -- >>
-  *awaiting-stack,pointer* action,get-argument-stack-pointer
+  awaiting-stack:*pointer* action,get-argument-stack-pointer
   set-argument-stack-pointer
   end
 ; define-function
@@ -875,7 +875,7 @@ more,syntax-rule-set,jojo-compiler
 : awake
   << name -- >>
   >:name
-  :name awaiting-stack,find if
+  :name awaiting-stack:find if
     action,apply
     end
   then
@@ -884,19 +884,19 @@ more,syntax-rule-set,jojo-compiler
 ; define-function
 
 1024 *cell-size* mul
-: *syntax-rule-set,word-interpreter,size*
+: *syntax-rule-set:word-interpreter,size*
 ; define-variable,with-tos
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-*syntax-rule-set,word-interpreter,size*
+*syntax-rule-set:word-interpreter,size*
 allocate-memory
-: *syntax-rule-set,word-interpreter*
+: syntax-rule-set:*word-interpreter*
 ; define-variable,with-tos
 
-*syntax-rule-set,word-interpreter*
-*syntax-rule-set,word-interpreter* *cell-size* sub
+syntax-rule-set:*word-interpreter*
+syntax-rule-set:*word-interpreter* *cell-size* sub
 set
 
 : word-interpreter
@@ -917,8 +917,8 @@ set
   end
 ; define-function
 
-: word-interpreter-syntax,bye
-  << word:bye -- >>
+: word-interpreter-syntax:bye
+  << literal-word:bye -- >>
   drop2
   'bye,basic-REPL awake
 ; define-function
@@ -941,7 +941,7 @@ set
   << unknown -- unknown >>
   jo bye,basic-REPL
   'bye,basic-REPL await
-  *syntax-rule-set,word-interpreter* push-syntax-stack
+  syntax-rule-set:*word-interpreter* push-syntax-stack
   basic-REPL,loop
   end
 ; define-function
@@ -981,19 +981,19 @@ set
 
 : latin-byte?
   << byte -- bool >>
-  dup "A" string,byte less-than? if
+  dup "A" string:byte less-than? if
     drop false
     end
   then
-  dup "Z" string,byte less-or-equal? if
+  dup "Z" string:byte less-or-equal? if
     drop true
     end
   then
-  dup "a" string,byte less-than? if
+  dup "a" string:byte less-than? if
     drop false
     end
   then
-  dup "z" string,byte less-or-equal? if
+  dup "z" string:byte less-or-equal? if
     drop true
     end
   then
@@ -1003,26 +1003,26 @@ set
 
 : latin-byte->number
   << latin-byte -- number >>
-  dup "A" string,byte less-than? if
+  dup "A" string:byte less-than? if
     "* (latin-byte->number) the argument must be a latin-byte" .s .l
     "  but the following byte is less-than 'A' : " .s
     .i .l
     end
   then
-  dup "Z" string,byte less-or-equal? if
-    "A" string,byte
+  dup "Z" string:byte less-or-equal? if
+    "A" string:byte
     sub
     10 add
     end
   then
-  dup "a" string,byte less-than? if
+  dup "a" string:byte less-than? if
     "* (latin-byte->number) the argument must be a latin-byte" .s .l
     "  but the following byte is less-than 'a' but greater-then 'Z' : " .s
     .i .l
     end
   then
-  dup "z" string,byte less-or-equal? if
-    "a" string,byte
+  dup "z" string:byte less-or-equal? if
+    "a" string:byte
     sub
     10 add
     end
@@ -1036,7 +1036,7 @@ set
 : number->latin-byte
   << number -- latin-byte >>
   10 sub
-  "a" string,byte
+  "a" string:byte
   add
   end
 ; define-function
@@ -1051,7 +1051,7 @@ set
   dup digit-byte?
   swap latin-byte?
   or if
-    string,byte-tail
+    string:byte-tail
     loop
   then
   drop2
@@ -1065,10 +1065,10 @@ set
     drop2 false
     end
   then
-  dup2 string,byte
-  "-" string,byte
+  dup2 string:byte
+  "-" string:byte
   equal? if
-    string,byte-tail
+    string:byte-tail
     wild-digit-string?
     end
   then
@@ -1084,15 +1084,15 @@ set
   :string-address
   string->buffer!
   :string-address swap
-  "_" string,byte
+  "_" string:byte
   remove-byte!
   >:new-string-length
   >:new-string-address
   << dup2 .s .l 0 end >>
   :new-string-address
   :new-string-length
-  "#" string,byte
-  string,find-byte if
+  "#" string:byte
+  string:find-byte if
   else
     false
     end
@@ -1106,14 +1106,14 @@ set
   :new-string-length swap sub
   >::wild-integer-string
   ::base-string digit-string?
-  ::base-string empty-string? not
+  ::base-string string:empty? not
   and if
   else
     false
     end
   then
   ::wild-integer-string wild-integer-string?
-  ::wild-integer-string empty-string? not
+  ::wild-integer-string string:empty? not
   and if
     true
   else
@@ -1128,8 +1128,8 @@ set
   >:address
   :address
   :length
-  "#" string,byte
-  string,find-byte if
+  "#" string:byte
+  string:find-byte if
   else
     "* (base#wild-integer-string->base-string)" .s .l
     "  the argument must be a base#wild-integer-string" .s .l
@@ -1152,8 +1152,8 @@ set
   >:address
   :address
   :length
-  "#" string,byte
-  string,find-byte if
+  "#" string:byte
+  string:find-byte if
   else
     "* (base#wild-integer-string->wild-integer-string)" .s .l
     "  the argument must be a base#wild-integer-string" .s .l
@@ -1209,10 +1209,10 @@ set
     0
     end
   then
-  dup2 string,byte
-  "-" string,byte
+  dup2 string:byte
+  "-" string:byte
   equal? if
-    string,byte-tail
+    string:byte-tail
     -1 >:sign
   else
     1 >:sign
@@ -1234,7 +1234,7 @@ set
   tuck :address string->buffer!
     >:length
   :address :length
-  "_" string,byte remove-byte!
+  "_" string:byte remove-byte!
     >::string
   ::string
   base#wild-integer-string->base-string
@@ -1309,14 +1309,14 @@ set
 : .#8  8  .# " " .s end ; define-function
 : .#16 16 .# " " .s end ; define-function
 
-: init,syntax-rule-set,basic-REPL
+: init,syntax-rule-set:basic-REPL
   << -- >>
-  *syntax-rule-set,word-interpreter*
-  dup jo integer-string? jo string->integer syntax-rule,add
-      jo base#wild-integer-string? jo base#wild-integer-string->integer syntax-rule,add
+  syntax-rule-set:*word-interpreter*
+  dup jo integer-string? jo string->integer syntax-rule:add
+      jo base#wild-integer-string? jo base#wild-integer-string->integer syntax-rule:add
   end
 ; define-function
-init,syntax-rule-set,basic-REPL
+init,syntax-rule-set:basic-REPL
 
 : jojo-compiler,dispatch-word
   << jo, string[address, length], word[address, length] --
@@ -1331,7 +1331,7 @@ init,syntax-rule-set,basic-REPL
     end
   then
   "* (jojo-compiler) meets undefined word : " .s .s .l
-  global-naming-stack,delete-last-record
+  global-naming-stack:delete-last-record
   'jojo-compiler,dispatch-word,fail awake
 ; define-function
 
@@ -1340,21 +1340,21 @@ init,syntax-rule-set,basic-REPL
   drop-syntax-stack
   action,reset-the-stack
   << scope-stack-pointer -- >>
-  address *scope-stack,pointer* set
+  address scope-stack:*pointer* set
   'undo-jojo-compiler awake
 ; define-function
 
 : jojo-compiler,loop
   << jo, string[address, length] -- >>
-  dup2 space-string? if
+  dup2 string:space? if
     drop2
     drop
     end
   then
   dup2
-  string,word-tail
+  string:word-tail
   xx|swap|xx
-  string,word
+  string:word
   jojo-compiler,dispatch-word
   loop
 ; define-function
@@ -1367,39 +1367,21 @@ init,syntax-rule-set,basic-REPL
   << this is an ad hoc
   >> local-variable-table,clear
 
-  *scope-stack,pointer* >:scope-stack-pointer
+  scope-stack:*pointer* >:scope-stack-pointer
   0 :scope-stack-pointer offset-record,set-name
   0 :scope-stack-pointer offset-record,set-offset
-  *scope-stack,unit* address *scope-stack,pointer* add-set
+  scope-stack:*unit* address scope-stack:*pointer* add-set
 
   :scope-stack-pointer
 
   jo jojo-compiler,dispatch-word,fail
   'jojo-compiler,dispatch-word,fail await
 
-  *syntax-rule-set,jojo-compiler* push-syntax-stack
+  jojo-compiler:*syntax-rule-set* push-syntax-stack
   :jo ::string jojo-compiler,loop
   drop-syntax-stack
 
-  address *scope-stack,pointer* set
-  end
-; define-function
-
-: <word>?
-  << string[address, length] -- bool >>
-  dup 2 less-or-equal? if
-    drop2
-    false
-    end
-  then
-  dup2 string-end,byte
-  ">" string-end,byte equal? not if
-    drop2
-    false
-    end
-  then
-  string,byte
-  "<" string,byte equal?
+  address scope-stack:*pointer* set
   end
 ; define-function
 
@@ -1482,25 +1464,15 @@ init,syntax-rule-set,basic-REPL
 
   dup2 >::string
 
-  ::string string,word >::title
-  ::string string,word-tail string,word >::name
-  ::string string,word-tail string,word-tail >::body
-
-  ::title " " ::name
-  512 allocate-local-memory dup >:buffer
-  3 n-string->buffer! >:length
-  :buffer :length >::name
-  ::title <word>? not if
-    ::string string,word >::name
-    ::string string,word-tail >::body
-  then
+  ::string string:word >::name
+  ::string string:word-tail >::body
 
   *explainer,function* 0
   make-jo-head >:jo
 
   :jo
   ::name string->name
-  global-naming-stack,record-jo
+  global-naming-stack:record-jo
 
   *jojo-area,current-free-address* >:old-address
 
@@ -1519,10 +1491,10 @@ init,syntax-rule-set,basic-REPL
 *link* init,name-hash-table,by-link
 basic-REPL
 
-: jojo-compiler-syntax,local-variable-get
+: jojo-compiler-syntax:local-variable-get
   << string[address, length], word[address, length] --
      string[address, length] >>
-  dup2 string->name scope-stack,find if
+  dup2 string->name scope-stack:find if
     jo instruction,local-variable,n-get
       jojo-area,stay
     << offset >>
@@ -1533,21 +1505,21 @@ basic-REPL
       jojo-area,stay
     end
   then
-  "* (jojo-compiler-syntax,local-variable-get)" .s .l
+  "* (jojo-compiler-syntax:local-variable-get)" .s .l
   "  local-variable not bound : " .s
      .s .l
   'undo-jojo-compiler await
 ; define-function
 
-: jojo-compiler-syntax,local-variable-set
+: jojo-compiler-syntax:local-variable-set
   << string[address, length], word[address, length] --
      string[address, length] >>
-  string,byte-tail
+  string:byte-tail
   >::local-variable-name
   ::local-variable-name count-front-colon >:number
   ::local-variable-name string->name >:name
 
-  :name scope-stack,find if
+  :name scope-stack:find if
     jo instruction,local-variable,n-set
       jojo-area,stay
     << offset >>
@@ -1558,14 +1530,14 @@ basic-REPL
     end
   then
 
-  scope-stack,get-current-offset >:current-offset
+  scope-stack:get-current-offset >:current-offset
   :current-offset
-  *scope-stack,pointer*
+  scope-stack:*pointer*
   offset-record,set-offset
   :name
-  *scope-stack,pointer*
+  scope-stack:*pointer*
   offset-record,set-name
-  *scope-stack,unit* address *scope-stack,pointer* add-set
+  scope-stack:*unit* address scope-stack:*pointer* add-set
 
   jo instruction,literal
     jojo-area,stay
@@ -1583,8 +1555,8 @@ basic-REPL
   end
 ; define-function
 
-: jojo-compiler-syntax,if
-  << jo, string[address, length], word:if --
+: jojo-compiler-syntax:if
+  << jo, string[address, length], literal-word:if --
      scope-stack-pointer,
      address,
      jo, string[address, length] >>
@@ -1595,7 +1567,7 @@ basic-REPL
   jo instruction,false?branch
     jojo-area,stay
 
-  *scope-stack,pointer*
+  scope-stack:*pointer*
   *jojo-area,current-free-address*
   :jo
   ::string
@@ -1604,10 +1576,10 @@ basic-REPL
   end
 ; define-function
 
-: jojo-compiler-syntax,else
+: jojo-compiler-syntax:else
   << scope-stack-pointer,
      address,
-     jo, string[address, length], word:else --
+     jo, string[address, length], literal-word:else --
      scope-stack-pointer,
      address,
      jo, string[address, length] >>
@@ -1617,12 +1589,12 @@ basic-REPL
   >:address
   >:scope-stack-pointer
 
-  :scope-stack-pointer address *scope-stack,pointer* set
+  :scope-stack-pointer address scope-stack:*pointer* set
 
   jo instruction,branch
     jojo-area,stay
 
-  *scope-stack,pointer*
+  scope-stack:*pointer*
   *jojo-area,current-free-address*
   :jo
   ::string
@@ -1639,10 +1611,10 @@ basic-REPL
   end
 ; define-function
 
-: jojo-compiler-syntax,then
+: jojo-compiler-syntax:then
   << scope-stack-pointer,
      address,
-     jo, string[address, length], word:then --
+     jo, string[address, length], literal-word:then --
      jo, string[address, length] >>
   drop2
   >::string
@@ -1659,25 +1631,25 @@ basic-REPL
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
+  jojo-compiler:*syntax-rule-set*
   jo local-variable-get-word?
-  jo jojo-compiler-syntax,local-variable-get
-  syntax-rule,add
-  *syntax-rule-set,jojo-compiler*
+  jo jojo-compiler-syntax:local-variable-get
+  syntax-rule:add
+  jojo-compiler:*syntax-rule-set*
   jo local-variable-set-word?
-  jo jojo-compiler-syntax,local-variable-set
-  syntax-rule,add
-  *syntax-rule-set,jojo-compiler*
-  dup jo word:if?    jo jojo-compiler-syntax,if    syntax-rule,add
-  dup jo word:else?  jo jojo-compiler-syntax,else  syntax-rule,add
-      jo word:then?  jo jojo-compiler-syntax,then  syntax-rule,add
+  jo jojo-compiler-syntax:local-variable-set
+  syntax-rule:add
+  jojo-compiler:*syntax-rule-set*
+  dup jo literal-word:if?    jo jojo-compiler-syntax:if    syntax-rule:add
+  dup jo literal-word:else?  jo jojo-compiler-syntax:else  syntax-rule:add
+      jo literal-word:then?  jo jojo-compiler-syntax:then  syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
-: print-argument-stack,loop
+: argument-stack:print,loop
   << address, counter -- >>
   dup zero? if
     drop2
@@ -1690,7 +1662,7 @@ more,syntax-rule-set,jojo-compiler
   loop
 ; define-function
 
-: print-argument-stack
+: argument-stack:print
   << -- >>
   snapshot-the-stack-pointer
   *the-stack-pointer-snapshot*
@@ -1698,14 +1670,14 @@ more,syntax-rule-set,jojo-compiler
     *the-stack*   << address as return value >>
     *the-stack-pointer-snapshot* *the-stack* sub
     *cell-size* div << counter as return value >>
-    print-argument-stack,loop
+    argument-stack:print,loop
     end
   then
   "below the stack " .s
   end
 ; define-function
 
-: print-argument-stack,pretty
+: argument-stack:pretty-print
   << -- >>
   snapshot-the-stack-pointer
   .l
@@ -1723,7 +1695,7 @@ more,syntax-rule-set,jojo-compiler
      .i
   " * " .s
   " -- " .s
-    print-argument-stack
+    argument-stack:print
   "--" .s
   .l
   end
@@ -1734,23 +1706,14 @@ more,syntax-rule-set,jojo-compiler
   >::string
   >:value
 
-  ::string string,word >::title
-  ::string string,word-tail string,word >::name
-
-  ::title " " ::name
-  512 allocate-local-memory dup >:buffer
-  3 n-string->buffer! >:length
-  :buffer :length >::name
-  ::title <word>? not if
-    ::title >::name
-  then
+  ::string string:word >::name
 
   *explainer,variable* 0
   make-jo-head >:jo
 
   :jo
   ::name string->name
-  global-naming-stack,record-jo
+  global-naming-stack:record-jo
 
   1 :jo jo,set-length
 
@@ -1772,99 +1735,44 @@ more,syntax-rule-set,jojo-compiler
   >:jo
   :jo
   ::alias string->name
-  global-naming-stack,record-jo
+  global-naming-stack:record-jo
   end
 ; define-function
 
-: name-hash-table,find-jo,with-title
-  << title[address, length], word[address, length]
-     -- jo, true
-     -- false >>
-  512 allocate-local-memory >:buffer
-  " " xx|swap|xx
-  :buffer
-  3 n-string->buffer! >:length
-  :buffer
-  :length
-  name-hash-table,search if
-  else
-    drop
-    false
-    end
-  then
-  dup name,used-as-jo? if
-    name,get-jo
-    true
-    end
-  then
-  drop
-  false
-  end
-; define-function
-
-: jojo-compiler-syntax,title
-  << jo, string[address, length], <title>[address, length] --
-     jo, string[address, length] >>
-  >::title
-  >::string
-  >:jo
-  ::title ::string string,word
-  name-hash-table,find-jo,with-title if
-    jojo-area,stay
-  else
-    "* (jojo-compiler-syntax,title) meet undefined" .s .l
-    "  title : " .s ::title .s .l
-    "  name  : " .s ::string string,word .s .l
-    global-naming-stack,delete-last-record
-    'undo-jojo-compiler awake
-  then
-  :jo
-  ::string string,word-tail
-  end
-; define-function
-
-: more,syntax-rule-set,jojo-compiler
-  << -- >>
-  *syntax-rule-set,jojo-compiler*
-  jo <word>? jo jojo-compiler-syntax,title syntax-rule,add
-  end
-; define-function
-more,syntax-rule-set,jojo-compiler
-
-: string,find-word
+: string:find-word
   << string[address, length], word[address, length]
      -- sub-string[address, length], true
      -- false >>
-  xx|over|xx space-string? if
+  xx|over|xx string:space? if
     drop2 drop2
     false
     end
   then
-  xx|over|xx string,word
-  xx|over|xx string-equal? if
+  xx|over|xx string:word
+  xx|over|xx string:equal? if
     drop2
     true
     end
   then
-  xx|swap|xx string,word-tail
+  xx|swap|xx string:word-tail
   xx|swap|xx
   loop
 ; define-function
 
-: word:square-bar?
+: literal-word:square-bar?
   << word[address, length] -- bool >>
-  "[" string-equal?
+  "[" string:equal?
   end
 ; define-function
 
-: word:square-ket?
+: literal-word:square-ket?
   << word[address, length] -- bool >>
-  "]" string-equal?
+  "]" string:equal?
   end
 ; define-function
 
-: <jojo-compiler-syntax> square-bar
-  << jo, string[address, length], word:square-bar --
+: jojo-compiler-syntax:square-bar
+  << jo, string[address, length], literal-word:square-bar --
      scope-stack-pointer,
      offset-address,
      new-jo,
@@ -1881,14 +1789,14 @@ more,syntax-rule-set,jojo-compiler
   *explainer,function* 0
   make-jo-head >:new-jo
 
-  *scope-stack,pointer* >:scope-stack-pointer
+  scope-stack:*pointer* >:scope-stack-pointer
   0
   :scope-stack-pointer
   offset-record,set-name
   0
   :scope-stack-pointer
   offset-record,set-offset
-  *scope-stack,unit* address *scope-stack,pointer* add-set
+  scope-stack:*unit* address scope-stack:*pointer* add-set
 
   :scope-stack-pointer
   :offset-address
@@ -1898,11 +1806,11 @@ more,syntax-rule-set,jojo-compiler
   end
 ; define-function
 
-: <jojo-compiler-syntax> square-ket
+: jojo-compiler-syntax:square-ket
   << scope-stack-pointer,
      offset-address,
      new-jo,
-     jo, string[address, length], word:square-ket --
+     jo, string[address, length], literal-word:square-ket --
      jo, string[address, length] >>
   drop2
   >::string
@@ -1911,7 +1819,7 @@ more,syntax-rule-set,jojo-compiler
   >:offset-address
   >:scope-stack-pointer
 
-  :scope-stack-pointer address *scope-stack,pointer* set
+  :scope-stack-pointer address scope-stack:*pointer* set
 
   *jojo-area,current-free-address*
   :offset-address sub
@@ -1928,40 +1836,40 @@ more,syntax-rule-set,jojo-compiler
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
-  dup jo word:square-bar? jo <jojo-compiler-syntax> square-bar syntax-rule,add
-      jo word:square-ket? jo <jojo-compiler-syntax> square-ket syntax-rule,add
+  jojo-compiler:*syntax-rule-set*
+  dup jo literal-word:square-bar? jo jojo-compiler-syntax:square-bar syntax-rule:add
+      jo literal-word:square-ket? jo jojo-compiler-syntax:square-ket syntax-rule:add
   end
 ; define-function
 
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
-: <jojo-compiler-syntax> name
+: jojo-compiler-syntax:name
   << string[address, length], word[address, length] --
      string[address, length] >>
   drop2
   jo instruction,literal
     jojo-area,stay
   dup2
-  string,word
+  string:word
   string->name
     jojo-area,stay
-  string,word-tail
+  string:word-tail
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
-  ["name" string-equal? end] jo <jojo-compiler-syntax> name
-  syntax-rule,add
+  jojo-compiler:*syntax-rule-set*
+  ["name" string:equal? end] jo jojo-compiler-syntax:name
+  syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
-: <jojo-compiler-syntax> base#wild-integer-string
+: jojo-compiler-syntax:base#wild-integer-string
   << string[address, length], word[address, length] --
      string[address, length] >>
   jo instruction,literal
@@ -1971,82 +1879,70 @@ more,syntax-rule-set,jojo-compiler
   end
 ; define-function
 
-: more,syntax-rule-set,jojo-compiler
+: more,syntax-rule-set:jojo-compiler
   << -- >>
-  *syntax-rule-set,jojo-compiler*
+  jojo-compiler:*syntax-rule-set*
   jo base#wild-integer-string?
-  jo <jojo-compiler-syntax> base#wild-integer-string
-  syntax-rule,add
+  jo jojo-compiler-syntax:base#wild-integer-string
+  syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,jojo-compiler
+more,syntax-rule-set:jojo-compiler
 
-: <word-interpreter-syntax> jo
-  << word:jo -- jo >>
+: word-interpreter-syntax:jo
+  << literal-word:jo -- jo >>
   drop2
   read-word
   >::word
-
-  ::word <word>? if
-    512 allocate-local-memory >:buffer
-    ::word dup >:length
-    :buffer string->buffer!
-    1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word
-    :new-buffer
-    3 n-string->buffer! >:new-length
-    :new-buffer :new-length >::word
-  then
-
   ::word name-hash-table,find-jo if
     end
   then
-  "* (<word-interpreter-syntax> jo) meet undefined word after jo : " .s ::word .s .l
+  "* (word-interpreter-syntax:jo) meet undefined word after jo : " .s ::word .s .l
   end
 ; define-function
 
-: more,syntax-rule-set,basic-REPL
+: more,syntax-rule-set:basic-REPL
   << -- >>
-  *syntax-rule-set,word-interpreter*
-  ["bye" string-equal? end] jo word-interpreter-syntax,bye
-  syntax-rule,add
+  syntax-rule-set:*word-interpreter*
+  ["bye" string:equal? end] jo word-interpreter-syntax:bye
+  syntax-rule:add
 
-  *syntax-rule-set,word-interpreter*
-  ["jo" string-equal? end] jo <word-interpreter-syntax> jo
-  syntax-rule,add
+  syntax-rule-set:*word-interpreter*
+  ["jo" string:equal? end] jo word-interpreter-syntax:jo
+  syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,basic-REPL
+more,syntax-rule-set:basic-REPL
 
-: <word-interpreter-syntax> if,meet-true,else
+: word-interpreter-syntax:if,meet-true,else
   << -- >>
   read-word
-  "then" string-equal? if
+  "then" string:equal? if
     end
   then
   loop
 ; define-function
 
-: <word-interpreter-syntax> if,meet-true
+: word-interpreter-syntax:if,meet-true
   << -- >>
   read-word
-  dup2 "then" string-equal? if
+  dup2 "then" string:equal? if
     drop2
     end
   then
-  dup2 "else" string-equal? if
+  dup2 "else" string:equal? if
     drop2
-    <word-interpreter-syntax> if,meet-true,else
+    word-interpreter-syntax:if,meet-true,else
     end
   then
   word-interpreter
   loop
 ; define-function
 
-: <word-interpreter-syntax> if,meet-false,else
+: word-interpreter-syntax:if,meet-false,else
   << -- >>
   read-word
-  dup2 "then" string-equal? if
+  dup2 "then" string:equal? if
     drop2
     end
   then
@@ -2054,35 +1950,35 @@ more,syntax-rule-set,basic-REPL
   loop
 ; define-function
 
-: <word-interpreter-syntax> if,meet-false
+: word-interpreter-syntax:if,meet-false
   << -- >>
   read-word
-  dup2 "then" string-equal? if
+  dup2 "then" string:equal? if
     drop2
     end
   then
-  dup2 "else" string-equal? if
+  dup2 "else" string:equal? if
     drop2
-    <word-interpreter-syntax> if,meet-false,else
+    word-interpreter-syntax:if,meet-false,else
     end
   then
   drop2
   loop
 ; define-function
 
-: <word-interpreter-syntax> if
-  << bool, word:if -- >>
+: word-interpreter-syntax:if
+  << bool, literal-word:if -- >>
   drop2 if
-    <word-interpreter-syntax> if,meet-true
+    word-interpreter-syntax:if,meet-true
   else
-    <word-interpreter-syntax> if,meet-false
+    word-interpreter-syntax:if,meet-false
   then
   end
 ; define-function
 
-*syntax-rule-set,word-interpreter*
-jo word:if? jo <word-interpreter-syntax> if
-syntax-rule,add
+syntax-rule-set:*word-interpreter*
+jo literal-word:if? jo word-interpreter-syntax:if
+syntax-rule:add
 
 1024 1024 mul
 : *circular-string-area,size*
@@ -2117,7 +2013,7 @@ syntax-rule,add
   end
 ; define-function
 
-: <word-interpreter-syntax> double-quote,loop
+: word-interpreter-syntax:double-quote,loop
   << cursor -- cursor >>
   read-byte
   dup 34 equal? if
@@ -2129,12 +2025,12 @@ syntax-rule,add
   loop
 ; define-function
 
-: <word-interpreter-syntax> double-quote
-  << word:double-quote -- string[address, length] >>
+: word-interpreter-syntax:double-quote
+  << literal-word:double-quote -- string[address, length] >>
   drop2
   1024 2 mul allocate-local-memory >:buffer
   :buffer
-  <word-interpreter-syntax> double-quote,loop
+  word-interpreter-syntax:double-quote,loop
   >:cursor
   *circular-string-area,current-free-address* >:address
   :buffer
@@ -2145,172 +2041,71 @@ syntax-rule,add
   end
 ; define-function
 
-*syntax-rule-set,word-interpreter*
-jo word:double-quote? jo <word-interpreter-syntax> double-quote
-syntax-rule,add
+syntax-rule-set:*word-interpreter*
+jo literal-word:double-quote? jo word-interpreter-syntax:double-quote
+syntax-rule:add
 
-: <word-interpreter-syntax> address
-  << word:address -- address >>
+: word-interpreter-syntax:address
+  << literal-word:address -- address >>
   drop2
   read-word
   >::word
-  ::word <word>? if
-    512 allocate-local-memory >:buffer
-    ::word dup >:length
-    :buffer string->buffer!
-    1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word
-    :new-buffer
-    3 n-string->buffer! >:new-length
-    :new-buffer :new-length >::word
-  then
 
   ::word name-hash-table,find-jo if
   else
-    "* (<word-interpreter-syntax> address) meet undefined word : " .s ::word .s .l
+    "* (word-interpreter-syntax:address) meet undefined word : " .s ::word .s .l
     end
   then
 
   >:jo
   :jo variable-jo? if
   else
-    "* (<word-interpreter-syntax> address) meet a not variable-jo : " .s ::word .s .l
+    "* (word-interpreter-syntax:address) meet a not variable-jo : " .s ::word .s .l
     end
   then
   :jo *cell-size* add
   end
 ; define-function
 
-*syntax-rule-set,word-interpreter*
-jo word:address?
-jo <word-interpreter-syntax> address
-syntax-rule,add
+syntax-rule-set:*word-interpreter*
+jo literal-word:address?
+jo word-interpreter-syntax:address
+syntax-rule:add
 
-: word:name?
+: literal-word:name?
   << word[address, length] -- bool >>
-  "name" string-equal?
+  "name" string:equal?
   end
 ; define-function
 
-: <word-interpreter-syntax> name
-  << word:name -- name >>
+: word-interpreter-syntax:name
+  << literal-word:name -- name >>
   drop2
   read-word
   >::word
-  ::word <word>? if
-    512 allocate-local-memory >:buffer
-    ::word dup >:length
-    :buffer string->buffer!
-    1024 allocate-local-memory >:new-buffer
-    :buffer :length " " read-word
-    :new-buffer
-    3 n-string->buffer! >:new-length
-    :new-buffer :new-length >::word
-  then
 
   ::word string->name
   end
 ; define-function
 
-*syntax-rule-set,word-interpreter*
-jo word:name?
-jo <word-interpreter-syntax> name
-syntax-rule,add
+syntax-rule-set:*word-interpreter*
+jo literal-word:name?
+jo word-interpreter-syntax:name
+syntax-rule:add
 
-: <word-interpreter-syntax> quote
+: word-interpreter-syntax:quote
   << quote-word -- name >>
-  string,byte-tail string->name
+  string:byte-tail string->name
   end
 ; define-function
 
-*syntax-rule-set,word-interpreter*
+syntax-rule-set:*word-interpreter*
 jo quote-word?
-jo <word-interpreter-syntax> quote
-syntax-rule,add
+jo word-interpreter-syntax:quote
+syntax-rule:add
 
-: <word-interpreter-syntax> title
-  << <title>[address, length] -- unknown >>
-  >::title
-  512 allocate-local-memory >:buffer
-  ::title :buffer string->buffer!
-  :buffer ::title swap drop >::title
-
-  read-word >::name
-  ::title ::name
-  name-hash-table,find-jo,with-title if
-    apply
-    end
-  then
-  "* (<word-interpreter-syntax> title) meet undefined" .s .l
-  "  title : " .s ::title .s .l
-  "  name  : " .s ::name .s .l
-  end
-; define-function
-
-*syntax-rule-set,word-interpreter*
-jo <word>?
-jo <word-interpreter-syntax> title
-syntax-rule,add
-
-"<string> byte" "string,byte" alias
-"<string> byte-tail" "string,byte-tail" alias
-"<string> byte-back" "string,byte-back" alias
-
-"<string> word" "string,word" alias
-"<string> word-begin" "string,word-begin" alias
-"<string> word-end" "string,word-end" alias
-"<string> word-tail" "string,word-tail" alias
-
-"<string> equal?" "string-equal?" alias
-
-"<string> space?" "space-string?" alias
-"<string> empty?" "empty-string?" alias
-
-"<string> find-byte" "string,find-byte" alias
-
-"<syntax-rule-set> get-border" "syntax-rule-set,get-border" alias
-"<syntax-rule-set> set-border" "syntax-rule-set,set-border" alias
-"<syntax-rule-set> find" "syntax-rule-set,find" alias
-
-"<syntax-rule> add" "syntax-rule,add" alias
-
-"<syntax-rule> *unit*" "*syntax-rule,unit*" alias
-"<syntax-rule> get" "syntax-rule,get" alias
-"<syntax-rule> get-predicate" "syntax-rule,get-predicate" alias
-"<syntax-rule> get-function" "syntax-rule,get-function" alias
-
-"<word-interpreter> *syntax-rule-set*" "*syntax-rule-set,word-interpreter*" alias
-"<jojo-compiler> *syntax-rule-set*" "*syntax-rule-set,jojo-compiler*" alias
-
-"<jojo-compiler-syntax> title" "jojo-compiler-syntax,title" alias
-"<jojo-compiler-syntax> recur" "jojo-compiler-syntax,recur" alias
-"<jojo-compiler-syntax> loop" "jojo-compiler-syntax,loop" alias
-"<jojo-compiler-syntax> then" "jojo-compiler-syntax,then" alias
-"<jojo-compiler-syntax> else" "jojo-compiler-syntax,else" alias
-"<jojo-compiler-syntax> if" "jojo-compiler-syntax,if" alias
-"<jojo-compiler-syntax> local-variable-get" "jojo-compiler-syntax,local-variable-get" alias
-"<jojo-compiler-syntax> local-variable-set" "jojo-compiler-syntax,local-variable-set" alias
-"<jojo-compiler-syntax> double-quote" "syntax,double-quote,jojo-compiler" alias
-"<jojo-compiler-syntax> jo" "jojo-compiler-syntax,jo" alias
-"<jojo-compiler-syntax> address" "jojo-compiler-syntax,address" alias
-"<jojo-compiler-syntax> integer-string" "jojo-compiler-syntax,integer-string" alias
-
-"<word-interpreter-syntax> bye" "word-interpreter-syntax,bye" alias
-
-"<name-record> get-old-jo" "name-record,get-old-jo" alias
-"<name-record> set-old-jo" "name-record,set-old-jo" alias
-
-"<name-record> get-name" "name-record,get-name" alias
-"<name-record> set-name" "name-record,set-name" alias
-
-"<name-record> get-new-jo" "name-record,get-new-jo" alias
-"<name-record> set-new-jo" "name-record,set-new-jo" alias
-
-"<global-naming-stack> record-jo" "global-naming-stack,record-jo" alias
-"<global-naming-stack> delete-last-record" "global-naming-stack,delete-last-record" alias
-
-: <syntax-rule-set> list,loop
-  << syntax-rule-set, cursor, counter -- >>
+: syntax-rule-set:list,loop
+  << syntax-rule-set: cursor, counter -- >>
   xx|over|x equal? if
     drop drop2
     end
@@ -2320,23 +2115,23 @@ syntax-rule,add
   add1 dup .i
   ")" .s .l
   swap
-    dup *syntax-rule,unit* sub syntax-rule,get-predicate
+    dup syntax-rule:*unit* sub syntax-rule:get-predicate
     "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
-    dup *syntax-rule,unit* sub syntax-rule,get-function
+    dup syntax-rule:*unit* sub syntax-rule:get-function
     "    " .s jo,find-name if name->string else "  unnamed jo" then .s .l
     *cell-size* sub *cell-size* sub
   swap
   loop
 ; define-function
 
-: <syntax-rule-set> list
+: syntax-rule-set:list
   << syntax-rule-set -- >>
-  dup syntax-rule-set,get-border
-  0 <syntax-rule-set> list,loop
+  dup syntax-rule-set:get-border
+  0 syntax-rule-set:list,loop
   end
 ; define-function
 
-: <syntax-rule> sub,move-one
+: syntax-rule:sub,move-one
   << cursor -- >>
   >:cursor
   :cursor 2 n-get
@@ -2345,25 +2140,25 @@ syntax-rule,add
   end
 ; define-function
 
-: <syntax-rule> sub,move
-  << syntax-rule-set, cursor -- >>
+: syntax-rule:sub,move
+  << syntax-rule-set: cursor -- >>
   >:cursor
   >:syntax-rule-set
-  :syntax-rule-set syntax-rule-set,get-border >:border
+  :syntax-rule-set syntax-rule-set:get-border >:border
   :cursor :border equal? if
     :border *cell-size* 2 mul sub
     :syntax-rule-set
-    syntax-rule-set,set-border
+    syntax-rule-set:set-border
     end
   then
-  :cursor <syntax-rule> sub,move-one
+  :cursor syntax-rule:sub,move-one
   :syntax-rule-set
   :cursor *cell-size* 2 mul add
   loop
 ; define-function
 
-: <syntax-rule> sub,loop
-  << syntax-rule-set, syntax-rule[predicate, function], cursor -- >>
+: syntax-rule:sub,loop
+  << syntax-rule-set: syntax-rule[predicate, function], cursor -- >>
   >:cursor
   >::syntax-rule
   >:syntax-rule-set
@@ -2371,10 +2166,10 @@ syntax-rule,add
     end
   then
   ::syntax-rule
-  :cursor *syntax-rule,unit* sub syntax-rule,get
+  :cursor syntax-rule:*unit* sub syntax-rule:get
   equal2? if
     :syntax-rule-set :cursor
-    <syntax-rule> sub,move
+    syntax-rule:sub,move
     end
   then
   :syntax-rule-set
@@ -2383,50 +2178,50 @@ syntax-rule,add
   loop
 ; define-function
 
-: <syntax-rule> sub
-  << syntax-rule-set, syntax-rule[predicate, function] -- >>
-  x|over|xx syntax-rule-set,get-border
-  <syntax-rule> sub,loop
+: syntax-rule:sub
+  << syntax-rule-set: syntax-rule[predicate, function] -- >>
+  x|over|xx syntax-rule-set:get-border
+  syntax-rule:sub,loop
   end
 ; define-function
 
-: <syntax-rule-set> mixin,loop
-  << base-syntax-rule-set, border, cursor -- >>
+: syntax-rule-set:mixin,loop
+  << base-syntax-rule-set: border, cursor -- >>
   dup2 equal? if
     drop2
     drop
     end
   then
-  dup <syntax-rule> get >::syntax-rule
-  x|over|xx ::syntax-rule <syntax-rule> add
-  <syntax-rule> *unit* add
+  dup syntax-rule:get >::syntax-rule
+  x|over|xx ::syntax-rule syntax-rule:add
+  syntax-rule:*unit* add
   loop
 ; define-function
 
-: <syntax-rule-set> mixin
-  << base-syntax-rule-set, syntax-rule-set -- >>
-  dup <syntax-rule-set> get-border swap
-  <syntax-rule-set> mixin,loop
+: syntax-rule-set:mixin
+  << base-syntax-rule-set: syntax-rule-set -- >>
+  dup syntax-rule-set:get-border swap
+  syntax-rule-set:mixin,loop
   end
 ; define-function
 
-: <syntax-rule-set> mixout,loop
-  << base-syntax-rule-set, border, cursor -- >>
+: syntax-rule-set:mixout,loop
+  << base-syntax-rule-set: border, cursor -- >>
   dup2 equal? if
     drop2
     drop
     end
   then
-  dup <syntax-rule> get >::syntax-rule
-  x|over|xx ::syntax-rule <syntax-rule> sub
-  <syntax-rule> *unit* add
+  dup syntax-rule:get >::syntax-rule
+  x|over|xx ::syntax-rule syntax-rule:sub
+  syntax-rule:*unit* add
   loop
 ; define-function
 
-: <syntax-rule-set> mixout
-  << base-syntax-rule-set, syntax-rule-set -- >>
-  dup <syntax-rule-set> get-border swap
-  <syntax-rule-set> mixout,loop
+: syntax-rule-set:mixout
+  << base-syntax-rule-set: syntax-rule-set -- >>
+  dup syntax-rule-set:get-border swap
+  syntax-rule-set:mixout,loop
   end
 ; define-function
 
@@ -2434,7 +2229,7 @@ syntax-rule,add
   << unknown -- unknown >>
   read-word
   word-interpreter
-  print-argument-stack,pretty
+  argument-stack:pretty-print
   loop
 ; define-function
 
@@ -2442,14 +2237,14 @@ syntax-rule,add
   << unknown -- unknown >>
   jo bye,basic-REPL
   'bye,basic-REPL await
-  *syntax-rule-set,word-interpreter* push-syntax-stack
+  syntax-rule-set:*word-interpreter* push-syntax-stack
   stack-REPL,loop
   end
 ; define-function
 
 : eval-string,loop
   << unknown -- unknown >>
-  tos-reading-stack <string> space? if
+  tos-reading-stack string:space? if
     end
   then
   read-word
@@ -2478,7 +2273,7 @@ syntax-rule,add
 ; define-function
 
 : syntax,double-quote,define-variable
-  << word:double-quote -- string[address, length] >>
+  << literal-word:double-quote -- string[address, length] >>
   drop2
   1024 2 mul allocate-local-memory >:buffer
   :buffer
@@ -2494,33 +2289,23 @@ syntax-rule,add
   << string[address, length] -- >>
   >::string
 
-  ::string <string> word >::title
-  ::string <string> word-tail <string> word >::name
-  ::string <string> word-tail <string> word-tail >::body
-
-  ::title " " ::name
-  512 allocate-local-memory dup >:buffer
-  3 n-string->buffer! >:len
-  :buffer :len >::name
-  ::title <word>? not if
-    ::title >::name
-    ::string <string> word-tail >::body
-  then
+  ::string string:word >::name
+  ::string string:word-tail >::body
 
   snapshot-the-stack-pointer
   *the-stack-pointer-snapshot* >:old-snapshot
 
-  *syntax-rule-set,word-interpreter*
-  jo word:double-quote?
+  syntax-rule-set:*word-interpreter*
+  jo literal-word:double-quote?
   jo syntax,double-quote,define-variable
-  <syntax-rule> add
+  syntax-rule:add
 
   ::body eval-string
 
-  *syntax-rule-set,word-interpreter*
-  jo word:double-quote?
+  syntax-rule-set:*word-interpreter*
+  jo literal-word:double-quote?
   jo syntax,double-quote,define-variable
-  <syntax-rule> sub
+  syntax-rule:sub
 
   snapshot-the-stack-pointer
   *the-stack-pointer-snapshot* >:new-snapshot
@@ -2574,41 +2359,41 @@ syntax-rule,add
 ; define-function
 
 *cell-size* 4 equal? if
-  5   : <syscall-number> *open*       ; define-variable,with-tos
-  6   : <syscall-number> *close*      ; define-variable,with-tos
-  3   : <syscall-number> *read*       ; define-variable,with-tos
-  4   : <syscall-number> *write*      ; define-variable,with-tos
-  9   : <syscall-number> *link*       ; define-variable,with-tos
-  10  : <syscall-number> *unlink*     ; define-variable,with-tos
-  39  : <syscall-number> *mkdir*      ; define-variable,with-tos
-  40  : <syscall-number> *rmdir*      ; define-variable,with-tos
-  141 : <syscall-number> *getdents*   ; define-variable,with-tos
-  220 : <syscall-number> *getdents64* ; define-variable,with-tos
-  106 : <syscall-number> *stat*       ; define-variable,with-tos
-  1   : <syscall-number> *exit*       ; define-variable,with-tos
-  43  : <syscall-number> *times*      ; define-variable,with-tos
-  20  : <syscall-number> *getpid*     ; define-variable,with-tos
-  183 : <syscall-number> *getcwd*     ; define-variable,with-tos
-  12  : <syscall-number> *chdir*      ; define-variable,with-tos
+  5   : syscall-number:*open*       ; define-variable,with-tos
+  6   : syscall-number:*close*      ; define-variable,with-tos
+  3   : syscall-number:*read*       ; define-variable,with-tos
+  4   : syscall-number:*write*      ; define-variable,with-tos
+  9   : syscall-number:*link*       ; define-variable,with-tos
+  10  : syscall-number:*unlink*     ; define-variable,with-tos
+  39  : syscall-number:*mkdir*      ; define-variable,with-tos
+  40  : syscall-number:*rmdir*      ; define-variable,with-tos
+  141 : syscall-number:*getdents*   ; define-variable,with-tos
+  220 : syscall-number:*getdents64* ; define-variable,with-tos
+  106 : syscall-number:*stat*       ; define-variable,with-tos
+  1   : syscall-number:*exit*       ; define-variable,with-tos
+  43  : syscall-number:*times*      ; define-variable,with-tos
+  20  : syscall-number:*getpid*     ; define-variable,with-tos
+  183 : syscall-number:*getcwd*     ; define-variable,with-tos
+  12  : syscall-number:*chdir*      ; define-variable,with-tos
 then
 
 *cell-size* 8 equal? if
-  2   : <syscall-number> *open*       ; define-variable,with-tos
-  3   : <syscall-number> *close*      ; define-variable,with-tos
-  0   : <syscall-number> *read*       ; define-variable,with-tos
-  1   : <syscall-number> *write*      ; define-variable,with-tos
-  86  : <syscall-number> *link*       ; define-variable,with-tos
-  87  : <syscall-number> *unlink*     ; define-variable,with-tos
-  83  : <syscall-number> *mkdir*      ; define-variable,with-tos
-  84  : <syscall-number> *rmdir*      ; define-variable,with-tos
-  78  : <syscall-number> *getdents*   ; define-variable,with-tos
-  217 : <syscall-number> *getdents64* ; define-variable,with-tos
-  4   : <syscall-number> *stat*       ; define-variable,with-tos
-  60  : <syscall-number> *exit*       ; define-variable,with-tos
-  100 : <syscall-number> *times*      ; define-variable,with-tos
-  39  : <syscall-number> *getpid*     ; define-variable,with-tos
-  79  : <syscall-number> *getcwd*     ; define-variable,with-tos
-  80  : <syscall-number> *chdir*      ; define-variable,with-tos
+  2   : syscall-number:*open*       ; define-variable,with-tos
+  3   : syscall-number:*close*      ; define-variable,with-tos
+  0   : syscall-number:*read*       ; define-variable,with-tos
+  1   : syscall-number:*write*      ; define-variable,with-tos
+  86  : syscall-number:*link*       ; define-variable,with-tos
+  87  : syscall-number:*unlink*     ; define-variable,with-tos
+  83  : syscall-number:*mkdir*      ; define-variable,with-tos
+  84  : syscall-number:*rmdir*      ; define-variable,with-tos
+  78  : syscall-number:*getdents*   ; define-variable,with-tos
+  217 : syscall-number:*getdents64* ; define-variable,with-tos
+  4   : syscall-number:*stat*       ; define-variable,with-tos
+  60  : syscall-number:*exit*       ; define-variable,with-tos
+  100 : syscall-number:*times*      ; define-variable,with-tos
+  39  : syscall-number:*getpid*     ; define-variable,with-tos
+  79  : syscall-number:*getcwd*     ; define-variable,with-tos
+  80  : syscall-number:*chdir*      ; define-variable,with-tos
 then
 
 : error-code->string
@@ -2666,7 +2451,7 @@ then
   end
 ; define-function
 
-: <port> open
+: port:open
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -2676,7 +2461,7 @@ then
   O_RDONLY
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   2 syscall
   dup
   negative? if
@@ -2687,7 +2472,7 @@ then
   end
 ; define-function
 
-: <port> create
+: port:create
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -2702,7 +2487,7 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   3 syscall
   dup
   negative? if
@@ -2713,7 +2498,7 @@ then
   end
 ; define-function
 
-: <port> update
+: port:update
   << path[address, length]
      -- port, true
      -- error-code, false >>
@@ -2727,7 +2512,7 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   3 syscall
   dup
   negative? if
@@ -2738,11 +2523,11 @@ then
   end
 ; define-function
 
-: <port> close
+: port:close
   << port
      -- true
      -- error-code, false >>
-  <syscall-number> *close*
+  syscall-number:*close*
   1 syscall
   dup
   negative? if
@@ -2753,14 +2538,14 @@ then
   end
 ; define-function
 
-: <port> read
+: port:read
   << buffer, max-size, port
      -- counter, true
      -- error-code, false >>
   >:port
   swap
   :port
-  <syscall-number> *read*
+  syscall-number:*read*
   3 syscall
   dup
   negative? if
@@ -2771,14 +2556,14 @@ then
   end
 ; define-function
 
-: <port> write
+: port:write
   << buffer, max-size, port
      -- counter, true
      -- error-code, false >>
   >:port
   swap
   :port
-  <syscall-number> *write*
+  syscall-number:*write*
   3 syscall
   dup
   negative? if
@@ -2789,7 +2574,7 @@ then
   end
 ; define-function
 
-: <file> create
+: file:create
   << path[address, length] -- >>
   >::path
   ::path
@@ -2804,25 +2589,25 @@ then
   O_CREAT  0100
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   3 syscall
   dup
   negative? if
-    "* (<file> create) fail to open port for the following path :" .s .l
+    "* (file:create) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
-  <port> close if
+  port:close if
     end
   then
-  "* (<file> create) fail to close port for the following path :" .s .l
+  "* (file:create) fail to close port for the following path :" .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: <file> write
+: file:write
   << string[address, length], path[address, length] -- >>
   >::path
   >::string
@@ -2837,11 +2622,11 @@ then
   O_TRUNC  1000
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   3 syscall
   dup
   negative? if
-    "* (<file> write) fail to open port for the following path :" .s .l
+    "* (file:write) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -2849,27 +2634,27 @@ then
   >:port
   ::string swap
   :port
-  <syscall-number> *write*
+  syscall-number:*write*
   3 syscall
   dup
   negative? if
-    "* (<file> write) fail to write port for the following path :" .s .l
+    "* (file:write) fail to write port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
   then
   >:counter << bytes been written >>
   :port
-  <port> close if
+  port:close if
     end
   then
-  "* (<file> write) fail to close port for the following path : " .s .l
+  "* (file:write) fail to close port for the following path : " .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: <file> read
+: file:read
   << string[address, max-length], path[address, length] -- counter >>
   >::path
   >::string
@@ -2880,11 +2665,11 @@ then
   O_RDONLY
   >>
   :syscall-path
-  <syscall-number> *open*
+  syscall-number:*open*
   2 syscall
   dup
   negative? if
-    "* (<file> read) fail to open port for the following path :" .s .l
+    "* (file:read) fail to open port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     0
@@ -2893,11 +2678,11 @@ then
   >:port
   ::string swap
   :port
-  <syscall-number> *read*
+  syscall-number:*read*
   3 syscall
   dup
   negative? if
-    "* (<file> read) fail to read port for the following path :" .s .l
+    "* (file:read) fail to read port for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     0
@@ -2905,29 +2690,29 @@ then
   then
   >:counter << bytes been readed >>
   :port
-  <port> close if
+  port:close if
     :counter
     end
   then
-  "* (<file> read) fail to close port for the following path : " .s .l
+  "* (file:read) fail to close port for the following path : " .s .l
   "  " .s ::path .s .l
   "  " .s error-code->string .s .l
   0
   end
 ; define-function
 
-: <file> remove
+: file:remove
   << path[address, length] -- >>
   >::path
   ::path
   string->syscall-string
   >:syscall-path
   :syscall-path
-  <syscall-number> *unlink*
+  syscall-number:*unlink*
   1 syscall
   dup
   negative? if
-    "* (<file> remove) fail for the following path :" .s .l
+    "* (file:remove) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -2936,7 +2721,7 @@ then
   end
 ; define-function
 
-: <directory> create
+: directory:create
   << path[address, length] -- >>
   >::path
   ::path
@@ -2946,11 +2731,11 @@ then
   2#111101101
   >>
   :syscall-path
-  <syscall-number> *mkdir*
+  syscall-number:*mkdir*
   2 syscall
   dup
   negative? if
-    "* (<directory> create) fail for the following path :" .s .l
+    "* (directory:create) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -2959,18 +2744,18 @@ then
   end
 ; define-function
 
-: <directory> remove
+: directory:remove
   << path[address, length] -- >>
   >::path
   ::path
   string->syscall-string
   >:syscall-path
   :syscall-path
-  <syscall-number> *rmdir*
+  syscall-number:*rmdir*
   1 syscall
   dup
   negative? if
-    "* (<directory> remove) fail for the following path :" .s .l
+    "* (directory:remove) fail for the following path :" .s .l
     "  " .s ::path .s .l
     "  " .s error-code->string .s .l
     end
@@ -3012,12 +2797,12 @@ then
 0 init,getdents64
 +getdents64,end+ : +getdents64,length+ ; define-variable,with-tos
 
-: <directory> empty?
+: directory:empty?
   << path[address, length] -- bool >>
   >::path
-  ::path <port> open if
+  ::path port:open if
   else
-    "* (<directory> empty?) fail to open : " .s ::path .s .l
+    "* (directory:empty?) fail to open : " .s ::path .s .l
     "  " .s error-code->string .s .l
     false
     end
@@ -3027,19 +2812,19 @@ then
   128
   :getdents64-structure-list
   :port
-  <syscall-number> *getdents64*
+  syscall-number:*getdents64*
   3 syscall
   48 equal? << this call to equal? returns the needed bool >>
-  :port <port> close if
+  :port port:close if
     end
   then
-  "* (<directory> empty?) fail to close : " .s ::path .s .l
+  "* (directory:empty?) fail to close : " .s ::path .s .l
   "  " .s error-code->string .s .l
   false
   end
 ; define-function
 
-: <directory> map,loop,apply
+: directory:map,loop,apply
   << end, cursor, function -- >>
   >:function
   dup2 less-or-equal? if
@@ -3056,7 +2841,7 @@ then
   loop
 ; define-function
 
-: <directory> map,loop
+: directory:map,loop
   << port, function -- >>
   >:function
   >:port
@@ -3064,10 +2849,10 @@ then
   1024
   :getdents64-structure-list
   :port
-  <syscall-number> *getdents64*
+  syscall-number:*getdents64*
   3 syscall
   dup negative? if
-    "* (<directory> map,loop) syscall fail" .s .l
+    "* (directory:map,loop) syscall fail" .s .l
     "  " .s error-code->string .s .l
     end
   then
@@ -3078,36 +2863,36 @@ then
   :getdents64-structure-list add
   :getdents64-structure-list
   :function
-  <directory> map,loop,apply
+  directory:map,loop,apply
   :port
   :function
   loop
 ; define-function
 
-: <directory> map
+: directory:map
   << directory-path[address, length],
      function
      -- true
      -- false >>
   >:function
   >::directory-path
-  ::directory-path <port> open if
+  ::directory-path port:open if
   else
-    "* (<directory> map) fail to open : " .s ::directory-path .s .l
+    "* (directory:map) fail to open : " .s ::directory-path .s .l
     "  " .s error-code->string .s .l
     end
   then
   >:port
-  :port :function <directory> map,loop
-  :port <port> close if
+  :port :function directory:map,loop
+  :port port:close if
     end
   then
-  "* (<directory> map) fail to close : " .s ::directory-path .s .l
+  "* (directory:map) fail to close : " .s ::directory-path .s .l
   "  " .s error-code->string .s .l
   end
 ; define-function
 
-: <directory> list-file
+: directory:list-file
   << directory-path[address, length] -- >>
   [ << -- >>
     +getdents64,type+ get-byte
@@ -3115,40 +2900,40 @@ then
       "  " .s
       +getdents64,name+
       dup 256
-      0 <string> find-byte
+      0 string:find-byte
       drop  << drop 0 >>
       over sub .s .l
     then
     end ]
-  <directory> map
+  directory:map
   end
 ; define-function
 
-: <directory> list-directory
+: directory:list-directory
   << directory-path[address, length] -- >>
   [ << -- >>
     +getdents64,type+ get-byte
     4 equal? if
       +getdents64,name+
       dup 256
-      0 <string> find-byte
+      0 string:find-byte
       drop  << drop 0 >>
       over sub >::name
-      ".." ::name <string> equal? if
+      ".." ::name string:equal? if
         end
       then
-      "." ::name <string> equal? if
+      "." ::name string:equal? if
         end
       then
       "  " .s ::name .s .l
       end
     then
     end ]
-  <directory> map
+  directory:map
   end
 ; define-function
 
-: <directory> find-file
+: directory:find-file
   << directory-path[address, length], file-name[address, length] -- bool >>
   xx|swap|xx
   false
@@ -3170,7 +2955,7 @@ then
     then
     :file-name,address :file-name,lenght
     +getdents64,name+ :file-name,lenght
-    <string> equal? if
+    string:equal? if
       :file-name,address
       :file-name,lenght
       true
@@ -3180,12 +2965,12 @@ then
     :file-name,lenght
     :bool
     end ]
-  <directory> map
+  directory:map
   xx|swap|x drop2
   end
 ; define-function
 
-: <directory> find-directory
+: directory:find-directory
   << directory-path[address, length], file-name[address, length] -- bool >>
   xx|swap|xx
   false
@@ -3207,7 +2992,7 @@ then
     then
     :file-name,address :file-name,lenght
     +getdents64,name+ :file-name,lenght
-    <string> equal? if
+    string:equal? if
       :file-name,address
       :file-name,lenght
       true
@@ -3217,7 +3002,7 @@ then
     :file-name,lenght
     :bool
     end ]
-  <directory> map
+  directory:map
   xx|swap|x drop2
   end
 ; define-function
@@ -3226,7 +3011,7 @@ then
 
 : init-pid
   << -- >>
-  <syscall-number> *getpid*
+  syscall-number:*getpid*
   0 syscall
   address *pid* set
   end
@@ -3267,7 +3052,7 @@ then
 
   :path-buffer
   :cursor :path-buffer sub dup2 >::path
-  <port> open if
+  port:open if
   else
     "* (init-command-line) fail to open : " .s ::path .s .l
     end
@@ -3277,7 +3062,7 @@ then
   *address,command-line*
   *length,command-line*
   :port
-  <port> read if
+  port:read if
   else
     "* (init-command-line) fail to read : " .s ::path .s .l
     end
@@ -3321,7 +3106,7 @@ then
 
   :path-buffer
   :cursor :path-buffer sub dup2 >::path
-  <port> open if
+  port:open if
   else
     "* (init-environment-variable-list) fail to open : " .s ::path .s .l
     end
@@ -3331,7 +3116,7 @@ then
   *address,environment-variable-list*
   *length,environment-variable-list*
   :port
-  <port> read if
+  port:read if
   else
     "* (init-environment-variable-list) fail to read : " .s ::path .s .l
     end
@@ -3368,7 +3153,7 @@ then
     loop
   then
   :cursor :length add get-byte
-  "=" <string> byte
+  "=" string:byte
   equal? not if
     :address :length
     :cursor 0 cursor->next-matching-byte add1
@@ -3400,9 +3185,9 @@ init-environment-variable-list
   "HOME" find-environment-variable
 ; define-variable
 
-: <report> environment-variable,loop
+: report:environment-variable,loop
   << environment-variable-list[address, length]-- >>
-  dup2 <string> space? if
+  dup2 string:space? if
     drop2
     end
   then
@@ -3410,7 +3195,7 @@ init-environment-variable-list
   >:length
   >:address
 
-  :address :length 0 <string> find-byte drop add1 >:cursor
+  :address :length 0 string:find-byte drop add1 >:cursor
   :cursor :address sub >:length-of-one-variable
 
   :address
@@ -3421,28 +3206,28 @@ init-environment-variable-list
   loop
 ; define-function
 
-: <report> environment-variable
+: report:environment-variable
   << -- >>
   get-environment-variable-list
-  <report> environment-variable,loop
+  report:environment-variable,loop
   end
 ; define-function
 
-: <report> command-line,loop
+: report:command-line,loop
   << command-line[address, length] -- >>
-  dup2 <string> space? if
+  dup2 string:space? if
     drop2
     end
   then
-  dup2 <string> word .s 32 .b
-  <string> word-tail
+  dup2 string:word .s 32 .b
+  string:word-tail
   loop
 ; define-function
 
-: <report> command-line
+: report:command-line
   << -- >>
   get-command-line
-  <report> command-line,loop
+  report:command-line,loop
   end
 ; define-function
 
@@ -3450,14 +3235,14 @@ init-environment-variable-list
 : *buffer,work-directory*
 ; define-variable,with-tos
 
-: <work-directory> get
+: work-directory:get
   << -- directory[address, length] >>
   512
   *buffer,work-directory*
-  <syscall-number> *getcwd*
+  syscall-number:*getcwd*
   2 syscall
   dup negative? if
-    "* (<work-directory> get) fail" .s .l
+    "* (work-directory:get) fail" .s .l
     "  " .s error-code->string .s .l
     end
   then
@@ -3467,15 +3252,15 @@ init-environment-variable-list
   end
 ; define-function
 
-: <work-directory> change
+: work-directory:change
   << directory-path[address, length] -- >>
   >::directory-path
   ::directory-path
   string->syscall-string
-  <syscall-number> *chdir*
+  syscall-number:*chdir*
   1 syscall
   dup negative? if
-    "* (<work-directory> change) fail" .s .l
+    "* (work-directory:change) fail" .s .l
     "  can not change the work directory into : " .s ::directory-path .s .l
     "  thus the argument in the stack is not consumed" .s .l
     "  " .s error-code->string .s .l
@@ -3488,11 +3273,11 @@ init-environment-variable-list
 
 : pwd
   << -- >>
-  <work-directory> get .s .l
+  work-directory:get .s .l
   end
 ; define-function
 
-"cd" "<work-directory> change" alias
+"cd" "work-directory:change" alias
 
 0 : +stat,dev+        ; define-variable,with-tos
 0 : +stat,ino+        ; define-variable,with-tos
@@ -3572,7 +3357,7 @@ init-environment-variable-list
 0 init,stat
 +stat,end+ : +stat,length+ ; define-variable,with-tos
 
-: <path> nothing?
+: path:nothing?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3580,13 +3365,13 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  <syscall-number> *stat*
+  syscall-number:*stat*
   2 syscall
   -2 equal?
   end
 ; define-function
 
-: <path> file?
+: path:file?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3594,7 +3379,7 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  <syscall-number> *stat*
+  syscall-number:*stat*
   2 syscall
   dup
   negative? if
@@ -3628,7 +3413,7 @@ init-environment-variable-list
   end
 ; define-function
 
-: <path> directory?
+: path:directory?
   << path[address, length] -- bool >>
   string->syscall-string
   >:syscall-path
@@ -3636,7 +3421,7 @@ init-environment-variable-list
   >:stat-structure
   :stat-structure
   :syscall-path
-  <syscall-number> *stat*
+  syscall-number:*stat*
   2 syscall
   dup
   negative? if
@@ -3670,26 +3455,26 @@ init-environment-variable-list
   end
 ; define-function
 
-: <path> relative?
+: path:relative?
   << string[address, length] -- bool >>
   dup zero? if
     drop2
     false
     end
   then
-  <string> byte
+  string:byte
   47 equal? not
   end
 ; define-function
 
-: <path> full?
+: path:full?
   << string[address, length] -- bool >>
   dup zero? if
     drop2
     false
     end
   then
-  <string> byte
+  string:byte
   47 equal?
   end
 ; define-function
@@ -3705,7 +3490,7 @@ init-environment-variable-list
   *poi-directory,user,address* swap
 ; define-variable
 
-: <poi> find
+: poi:find
   << name[address, length]
      -- path[address, length], true
      -- false >>
@@ -3716,7 +3501,7 @@ init-environment-variable-list
   4 n-string->buffer! >:length
 
   :buffer :length
-  <path> file? not if
+  path:file? not if
     false
     end
   then
@@ -3724,7 +3509,7 @@ init-environment-variable-list
   512 allocate-local-memory >:read-buffer
   :read-buffer 512
   :buffer :length
-  <file> read >:read-length
+  file:read >:read-length
 
   *circular-string-area,current-free-address*
   >:path-address
@@ -3738,25 +3523,25 @@ init-environment-variable-list
   end
 ; define-function
 
-: <poi> add
+: poi:add
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
-  ::relative-path <path> relative? not if
-    "* (<poi> add) the argument must be a relative-path" .s .l
+  ::relative-path path:relative? not if
+    "* (poi:add) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path <path> directory? not if
-    "* (<poi> add) the argument must be a relative-path to a existing directory" .s .l
+  ::relative-path path:directory? not if
+    "* (poi:add) the argument must be a relative-path to a existing directory" .s .l
     "  but the following path is not to a directory : " .s ::relative-path .s .l
     end
   then
 
-  ::name <poi> find if
-    "* (<poi> add) can not add" .s .l
+  ::name poi:find if
+    "* (poi:add) can not add" .s .l
     "  for the following poi already exist : " .s ::name .s .l
     "  name is use as the following directory's name : " .s .s .l
     end
@@ -3768,32 +3553,32 @@ init-environment-variable-list
   3 n-string->buffer!
   >:length
   :buffer :length
-  <directory> create
+  directory:create
 
   *poi-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer!
   >:length
   :buffer :length
-  <file> create
+  file:create
 
   512 allocate-local-memory >:address,full-path
-  <work-directory> get "/" ::relative-path
+  work-directory:get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
   :address,full-path :length,full-path
   :buffer :length
-  <file> write
+  file:write
   end
 ; define-function
 
-: <poi> sub
+: poi:sub
   << name[address, length] -- >>
   >::name
 
-  ::name <poi> find not if
-    "* (<poi> sub) can not sub" .s .l
+  ::name poi:find not if
+    "* (poi:sub) can not sub" .s .l
     "  for the following poi does not exist : " .s ::name .s .l
     end
   then
@@ -3805,36 +3590,36 @@ init-environment-variable-list
   4 n-string->buffer! >:length
 
   :buffer :length
-  <file> remove
+  file:remove
 
   *poi-directory* "/" ::name
   :buffer
   3 n-string->buffer!
   >:length
   :buffer :length
-  <directory> remove
+  directory:remove
   end
 ; define-function
 
-: <poi> up
+: poi:up
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
-  ::relative-path <path> relative? not if
-    "* (<poi> up) the argument must be a relative-path" .s .l
+  ::relative-path path:relative? not if
+    "* (poi:up) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path <path> directory? not if
-    "* (<poi> up) the argument must be a relative-path to a existing directory" .s .l
+  ::relative-path path:directory? not if
+    "* (poi:up) the argument must be a relative-path to a existing directory" .s .l
     "  but the following directory is not exist : " .s ::relative-path .s .l
     end
   then
 
-  ::name <poi> find not if
-    "* (<poi> up) can not up" .s .l
+  ::name poi:find not if
+    "* (poi:up) can not up" .s .l
     "  for the following poi does not exist : " .s ::name .s .l
     end
   then
@@ -3846,17 +3631,17 @@ init-environment-variable-list
   4 n-string->buffer! >:length
 
   512 allocate-local-memory >:address,full-path
-  <work-directory> get "/" ::relative-path
+  work-directory:get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
   :address,full-path :length,full-path
   :buffer :length
-  <file> write
+  file:write
   end
 ; define-function
 
-: <poi> list
+: poi:list
   << -- >>
   *poi-directory*
   [ << -- >>
@@ -3865,15 +3650,15 @@ init-environment-variable-list
       512 allocate-local-memory >:path-buffer
       +getdents64,name+
       dup 256
-      0 <string> find-byte
+      0 string:find-byte
       drop  << drop 0 >>
       over sub >::name
 
-      ".." ::name <string> equal? if
+      ".." ::name string:equal? if
         end
       then
 
-      "." ::name <string> equal? if
+      "." ::name string:equal? if
         end
       then
 
@@ -3887,19 +3672,19 @@ init-environment-variable-list
       512 allocate-local-memory >:reading-buffer
       :reading-buffer 512
       :path-buffer :path-length
-      <file> read >:reading-length
+      file:read >:reading-length
 
       :reading-buffer :reading-length
       .s .l
     then
     end ]
-  <directory> map
+  directory:map
   end
 ; define-function
 
-: <poi> help
+: poi:help
   << -- >>
-  "* (<poi> help)" .s .l
+  "* (poi:help)" .s .l
   "  * cn poi add  <new-name> <relative-path-to-existing-directory>" .s .l
   "  * cn poi sub  <old-name>" .s .l
   "  * cn poi up   <old-name> <relative-path-to-existing-directory>" .s .l
@@ -3916,13 +3701,13 @@ init-environment-variable-list
     end
   then
   over get-byte
-  "+" <string> byte equal? not if
+  "+" string:byte equal? not if
     drop2
     false
     end
   then
   add sub1 get-byte
-  "+" <string> byte equal?
+  "+" string:byte equal?
   end
 ; define-function
 
@@ -3936,19 +3721,19 @@ init-environment-variable-list
 : path-syntax-word->path
   << word[address, length] -- path[address, length] >>
   >::word
-  ::word "+root+" <string> equal? if
+  ::word "+root+" string:equal? if
     "/"
     end
   then
-  ::word "+work+" <string> equal? if
-    <work-directory> get
+  ::word "+work+" string:equal? if
+    work-directory:get
     end
   then
-  ::word "+home+" <string> equal? if
+  ::word "+home+" string:equal? if
     *home-directory*
     end
   then
-  ::word "+back+" <string> equal? if
+  ::word "+back+" string:equal? if
     ".."
     end
   then
@@ -3956,7 +3741,7 @@ init-environment-variable-list
     ::word
     end
   then
-  ::word +word+->word <poi> find if
+  ::word +word+->word poi:find if
     end
   then
   ::word
@@ -3966,7 +3751,7 @@ init-environment-variable-list
 : bad-path-syntax-word,loop
   << -- >>
   read-word
-  dup2 ";" <string> equal? if
+  dup2 ";" string:equal? if
     .s 32 .b
     end
   then
@@ -3974,12 +3759,12 @@ init-environment-variable-list
   loop
 ; define-function
 
-: <word-interpreter-syntax> path,loop
+: word-interpreter-syntax:path,loop
   << cursor -- cursor >>
   >:cursor
   read-word >::word
 
-  ";" ::word <string> equal? if
+  ";" ::word string:equal? if
     :cursor
     end
   then
@@ -3990,19 +3775,19 @@ init-environment-variable-list
 
   :cursor :length add
     dup
-    "/" <string> byte
+    "/" string:byte
     swap
     set-byte
   add1
   loop
 ; define-function
 
-: <word-interpreter-syntax> path
-  << word:path: -- path[address, length] >>
+: word-interpreter-syntax:path
+  << literal-word:path: -- path[address, length] >>
   drop2
 
   [ << word -- >>
-    "* (<word-interpreter-syntax> path) the following word is of bad syntax : " .s .l
+    "* (word-interpreter-syntax:path) the following word is of bad syntax : " .s .l
     "    " .s .s .l
     action,reset-the-stack
     << -- >>
@@ -4012,7 +3797,7 @@ init-environment-variable-list
   'bad-path-syntax-word await
 
   512 allocate-local-memory >:buffer
-  :buffer <word-interpreter-syntax> path,loop >:cursor
+  :buffer word-interpreter-syntax:path,loop >:cursor
 
   :cursor :buffer sub >:length
 
@@ -4028,17 +3813,17 @@ init-environment-variable-list
   end
 ; define-function
 
-: more,syntax-rule-set,basic-REPL
+: more,syntax-rule-set:basic-REPL
   << -- >>
-  *syntax-rule-set,word-interpreter*
-  ["path:" <string> equal? end]
-  jo <word-interpreter-syntax> path
-  <syntax-rule> add
+  syntax-rule-set:*word-interpreter*
+  ["path:" string:equal? end]
+  jo word-interpreter-syntax:path
+  syntax-rule:add
   end
 ; define-function
-more,syntax-rule-set,basic-REPL
+more,syntax-rule-set:basic-REPL
 
-: <string> full-of-the-same-byte?
+: string:full-of-the-same-byte?
   << string[address, length], byte -- bool >>
   >:byte
   >::string
@@ -4047,54 +3832,54 @@ more,syntax-rule-set,basic-REPL
     true
     end
   then
-  <string> byte :byte equal? not if
+  string:byte :byte equal? not if
     false
     end
   then
-  ::string <string> byte-tail
+  ::string string:byte-tail
   :byte
   loop
 ; define-function
 
-: <string> any-word
+: string:any-word
   << string[address, length]
      function : < word[address, length] -- bool >
      -- bool >>
   >:function
   >::string
-  ::string <string> space? if
+  ::string string:space? if
     false
     end
   then
-  ::string <string> word :function apply if
+  ::string string:word :function apply if
     true
     end
   then
-  ::string <string> word-tail
+  ::string string:word-tail
   :function
   loop
 ; define-function
 
-: <string> every-word
+: string:every-word
   << string[address, length]
      function : < word[address, length] -- bool >
      -- bool >>
   >:function
   >::string
-  ::string <string> space? if
+  ::string string:space? if
     true
     end
   then
-  ::string <string> word :function apply not if
+  ::string string:word :function apply not if
     false
     end
   then
-  ::string <string> word-tail
+  ::string string:word-tail
   :function
   loop
 ; define-function
 
-: <string> word-end-back
+: string:word-end-back
   << string[address, length] -- string[address, length] >>
   dup zero? if
     <<
@@ -4103,15 +3888,15 @@ more,syntax-rule-set,basic-REPL
     >>
     end
   then
-  dup2 <string> byte-back
-  <string> byte space-byte? not if
+  dup2 string:byte-back
+  string:byte space-byte? not if
     end
   then
-  <string> byte-back
+  string:byte-back
   loop
 ; define-function
 
-: <string> word-begin-back,loop
+: string:word-begin-back,loop
   << string[address, length] -- string[address, length] >>
   dup zero? if
     <<
@@ -4120,19 +3905,19 @@ more,syntax-rule-set,basic-REPL
     >>
     end
   then
-  dup2 <string> byte-back
-  <string> byte space-byte? if
+  dup2 string:byte-back
+  string:byte space-byte? if
     end
   then
-  dup2 <string> byte-back
-  <string> byte bar-ket-byte? if
+  dup2 string:byte-back
+  string:byte bar-ket-byte? if
     end
   then
-  <string> byte-back
+  string:byte-back
   loop
 ; define-function
 
-: <string> word-begin-back
+: string:word-begin-back
   << string[address, length] -- string[address, length] >>
   dup zero? if
     <<
@@ -4141,45 +3926,45 @@ more,syntax-rule-set,basic-REPL
     >>
     end
   then
-  dup2 <string> byte-back
-  <string> byte bar-ket-byte? if
-    <string> byte-back
+  dup2 string:byte-back
+  string:byte bar-ket-byte? if
+    string:byte-back
     end
   then
-  <string> word-begin-back,loop
+  string:word-begin-back,loop
   end
 ; define-function
 
-: <string> word-back
+: string:word-back
   << string[address, length] -- string[address, length] >>
-  <string> word-end-back
-  <string> word-begin-back
+  string:word-end-back
+  string:word-begin-back
   end
 ; define-function
 
 : unread-word
   << -- >>
   pop-reading-stack
-  <string> word-back
+  string:word-back
   push-reading-stack
   end
 ; define-function
 
 100 1024 mul
-: *module-naming-stack,size*
+: module-naming-stack:*size*
 ; define-variable,with-tos
 
 3 *cell-size* mul
-: *module-naming-stack,unit*
+: module-naming-stack:*unit*
 ; define-variable,with-tos
 
-*module-naming-stack,size*
-*module-naming-stack,unit* mul allocate-memory
+module-naming-stack:*size*
+module-naming-stack:*unit* mul allocate-memory
 : *module-naming-stack*
 ; define-variable,with-tos
 
 *module-naming-stack*
-: *module-naming-stack,pointer*
+: module-naming-stack:*pointer*
 ; define-variable,with-tos
 
 : *module-directory,user,address*
@@ -4193,7 +3978,7 @@ more,syntax-rule-set,basic-REPL
   *module-directory,user,address* swap
 ; define-variable
 
-: <moi> find
+: moi:find
   << name[address, length]
      -- path[address, length], true
      -- false >>
@@ -4204,7 +3989,7 @@ more,syntax-rule-set,basic-REPL
   4 n-string->buffer! >:length
 
   :buffer :length
-  <path> file? not if
+  path:file? not if
     false
     end
   then
@@ -4212,7 +3997,7 @@ more,syntax-rule-set,basic-REPL
   512 allocate-local-memory >:read-buffer
   :read-buffer 512
   :buffer :length
-  <file> read >:read-length
+  file:read >:read-length
 
   *circular-string-area,current-free-address*
   >:path-address
@@ -4226,25 +4011,25 @@ more,syntax-rule-set,basic-REPL
   end
 ; define-function
 
-: <moi> add
+: moi:add
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
-  ::relative-path <path> relative? not if
-    "* (<moi> add) the argument must be a relative-path" .s .l
+  ::relative-path path:relative? not if
+    "* (moi:add) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path <path> file? not if
-    "* (<moi> add) the argument must be a relative-path to a existing file" .s .l
+  ::relative-path path:file? not if
+    "* (moi:add) the argument must be a relative-path to a existing file" .s .l
     "  but the following path is not to a file : " .s ::relative-path .s .l
     end
   then
 
-  ::name <moi> find if
-    "* (<moi> add) can not add" .s .l
+  ::name moi:find if
+    "* (moi:add) can not add" .s .l
     "  for the following module already exist : " .s ::name .s .l
     "  name is use as the following directory's name : " .s .s .l
     end
@@ -4256,32 +4041,32 @@ more,syntax-rule-set,basic-REPL
   3 n-string->buffer!
   >:length
   :buffer :length
-  <directory> create
+  directory:create
 
   *module-directory* "/" ::name "/path"
   :buffer
   4 n-string->buffer!
   >:length
   :buffer :length
-  <file> create
+  file:create
 
   512 allocate-local-memory >:address,full-path
-  <work-directory> get "/" ::relative-path
+  work-directory:get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
   :address,full-path :length,full-path
   :buffer :length
-  <file> write
+  file:write
   end
 ; define-function
 
-: <moi> sub
+: moi:sub
   << name[address, length] -- >>
   >::name
 
-  ::name <moi> find not if
-    "* (<moi> sub) can not sub" .s .l
+  ::name moi:find not if
+    "* (moi:sub) can not sub" .s .l
     "  for the following module does not exist : " .s ::name .s .l
     end
   then
@@ -4293,36 +4078,36 @@ more,syntax-rule-set,basic-REPL
   4 n-string->buffer! >:length
 
   :buffer :length
-  <file> remove
+  file:remove
 
   *module-directory* "/" ::name
   :buffer
   3 n-string->buffer!
   >:length
   :buffer :length
-  <directory> remove
+  directory:remove
   end
 ; define-function
 
-: <moi> up
+: moi:up
   << name[address, length], relative-path[address, length] -- >>
   >::relative-path
   >::name
 
-  ::relative-path <path> relative? not if
-    "* (<moi> up) the argument must be a relative-path" .s .l
+  ::relative-path path:relative? not if
+    "* (moi:up) the argument must be a relative-path" .s .l
     "  but the following is not : " .s ::relative-path .s .l
     end
   then
 
-  ::relative-path <path> file? not if
-    "* (<moi> up) the argument must be a relative-path to a existing file" .s .l
+  ::relative-path path:file? not if
+    "* (moi:up) the argument must be a relative-path to a existing file" .s .l
     "  but the following file is not exist : " .s ::relative-path .s .l
     end
   then
 
-  ::name <moi> find not if
-    "* (<moi> up) can not up" .s .l
+  ::name moi:find not if
+    "* (moi:up) can not up" .s .l
     "  for the following module does not exist : " .s ::name .s .l
     end
   then
@@ -4334,17 +4119,17 @@ more,syntax-rule-set,basic-REPL
   4 n-string->buffer! >:length
 
   512 allocate-local-memory >:address,full-path
-  <work-directory> get "/" ::relative-path
+  work-directory:get "/" ::relative-path
   :address,full-path
   3 n-string->buffer! >:length,full-path
 
   :address,full-path :length,full-path
   :buffer :length
-  <file> write
+  file:write
   end
 ; define-function
 
-: <moi> list
+: moi:list
   << -- >>
   *module-directory*
   [ << -- >>
@@ -4353,15 +4138,15 @@ more,syntax-rule-set,basic-REPL
       512 allocate-local-memory >:path-buffer
       +getdents64,name+
       dup 256
-      0 <string> find-byte
+      0 string:find-byte
       drop  << drop 0 >>
       over sub >::name
 
-      ".." ::name <string> equal? if
+      ".." ::name string:equal? if
         end
       then
 
-      "." ::name <string> equal? if
+      "." ::name string:equal? if
         end
       then
 
@@ -4375,19 +4160,19 @@ more,syntax-rule-set,basic-REPL
       512 allocate-local-memory >:reading-buffer
       :reading-buffer 512
       :path-buffer :path-length
-      <file> read >:reading-length
+      file:read >:reading-length
 
       :reading-buffer :reading-length
       .s .l
     then
     end ]
-  <directory> map
+  directory:map
   end
 ; define-function
 
-: <moi> help
+: moi:help
   << -- >>
-  "* (<moi> help)" .s .l
+  "* (moi:help)" .s .l
   "  * cn moi add  <new-module-name>      <relative-path-to-existing-file>" .s .l
   "  * cn moi sub  <existing-module-name>" .s .l
   "  * cn moi up   <existing-module-name> <relative-path-to-existing-file>" .s .l
@@ -4397,106 +4182,106 @@ more,syntax-rule-set,basic-REPL
 ; define-function
 
 10 1024 mul
-: *module-stack,size*
+: module-stack:*size*
 ; define-variable,with-tos
 
 8 *cell-size* mul
-: *module-stack,unit*
+: module-stack:*unit*
 ; define-variable,with-tos
 
-*module-stack,size*
-*module-stack,unit* mul allocate-memory
+module-stack:*size*
+module-stack:*unit* mul allocate-memory
 : *module-stack*
 ; define-variable,with-tos
 
 *module-stack*
-: *module-stack,pointer*
+: module-stack:*pointer*
 ; define-variable,with-tos
 
-: <module-info> get-meta-string
+: module-info:get-meta-string
   << module-info -- meta-string[address, length] >>
   2 n-get
   end
 ; define-function
 
-: <module-info> set-meta-string
+: module-info:set-meta-string
   << meta-string[address, length], module-info -- >>
   xx|swap|x make-string x|swap|xx
   2 n-set
   end
 ; define-function
 
-: <module-info> get-name
+: module-info:get-name
   << module-info -- name >>
   *cell-size* 2 mul add
   get
   end
 ; define-function
 
-: <module-info> set-name
+: module-info:set-name
   << name, module-info -- >>
   *cell-size* 2 mul add
   set
   end
 ; define-function
 
-: <module-info> get-name-record-begin
+: module-info:get-name-record-begin
   << module-info -- name >>
   *cell-size* 3 mul add
   get
   end
 ; define-function
 
-: <module-info> set-name-record-begin
+: module-info:set-name-record-begin
   << name, module-info -- >>
   *cell-size* 3 mul add
   set
   end
 ; define-function
 
-: <module-info> get-name-record-end
+: module-info:get-name-record-end
   << module-info -- name >>
   *cell-size* 4 mul add
   get
   end
 ; define-function
 
-: <module-info> set-name-record-end
+: module-info:set-name-record-end
   << name, module-info -- >>
   *cell-size* 4 mul add
   set
   end
 ; define-function
 
-: <module-info> get-tested-flag
+: module-info:get-tested-flag
   << module-info -- name >>
   *cell-size* 5 mul add
   get
   end
 ; define-function
 
-: <module-info> set-tested-flag
+: module-info:set-tested-flag
   << name, module-info -- >>
   *cell-size* 5 mul add
   set
   end
 ; define-function
 
-: <module-info> get-success-counter
+: module-info:get-success-counter
   << module-info -- name >>
   *cell-size* 6 mul add
   get
   end
 ; define-function
 
-: <module-info> set-success-counter
+: module-info:set-success-counter
   << name, module-info -- >>
   *cell-size* 6 mul add
   set
   end
 ; define-function
 
-: <module-info> inc-success-counter
+: module-info:inc-success-counter
   << module-info -- >>
   *cell-size* 6 mul add
   1 swap
@@ -4504,21 +4289,21 @@ more,syntax-rule-set,basic-REPL
   end
 ; define-function
 
-: <module-info> get-fail-counter
+: module-info:get-fail-counter
   << module-info -- name >>
   *cell-size* 7 mul add
   get
   end
 ; define-function
 
-: <module-info> set-fail-counter
+: module-info:set-fail-counter
   << name, module-info -- >>
   *cell-size* 7 mul add
   set
   end
 ; define-function
 
-: <module-info> inc-fail-counter
+: module-info:inc-fail-counter
   << module-info -- >>
   *cell-size* 7 mul add
   1 swap
@@ -4526,43 +4311,43 @@ more,syntax-rule-set,basic-REPL
   end
 ; define-function
 
-: <module-stack> find,loop
+: module-stack:find,loop
   << name, cursor
      -- module-info, true
      -- false >>
-  dup *module-stack,pointer* equal? if
+  dup module-stack:*pointer* equal? if
     drop2
     false
     end
   then
   >:cursor
   >:name
-  :cursor <module-info> get-name
+  :cursor module-info:get-name
   :name equal? if
     :cursor
     true
     end
   then
   :name
-  :cursor *module-stack,unit* add
+  :cursor module-stack:*unit* add
   loop
 ; define-function
 
-: <module-stack> find
+: module-stack:find
   << name
      -- module-info, true
      -- false >>
   *module-stack*
-  <module-stack> find,loop
+  module-stack:find,loop
   end
 ; define-function
 
 10 1024 mul
-: *importing-stack,size*
+: importing-stack:*size*
 ; define-variable,with-tos
 
 2 *cell-size* mul
-: *importing-stack,unit*
+: importing-stack:*unit*
 ; define-variable,with-tos
 
 *cell-size* allocate-memory drop
@@ -4570,73 +4355,73 @@ more,syntax-rule-set,basic-REPL
 : *testing-flag*
 ; define-variable,with-tos
 
-*importing-stack,size*
-*importing-stack,unit* mul allocate-memory
+importing-stack:*size*
+importing-stack:*unit* mul allocate-memory
 : *importing-stack*
 ; define-variable,with-tos
 
 *importing-stack*
-: *importing-stack,pointer*
+: importing-stack:*pointer*
 ; define-variable,with-tos
 
-: <importing-record> get-name
+: importing-record:get-name
   << module-info -- name >>
   get
   end
 ; define-function
 
-: <importing-record> set-name
+: importing-record:set-name
   << name, module-info -- >>
   set
   end
 ; define-function
 
-: <importing-record> get-testing-flag
+: importing-record:get-testing-flag
   << module-info -- bool >>
   *cell-size* add get
   end
 ; define-function
 
-: <importing-record> set-testing-flag
+: importing-record:set-testing-flag
   << bool, module-info -- >>
   *cell-size* add set
   end
 ; define-function
 
-: <importing-stack> find,loop
+: importing-stack:find,loop
   << name, cursor
      -- importing-record, true
      -- false >>
-  dup *importing-stack,pointer* equal? if
+  dup importing-stack:*pointer* equal? if
     drop2
     false
     end
   then
   >:cursor
   >:name
-  :cursor <importing-record> get-name
+  :cursor importing-record:get-name
   :name equal? if
     :cursor
     true
     end
   then
   :name
-  :cursor *importing-stack,unit* add
+  :cursor importing-stack:*unit* add
   loop
 ; define-function
 
-: <importing-stack> find
+: importing-stack:find
   << name
      -- importing-record, true
      -- false >>
   *importing-stack*
-  <importing-stack> find,loop
+  importing-stack:find,loop
   end
 ; define-function
 
-: <importing-stack> drop
+: importing-stack:drop
   << -- >>
-  *importing-stack,unit* address *importing-stack,pointer* sub-set
+  importing-stack:*unit* address importing-stack:*pointer* sub-set
   end
 ; define-function
 
@@ -4653,57 +4438,57 @@ more,syntax-rule-set,basic-REPL
   then
 ; define-function
 
-: <module-naming-stack> record-jo
+: module-naming-stack:record-jo
   << jo, name -- >>
   dup name,get-jo
-  *module-naming-stack,pointer* name-record,set-old-jo
+  module-naming-stack:*pointer* name-record:set-old-jo
   dup2 name,set-jo
-  *module-naming-stack,pointer* name-record,set-name
-  *module-naming-stack,pointer* name-record,set-new-jo
-  *module-naming-stack,unit* address *module-naming-stack,pointer* add-set
+  module-naming-stack:*pointer* name-record:set-name
+  module-naming-stack:*pointer* name-record:set-new-jo
+  module-naming-stack:*unit* address module-naming-stack:*pointer* add-set
   end
 ; define-function
 
-: <module-naming-stack> delete-last-record
+: module-naming-stack:delete-last-record
   << -- >>
-  *module-naming-stack,unit*
-  address *module-naming-stack,pointer*
+  module-naming-stack:*unit*
+  address module-naming-stack:*pointer*
   sub-set
-  *module-naming-stack,pointer* name-record,get-old-jo
-  *module-naming-stack,pointer* name-record,get-name
+  module-naming-stack:*pointer* name-record:get-old-jo
+  module-naming-stack:*pointer* name-record:get-name
   name,set-jo
   end
 ; define-function
 
-: <global-naming-stack> clear-naming
+: global-naming-stack:clear-naming
   << name-record-begin, name-record-end -- >>
   dup2 equal? if
     drop2
     end
   then
-  *global-naming-stack,unit* sub
+  global-naming-stack:*unit* sub
   dup >:name-record
-  :name-record <name-record> get-old-jo
-  :name-record <name-record> get-name
+  :name-record name-record:get-old-jo
+  :name-record name-record:get-name
   name,set-jo
   loop
 ; define-function
 
-: <module-naming-stack> clear-naming
+: module-naming-stack:clear-naming
   << name-record-begin, name-record-end -- >>
   dup2 equal? if
     drop2
     end
   then
-  *module-naming-stack,unit* sub
+  module-naming-stack:*unit* sub
   dup >:name-record
-  :name-record <name-record> get-old-jo
-  :name-record <name-record> get-name
+  :name-record name-record:get-old-jo
+  :name-record name-record:get-name
   name,set-jo
   loop
 ; define-function
 
-: <global-naming-stack> prefix-naming
+: global-naming-stack:prefix-naming
   << name-record-begin, name-record-end, prefix[name-index] -- >>
   >:prefix
   >:end
@@ -4713,20 +4498,20 @@ more,syntax-rule-set,basic-REPL
   then
 
   512 allocate-local-memory >:buffer
-  :prefix name->string " " :begin <name-record> get-name name->string
+  :prefix name->string " " :begin name-record:get-name name->string
   :buffer 3 n-string->buffer! >:length
 
-  :begin <name-record> get-new-jo
+  :begin name-record:get-new-jo
   :buffer :length string->name
-  <module-naming-stack> record-jo
+  module-naming-stack:record-jo
 
-  :begin *global-naming-stack,unit* add
+  :begin global-naming-stack:*unit* add
   :end
   :prefix
   loop
 ; define-function
 
-: <module-naming-stack> expose-naming
+: module-naming-stack:expose-naming
   << name-record-begin, name-record-end -- >>
   >:end
   >:begin
@@ -4734,114 +4519,114 @@ more,syntax-rule-set,basic-REPL
     end
   then
 
-  :begin <name-record> get-new-jo
-  :begin <name-record> get-name
+  :begin name-record:get-new-jo
+  :begin name-record:get-name
   name->string
-  <string> word-tail <string> byte-tail
+  string:word-tail string:byte-tail
   string->name
-  <global-naming-stack> record-jo
+  global-naming-stack:record-jo
 
-  :begin *module-naming-stack,unit* add
+  :begin module-naming-stack:*unit* add
   :end
   loop
 ; define-function
 
 60 1024 mul
-: *undo-stack,size*
+: undo-stack:*size*
 ; define-variable,with-tos
 
 7 *cell-size* mul
-: *undo-stack,unit*
+: undo-stack:*unit*
 ; define-variable,with-tos
 
-*undo-stack,size*
-*undo-stack,unit* mul allocate-memory
+undo-stack:*size*
+undo-stack:*unit* mul allocate-memory
 : *undo-stack*
 ; define-variable,with-tos
 
 *undo-stack*
-: *undo-stack,pointer*
+: undo-stack:*pointer*
 ; define-variable,with-tos
 
-: <undo-point> get-jojo-area
+: undo-point:get-jojo-area
   << undo-point -- jojo-area current-free-address >>
   get
   end
 ; define-function
 
-: <undo-point> set-jojo-area
+: undo-point:set-jojo-area
   << jojo-area current-free-address, undo-point -- >>
   set
   end
 ; define-function
 
-: <undo-point> get-string-area
+: undo-point:get-string-area
   << undo-point -- jojo-area current-free-address >>
   *cell-size* add get
   end
 ; define-function
 
-: <undo-point> set-string-area
+: undo-point:set-string-area
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* add set
   end
 ; define-function
 
-: <undo-point> get-global-naming-stack
+: undo-point:get-global-naming-stack
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 2 mul add get
   end
 ; define-function
 
-: <undo-point> set-global-naming-stack
+: undo-point:set-global-naming-stack
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 2 mul add set
   end
 ; define-function
 
-: <undo-point> get-module-naming-stack
+: undo-point:get-module-naming-stack
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 3 mul add get
   end
 ; define-function
 
-: <undo-point> set-module-naming-stack
+: undo-point:set-module-naming-stack
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 3 mul add set
   end
 ; define-function
 
-: <undo-point> get-syntax-backup-area
+: undo-point:get-syntax-backup-area
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 4 mul add get
   end
 ; define-function
 
-: <undo-point> set-syntax-backup-area
+: undo-point:set-syntax-backup-area
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 4 mul add set
   end
 ; define-function
 
-: <undo-point> get-number-of-syntax-rule-sets
+: undo-point:get-number-of-syntax-rule-sets
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 5 mul add get
   end
 ; define-function
 
-: <undo-point> set-number-of-syntax-rule-sets
+: undo-point:set-number-of-syntax-rule-sets
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 5 mul add set
   end
 ; define-function
 
-: <undo-point> get-importing-stack
+: undo-point:get-importing-stack
   << undo-point -- jojo-area current-free-address >>
   *cell-size* 6 mul add get
   end
 ; define-function
 
-: <undo-point> set-importing-stack
+: undo-point:set-importing-stack
   << jojo-area current-free-address, undo-point -- >>
   *cell-size* 6 mul add set
   end
@@ -4860,10 +4645,10 @@ more,syntax-rule-set,basic-REPL
 : *syntax-backup-area,current-free-address*
 ; define-variable,with-tos
 
-: <undo-point> create,copy-syntax,one-syntax-rule-set
+: undo-point:create,copy-syntax,one-syntax-rule-set
   << syntax-rule-set -- >>
   >:syntax-rule-set
-  :syntax-rule-set <syntax-rule-set> get-border >:border
+  :syntax-rule-set syntax-rule-set:get-border >:border
   :border :syntax-rule-set sub
   *cell-size* div >:n
 
@@ -4884,104 +4669,104 @@ more,syntax-rule-set,basic-REPL
   end
 ; define-function
 
-: <undo-point> create,copy-syntax
+: undo-point:create,copy-syntax
   << cursor -- >>
-  dup *syntax-stack,pointer* equal? if
+  dup syntax-stack:*pointer* equal? if
     drop
     end
   then
-  dup get <undo-point> create,copy-syntax,one-syntax-rule-set
+  dup get undo-point:create,copy-syntax,one-syntax-rule-set
   *cell-size* add
   loop
 ; define-function
 
-: <undo-point> create
+: undo-point:create
   << -- undo-point >>
-  *undo-stack,pointer*
+  undo-stack:*pointer*
   >:undo-point
 
-  *undo-stack,unit*
-  address *undo-stack,pointer*
+  undo-stack:*unit*
+  address undo-stack:*pointer*
   add-set
 
   *jojo-area,current-free-address*
   :undo-point
-  <undo-point> set-jojo-area
+  undo-point:set-jojo-area
 
   *string-area,current-free-address*
   :undo-point
-  <undo-point> set-string-area
+  undo-point:set-string-area
 
-  *global-naming-stack,pointer*
+  global-naming-stack:*pointer*
   :undo-point
-  <undo-point> set-global-naming-stack
+  undo-point:set-global-naming-stack
 
-  *module-naming-stack,pointer*
+  module-naming-stack:*pointer*
   :undo-point
-  <undo-point> set-module-naming-stack
+  undo-point:set-module-naming-stack
 
-  *importing-stack,pointer*
+  importing-stack:*pointer*
   :undo-point
-  <undo-point> set-importing-stack
+  undo-point:set-importing-stack
 
   *syntax-backup-area,current-free-address*
   :undo-point
-  <undo-point> set-syntax-backup-area
+  undo-point:set-syntax-backup-area
 
-  *syntax-stack,address*
-  <undo-point> create,copy-syntax
+  syntax-stack:*address*
+  undo-point:create,copy-syntax
 
-  *syntax-stack,pointer*
-  *syntax-stack,address* sub
+  syntax-stack:*pointer*
+  syntax-stack:*address* sub
   *cell-size* div
   :undo-point
-  <undo-point> set-number-of-syntax-rule-sets
+  undo-point:set-number-of-syntax-rule-sets
 
   :undo-point
   end
 ; define-function
 
-: <undo-point> restore-jojo-area
+: undo-point:restore-jojo-area
   << undo-point -- >>
-  <undo-point> get-jojo-area
+  undo-point:get-jojo-area
   address *jojo-area,current-free-address*
   set
   end
 ; define-function
 
-: <undo-point> restore-string-area
+: undo-point:restore-string-area
   << undo-point -- >>
-  <undo-point> get-string-area
+  undo-point:get-string-area
   address *string-area,current-free-address*
   set
   end
 ; define-function
 
-: <undo-point> restore-global-naming-stack
+: undo-point:restore-global-naming-stack
   << undo-point -- >>
-  <undo-point> get-global-naming-stack >:old-record
+  undo-point:get-global-naming-stack >:old-record
 
   :old-record
-  *global-naming-stack,pointer*
-  <global-naming-stack> clear-naming
+  global-naming-stack:*pointer*
+  global-naming-stack:clear-naming
 
-  :old-record address *global-naming-stack,pointer* set
+  :old-record address global-naming-stack:*pointer* set
   end
 ; define-function
 
-: <undo-point> restore-module-naming-stack
+: undo-point:restore-module-naming-stack
   << undo-point -- >>
-  <undo-point> get-module-naming-stack >:old-record
+  undo-point:get-module-naming-stack >:old-record
 
   :old-record
-  *module-naming-stack,pointer*
-  <module-naming-stack> clear-naming
+  module-naming-stack:*pointer*
+  module-naming-stack:clear-naming
 
-  :old-record address *module-naming-stack,pointer* set
+  :old-record address module-naming-stack:*pointer* set
   end
 ; define-function
 
-: <undo-point> restore-syntax-backup-area,set-syntax
+: undo-point:restore-syntax-backup-area,set-syntax
   << cursor, syntax-rule-set-copy, number-of-syntax-rule-sets -- cursor >>
   dup zero? if
     drop2
@@ -5004,7 +4789,7 @@ more,syntax-rule-set,basic-REPL
   *cell-size*
   :n mul
   :syntax-rule-set add
-  :syntax-rule-set <syntax-rule-set> set-border
+  :syntax-rule-set syntax-rule-set:set-border
 
   :cursor *cell-size* add
   :syntax-rule-set-copy *cell-size* :n 2 add mul add
@@ -5012,19 +4797,19 @@ more,syntax-rule-set,basic-REPL
   loop
 ; define-function
 
-: <undo-point> restore-syntax-backup-area
+: undo-point:restore-syntax-backup-area
   << undo-point -- >>
   >:undo-point
-  :undo-point <undo-point> get-syntax-backup-area >:old-address
-  :undo-point <undo-point> get-number-of-syntax-rule-sets >:number-of-syntax-rule-sets
+  :undo-point undo-point:get-syntax-backup-area >:old-address
+  :undo-point undo-point:get-number-of-syntax-rule-sets >:number-of-syntax-rule-sets
 
-  *syntax-stack,address*
+  syntax-stack:*address*
   :old-address
   :number-of-syntax-rule-sets
-  <undo-point> restore-syntax-backup-area,set-syntax >:cursor
+  undo-point:restore-syntax-backup-area,set-syntax >:cursor
 
   :cursor
-  address *syntax-stack,pointer*
+  address syntax-stack:*pointer*
   set
 
   :old-address
@@ -5033,17 +4818,17 @@ more,syntax-rule-set,basic-REPL
   end
 ; define-function
 
-: <undo-point> restore-importing-stack
+: undo-point:restore-importing-stack
   << undo-point -- >>
-  <undo-point> get-importing-stack
-  address *importing-stack,pointer*
+  undo-point:get-importing-stack
+  address importing-stack:*pointer*
   set
   end
 ; define-function
 
-: <undo-point> restore-undo-stack
+: undo-point:restore-undo-stack
   << undo-point -- >>
-  address *undo-stack,pointer*
+  address undo-stack:*pointer*
   set
   end
 ; define-function
@@ -5051,44 +4836,44 @@ more,syntax-rule-set,basic-REPL
 : undo
   << undo-point -- >>
   >:undo-point
-  :undo-point <undo-point> restore-jojo-area
-  :undo-point <undo-point> restore-string-area
-  :undo-point <undo-point> restore-global-naming-stack
-  :undo-point <undo-point> restore-module-naming-stack
-  :undo-point <undo-point> restore-syntax-backup-area
-  :undo-point <undo-point> restore-importing-stack
-  :undo-point <undo-point> restore-undo-stack
+  :undo-point undo-point:restore-jojo-area
+  :undo-point undo-point:restore-string-area
+  :undo-point undo-point:restore-global-naming-stack
+  :undo-point undo-point:restore-module-naming-stack
+  :undo-point undo-point:restore-syntax-backup-area
+  :undo-point undo-point:restore-importing-stack
+  :undo-point undo-point:restore-undo-stack
   end
 ; define-function
 
-: <pre-module> *syntax-rule-set,size*
+: pre-module:*syntax-rule-set:size*
   1024 *cell-size* mul
 ; define-variable
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-: <pre-module> *syntax-rule-set*
-  <pre-module> *syntax-rule-set,size* allocate-memory
+: pre-module:*syntax-rule-set*
+  pre-module:*syntax-rule-set:size* allocate-memory
 ; define-variable
 
-<pre-module> *syntax-rule-set*
-<pre-module> *syntax-rule-set* *cell-size* sub
+pre-module:*syntax-rule-set*
+pre-module:*syntax-rule-set* *cell-size* sub
 set
 
-: <post-module> *syntax-rule-set,size*
+: post-module:*syntax-rule-set:size*
   1024 *cell-size* mul
 ; define-variable
 
 << for cursor >>
 *cell-size* allocate-memory drop
 
-: <post-module> *syntax-rule-set*
-  <post-module> *syntax-rule-set,size* allocate-memory
+: syntax-rule-set:*post-module*
+  post-module:*syntax-rule-set:size* allocate-memory
 ; define-variable
 
-<post-module> *syntax-rule-set*
-<post-module> *syntax-rule-set* *cell-size* sub
+syntax-rule-set:*post-module*
+syntax-rule-set:*post-module* *cell-size* sub
 set
 
 : module-meta-begin-word?
@@ -5098,8 +4883,8 @@ set
     false
     end
   then
-  ":" <string> byte
-  <string> full-of-the-same-byte?
+  ":" string:byte
+  string:full-of-the-same-byte?
   end
 ; define-function
 
@@ -5110,8 +4895,8 @@ set
     false
     end
   then
-  "=" <string> byte
-  <string> full-of-the-same-byte?
+  "=" string:byte
+  string:full-of-the-same-byte?
   end
 ; define-function
 
@@ -5137,12 +4922,12 @@ set
   :address :length add sub1 get-byte >:last-byte
   :address :length add sub1 sub1 get-byte >:the-byte-before-last-byte
   :last-byte
-  ":" <string> byte equal? not if
+  ":" string:byte equal? not if
     false
     end
   then
   :the-byte-before-last-byte
-  ":" <string> byte equal? if
+  ":" string:byte equal? if
     false
     end
   then
@@ -5150,49 +4935,49 @@ set
   end
 ; define-function
 
-: <module-buffer> good-format?
+: module-buffer:good-format?
   << module-buffer[address, length] -- bool >>
-  dup2 <string> space? if
+  dup2 string:space? if
     drop2
     false
     end
   then
-  dup2 <string> word
+  dup2 string:word
   module-meta-begin-word? not if
     drop2
     false
     end
   then
-  jo module-meta-end-word? <string> any-word
+  jo module-meta-end-word? string:any-word
   end
 ; define-function
 
-: <module-buffer> get-code-string
+: module-buffer:get-code-string
   << module-buffer[address, length] -- meta-string[address, length] >>
-  dup2 <string> word
+  dup2 string:word
   module-meta-end-word? if
-    <string> word-tail
+    string:word-tail
     end
   then
-  <string> word-tail
+  string:word-tail
   loop
 ; define-function
 
-: <module-buffer> get-meta-string,loop
+: module-buffer:get-meta-string,loop
   << module-buffer[address, length] -- cursor >>
-  dup2 <string> word
+  dup2 string:word
   module-meta-end-word? if
-    <string> word-tail
+    string:word-tail
     drop
     end
   then
-  <string> word-tail
+  string:word-tail
   loop
 ; define-function
 
-: <module-buffer> get-meta-string
+: module-buffer:get-meta-string
   << module-buffer[address, length] -- meta-string[address, length] >>
-  dup2 <module-buffer> get-meta-string,loop >:cursor
+  dup2 module-buffer:get-meta-string,loop >:cursor
   drop >:address
   :address
   :cursor :address sub
@@ -5221,17 +5006,17 @@ set
   ::module-name-string string->name >:module-name-index
   :module-name-index name->module-prefix >:module-prefix
 
-  :module-name-index <module-stack> find if
+  :module-name-index module-stack:find if
     drop
     end
   then
 
-  :module-name-index <importing-stack> find if
+  :module-name-index importing-stack:find if
     "* (import) circular import of : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
 
-  ::module-name-string <moi> find not if
+  ::module-name-string moi:find not if
     "* (import) can not find module : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
@@ -5242,77 +5027,77 @@ set
   :buffer
   64 1024 mul
   ::module-path
-  <file> read >:length
+  file:read >:length
 
-  :buffer :length <module-buffer> good-format? not if
+  :buffer :length module-buffer:good-format? not if
     "* (import) fail to import module : " .s ::module-name-string .s .l
     "  for the file is not well formated cicada-nymph source code" .s .l
     'fail-to-load awake
   then
 
-  :buffer :length <module-buffer> get-meta-string >::meta-string
-  :buffer :length <module-buffer> get-code-string >::code-string
+  :buffer :length module-buffer:get-meta-string >::meta-string
+  :buffer :length module-buffer:get-code-string >::code-string
 
   false
-  *module-stack,pointer*
-  <module-info> set-tested-flag
+  module-stack:*pointer*
+  module-info:set-tested-flag
 
   false
-  *importing-stack,pointer*
-  <importing-record> set-testing-flag
+  importing-stack:*pointer*
+  importing-record:set-testing-flag
   :module-name-index
-  *importing-stack,pointer*
-  <importing-record> set-name
-  *importing-stack,unit* address *importing-stack,pointer* add-set
+  importing-stack:*pointer*
+  importing-record:set-name
+  importing-stack:*unit* address importing-stack:*pointer* add-set
 
-  *global-naming-stack,pointer* >:global-name-record-before-import
+  global-naming-stack:*pointer* >:global-name-record-before-import
 
-  <pre-module> *syntax-rule-set* push-syntax-stack
+  pre-module:*syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *syntax-rule-set* push-syntax-stack
+  global-naming-stack:*pointer* >:global-name-record-begin
+  syntax-rule-set:*word-interpreter* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
-  *global-naming-stack,pointer* >:global-name-record-end
+  global-naming-stack:*pointer* >:global-name-record-end
 
-  <post-module> *syntax-rule-set* push-syntax-stack
+  syntax-rule-set:*post-module* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  <importing-stack> drop
+  importing-stack:drop
 
-  *module-naming-stack,pointer* >:module-name-record-begin
+  module-naming-stack:*pointer* >:module-name-record-begin
   :global-name-record-begin
   :global-name-record-end
   :module-prefix
-  <global-naming-stack> prefix-naming
-  *module-naming-stack,pointer* >:module-name-record-end
+  global-naming-stack:prefix-naming
+  module-naming-stack:*pointer* >:module-name-record-end
 
   :global-name-record-before-import
-  *global-naming-stack,pointer*
-  <global-naming-stack> clear-naming
+  global-naming-stack:*pointer*
+  global-naming-stack:clear-naming
 
-  :global-name-record-before-import address *global-naming-stack,pointer* set
+  :global-name-record-before-import address global-naming-stack:*pointer* set
 
   :module-name-record-begin
-  *module-stack,pointer*
-  <module-info> set-name-record-begin
+  module-stack:*pointer*
+  module-info:set-name-record-begin
   :module-name-record-end
-  *module-stack,pointer*
-  <module-info> set-name-record-end
+  module-stack:*pointer*
+  module-info:set-name-record-end
   ::meta-string
-  *module-stack,pointer*
-  <module-info> set-meta-string
+  module-stack:*pointer*
+  module-info:set-meta-string
   :module-name-index
-  *module-stack,pointer*
-  <module-info> set-name
-  *module-stack,unit* address *module-stack,pointer* add-set
+  module-stack:*pointer*
+  module-info:set-name
+  module-stack:*unit* address module-stack:*pointer* add-set
   end
 ; define-function
 
-: <module-syntax> unknow-meta-word,loop
+: module-syntax:unknow-meta-word,loop
   << -- >>
   read-word module-meta-word? if
     unread-word
@@ -5321,20 +5106,20 @@ set
   loop
 ; define-function
 
-: <module-syntax> unknow-meta-word
+: module-syntax:unknow-meta-word
   << meta-word -- >>
   drop2
-  <module-syntax> unknow-meta-word,loop
+  module-syntax:unknow-meta-word,loop
   end
 ; define-function
 
-: meta-word:import?
+: meta-literal-word:import?
   << word[address, length] -- bool >>
-  "import:" <string> equal?
+  "import:" string:equal?
   end
 ; define-function
 
-: <pre-module-syntax> import,loop
+: pre-module-syntax:import,loop
   << -- unknow >>
   read-word >::word
   ::word string->name >:name
@@ -5343,57 +5128,57 @@ set
     end
   then
   ::word import
-  :name <module-stack> find not if
-    "* (<pre-module-syntax> import,loop) after import module : " .s
+  :name module-stack:find not if
+    "* (pre-module-syntax:import,loop) after import module : " .s
        :name name->string .s .l
     "  still can not find it in the module-stack" .s .l
     end
   then
   >:module-info
-  :module-info <module-info> get-name-record-begin
-  :module-info <module-info> get-name-record-end
-  <module-naming-stack> expose-naming
+  :module-info module-info:get-name-record-begin
+  :module-info module-info:get-name-record-end
+  module-naming-stack:expose-naming
   loop
 ; define-function
 
-: <pre-module-syntax> import
-  << meta-word:import -- unknow >>
+: pre-module-syntax:import
+  << meta-literal-word:import -- unknow >>
   drop2
-  <pre-module-syntax> import,loop
+  pre-module-syntax:import,loop
   end
 ; define-function
 
-<pre-module> *syntax-rule-set*
-<word-interpreter> *syntax-rule-set*
-<syntax-rule-set> mixin
+pre-module:*syntax-rule-set*
+syntax-rule-set:*word-interpreter*
+syntax-rule-set:mixin
 
-<pre-module> *syntax-rule-set*
+pre-module:*syntax-rule-set*
 jo module-meta-word?
-jo <module-syntax> unknow-meta-word
-<syntax-rule> add
+jo module-syntax:unknow-meta-word
+syntax-rule:add
 
-<pre-module> *syntax-rule-set*
+pre-module:*syntax-rule-set*
 jo module-meta-begin-word?
 jo drop2
-<syntax-rule> add
+syntax-rule:add
 
-<pre-module> *syntax-rule-set*
+pre-module:*syntax-rule-set*
 jo module-meta-end-word?
 jo drop2
-<syntax-rule> add
+syntax-rule:add
 
-<pre-module> *syntax-rule-set*
-jo meta-word:import?
-jo <pre-module-syntax> import
-<syntax-rule> add
+pre-module:*syntax-rule-set*
+jo meta-literal-word:import?
+jo pre-module-syntax:import
+syntax-rule:add
 
-: meta-word:do?
+: meta-literal-word:do?
   << word[address, length] -- bool >>
-  "do:" <string> equal?
+  "do:" string:equal?
   end
 ; define-function
 
-: <post-module-syntax> do,loop
+: post-module-syntax:do,loop
   << -- >>
   read-word >::word
   ::word module-meta-word? if
@@ -5404,55 +5189,55 @@ jo <pre-module-syntax> import
   loop
 ; define-function
 
-: <post-module-syntax> do
-  << meta-word:do -- >>
+: post-module-syntax:do
+  << meta-literal-word:do -- >>
   drop2
-  <post-module-syntax> do,loop
+  post-module-syntax:do,loop
   end
 ; define-function
 
-<post-module> *syntax-rule-set*
-<word-interpreter> *syntax-rule-set*
-<syntax-rule-set> mixin
+syntax-rule-set:*post-module*
+syntax-rule-set:*word-interpreter*
+syntax-rule-set:mixin
 
-<post-module> *syntax-rule-set*
+syntax-rule-set:*post-module*
 jo module-meta-word?
-jo <module-syntax> unknow-meta-word
-<syntax-rule> add
+jo module-syntax:unknow-meta-word
+syntax-rule:add
 
-<post-module> *syntax-rule-set*
+syntax-rule-set:*post-module*
 jo module-meta-begin-word?
 jo drop2
-<syntax-rule> add
+syntax-rule:add
 
-<post-module> *syntax-rule-set*
+syntax-rule-set:*post-module*
 jo module-meta-end-word?
 jo drop2
-<syntax-rule> add
+syntax-rule:add
 
-<post-module> *syntax-rule-set*
-jo meta-word:do?
-jo <post-module-syntax> do
-<syntax-rule> add
+syntax-rule-set:*post-module*
+jo meta-literal-word:do?
+jo post-module-syntax:do
+syntax-rule:add
 
 : load
   << module-name-string[address, length] -- >>
   >::module-name-string
 
   ::module-name-string
-  <undo-point> create
-  *reading-stack,pointer*
+  undo-point:create
+  reading-stack:*pointer*
   << module-name-string[address, length],
      undo-point
-     *reading-stack,pointer*
+     reading-stack:*pointer*
      -- >>
 
   [ action,reset-the-stack
     << module-name-string[address, length],
        undo-point
-       *reading-stack,pointer*
+       reading-stack:*pointer*
        -- >>
-    address *reading-stack,pointer* set
+    address reading-stack:*pointer* set
     undo
     "* (load) can not load : " .s .s .l
     end ]
@@ -5461,18 +5246,18 @@ jo <post-module-syntax> do
   ::module-name-string string->name >:module-name-index
   :module-name-index name->module-prefix >:module-prefix
 
-  :module-name-index <module-stack> find if
+  :module-name-index module-stack:find if
     drop
     "* (load) the following module is already loaded : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
 
-  :module-name-index <importing-stack> find if
+  :module-name-index importing-stack:find if
     "* (load) circular import of : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
 
-  ::module-name-string <moi> find not if
+  ::module-name-string moi:find not if
     "* (load) can not find module : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
@@ -5483,73 +5268,73 @@ jo <post-module-syntax> do
   :buffer
   64 1024 mul
   ::module-path
-  <file> read >:length
+  file:read >:length
 
-  :buffer :length <module-buffer> good-format? not if
+  :buffer :length module-buffer:good-format? not if
     "* (load) fail to import module : " .s ::module-name-string .s .l
     "  for the file is not well formated cicada-nymph source code" .s .l
     'fail-to-load awake
   then
 
-  :buffer :length <module-buffer> get-meta-string >::meta-string
-  :buffer :length <module-buffer> get-code-string >::code-string
+  :buffer :length module-buffer:get-meta-string >::meta-string
+  :buffer :length module-buffer:get-code-string >::code-string
 
   false
-  *module-stack,pointer*
-  <module-info> set-tested-flag
+  module-stack:*pointer*
+  module-info:set-tested-flag
 
   false
-  *importing-stack,pointer*
-  <importing-record> set-testing-flag
+  importing-stack:*pointer*
+  importing-record:set-testing-flag
   :module-name-index
-  *importing-stack,pointer*
-  <importing-record> set-name
-  *importing-stack,unit* address *importing-stack,pointer* add-set
+  importing-stack:*pointer*
+  importing-record:set-name
+  importing-stack:*unit* address importing-stack:*pointer* add-set
 
-  *global-naming-stack,pointer* >:global-name-record-before-import
+  global-naming-stack:*pointer* >:global-name-record-before-import
 
-  <pre-module> *syntax-rule-set* push-syntax-stack
+  pre-module:*syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *syntax-rule-set* push-syntax-stack
+  global-naming-stack:*pointer* >:global-name-record-begin
+  syntax-rule-set:*word-interpreter* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
-  *global-naming-stack,pointer* >:global-name-record-end
+  global-naming-stack:*pointer* >:global-name-record-end
 
-  <post-module> *syntax-rule-set* push-syntax-stack
+  syntax-rule-set:*post-module* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  <importing-stack> drop
+  importing-stack:drop
 
-  *module-naming-stack,pointer* >:module-name-record-begin
+  module-naming-stack:*pointer* >:module-name-record-begin
   :global-name-record-begin
   :global-name-record-end
   :module-prefix
-  <global-naming-stack> prefix-naming
-  *module-naming-stack,pointer* >:module-name-record-end
+  global-naming-stack:prefix-naming
+  module-naming-stack:*pointer* >:module-name-record-end
 
   :global-name-record-before-import
-  *global-naming-stack,pointer*
-  <global-naming-stack> clear-naming
+  global-naming-stack:*pointer*
+  global-naming-stack:clear-naming
 
-  :global-name-record-before-import address *global-naming-stack,pointer* set
+  :global-name-record-before-import address global-naming-stack:*pointer* set
 
   :module-name-record-begin
-  *module-stack,pointer*
-  <module-info> set-name-record-begin
+  module-stack:*pointer*
+  module-info:set-name-record-begin
   :module-name-record-end
-  *module-stack,pointer*
-  <module-info> set-name-record-end
+  module-stack:*pointer*
+  module-info:set-name-record-end
   ::meta-string
-  *module-stack,pointer*
-  <module-info> set-meta-string
+  module-stack:*pointer*
+  module-info:set-meta-string
   :module-name-index
-  *module-stack,pointer*
-  <module-info> set-name
-  *module-stack,unit* address *module-stack,pointer* add-set
+  module-stack:*pointer*
+  module-info:set-name
+  module-stack:*unit* address module-stack:*pointer* add-set
 
 
   drop
@@ -5563,19 +5348,19 @@ jo <post-module-syntax> do
   >::module-name-string
 
   ::module-name-string
-  <undo-point> create
-  *reading-stack,pointer*
+  undo-point:create
+  reading-stack:*pointer*
   << module-name-string[address, length],
      undo-point
-     *reading-stack,pointer*
+     reading-stack:*pointer*
      -- >>
 
   [ action,reset-the-stack
     << module-name-string[address, length],
        undo-point
-       *reading-stack,pointer*
+       reading-stack:*pointer*
        -- >>
-    address *reading-stack,pointer* set
+    address reading-stack:*pointer* set
     undo
     "* (load-with-test) can not load : " .s .s .l
     end ]
@@ -5584,18 +5369,18 @@ jo <post-module-syntax> do
   ::module-name-string string->name >:module-name-index
   :module-name-index name->module-prefix >:module-prefix
 
-  :module-name-index <module-stack> find if
+  :module-name-index module-stack:find if
     drop
     "* (load-with-test) the following module is already loaded : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
 
-  :module-name-index <importing-stack> find if
+  :module-name-index importing-stack:find if
     "* (load-with-test) circular import of : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
 
-  ::module-name-string <moi> find not if
+  ::module-name-string moi:find not if
     "* (load-with-test) can not find module : " .s ::module-name-string .s .l
     'fail-to-load awake
   then
@@ -5606,88 +5391,88 @@ jo <post-module-syntax> do
   :buffer
   64 1024 mul
   ::module-path
-  <file> read >:length
+  file:read >:length
 
-  :buffer :length <module-buffer> good-format? not if
+  :buffer :length module-buffer:good-format? not if
     "* (load-with-test) fail to import module : " .s ::module-name-string .s .l
     "  for the file is not well formated cicada-nymph source code" .s .l
     'fail-to-load awake
   then
 
-  :buffer :length <module-buffer> get-meta-string >::meta-string
-  :buffer :length <module-buffer> get-code-string >::code-string
+  :buffer :length module-buffer:get-meta-string >::meta-string
+  :buffer :length module-buffer:get-code-string >::code-string
 
   true
-  *module-stack,pointer*
-  <module-info> set-tested-flag
+  module-stack:*pointer*
+  module-info:set-tested-flag
   0
-  *module-stack,pointer*
-  <module-info> set-success-counter
+  module-stack:*pointer*
+  module-info:set-success-counter
   0
-  *module-stack,pointer*
-  <module-info> set-fail-counter
+  module-stack:*pointer*
+  module-info:set-fail-counter
 
   true
-  *importing-stack,pointer*
-  <importing-record> set-testing-flag
+  importing-stack:*pointer*
+  importing-record:set-testing-flag
   :module-name-index
-  *importing-stack,pointer*
-  <importing-record> set-name
-  *importing-stack,unit* address *importing-stack,pointer* add-set
+  importing-stack:*pointer*
+  importing-record:set-name
+  importing-stack:*unit* address importing-stack:*pointer* add-set
 
-  *global-naming-stack,pointer* >:global-name-record-before-import
+  global-naming-stack:*pointer* >:global-name-record-before-import
 
-  <pre-module> *syntax-rule-set* push-syntax-stack
+  pre-module:*syntax-rule-set* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  *global-naming-stack,pointer* >:global-name-record-begin
-  <word-interpreter> *syntax-rule-set* push-syntax-stack
+  global-naming-stack:*pointer* >:global-name-record-begin
+  syntax-rule-set:*word-interpreter* push-syntax-stack
   ::code-string eval-string
   drop-syntax-stack
-  *global-naming-stack,pointer* >:global-name-record-end
+  global-naming-stack:*pointer* >:global-name-record-end
 
-  <post-module> *syntax-rule-set* push-syntax-stack
+  syntax-rule-set:*post-module* push-syntax-stack
   ::meta-string eval-string
   drop-syntax-stack
 
-  <importing-stack> drop
+  importing-stack:drop
 
-  *module-naming-stack,pointer* >:module-name-record-begin
+  module-naming-stack:*pointer* >:module-name-record-begin
   :global-name-record-begin
   :global-name-record-end
   :module-prefix
-  <global-naming-stack> prefix-naming
-  *module-naming-stack,pointer* >:module-name-record-end
+  global-naming-stack:prefix-naming
+  module-naming-stack:*pointer* >:module-name-record-end
 
   :global-name-record-before-import
-  *global-naming-stack,pointer*
-  <global-naming-stack> clear-naming
+  global-naming-stack:*pointer*
+  global-naming-stack:clear-naming
 
-  :global-name-record-before-import address *global-naming-stack,pointer* set
+  :global-name-record-before-import address global-naming-stack:*pointer* set
 
   :module-name-record-begin
-  *module-stack,pointer*
-  <module-info> set-name-record-begin
+  module-stack:*pointer*
+  module-info:set-name-record-begin
   :module-name-record-end
-  *module-stack,pointer*
-  <module-info> set-name-record-end
+  module-stack:*pointer*
+  module-info:set-name-record-end
   ::meta-string
-  *module-stack,pointer*
-  <module-info> set-meta-string
+  module-stack:*pointer*
+  module-info:set-meta-string
   :module-name-index
-  *module-stack,pointer*
-  <module-info> set-name
+  module-stack:*pointer*
+  module-info:set-name
 
   "* (load-with-test) load : " .s ::module-name-string .s .l
   "  success : " .s
-  *module-stack,pointer* <module-info> get-success-counter
+  module-stack:*pointer* module-info:get-success-counter
   .i .l
   "  fali : " .s
-  *module-stack,pointer* <module-info> get-fail-counter
+  module-stack:*pointer* module-info:get-fail-counter
   .i .l
 
-  *module-stack,unit* address *module-stack,pointer* add-set
+  module-stack:*unit* address module-stack:*pointer* add-set
 
 
   drop
@@ -5698,9 +5483,9 @@ jo <post-module-syntax> do
 
 : test-function
   << string[address, length] -- >>
-  *importing-stack,pointer*
-  *importing-stack,unit* sub
-  <importing-record> get-testing-flag if
+  importing-stack:*pointer*
+  importing-stack:*unit* sub
+  importing-record:get-testing-flag if
     define-function
     end
   then
@@ -5710,9 +5495,9 @@ jo <post-module-syntax> do
 
 : test-variable
   << string[address, length] -- >>
-  *importing-stack,pointer*
-  *importing-stack,unit* sub
-  <importing-record> get-testing-flag if
+  importing-stack:*pointer*
+  importing-stack:*unit* sub
+  importing-record:get-testing-flag if
     define-variable
     end
   then
@@ -5722,9 +5507,9 @@ jo <post-module-syntax> do
 
 : test-variable,with-tos
   << string[address, length] -- >>
-  *importing-stack,pointer*
-  *importing-stack,unit* sub
-  <importing-record> get-testing-flag if
+  importing-stack:*pointer*
+  importing-stack:*unit* sub
+  importing-record:get-testing-flag if
     define-variable,with-tos
     end
   then
@@ -5734,9 +5519,9 @@ jo <post-module-syntax> do
 
 : test-do
   << string[address, length] -- >>
-  *importing-stack,pointer*
-  *importing-stack,unit* sub
-  <importing-record> get-testing-flag if
+  importing-stack:*pointer*
+  importing-stack:*unit* sub
+  importing-record:get-testing-flag if
     eval-string
     end
   then
@@ -5748,15 +5533,15 @@ jo <post-module-syntax> do
   << bool -- >>
   if
     "  (success)" .s .l
-    *module-stack,pointer* <module-info> inc-success-counter
+    module-stack:*pointer* module-info:inc-success-counter
   else
     "  (fail)" .s .l
-    *module-stack,pointer* <module-info> inc-fail-counter
+    module-stack:*pointer* module-info:inc-fail-counter
   then
   end
 ; define-function
 
-: <report> memory
+: report:memory
   << -- >>
   "* *un-initialized-memory*" .s .l
   "  * size : " .s
@@ -5799,20 +5584,20 @@ jo <post-module-syntax> do
   end
 ; define-function
 
-: <report> syntax
+: report:syntax
   << -- >>
-  "* *syntax-rule-set,jojo-compiler* :" .s .l
-     *syntax-rule-set,jojo-compiler* <syntax-rule-set> list
-  "* *syntax-rule-set,word-interpreter* :" .s .l
-     *syntax-rule-set,word-interpreter* <syntax-rule-set> list
+  "* jojo-compiler:*syntax-rule-set* :" .s .l
+     jojo-compiler:*syntax-rule-set* syntax-rule-set:list
+  "* syntax-rule-set:*word-interpreter* :" .s .l
+     syntax-rule-set:*word-interpreter* syntax-rule-set:list
   "* tos-syntax-stack :" .s .l
-     tos-syntax-stack <syntax-rule-set> list
+     tos-syntax-stack syntax-rule-set:list
   end
 ; define-function
 
-: <global-naming-stack> list-by-jo-predicate,loop
+: global-naming-stack:list-by-jo-predicate,loop
   << jo-predicate, counter, cursor -- >>
-  dup *global-naming-stack,pointer* equal? if
+  dup global-naming-stack:*pointer* equal? if
     drop
     drop
     drop
@@ -5821,44 +5606,44 @@ jo <post-module-syntax> do
   >:cursor
   >:counter
   >:jo-predicate
-  :cursor <name-record> get-new-jo
+  :cursor name-record:get-new-jo
   :jo-predicate apply if
     "  " .s
     :counter .i ". " .s :counter add1 >:counter
-    :cursor <name-record> get-name name->string .s
+    :cursor name-record:get-name name->string .s
     .l
   then
   :jo-predicate
   :counter
-  :cursor *global-naming-stack,unit* add
+  :cursor global-naming-stack:*unit* add
   loop
 ; define-function
 
-: <global-naming-stack> list-by-jo-predicate
+: global-naming-stack:list-by-jo-predicate
   << jo-predicate -- >>
   1
   *global-naming-stack*
-  <global-naming-stack> list-by-jo-predicate,loop
+  global-naming-stack:list-by-jo-predicate,loop
   end
 ; define-function
 
-: <report> global-naming-stack
+: report:global-naming-stack
   << -- >>
   "* all primitive-function in global-naming-stack :" .s .l
   jo primitive-function-jo?
-  <global-naming-stack> list-by-jo-predicate
+  global-naming-stack:list-by-jo-predicate
 
   "* all function in global-naming-stack :" .s .l
   jo function-jo?
-  <global-naming-stack> list-by-jo-predicate
+  global-naming-stack:list-by-jo-predicate
 
   "* all variable in global-naming-stack :" .s .l
   jo variable-jo?
-  <global-naming-stack> list-by-jo-predicate
+  global-naming-stack:list-by-jo-predicate
   end
 ; define-function
 
-: <report> system
+: report:system
   << -- >>
   "* (system) " .s
   *cell-size* 8 mul .i "bit" .s
@@ -5874,7 +5659,7 @@ jo <post-module-syntax> do
 
 : hi,random
   << -- random-number >>
-  0 <syscall-number> *times*
+  0 syscall-number:*times*
   1 syscall
   13 mod
   <<
@@ -5914,81 +5699,81 @@ jo <post-module-syntax> do
   end
 ; define-function
 
-: <command-function> unknow-function
+: command-function:unknow-function
   << -- >>
   "* (cicada-nymph) unknow command-line-function : " .s
   get-command-line
-  <string> word-tail
-  <string> word .s .l
+  string:word-tail
+  string:word .s .l
   "  good bye ^-^/" .s .l
   bye
 ; define-function
 
-: <command-function> stack-REPL
+: command-function:stack-REPL
   << -- >>
   .l
   "* (cicada-nymph) " .s hi
-  <report> system
+  report:system
   "* (stack-REPL) is where you are now" .s .l
   "  eval a word print the stack" .s .l
-  print-argument-stack,pretty
+  argument-stack:pretty-print
   jo stack-REPL
   reset-top-level-REPL
 ; define-function
 
-: <command-function> basic-REPL
+: command-function:basic-REPL
   << -- >>
   .l
   "* (cicada-nymph) " .s hi
-  <report> system
+  report:system
   "* (basic-REPL) is where you are now" .s .l
   "  this REPL does not print any thing automaticly" .s .l
   jo basic-REPL
   reset-top-level-REPL
 ; define-function
 
-: <command-function> poi
+: command-function:poi
   << -- >>
   get-command-line
-  <string> word-tail
-  <string> word-tail >::command-line
+  string:word-tail
+  string:word-tail >::command-line
 
-  ::command-line <string> space? if
-    <poi> help
+  ::command-line string:space? if
+    poi:help
     bye
   then
 
-  ::command-line <string> word >::sub-function-name
-  ::command-line <string> word-tail >::command-line-arguments
+  ::command-line string:word >::sub-function-name
+  ::command-line string:word-tail >::command-line-arguments
 
-  ::sub-function-name "help" <string> equal? if
-    <poi> help
+  ::sub-function-name "help" string:equal? if
+    poi:help
     bye
   then
 
-  ::sub-function-name "add" <string> equal? if
-    ::command-line-arguments <string> word
-    ::command-line-arguments <string> word-tail <string> word
-    <poi> add
+  ::sub-function-name "add" string:equal? if
+    ::command-line-arguments string:word
+    ::command-line-arguments string:word-tail string:word
+    poi:add
     bye
   then
 
-  ::sub-function-name "sub" <string> equal? if
-    ::command-line-arguments <string> word
-    <poi> sub
+  ::sub-function-name "sub" string:equal? if
+    ::command-line-arguments string:word
+    poi:sub
     bye
   then
 
-  ::sub-function-name "up" <string> equal? if
-    ::command-line-arguments <string> word
-    ::command-line-arguments <string> word-tail <string> word
-    <poi> up
+  ::sub-function-name "up" string:equal? if
+    ::command-line-arguments string:word
+    ::command-line-arguments string:word-tail string:word
+    poi:up
     bye
   then
 
-  ::sub-function-name "find" <string> equal? if
-    ::command-line-arguments <string> word
-    <poi> find if
+  ::sub-function-name "find" string:equal? if
+    ::command-line-arguments string:word
+    poi:find if
       .s .l
     else
       "no found" .s .l
@@ -5996,62 +5781,62 @@ jo <post-module-syntax> do
     bye
   then
 
-  ::sub-function-name "list" <string> equal? if
-    <poi> list
+  ::sub-function-name "list" string:equal? if
+    poi:list
     bye
   then
 
-  "* (<command-function> poi) meets argument that (<command-function> poi) can not understand" .s .l
-  "  it is the following command-line that is confusing (<command-function> poi) :" .s .l
-  "    " .s <report> command-line .l
+  "* (command-function:poi) meets argument that (command-function:poi) can not understand" .s .l
+  "  it is the following command-line that is confusing (command-function:poi) :" .s .l
+  "    " .s report:command-line .l
   "  to get some help info  you can type :" .s .l
   "    cn poi help" .s .l
   "  good bye ^-^/" .s .l
   bye
 ; define-function
 
-: <command-function> moi
+: command-function:moi
   << -- >>
   get-command-line
-  <string> word-tail
-  <string> word-tail >::command-line
+  string:word-tail
+  string:word-tail >::command-line
 
-  ::command-line <string> space? if
-    <moi> help
+  ::command-line string:space? if
+    moi:help
     bye
   then
 
-  ::command-line <string> word >::sub-function-name
-  ::command-line <string> word-tail >::command-line-arguments
+  ::command-line string:word >::sub-function-name
+  ::command-line string:word-tail >::command-line-arguments
 
-  ::sub-function-name "help" <string> equal? if
-    <moi> help
+  ::sub-function-name "help" string:equal? if
+    moi:help
     bye
   then
 
-  ::sub-function-name "add" <string> equal? if
-    ::command-line-arguments <string> word
-    ::command-line-arguments <string> word-tail <string> word
-    <moi> add
+  ::sub-function-name "add" string:equal? if
+    ::command-line-arguments string:word
+    ::command-line-arguments string:word-tail string:word
+    moi:add
     bye
   then
 
-  ::sub-function-name "sub" <string> equal? if
-    ::command-line-arguments <string> word
-    <moi> sub
+  ::sub-function-name "sub" string:equal? if
+    ::command-line-arguments string:word
+    moi:sub
     bye
   then
 
-  ::sub-function-name "up" <string> equal? if
-    ::command-line-arguments <string> word
-    ::command-line-arguments <string> word-tail <string> word
-    <moi> up
+  ::sub-function-name "up" string:equal? if
+    ::command-line-arguments string:word
+    ::command-line-arguments string:word-tail string:word
+    moi:up
     bye
   then
 
-  ::sub-function-name "find" <string> equal? if
-    ::command-line-arguments <string> word
-    <moi> find if
+  ::sub-function-name "find" string:equal? if
+    ::command-line-arguments string:word
+    moi:find if
       .s .l
     else
       "no found" .s .l
@@ -6059,91 +5844,91 @@ jo <post-module-syntax> do
     bye
   then
 
-  ::sub-function-name "list" <string> equal? if
-    <moi> list
+  ::sub-function-name "list" string:equal? if
+    moi:list
     bye
   then
 
-  "* (<command-function> moi) meets argument that (<command-function> moi) can not understand" .s .l
-  "  it is the following command-line that is confusing (<command-function> moi) :" .s .l
-  "    " .s <report> command-line .l
+  "* (command-function:moi) meets argument that (command-function:moi) can not understand" .s .l
+  "  it is the following command-line that is confusing (command-function:moi) :" .s .l
+  "    " .s report:command-line .l
   "  to get some help info  you can type :" .s .l
   "    cn module help" .s .l
   "  good bye ^-^/" .s .l
   bye
 ; define-function
 
-: <command-function> load
+: command-function:load
   << -- >>
   get-command-line
-  <string> word-tail
-  <string> word-tail >::command-line
-  ::command-line <string> space? if
-    "* (<command-function> load) is called with no argument" .s .l
+  string:word-tail
+  string:word-tail >::command-line
+  ::command-line string:space? if
+    "* (command-function:load) is called with no argument" .s .l
     "  it should be called with a name of module" .s .l
     bye
   then
-  ::command-line <string> word load
+  ::command-line string:word load
   bye
 ; define-function
 
-: <command-function> load-with-test
+: command-function:load-with-test
   << -- >>
   get-command-line
-  <string> word-tail
-  <string> word-tail >::command-line
-  ::command-line <string> space? if
-    "* (<command-function> load-with-test) is called with no argument" .s .l
+  string:word-tail
+  string:word-tail >::command-line
+  ::command-line string:space? if
+    "* (command-function:load-with-test) is called with no argument" .s .l
     "  it should be called with a name of module" .s .l
     bye
   then
-  ::command-line <string> word load-with-test
+  ::command-line string:word load-with-test
   bye
 ; define-function
 
-: <command-function> no-function
+: command-function:no-function
   << -- >>
-  <command-function> stack-REPL
+  command-function:stack-REPL
   end
 ; define-function
 
-: <command> dispatch
+: command:dispatch
   << -- >>
   get-command-line
-  <string> word-tail
-  dup2 <string> space? if
+  string:word-tail
+  dup2 string:space? if
     drop2
-    <command-function> no-function
+    command-function:no-function
     end
   then
-  <string> word
+  string:word
   >::1st-word
-  ::1st-word "basic-REPL" <string> equal? if
-    <command-function> basic-REPL
+  ::1st-word "basic-REPL" string:equal? if
+    command-function:basic-REPL
     end
   then
-  ::1st-word "stack-REPL" <string> equal? if
-    <command-function> stack-REPL
+  ::1st-word "stack-REPL" string:equal? if
+    command-function:stack-REPL
     end
   then
-  ::1st-word "poi" <string> equal? if
-    <command-function> poi
+  ::1st-word "poi" string:equal? if
+    command-function:poi
     end
   then
-  ::1st-word "moi" <string> equal? if
-    <command-function> moi
+  ::1st-word "moi" string:equal? if
+    command-function:moi
     end
   then
-  ::1st-word "load" <string> equal? if
-    <command-function> load
+  ::1st-word "load" string:equal? if
+    command-function:load
     end
   then
-  ::1st-word "load-with-test" <string> equal? if
-    <command-function> load-with-test
+  ::1st-word "load-with-test" string:equal? if
+    command-function:load-with-test
     end
   then
-  <command-function> unknow-function
+  command-function:unknow-function
   end
 ; define-function
 
-<command> dispatch
+command:dispatch

@@ -1,6 +1,5 @@
 #+TITLE:  小蟬記 / cicada-nymph-note
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * 原則
 ** 認知負擔

@@ -1,6 +1,5 @@
 #+TITLE:  蟬語散記 / cicada language prose
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * todo
 ** new

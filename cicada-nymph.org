@@ -1,6 +1,5 @@
 #+TITLE:  小蟬 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * todo
 ** add length field into jo in assembly code :maybe:
@@ -935,13 +934,13 @@
 
    unit__return_point = (cell_size * 4)
    #+end_src
-** *return-stack,unit*
+** return-stack:*unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*return-stack,unit*", V__return_stack__unit
+   define_variable "return-stack:*unit*", V__return_stack__unit
       xx unit__return_point
    #+end_src
 ** 記 插 珠珠 人返回棧 到某珠珠的前面 [等效替換法 以理解]
-   * 有了下面的 (return-stack,insert-jo) 這個素函數之後
+   * 有了下面的 (return-stack:insert-jo) 這個素函數之後
      即便是在非素函數中也能夠對返回棧進行有限的操作了
    * before insert-jo
      |----------------+--------------------------|
@@ -956,7 +955,7 @@
      |                | jojo-2                   |
      |----------------+--------------------------|
    * after
-     jo return-point-2 (return-stack,insert-jo)
+     jo return-point-2 (return-stack:insert-jo)
      |-----------------+--------------------------|
      | return-point-1  | conjugate-local-memory-1 |
      |                 | local-memory-1           |
@@ -1013,14 +1012,14 @@
    define_function "nothing", nothing
       xx end
    #+end_src
-** return-stack,insert-jo
+** return-stack:insert-jo
    * 先在個循環中複製 return-stack 之後的部分
      以空出一個位置
      然後把 jo 插入到空位
    #+begin_src fasm :tangle cicada-nymph.fasm
    match =64bit, machine {
 
-   define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
+   define_primitive_function "return-stack:insert-jo", return_stack__insert_jo
       ;; << jo, return-stack-pointer -- >>
       pop_argument_stack rbx
 
@@ -1057,7 +1056,7 @@
 
    match =32bit, machine {
 
-   define_primitive_function "return-stack,insert-jo", return_stack__insert_jo
+   define_primitive_function "return-stack:insert-jo", return_stack__insert_jo
       ;; << jo, return-stack-pointer -- >>
       pop_argument_stack rbx
 
@@ -3234,7 +3233,7 @@
    address$reading_stack labeling
       preserve size$reading_stack
 
-   define_variable "*reading-stack,pointer*", V__reading_stack__pointer
+   define_variable "reading-stack:*pointer*", V__reading_stack__pointer
       xx address$reading_stack
    #+end_src
 ** push & pop & drop                  :64bit:
@@ -3603,17 +3602,17 @@
       xx end
    #+end_src
 ** ----------------------------------
-** empty-string?
+** string:empty?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "empty-string?", empty_string?
+   define_function "string:empty?", empty_string?
      ;; << string[address, length] -- bool >>
      xx swap, drop
      xx zero?
      xx end
    #+end_src
-** string-equal?
+** string:equal?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string-equal?", string_equal?
+   define_function "string:equal?", string_equal?
       ;; << string[address, length], string[address, length] -- bool >>
       xx xoverxx, equal?, false?branch, 4
       xx   swap
@@ -3623,25 +3622,25 @@
       xx false
       xx end
    #+end_src
-** string,byte
+** string:byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,byte", string__byte
+   define_function "string:byte", string__byte
       ;; << string[address, length] -- byte >>
       xx drop, get_byte
       xx end
    #+end_src
-** string,byte-tail
+** string:byte-tail
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,byte-tail", string__byte_tail
+   define_function "string:byte-tail", string__byte_tail
       ;; << string[address, length] -- [address + 1, length - 1] >>
       xx sub1, swap
       xx add1
       xx swap
       xx end
    #+end_src
-** string,byte-back
+** string:byte-back
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,byte-back", string__byte_back
+   define_function "string:byte-back", string__byte_back
       ;; << string[address, length] -- [address - 1, length + 1] >>
       xx add1, swap
       xx sub1
@@ -3835,9 +3834,9 @@
       xx end
    #+end_src
 ** ----------------------------------
-** string,find-byte
+** string:find-byte
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,find-byte", string__find_byte
+   define_function "string:find-byte", string__find_byte
      ;; << string[address, length], byte
      ;;    -- address, true
      ;;    -- false >>
@@ -3858,7 +3857,7 @@
 ** test
    #+begin_src cicada-nymph
    : XIE Yuheng ;
-   32 string,find-byte . << 1 >>
+   32 string:find-byte . << 1 >>
    get-byte . << 32 >>
    #+end_src
 ** string-end,byte
@@ -3870,12 +3869,12 @@
    #+end_src
 ** ----------------------------------
 ** note
-   * one should use space-string? to make sure
+   * one should use string:space? to make sure
      that the string is not space-string
      before calling the following functions
-** space-string?
+** string:space?
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "space-string?", space_string?
+   define_function "string:space?", space_string?
       ;; << string[address, length] -- bool >>
       xx dup, zero?, false?branch, 4
       xx   drop2, true
@@ -3886,9 +3885,9 @@
       xx drop2, false
       xx end
    #+end_src
-** string,word-begin
+** string:word-begin
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,word-begin", string__word_begin
+   define_function "string:word-begin", string__word_begin
       ;; << string[address, length] -- string[address, length] >>
       xx dup, zero?, false?branch, 2
       ;;   no error handling
@@ -3900,9 +3899,9 @@
       xx string__byte_tail
       xx tail_call, string__word_begin
    #+end_src
-** string,word-end
+** string:word-end
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,word-end,loop", string__word_end__loop
+   define_function "string:word-end,loop", string__word_end__loop
       ;; << string[address, length] -- string[address, length] >>
       xx dup, zero?, false?branch, 2
       ;;   no error handling
@@ -3917,7 +3916,7 @@
       xx string__byte_tail
       xx tail_call, string__word_end__loop
 
-   define_function "string,word-end", string__word_end
+   define_function "string:word-end", string__word_end
       ;; << string[address, length] -- string[address, length] >>
       xx dup, zero?, false?branch, 2
       ;;   no error handling
@@ -3930,9 +3929,9 @@
       xx string__word_end__loop
       xx end
    #+end_src
-** string,word
+** string:word
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,word", string__word
+   define_function "string:word", string__word
       ;; << string[address, length] -- word[address, length] >>
       xx string__word_begin
       xx dup2, string__word_end
@@ -3940,9 +3939,9 @@
       xx subtraction
       xx end
    #+end_src
-** string,word-tail
+** string:word-tail
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "string,word-tail", string__word_tail
+   define_function "string:word-tail", string__word_tail
       ;; << string[address, length] -- string[address, length] >>
       xx string__word_begin
       xx string__word_end
@@ -4040,7 +4039,7 @@
      we can implement bar-ket as word easily
      and nothing like un-read is needed
      and
-     it is (string,word) and (string,word-tail)
+     it is (string:word) and (string:word-tail)
      these two functions are maintaining the "bar-ket as word" feature
    * otherwise
      the implementation of (eval-string) will meet problems
@@ -4478,17 +4477,17 @@
 * syntax-stack
 ** 記
    * *syntax-stack* 轉換語境
-   * *syntax-rule-set,...* 添加語法
+   * *syntax-rule-set:...* 添加語法
 ** memory allocate
    #+begin_src fasm :tangle cicada-nymph.fasm
       preserve cell_size * 64
    address$syntax_stack labeling
       preserve cell_size * 1024
 
-   define_variable "*syntax-stack,address*", V__syntax_stack__address
+   define_variable "syntax-stack:*address*", V__syntax_stack__address
       xx address$syntax_stack
 
-   define_variable "*syntax-stack,pointer*", V__syntax_stack__pointer
+   define_variable "syntax-stack:*pointer*", V__syntax_stack__pointer
       xx address$syntax_stack
    #+end_src
 ** push-syntax-stack
@@ -4558,13 +4557,13 @@
    #+end_src
 * syntax-rule-set
 ** 記 使用
-   * syntax-rule-set,jojo-compiler 是
+   * syntax-rule-set:jojo-compiler 是
      語法謂詞 還有 語法函數 這種對子
      所形成的有序集合
      這樣就可以形成簡單的語境概念了
    * 每個語境都有責任
      在進入和退出時
-     維護好 syntax-rule-set,jojo-compiler
+     維護好 syntax-rule-set:jojo-compiler
    * 以 syntax 爲前綴的 function 的類型常常是
      1. 以 jojo-compiler 爲後綴時
         << jo, string[address, length], word[address, length]
@@ -4593,54 +4592,54 @@
      3. (find-syntax-rule)
         find a function from a word
      4. (list-syntax-rule)
-** *syntax-rule,unit*
+** syntax-rule:*unit*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*syntax-rule,unit*", V__syntax_rule__unit
+   define_variable "syntax-rule:*unit*", V__syntax_rule__unit
       xx (cell_size * 2)
    #+end_src
-** syntax-rule,get-predicate
+** syntax-rule:get-predicate
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule,get-predicate", syntax_rule__get_predicate
+   define_function "syntax-rule:get-predicate", syntax_rule__get_predicate
       ;; << syntax-rule[address] -- predicate >>
       xx get
       xx end
    #+end_src
-** syntax-rule,get-function
+** syntax-rule:get-function
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule,get-function", syntax_rule__get_function
+   define_function "syntax-rule:get-function", syntax_rule__get_function
       ;; << syntax-rule[address] -- function >>
       xx V__cell_size, addition
       xx get
       xx end
    #+end_src
-** syntax-rule,get
+** syntax-rule:get
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule,get", syntax_rule__get
+   define_function "syntax-rule:get", syntax_rule__get
       ;; << syntax-rule[address] -- syntax-rule[predicate, function] >>
       xx V__syntax_rule__unit, V__cell_size, division
       xx n_get
       xx end
    #+end_src
-** syntax-rule-set,get-border
+** syntax-rule-set:get-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule-set,get-border", syntax_rule_set__get_border
+   define_function "syntax-rule-set:get-border", syntax_rule_set__get_border
       ;; << syntax-rule-set -- border >>
       xx V__cell_size, subtraction
       xx get
       xx end
    #+end_src
-** syntax-rule-set,set-border
+** syntax-rule-set:set-border
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule-set,set-border", syntax_rule_set__set_border
+   define_function "syntax-rule-set:set-border", syntax_rule_set__set_border
       ;; << border, syntax-rule-set -- >>
       xx V__cell_size, subtraction
       xx set
       xx end
    #+end_src
-** syntax-rule,add
+** syntax-rule:add
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "syntax-rule,add", syntax_rule__add
-      ;; << syntax-rule-set, syntax-rule[predicate, function] -- >>
+   define_function "syntax-rule:add", syntax_rule__add
+      ;; << syntax-rule-set: syntax-rule[predicate, function] -- >>
       xx xoverxx
       xx syntax_rule_set__get_border
       xx literal, 2
@@ -4653,12 +4652,12 @@
       xx syntax_rule_set__set_border
       xx end
    #+end_src
-** syntax-rule-set,find
+** syntax-rule-set:find
    #+begin_src fasm :tangle cicada-nymph.fasm
    cursor$syntax_rule_set__find:
       xx 0
 
-   define_function "syntax-rule-set,find", syntax_rule_set__find
+   define_function "syntax-rule-set:find", syntax_rule_set__find
       ;; << word[address, length], syntax-rule-set
       ;;    -- function, true
       ;;    -- false >>
@@ -4667,7 +4666,7 @@
       xx syntax_rule_set__find__loop
       xx end
 
-   define_function "syntax-rule-set,find,loop", syntax_rule_set__find__loop
+   define_function "syntax-rule-set:find,loop", syntax_rule_set__find__loop
       ;; << word[address, length], syntax-rule-set
       ;;    -- function, true
       ;;    -- false >>
@@ -4694,7 +4693,7 @@
       xx literal, cursor$syntax_rule_set__find, set
       xx tail_call, syntax_rule_set__find__loop
    #+end_src
-* *syntax-rule-set,jojo-compiler*
+* jojo-compiler:*syntax-rule-set*
 ** ----------------------------------
 ** note
    * a syntax is a function to be called at compile time
@@ -4703,9 +4702,9 @@
      and return a shorter string
      [this can be viewed as moving a cursor forward]
 ** ----------------------------------
-** jojo-compiler-syntax,integer-string
+** jojo-compiler-syntax:integer-string
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jojo-compiler-syntax,integer-string", jojo_compiler_syntax__integer_string
+   define_function "jojo-compiler-syntax:integer-string", jojo_compiler_syntax__integer_string
       ;; << string[address, length], word[address, length] --
       ;;    string[address, length] >>
       xx literal, literal
@@ -4715,24 +4714,24 @@
       xx end
    #+end_src
 ** ----------------------------------
-** word:address?
+** literal-word:address?
    #+begin_src fasm :tangle cicada-nymph.fasm
    string$word_is_address?:
       db "address"
    .end:
    length$word_is_address? = (.end - string$word_is_address?)
 
-   define_function "word:address?", word_is_address?
+   define_function "literal-word:address?", word_is_address?
       ;; << word[address, length] -- bool >>
       xx literal, string$word_is_address?
       xx literal, length$word_is_address?
       xx string_equal?
       xx end
    #+end_src
-** jojo-compiler-syntax,address
+** jojo-compiler-syntax:address
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jojo-compiler-syntax,address", jojo_compiler_syntax__address
-      ;; << string[address, length], word:address --
+   define_function "jojo-compiler-syntax:address", jojo_compiler_syntax__address
+      ;; << string[address, length], literal-word:address --
       ;;    string[address, length] >>
       xx drop2
       xx literal, address
@@ -4740,24 +4739,24 @@
       xx end
    #+end_src
 ** ----------------------------------
-** word:jo?
+** literal-word:jo?
    #+begin_src fasm :tangle cicada-nymph.fasm
    string$word_is_jo?:
       db "jo"
    .end:
    length$word_is_jo? = (.end - string$word_is_jo?)
 
-   define_function "word:jo?", word_is_jo?
+   define_function "literal-word:jo?", word_is_jo?
       ;; << word[address, length] -- bool >>
       xx literal, string$word_is_jo?
       xx literal, length$word_is_jo?
       xx string_equal?
       xx end
    #+end_src
-** jojo-compiler-syntax,jo
+** jojo-compiler-syntax:jo
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "jojo-compiler-syntax,jo", jojo_compiler_syntax__jo
-      ;; << string[address, length], word:jo --
+   define_function "jojo-compiler-syntax:jo", jojo_compiler_syntax__jo
+      ;; << string[address, length], literal-word:jo --
       ;;    string[address, length] >>
       xx drop2
       xx literal, literal
@@ -4765,14 +4764,14 @@
       xx end
    #+end_src
 ** ----------------------------------
-** word:double-quote?
+** literal-word:double-quote?
    #+begin_src fasm :tangle cicada-nymph.fasm
    string$word_is_double_quote?:
       db '"'
    .end:
    length$word_is_double_quote? = (.end - string$word_is_double_quote?)
 
-   define_function "word:double-quote?", word_is_double_quote?
+   define_function "literal-word:double-quote?", word_is_double_quote?
       ;; << word[double-quote, length] -- bool >>
       xx literal, string$word_is_double_quote?
       xx literal, length$word_is_double_quote?
@@ -4785,7 +4784,7 @@
    * in ASCII encode double-quote is 34
    #+begin_src fasm :tangle cicada-nymph.fasm
    define_function "syntax,double-quote,jojo-compiler", syntax__double_quote__jojo_compiler
-      ;; << string[address, length], word:double-quote --
+      ;; << string[address, length], literal-word:double-quote --
       ;;    string[address, length] >>
       xx drop2
 
@@ -4883,14 +4882,14 @@
    address$syntax_rule_set__jojo_compiler:
       times size$syntax_rule_set__jojo_compiler db 0
    #+end_src
-** *syntax-rule-set,jojo-compiler*
+** jojo-compiler:*syntax-rule-set*
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_variable "*syntax-rule-set,jojo-compiler*", V__syntax_rule_set__jojo_compiler
+   define_variable "jojo-compiler:*syntax-rule-set*", V__syntax_rule_set__jojo_compiler
       xx address$syntax_rule_set__jojo_compiler
    #+end_src
-** init,syntax-rule-set,jojo-compiler
+** init,syntax-rule-set:jojo-compiler
    #+begin_src fasm :tangle cicada-nymph.fasm
-   define_function "init,syntax-rule-set,jojo-compiler", init__syntax_rule_set__jojo_compiler
+   define_function "init,syntax-rule-set:jojo-compiler", init__syntax_rule_set__jojo_compiler
       ;; << -- >>
       xx V__syntax_rule_set__jojo_compiler
 
@@ -5072,7 +5071,7 @@
    : addadd add add end ; define-function
    1 2 3 addadd . << 6 >>
 
-   : addadd ; string,word *link* find-link drop
+   : addadd ; string:word *link* find-link drop
    link->jo dup jo->length . << 3 >>
    1 2 3 x|swap|xxx apply . << 6 >>
 
@@ -5717,9 +5716,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** jojo-compiler-syntax,local-variable-get
+*** jojo-compiler-syntax:local-variable-get
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "jojo-compiler-syntax,local-variable-get", jojo_compiler_syntax__local_variable_get
+    define_function "jojo-compiler-syntax:local-variable-get", jojo_compiler_syntax__local_variable_get
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx dup2
@@ -5782,9 +5781,9 @@
        xx literal, 0, greater_than?
        xx end
     #+end_src
-*** jojo-compiler-syntax,local-variable-set
+*** jojo-compiler-syntax:local-variable-set
     #+begin_src fasm :tangle cicada-nymph.fasm
-    define_function "jojo-compiler-syntax,local-variable-set", jojo_compiler_syntax__local_variable_set
+    define_function "jojo-compiler-syntax:local-variable-set", jojo_compiler_syntax__local_variable_set
        ;; << string[address, length], word[address, length] --
        ;;    string[address, length] >>
        xx string__byte_tail
