@@ -1,6 +1,5 @@
 #+TITLE:  gamber
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-#+EMAIL:  xyheme@gmail.com
 
 * ===================================
 * 題解

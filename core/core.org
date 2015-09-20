@@ -3741,16 +3741,16 @@
    #+end_src
 ** test
    #+begin_src cicada-nymph
-   : *numbers:define-variable*
+   : define-variable:*testing-numbers*
      1 2 3
    ; define-variable
-   *numbers:define-variable* . . . << 3 2 1 >>
-   address *numbers:define-variable* get . << 1 >>
+   define-variable:*testing-numbers* . . . << 3 2 1 >>
+   address define-variable:*testing-numbers* get . << 1 >>
 
-   : *string:define-variable*
+   : define-variable:*testing-string*
      "define-variable"
    ; define-variable
-   *string:define-variable* .s << define-variable >>
+   define-variable:*testing-string* .s << define-variable >>
 
    << error >>
    : kkk
@@ -6090,10 +6090,10 @@
    * 元數據 中 所能包含的信息類型
      還有聲明這些信息的語法
      都是可以擴展的
-   * 語法關鍵詞都形如 "literal-word:"
-     每次通過找下一個 "literal-word:" 來確定其截止位置
-   * 遇不被識別的 "literal-word:"
-     就忽略 而找到下一個 "literal-word:"
+   * 語法關鍵詞都形如 "word:"
+     每次通過找下一個 "word:" 來確定其截止位置
+   * 遇不被識別的 "word:"
+     就忽略 而找到下一個 "word:"
 ** 減載
    * 或者說 撤銷加載 (unload)
      它利用 (undo) 來實現
