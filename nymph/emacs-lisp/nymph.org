@@ -1,17 +1,17 @@
-#+TITLE:  nymph in racket
+#+TITLE:  nymph for racket
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 
 * ===================================
 * prolog
 ** header
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    #lang racket
    (require rnrs/bytevectors-6)
    #+end_src
 * -----------------------------------
 * architecture
 ** memory
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define cell 4) ;; unit byte
 
    (define memory:size (* 64 1024 1024))
@@ -35,7 +35,7 @@
          return-address)))
    #+end_src
 ** argument-stack
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (allocate-memory (* 1024)) ;; 1k safe underflow
    (define argument-stack:address (allocate-memory (* 1 1024 1024)))
    (define argument-stack:current-free-address argument-stack:address)
@@ -57,7 +57,7 @@
        (memory:get (- argument-stack:current-free-address cell))))
    #+end_src
 ** return-stack
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (allocate-memory (* 1024)) ;; 1k safe underflow
    (define return-stack:address (allocate-memory (* 1 1024 1024)))
    (define return-stack:current-free-address return-stack:address)
@@ -80,7 +80,7 @@
    #+end_src
 * jojo
 ** primitive-function-record
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define primitive-function-record:size (* 4 1024))
    (define primitive-function-record (make-vector primitive-function-record:size 0))
 
@@ -107,7 +107,7 @@
          return-address)))
    #+end_src
 ** next
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define next:explainer-argument 0)
 
    (define next
@@ -121,7 +121,7 @@
          ((primitive-function-record:get explainer)))))
    #+end_src
 ** string-area
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define string-area:address (allocate-memory (* 256 1024)))
    (define string-area:current-free-address string-area:address)
 
@@ -139,11 +139,11 @@
 ** in-host-name-hash-table
    * a clean name space for nymph
      used by in-host non-primitive-function
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define in-host-name-hash-table (make-hasheq))
    #+end_src
 ** xx & ::
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define xx
      (lambda (value)
        (memory:set memory:current-free-address value)
@@ -157,11 +157,11 @@
                   memory:current-free-address)))
    #+end_src
 ** link
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define link 0)
    #+end_src
 ** primitive-function
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define primitive-function-explainer
      (create-primitive-function
       (lambda ()
@@ -180,7 +180,7 @@
          (xx function-index))))
    #+end_src
 ** function
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define function-explainer
      (create-primitive-function
       (lambda ()
@@ -202,7 +202,7 @@
               function-name-string-list))))
    #+end_src
 ** variable
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define variable-explainer
      (create-primitive-function
       (lambda ()
@@ -221,7 +221,7 @@
          (xx value))))
    #+end_src
 * end
-  #+begin_src racket :tangle nymph.rkt
+  #+begin_src emacs-lisp :tangle nymph.el
   (define-primitive-function "end"
     (lambda ()
       (return-stack:pop)
@@ -229,13 +229,13 @@
   #+end_src
 * *the-story-begin*
 ** report-return-stack-is-empty-and-exit
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define-primitive-function "report-return-stack-is-empty-and-exit"
      (lambda ()
        (write "return stack is empty now")))
    #+end_src
 ** print-tos
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define-primitive-function "print-tos"
      (lambda ()
        (let* ([tos (argument-stack:pop)])
@@ -244,7 +244,7 @@
          (next))))
    #+end_src
 ** little-test
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define-variable "*little-test-number*"
      3)
 
@@ -268,7 +268,7 @@
         cell))
    #+end_src
 ** begin-to-interpret-threaded-code
-   #+begin_src racket :tangle nymph.rkt
+   #+begin_src emacs-lisp :tangle nymph.el
    (define begin-to-interpret-threaded-code
      (lambda ()
        (return-stack:push jojo-for-little-test)

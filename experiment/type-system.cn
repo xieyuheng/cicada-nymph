@@ -1,0 +1,263 @@
+: red-black-tree
+  import
+    preliminaries
+  assume
+    key (-> type)
+    compare (key key -> order)
+    value (-> type)
+; define-module
+
+: color (-> type)
+  red (-> color)
+  black (-> color)
+; define-type
+
+: tree (-> type)
+  empty (-> tree)
+  node (tree tree color key value -> tree)
+; define-type
+
+: balance
+  (tree -> tree)
+  * :a
+    :b red ::x node
+                 :c red ::y node
+                              :d black ::z node
+  | :a
+    :b black ::x node
+    :c
+    :d black ::z node red ::y node
+  *              :a
+    :b
+    :c red ::y node red ::x node
+                              :d black ::z node
+  | :a
+    :b black ::x node
+    :c
+    :d black ::z node red ::y node
+  *                           :a
+    :b
+    :c red ::y node
+                 :d red ::z node black ::x node
+  | :a
+    :b black ::x node
+    :c
+    :d black ::z node red ::y node
+  *                           :a
+                 :b
+    :c
+    :d red ::z node red ::y node black ::x node
+  | :a
+    :b black ::x node
+    :c
+    :d black ::z node red ::y node
+  * :already-balanced-tree
+  | :already-balanced-tree
+; define-function
+
+: insert,help
+  (tree key value -> tree)
+  * empty :key :value
+  | empty empty
+    red :key :value node
+  * :left :right
+    :color :key :value node
+    :key' :value'
+  | :key :key' compare
+    * equal
+    | :left
+      :right
+      :color :key' :value' node
+    * less
+    | :left :key' :value' insert,help
+      :right
+      :color :key :value node balance
+    * greater
+    | :left
+      :right :key' :value' insert,help
+      :color :key :value node balance
+; define-function
+
+: blacken-root
+  (tree -> tree)
+  * empty
+  | empty
+  * :left :right :color ::key-value node
+  | :left :right black ::key-value node
+; define-function
+
+: insert
+  (tree key value -> tree)
+  insert,help
+  blacken-root
+  end
+; define-function
+
+: black-high? (tree natural -> type)
+  black-high?empty
+  (--------------->
+   empty 1 black-high?)
+  black-high?red
+  ({natural #high tree #left #right key value ##key-value}
+   :left :high black-high?
+   :right :high black-high?
+   ----------------------->
+   :right :high red ::key-value node :high black-high?)
+  black-high?black
+  ({natural #high tree #left #right key value ##key-value}
+   :left :high black-high?
+   :right :high black-high?
+   ----------------------->
+   :right :high black ::key-value node :high add1 black-high?)
+; introduce-axiom
+
+: black-high?blacken-root
+  ({tree #tree natural #high}
+   :tree :high black-high?
+   ---------------------->
+   natural #high'
+   :tree blacken-root :high' black-high?)
+  * black-high?empty
+  | 1 black-high?empty
+  * :black-high?left :black-high?right black-high?red
+  | _ :black-high?left :black-high?right black-high?black
+  * :black-high?left :black-high?right black-high?black
+  | _ :black-high?left :black-high?right black-high?black
+; proof-theorem
+
+: black-high?example
+  assume
+    k1 (-> key)
+    k2 (-> key)
+    v1 (-> value)
+    v2 (-> value)
+  : t (-> tree)
+    empty empty red k1 v1 node
+                         empty black k2 v2 node
+  ; define-function
+  : black-high?t
+    (-------------->
+     t 2 black-high?)
+    black-high?empty
+    black-high?empty
+    black-high?red
+    black-high?empty
+    black-high?black
+  ; proof-theorem
+; define-sub-module
+
+: black-high?balance,red
+  ({tree #left #right key value ##key-value natural #high}
+   :left :high black-high?
+   :right :high black-high?
+   ----------------------->
+   :left :right red ##key-value balance :high add1 black-high?)
+  * ?
+  | ?
+; proof-theorem
+
+: black-high?balance,black
+  ({tree #left #right key value ##key-value natural #high}
+   :left :high black-high?
+   :right :high black-high?
+   ----------------------->
+   :left :right black ##key-value balance :high add1 black-high?)
+  * ?
+  | ?
+; proof-theorem
+
+: black-high?insert,help
+  ({tree #tree key value ##key-value natural #high}
+   :tree :high black-high?
+   ---------------------->
+   natural #high'
+   :tree ::key-value insert,help :high black-high?)
+  * ?
+  | ?
+; proof-theorem
+
+: black-high?insert
+  ({tree #tree key value ##key-value natural #high}
+   :tree :high black-high?
+   ---------------------->
+   natural #high'
+   :tree ::key-value insert :high' black-high?)
+  black-high?insert,help
+  black-high?blacken-root
+  end
+; proof-theorem
+
+: map
+  ({type #type #type'}
+   (:type -> :type') #function
+    :type list -> :type' list)
+  * :function null
+  | null
+  * :function :car :cdr cons
+  | :car :function apply
+    :function :cdr map cons
+; define-function
+
+: list-length? ({type #type} :type list natural -> type)
+  list-length?null
+  (---------->
+   null 0 list-length?)
+  list-length?cons
+  ({natural #length
+    :type #car
+    :type list #cdr}
+   :cdr :length list-length?
+   ------------------------->
+   :car :cdr cons :length add1 list-length?)
+; introduce-axiom
+
+: list-length?map
+  ({type #type #type'
+    (:type -> :type') #function
+    :type list #list natural #length}
+   :list :length list-length?
+   -------------------------->
+   :list :function map :length list-length?)
+  * list-length?null
+  | list-length?null
+  * :inductive-hypothesis list-length?cons
+  | :inductive-hypothesis list-length?map list-length?cons
+; proof-theorem
+
+<< explicit argument >>
+
+: list-length? ({type #type} :type list natural -> type)
+  list-length?null
+  (------------->
+   null 0 list-length?)
+  list-length?cons
+  (natural #length
+   :type #car
+   :type list #cdr
+   :cdr :length list-length?
+   ------------------------->
+   :car :cdr cons :length add1 list-length?)
+; introduce-axiom
+
+: list-length?map
+  ({type #type #type'}
+   (:type -> :type') #function
+   :type list #list natural #length
+   :list :length list-length?
+   -------------------------->
+   :list map :function apply :length list-length?)
+  * :function null 0
+    list-length?null
+  | list-length?null
+  * :function :car :cdr cons :length add1
+    :length
+    :car
+    :cdr
+    :inductive-hypothesis
+    list-length?cons
+  | :length
+    :car :function apply
+    :cdr :function map
+    :function :cdr :length :inductive-hypothesis list-length?map
+    list-length?cons
+; proof-theorem

@@ -1,4 +1,4 @@
-#+TITLE:  nymph in racket
+#+TITLE:  nymph for racket
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 
 * ===================================
