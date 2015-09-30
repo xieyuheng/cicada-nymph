@@ -1,4 +1,4 @@
-#+TITLE:  nymph for racket
+#+TITLE:  nymph in js
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 
 * ===================================
