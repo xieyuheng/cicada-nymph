@@ -347,3 +347,6 @@ var begin_to_interpret_threaded_code =
     };
 
 begin_to_interpret_threaded_code();
+
+exports.begin_to_interpret_threaded_code
+  = begin_to_interpret_threaded_code;

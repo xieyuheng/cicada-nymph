@@ -394,3 +394,9 @@
    begin_to_interpret_threaded_code();
    #+end_src
 * ===================================
+* export                              :nodejs:
+  #+begin_src js :tangle nymph.js
+  exports.begin_to_interpret_threaded_code
+    = begin_to_interpret_threaded_code;
+  #+end_src
+* ===================================

@@ -10,5 +10,8 @@ cn
 cn32
 cicada-nymph
 
+/node_modules
+*.log
+
 /compiled
 nymph
