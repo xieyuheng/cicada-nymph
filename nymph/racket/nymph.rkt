@@ -114,6 +114,15 @@
             (+ string-area:current-free-address len))
       return-address)))
 
+(define name-hash-table:size 100333)
+(define name-hash-table:unit 5)
+
+(define name-hash-table:address
+  (allocate-memory (* name-hash-table:size
+                      name-hash-table:unit)))
+
+(define name-hash-table:counter 0)
+
 (define in-host-name-hash-table (make-hasheq))
 
 (define xx
@@ -122,7 +131,7 @@
     (set! memory:current-free-address
           (+ memory:current-free-address cell))))
 
-(define ::
+(define mm
   (lambda (name-string)
     (hash-set! in-host-name-hash-table
                name-string
@@ -142,8 +151,7 @@
       (xx link)
       (set! link (- memory:current-free-address cell))
       (xx name-string-address)
-      (xx (string-length name-string))
-      (:: name-string)
+      (mm name-string)
       (xx primitive-function-explainer)
       (xx function-index))))
 
@@ -159,8 +167,7 @@
       (xx link)
       (set! link (- memory:current-free-address cell))
       (xx name-string-address)
-      (xx (string-length name-string))
-      (:: name-string)
+      (mm name-string)
       (xx function-explainer)
       (map (lambda (function-name-string)
              (xx (hash-ref in-host-name-hash-table
@@ -179,8 +186,7 @@
       (xx link)
       (set! link (- memory:current-free-address cell))
       (xx name-string-address)
-      (xx (string-length name-string))
-      (:: name-string)
+      (mm name-string)
       (xx variable-explainer)
       (xx value))))
 

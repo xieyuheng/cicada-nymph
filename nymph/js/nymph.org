@@ -3,277 +3,394 @@
 
 * ===================================
 * prolog
-** header
-   #+begin_src racket :tangle nymph.rkt
-   #lang racket
-   (require rnrs/bytevectors-6)
-   #+end_src
 * -----------------------------------
 * architecture
 ** memory
-   #+begin_src racket :tangle nymph.rkt
-   (define cell 4) ;; unit byte
+   #+begin_src js :tangle nymph.js
+   var cell = 4;
+   // unit byte
+   // this global value should match the following interface
 
-   (define memory:size (* 64 1024 1024))
-   (define memory (make-bytevector memory:size 0))
+   var memory = {};
 
-   (define memory:get
-     (lambda (index #:size [size cell])
-       (bytevector-uint-ref memory index (native-endianness) size)))
+   memory.size = 64 * 1024 * 1024;
+   memory.array_buffer = new ArrayBuffer(memory.size);
+   memory.dataview = new DataView(memory.array_buffer);
+   memory.current_free_address = 0;
 
-   (define memory:set
-     (lambda (index value #:size [size cell])
-       (bytevector-uint-set! memory index value (native-endianness) size)))
+   memory.get =
+       function (index) {
+           return memory.dataview.getUint32(index);
+       };
+   memory.set =
+       function (index, value) {
+           memory.dataview.setUint32(index, value);
+       };
+   memory.get_byte =
+       function (index) {
+           return memory.dataview.getUint8(index);
+       };
+   memory.set_byte =
+       function (index, value) {
+           memory.dataview.setUint8(index, value);
+       };
+   memory.allocate =
+       function (size) {
+           return_address = memory.current_free_address;
+           memory.current_free_address = return_address + size;
+           return return_address;
+       };
 
-   (define memory:current-free-address 0)
-
-   (define allocate-memory
-     (lambda (size)
-       (let ([return-address memory:current-free-address])
-         (set! memory:current-free-address
-               (+ memory:current-free-address size))
-         return-address)))
+   // memory.set(1, 231);
+   // memory.get(1);
+   // memory.allocate(16);
+   // memory.current_free_address;
    #+end_src
 ** argument-stack
-   #+begin_src racket :tangle nymph.rkt
-   (allocate-memory (* 1024)) ;; 1k safe underflow
-   (define argument-stack:address (allocate-memory (* 1 1024 1024)))
-   (define argument-stack:current-free-address argument-stack:address)
+   #+begin_src js :tangle nymph.js
+   memory.allocate(1024);
+   // 1k safe underflow
 
-   (define argument-stack:push
-     (lambda (value)
-       (memory:set argument-stack:current-free-address value)
-       (set! argument-stack:current-free-address
-             (+ argument-stack:current-free-address cell))))
+   var argument_stack = {};
+   argument_stack.address = memory.allocate(1 * 1024 * 1024);
+   argument_stack.current_free_address = argument_stack.address;
 
-   (define argument-stack:pop
-     (lambda ()
-       (set! argument-stack:current-free-address
-             (- argument-stack:current-free-address cell))
-       (memory:get argument-stack:current-free-address)))
+   argument_stack.push =
+       function (value) {
+           memory.set(argument_stack.current_free_address, value);
+           argument_stack.current_free_address =
+               argument_stack.current_free_address + cell;
+       };
 
-   (define argument-stack:tos
-     (lambda ()
-       (memory:get (- argument-stack:current-free-address cell))))
+   argument_stack.pop =
+       function () {
+           argument_stack.current_free_address =
+               argument_stack.current_free_address - cell;
+           return memory.get(argument_stack.current_free_address);
+       };
+
+   argument_stack.tos =
+       function () {
+           return memory.get(argument_stack.current_free_address - cell);
+       };
    #+end_src
 ** return-stack
-   #+begin_src racket :tangle nymph.rkt
-   (allocate-memory (* 1024)) ;; 1k safe underflow
-   (define return-stack:address (allocate-memory (* 1 1024 1024)))
-   (define return-stack:current-free-address return-stack:address)
+   #+begin_src js :tangle nymph.js
+   memory.allocate(1024);
+   // 1k safe underflow
 
-   (define return-stack:push
-     (lambda (value)
-       (memory:set return-stack:current-free-address value)
-       (set! return-stack:current-free-address
-             (+ return-stack:current-free-address cell))))
+   var return_stack = {};
+   return_stack.address = memory.allocate(1 * 1024 * 1024);
+   return_stack.current_free_address = return_stack.address;
 
-   (define return-stack:pop
-     (lambda ()
-       (set! return-stack:current-free-address
-             (- return-stack:current-free-address cell))
-       (memory:get return-stack:current-free-address)))
+   return_stack.push =
+       function (value) {
+           memory.set(return_stack.current_free_address, value);
+           return_stack.current_free_address =
+               return_stack.current_free_address + cell;
+       };
 
-   (define return-stack:tos
-     (lambda ()
-       (memory:get (- return-stack:current-free-address cell))))
+   return_stack.pop =
+       function () {
+           return_stack.current_free_address =
+               return_stack.current_free_address - cell;
+           return memory.get(return_stack.current_free_address);
+       };
+
+   return_stack.tos =
+       function () {
+           return memory.get(return_stack.current_free_address - cell);
+       };
    #+end_src
 * jojo
 ** primitive-function-record
-   #+begin_src racket :tangle nymph.rkt
-   (define primitive-function-record:size (* 4 1024))
-   (define primitive-function-record (make-vector primitive-function-record:size 0))
+   #+begin_src js :tangle nymph.js
+   var primitive_function_record = {};
 
-   (define primitive-function-counter 0)
+   // primitive_function_record.size = 4 * 1024;
+   // primitive_function_record.map = new Array(primitive_function_record.size);
 
-   (define primitive-function-record:get
-     (lambda (index)
-       (vector-ref primitive-function-record
-                   index)))
+   primitive_function_record.counter = 0;
+   primitive_function_record.map = new Map();
 
-   (define primitive-function-record:set
-     (lambda (index function)
-       (vector-set! primitive-function-record
-                    index
-                    function)))
+   primitive_function_record.get =
+       function (index) {
+           return primitive_function_record.map.get(index);
+       };
 
-   (define create-primitive-function
-     (lambda (function)
-       (let ([return-address primitive-function-counter])
-         (primitive-function-record:set primitive-function-counter
-                                        function)
-         (set! primitive-function-counter
-               (+ primitive-function-counter 1))
-         return-address)))
+   primitive_function_record.set =
+       function (index, fun) {
+           return primitive_function_record.map.set(index, fun);
+       };
+
+   var create_primitive_function =
+       function (fun) {
+           return_address = primitive_function_record.counter;
+           primitive_function_record
+               .set(primitive_function_record.counter, fun);
+           primitive_function_record.counter =
+               primitive_function_record.counter + 1;
+           return return_address;
+       };
    #+end_src
 ** next
-   #+begin_src racket :tangle nymph.rkt
-   (define next:explainer-argument 0)
+   #+begin_src js :tangle nymph.js
+   next_explainer_argument = 0;
 
-   (define next
-     (lambda ()
-       (let* ([jojo (return-stack:pop)]
-              [next-jojo (+ jojo cell)]
-              [explainer (memory:get (memory:get jojo))]
-              [explainer-argument (+ (memory:get jojo) cell)])
-         (return-stack:push next-jojo)
-         (set! next:explainer-argument explainer-argument)
-         ((primitive-function-record:get explainer)))))
+   var next =
+       function () {
+           jojo = return_stack.pop();
+           next_jojo = jojo + cell;
+           explainer = memory.get(memory.get(jojo));
+           return_stack.push(next_jojo);
+           next_explainer_argument = memory.get(jojo) + cell;
+           primitive_function_record.get(explainer).call();
+       };
+   #+end_src
+** help string-area
+   #+begin_src js :tangle nymph.js
+   function codepoint_to_utf8_byte_array(charcode){
+       array = [];
+
+       if (charcode < 0b10000000) {
+           // 0xxxxxxx
+           array.unshift(charcode);
+           return array;
+       }
+
+       array.unshift(0b10000000 | (charcode & 0b00111111));
+       charcode = charcode >>> 6;
+
+       if (charcode < 0b00100000) {
+           // 110xxxxx 10xxxxxx
+           array.unshift(0b11000000 | charcode);
+           return array;
+       }
+
+       array.unshift(0b10000000 | (charcode & 0b00111111));
+       charcode = charcode >>> 6;
+
+       if (charcode < 0b00010000) {
+           // 1110xxxx 10xxxxxx 10xxxxxx
+           array.unshift(0b11100000 | charcode);
+           return array;
+       }
+
+       array.unshift(0b10000000 | (charcode & 0b00111111));
+       charcode = charcode >>> 6;
+
+       if (charcode < 0b00001000) {
+           // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+           array.unshift(0b11110000 | charcode);
+           return array;
+       }
+
+       array.unshift(0b10000000 | (charcode & 0b00111111));
+       charcode = charcode >>> 6;
+
+       if (charcode < 0b00000100) {
+           // 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+           array.unshift(0b11111000 | charcode);
+           return array;
+       }
+
+       array.unshift(0b10000000 | (charcode & 0b00111111));
+       charcode = charcode >>> 6;
+
+       {// else
+           // 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+           array.unshift(0b11111100 | charcode);
+           return array;
+       }
+
+   }
+
+   // https://en.wikipedia.org/wiki/UTF-8
+   // codepoint_to_utf8_byte_array("€".codePointAt(0));
+   // [0b11100010, 0b10000010, 0b10101100]
+   // codepoint_to_utf8_byte_array("謝宇恆".codePointAt(0));
+   // codepoint_to_utf8_byte_array("謝宇恆".codePointAt(1));
+   // codepoint_to_utf8_byte_array("謝宇恆".codePointAt(2));
    #+end_src
 ** string-area
-   #+begin_src racket :tangle nymph.rkt
-   (define string-area:address (allocate-memory (* 256 1024)))
-   (define string-area:current-free-address string-area:address)
+   #+begin_src js :tangle nymph.js
+   var string_area = {};
 
-   (define create-string
-     (lambda (s)
-       (let ([return-address string-area:current-free-address]
-             [len (string-length s)])
-         (bytevector-copy! (string->utf8 s) 0
-                           memory string-area:current-free-address
-                           len)
-         (set! string-area:current-free-address
-               (+ string-area:current-free-address len))
-         return-address)))
+   string_area.address = memory.allocate(256 * 1024);
+   string_area.current_free_address = string_area.address;
+
+   function create_string(string){
+       return_address = string_area.current_free_address;
+       length = string.length;
+
+       function set_byte(byte){
+           memory.set_byte(
+               string_area.current_free_address + index,
+               byte);
+           string_area.current_free_address
+               = string_area.current_free_address + 1;
+       }
+
+       for (index = 0; index < length; index++){
+           codepoint_to_utf8_byte_array(string.codePointAt(index))
+               .forEach(set_byte);
+       };
+       return return_address;
+   }
+
+   // create_string("謝宇恆");
    #+end_src
 ** in-host-name-hash-table
    * a clean name space for nymph
      used by in-host non-primitive-function
-   #+begin_src racket :tangle nymph.rkt
-   (define in-host-name-hash-table (make-hasheq))
+   #+begin_src js :tangle nymph.js
+   var in_host_name_hash_table = new Map();
    #+end_src
-** xx & ::
-   #+begin_src racket :tangle nymph.rkt
-   (define xx
-     (lambda (value)
-       (memory:set memory:current-free-address value)
-       (set! memory:current-free-address
-             (+ memory:current-free-address cell))))
+** xx & mm
+   #+begin_src js :tangle nymph.js
+   var xx =
+       function (value) {
+           memory.set(memory.current_free_address, value);
+           memory.current_free_address =
+               memory.current_free_address + cell;
+       };
 
-   (define ::
-     (lambda (name-string)
-       (hash-set! in-host-name-hash-table
-                  name-string
-                  memory:current-free-address)))
+   var mm =
+       function (name_string) {
+           in_host_name_hash_table
+               .set(name_string, memory.current_free_address);
+       };
    #+end_src
 ** link
-   #+begin_src racket :tangle nymph.rkt
-   (define link 0)
+   #+begin_src js :tangle nymph.js
+   var link = 0;
    #+end_src
 ** primitive-function
-   #+begin_src racket :tangle nymph.rkt
-   (define primitive-function-explainer
-     (create-primitive-function
-      (lambda ()
-        ((primitive-function-record:get (memory:get next:explainer-argument))))))
+   #+begin_src js :tangle nymph.js
+   var primitive_function_explainer =
+       create_primitive_function(
+           function () {
+               primitive_function_record.get(
+                   memory.get(next_explainer_argument)
+               ).call();
+           });
 
-   (define define-primitive-function
-     (lambda (name-string function)
-       (let* ([name-string-address (create-string name-string)]
-              [function-index (create-primitive-function function)])
-         (xx link)
-         (set! link (- memory:current-free-address cell))
-         (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
-         (xx primitive-function-explainer)
-         (xx function-index))))
+   var define_primitive_function =
+       function (name_string, fun) {
+           name_string_address = create_string(name_string);
+           function_index = create_primitive_function(fun);
+           xx(link);
+           link = memory.current_free_address - cell;
+           xx(name_string_address);
+           mm(name_string);
+           xx(primitive_function_explainer);
+           xx(function_index);
+       };
    #+end_src
 ** function
-   #+begin_src racket :tangle nymph.rkt
-   (define function-explainer
-     (create-primitive-function
-      (lambda ()
-        (return-stack:push next:explainer-argument)
-        (next))))
+   #+begin_src js :tangle nymph.js
+   var function_explainer =
+       create_primitive_function(
+           function () {
+               return_stack.push(next_explainer_argument);
+               next();
+           });
 
-   (define define-function
-     (lambda (name-string . function-name-string-list)
-       (let* ([name-string-address (create-string name-string)])
-         (xx link)
-         (set! link (- memory:current-free-address cell))
-         (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
-         (xx function-explainer)
-         (map (lambda (function-name-string)
-                (xx (hash-ref in-host-name-hash-table
-                              function-name-string)))
-              function-name-string-list))))
+   var define_function =
+       function (name_string, function_name_string_array) {
+           name_string_address = create_string(name_string);
+           xx(link);
+           link = memory.current_free_address - cell;
+           xx(name_string_address);
+           mm(name_string);
+           xx(function_explainer);
+           function_name_string_array.forEach(
+               function (function_name_string) {
+                   xx(in_host_name_hash_table.get(function_name_string));
+               }
+           );
+       };
    #+end_src
 ** variable
-   #+begin_src racket :tangle nymph.rkt
-   (define variable-explainer
-     (create-primitive-function
-      (lambda ()
-        (argument-stack:push (memory:get next:explainer-argument))
-        (next))))
+   #+begin_src js :tangle nymph.js
+   var variable_explainer =
+       create_primitive_function(
+           function () {
+               argument_stack.push(
+                   (memory.get(next_explainer_argument)));
+               next();
+           });
 
-   (define define-variable
-     (lambda (name-string value)
-       (let* ([name-string-address (create-string name-string)])
-         (xx link)
-         (set! link (- memory:current-free-address cell))
-         (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
-         (xx variable-explainer)
-         (xx value))))
+   var define_variable =
+       function (name_string, value) {
+           name_string_address = create_string(name_string);
+           xx(link);
+           link = memory.current_free_address - cell;
+           xx(name_string_address);
+           mm(name_string);
+           xx(variable_explainer);
+           xx(value);
+       };
    #+end_src
 * end
-  #+begin_src racket :tangle nymph.rkt
-  (define-primitive-function "end"
-    (lambda ()
-      (return-stack:pop)
-      (next)))
+  #+begin_src js :tangle nymph.js
+  define_primitive_function(
+      "end",
+      function () {
+          return_stack.pop();
+          next();
+      }
+  );
   #+end_src
 * *the-story-begin*
-** report-return-stack-is-empty-and-exit
-   #+begin_src racket :tangle nymph.rkt
-   (define-primitive-function "report-return-stack-is-empty-and-exit"
-     (lambda ()
-       (write "return stack is empty now")))
-   #+end_src
 ** print-tos
-   #+begin_src racket :tangle nymph.rkt
-   (define-primitive-function "print-tos"
-     (lambda ()
-       (let* ([tos (argument-stack:pop)])
-         (display tos)
-         (newline)
-         (next))))
+   #+begin_src js :tangle nymph.js
+   define_primitive_function(
+       "print-tos",
+       function () {
+           console.log(argument_stack.pop());
+           next();
+       }
+   );
    #+end_src
 ** little-test
-   #+begin_src racket :tangle nymph.rkt
-   (define-variable "*little-test-number*"
-     3)
+   #+begin_src js :tangle nymph.js
+   define_variable("*little-test-number*", 3);
 
-   (define-primitive-function "bye"
-     (lambda ()
-       (display "bye bye ^-^/")
-       (newline)))
+   define_primitive_function(
+       "bye",
+       function () {
+           console.log("bye bye ^-^/");
+       }
+   );
 
-   (define-function "little-test"
-     "*little-test-number*"
-     "print-tos"
-     "bye")
+   define_function(
+       "little-test",
+       [ "*little-test-number*",
+         "print-tos",
+         "bye"
+       ]
+   );
 
-   (define-function "little-test:help"
-     "little-test"
-     "end")
+   define_function(
+       "little-test:help",
+       [ "little-test",
+         "end"
+       ]
+   );
 
-   (define jojo-for-little-test
-     (+ (hash-ref in-host-name-hash-table
-                  "little-test:help")
-        cell))
+   var jojo_for_little_test =
+       in_host_name_hash_table.get("little-test:help")
+       + cell;
    #+end_src
 ** begin-to-interpret-threaded-code
-   #+begin_src racket :tangle nymph.rkt
-   (define begin-to-interpret-threaded-code
-     (lambda ()
-       (return-stack:push jojo-for-little-test)
-       (next)))
+   #+begin_src js :tangle nymph.js
+   var begin_to_interpret_threaded_code =
+       function () {
+           return_stack.push(jojo_for_little_test);
+           next();
+       };
 
-   (begin-to-interpret-threaded-code)
+   begin_to_interpret_threaded_code();
    #+end_src
 * ===================================

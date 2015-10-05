@@ -114,14 +114,13 @@
      (lambda ()
        (let* ([jojo (return-stack:pop)]
               [next-jojo (+ jojo cell)]
-              [explainer (memory:get (memory:get jojo))]
-              [explainer-argument (+ (memory:get jojo) cell)])
+              [explainer (memory:get (memory:get jojo))])
          (return-stack:push next-jojo)
-         (set! next:explainer-argument explainer-argument)
+         (set! next:explainer-argument (+ (memory:get jojo) cell))
          ((primitive-function-record:get explainer)))))
    #+end_src
 ** string-area
-   #+begin_src racket :tangle nymph.rkt
+#+begin_src racket :tangle nymph.rkt
    (define string-area:address (allocate-memory (* 256 1024)))
    (define string-area:current-free-address string-area:address)
 
@@ -136,13 +135,33 @@
                (+ string-area:current-free-address len))
          return-address)))
    #+end_src
+** name-hash-table
+   * the following are some prime number
+     ready to be used
+     * 1000003   about 976 k
+     * 1000033
+     * 1000333
+     * 100003    about 97 k
+     * 100333
+     * 997
+     * 499
+   #+begin_src racket :tangle nymph.rkt
+   (define name-hash-table:size 100333)
+   (define name-hash-table:unit 5)
+
+   (define name-hash-table:address
+     (allocate-memory (* name-hash-table:size
+                         name-hash-table:unit)))
+
+   (define name-hash-table:counter 0)
+   #+end_src
 ** in-host-name-hash-table
    * a clean name space for nymph
      used by in-host non-primitive-function
    #+begin_src racket :tangle nymph.rkt
    (define in-host-name-hash-table (make-hasheq))
    #+end_src
-** xx & ::
+** xx & mm
    #+begin_src racket :tangle nymph.rkt
    (define xx
      (lambda (value)
@@ -150,7 +169,7 @@
        (set! memory:current-free-address
              (+ memory:current-free-address cell))))
 
-   (define ::
+   (define mm
      (lambda (name-string)
        (hash-set! in-host-name-hash-table
                   name-string
@@ -174,8 +193,7 @@
          (xx link)
          (set! link (- memory:current-free-address cell))
          (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
+         (mm name-string)
          (xx primitive-function-explainer)
          (xx function-index))))
    #+end_src
@@ -193,8 +211,7 @@
          (xx link)
          (set! link (- memory:current-free-address cell))
          (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
+         (mm name-string)
          (xx function-explainer)
          (map (lambda (function-name-string)
                 (xx (hash-ref in-host-name-hash-table
@@ -215,8 +232,7 @@
          (xx link)
          (set! link (- memory:current-free-address cell))
          (xx name-string-address)
-         (xx (string-length name-string))
-         (:: name-string)
+         (mm name-string)
          (xx variable-explainer)
          (xx value))))
    #+end_src
@@ -228,12 +244,6 @@
       (next)))
   #+end_src
 * *the-story-begin*
-** report-return-stack-is-empty-and-exit
-   #+begin_src racket :tangle nymph.rkt
-   (define-primitive-function "report-return-stack-is-empty-and-exit"
-     (lambda ()
-       (write "return stack is empty now")))
-   #+end_src
 ** print-tos
    #+begin_src racket :tangle nymph.rkt
    (define-primitive-function "print-tos"
