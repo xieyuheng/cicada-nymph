@@ -1,64 +1,68 @@
 #+TITLE:  gamber
 #+AUTHOR: 謝宇恆 / XIE Yuheng
-
-* ===================================
+#+PROPERTY: tangle gamber.cn
 * 題解
-** bit-xor
-   * 對 bit-xor 的解釋
-     1. 對稱地看
-        diff
-     2. 非對稱地看
-        後者是 1 則 求 invert
-     結構上 對於同樣的抽象函數
-     認識上 可以有不同的理解方式
-** gamber
-   * gray code 很有趣
-     尤其是其生成方式
-     即 先取對稱 再加前綴
-     是利用 對稱性 和 不變量[不變性] 的典型例子
-   * 同樣的一個 0 1 字符串
-     比如 "100"
-     把它做爲自然編碼的二進制數 其值爲 4 這個是 number
-     把它做爲 gray code 編碼的二進制數 其值爲 7 這個我稱之爲 gamber
-   * 這樣 我們就有如下兩個函數
-     string->number
-     string->gamber
-     同時這兩個函數還引出了下面兩個函數
-     number->gamber
-     gamber->number
-   * 下面的的算法是通過把數字列表之後
-     逐 bit 觀察每列的接連 bit 值的規則而得來的
-     比如
-     以生成規則爲定義
-     然後總結一下所發現的每一列的規律
-     就可以得到對下面的算法的有效性的嚴格證明
-   * 注意
-     兩個方向的運算迥然不同
-     還是要以生成方式爲核心來理解這一點
-     只要把生成過程中
-     每次在做完對稱後
-     所添加的 一串前綴 1 看成是一個整體
-     就能理解了
-     可以把每次的 一串前綴 1 看成是一根棍子
-     一根棍子 一根棍子 地 來觀察所生成的列表 就行了
-     可以發現
-     棍子 其實就是 自然編碼時
-     逐 bit 觀察列表時的 接連 bit 值
-     那麼就能理解到
-     爲什麼 number->gamber 比 gamber->number 容易計算了
-   * 另外還要注意
-     從最高位向最低位去計算
-     是爲了逐步確定數在序關係中的位置
-* ===================================
+
+*** bit-xor
+    * 對 bit-xor 的解釋
+      1. 對稱地看
+         diff
+      2. 非對稱地看
+         後者是 1 則 求 invert
+      結構上 對於同樣的抽象函數
+      認識上 可以有不同的理解方式
+
+*** gamber
+    * gray code 很有趣
+      尤其是其生成方式
+      即 先取對稱 再加前綴
+      是利用 對稱性 和 不變量[不變性] 的典型例子
+    * 同樣的一個 0 1 字符串
+      比如 "100"
+      把它做爲自然編碼的二進制數 其值爲 4 這個是 number
+      把它做爲 gray code 編碼的二進制數 其值爲 7 這個我稱之爲 gamber
+    * 這樣 我們就有如下兩個函數
+      string->number
+      string->gamber
+      同時這兩個函數還引出了下面兩個函數
+      number->gamber
+      gamber->number
+    * 下面的的算法是通過把數字列表之後
+      逐 bit 觀察每列的接連 bit 值的規則而得來的
+      比如
+      以生成規則爲定義
+      然後總結一下所發現的每一列的規律
+      就可以得到對下面的算法的有效性的嚴格證明
+    * 注意
+      兩個方向的運算迥然不同
+      還是要以生成方式爲核心來理解這一點
+      只要把生成過程中
+      每次在做完對稱後
+      所添加的 一串前綴 1 看成是一個整體
+      就能理解了
+      可以把每次的 一串前綴 1 看成是一根棍子
+      一根棍子 一根棍子 地 來觀察所生成的列表 就行了
+      可以發現
+      棍子 其實就是 自然編碼時
+      逐 bit 觀察列表時的 接連 bit 值
+      那麼就能理解到
+      爲什麼 number->gamber 比 gamber->number 容易計算了
+    * 另外還要注意
+      從最高位向最低位去計算
+      是爲了逐步確定數在序關係中的位置
+
+
+
 * module-meta
-  #+begin_src cicada-nymph :tangle gamber.cn
+  #+begin_src cicada-nymph
   ::::::::
   auther: XIE Yuheng
   do: "gamber gamber gary-coded number ^-^" .s .l
   ========
   #+end_src
+
 * number->gamber
-  #+begin_src cicada-nymph :tangle gamber.cn
+  #+begin_src cicada-nymph
   : number->gamber
     << number -- gamber >>
     dup 1 bit-right
@@ -66,8 +70,9 @@
     end
   ; define-function
   #+end_src
+
 * gamber->number
-  #+begin_src cicada-nymph :tangle gamber.cn
+  #+begin_src cicada-nymph
   : gamber->number,loop
     << gamber, number, cursor -- number >>
     dup negative? if
@@ -102,8 +107,9 @@
     end
   ; define-function
   #+end_src
+
 * test
-  #+begin_src cicada-nymph :tangle gamber.cn
+  #+begin_src cicada-nymph
   : <test> gamber
     << -- >>
     2#0000 number->gamber .#2 .l
@@ -148,4 +154,3 @@
   : <test> gamber
   ; test-do
   #+end_src
-* ===================================
