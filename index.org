@@ -1,0 +1,22 @@
+#+HTML_HEAD: <link rel="stylesheet" href="http://xieyuheng.github.io/asset/css/index.css" type="text/css" media="screen" />
+#+title: cicada-nymph
+
+---------
+
+- a forth-like language
+
+- [[http://xieyuheng.github.io][XIE Yuheng]] created
+
+---------
+
+* code
+
+  - [[./cicada-nymph.html][the implementation]] written in fasm
+
+  - [[./core/core.html][example code]] in cicada-nymph
+
+  - [[https://github.com/xieyuheng/cicada-nymph][source code]] on github
+
+* reading
+
+  - (todo)

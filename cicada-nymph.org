@@ -1,3 +1,4 @@
+#+HTML_HEAD: <link rel="stylesheet" href="http://xieyuheng.github.io/asset/css/page.css" type="text/css" media="screen" />
 #+TITLE:  小蟬 / cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 
@@ -4482,7 +4483,7 @@
       I do NOT think which of the following is better then the other
       but I choose the second one
     * first
-      #+begin_src
+      #+begin_src cicada-nymph
       define-function factorial
         << n -- n! >>
         dup one? if
