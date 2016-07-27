@@ -1,4 +1,4 @@
-#+HTML_HEAD: <link rel="stylesheet" href="http://xieyuheng.github.io/asset/css/index.css" type="text/css" media="screen" />
+#+HTML_HEAD: <link rel="stylesheet" href="https://xieyuheng.github.io/asset/css/index.css" type="text/css" media="screen" />
 #+title: cicada-nymph
 
 ---------

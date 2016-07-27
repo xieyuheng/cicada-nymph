@@ -1,4 +1,4 @@
-#+HTML_HEAD: <link rel="stylesheet" href="http://xieyuheng.github.io/asset/css/page.css" type="text/css" media="screen" />
+#+HTML_HEAD: <link rel="stylesheet" href="https://xieyuheng.github.io/asset/css/page.css" type="text/css" media="screen" />
 #+TITLE:  小蟬之核 / core of cicada-nymph
 #+AUTHOR: 謝宇恆 / XIE Yuheng
 
